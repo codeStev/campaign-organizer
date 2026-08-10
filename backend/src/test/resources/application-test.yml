@@ -1,0 +1,5 @@
+app:
+  password: test-password
+  jwt:
+    secret: integration-test-secret-that-is-32-bytes-minimum
+    expiration-hours: 1
