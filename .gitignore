@@ -1,0 +1,21 @@
+# Environment
+.env
+
+# Java / Maven
+backend/target/
+*.class
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/src/api/schema.ts
+
+# Local runtime data
+data/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
