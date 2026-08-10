@@ -1,0 +1,102 @@
+# Campaign Organizer — Requirements
+
+Personal, self-hosted worldbuilding and RPG campaign management application,
+inspired by the feature set of [World Anvil](https://www.worldanvil.com/) but
+scoped to a **single user** (no community, sharing, or collaboration features).
+
+- **Audience:** one worldbuilder / gamemaster (the owner), self-hosting the app.
+- **Reference:** World Anvil feature research captured in the roadmap below.
+- **Design decisions:** recorded as ADRs in [`adr/`](adr/).
+- **API contract:** [`api/openapi.yaml`](api/openapi.yaml) is canonical.
+
+Requirement IDs are stable references (`FR-*` functional, `NFR-*`
+non-functional). Each maps to a roadmap phase.
+
+---
+
+## 1. Functional requirements
+
+### Foundations (Phase 0) — implemented
+- **FR-1 Authentication.** The owner signs in with a single configured password
+  and receives a bearer token used for all subsequent API calls. (ADR-0006)
+- **FR-2 Worlds.** The owner can create, list, view, rename/edit, and delete
+  worlds. A world is the top-level container every other object belongs to.
+
+### Wiki (Phase 1)
+- **FR-3 Articles.** Create rich-text articles within a world, organized by
+  category/hierarchy.
+- **FR-4 Templates.** Article templates (Character, Location, Organization,
+  Species, Item, etc.) provide structured prompts.
+- **FR-5 Auto-linking.** Mentions of other articles are automatically turned
+  into cross-links.
+- **FR-6 Media library.** Upload images and reuse them across articles and maps;
+  stored on a local volume. (ADR-0007)
+- **FR-7 Search.** Full-text search across a world's articles.
+
+### Worldbuilding tools (Phase 2)
+- **FR-8 Interactive maps.** Upload a map image, place pins linked to articles,
+  toggle layers.
+- **FR-9 Timelines.** Events with dates, linked to articles; parallel timelines.
+- **FR-10 Calendars.** Custom (fantasy) calendar systems that drive timeline
+  dates.
+- **FR-11 Relationship graphs.** Family trees / relationship webs between
+  characters and organizations.
+
+### Gamemaster tools (Phase 3)
+- **FR-12 Campaigns.** Group sessions and notes under a campaign tied to a world.
+- **FR-13 Sessions.** Record sessions with notes and links to NPCs/locations.
+- **FR-14 Story arcs.** Track arcs/beats so plot threads are not lost.
+- **FR-15 GM-only content.** Mark articles/sections as hidden ("GM-only") to
+  toggle spoilers at the table. (Replaces World Anvil subscriber groups.)
+
+### Character sheets & dice (Phase 4)
+- **FR-16 Sheet engine.** Schema-driven character sheets supporting multiple
+  game systems without hardcoding each.
+- **FR-17 Starter systems.** Ship 2–3 systems (e.g. D&D 5e, Pathfinder, generic).
+- **FR-18 Statblocks.** Reusable NPC/monster statblocks.
+- **FR-19 Dice roller.** Roll dice, optionally bound to a sheet.
+
+### Polish (Phase 5)
+- **FR-20 Whiteboards.** Free-form canvas for plotting.
+- **FR-21 Revision history.** Track article edits over time.
+- **FR-22 Export.** Export a world/campaign to PDF/JSON.
+
+---
+
+## 2. Non-functional requirements
+- **NFR-1 Deployment.** Runs as Docker containers with a single
+  `docker compose up`. (ADR-0004)
+- **NFR-2 Single-user.** No multi-tenancy, registration, or per-object ACLs
+  beyond the GM-only flag. (ADR-0005)
+- **NFR-3 API-first.** All behavior exposed via a documented OpenAPI 3.1 API;
+  contract is the source of truth. (ADR-0008)
+- **NFR-4 Persistence.** Data stored in PostgreSQL with versioned schema
+  migrations. (ADR-0003, ADR-0012)
+- **NFR-5 Testing.** Critical paths covered by unit and integration tests; CI
+  runs them on every push. (ADR-0011)
+- **NFR-6 Portability.** Self-hostable on a single machine; no external cloud
+  services required (media on local volume).
+- **NFR-7 Security.** Stateless bearer-token auth; secrets supplied via
+  environment; non-root container users.
+- **NFR-8 Errors.** API errors use RFC 9457/7807 `application/problem+json`.
+  (ADR-0009)
+
+---
+
+## 3. Out of scope (deliberately cut)
+Community/social features, public world pages, player accounts, subscriber
+groups, marketplace/monetization, novel-writing manuscript editor, real-time
+multi-user collaboration. Rationale in ADR-0005.
+
+---
+
+## 4. Roadmap
+
+| Phase | Theme | Requirements |
+| --- | --- | --- |
+| 0 | Foundations (auth, worlds, deploy, CI) | FR-1, FR-2, NFR-* |
+| 1 | Wiki MVP | FR-3 … FR-7 |
+| 2 | Maps & timelines | FR-8 … FR-11 |
+| 3 | GM campaign manager | FR-12 … FR-15 |
+| 4 | Character sheets & dice | FR-16 … FR-19 |
+| 5 | Polish | FR-20 … FR-22 |
