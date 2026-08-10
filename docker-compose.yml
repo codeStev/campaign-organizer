@@ -1,0 +1,46 @@
+# Full local stack: Postgres + Spring Boot backend + nginx-served React frontend.
+# Media is stored on a local volume (no object store) per ADR-0007.
+# Copy .env.example to .env and adjust before running `docker compose up`.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campaign_organizer
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d campaign_organizer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/campaign_organizer
+      SPRING_DATASOURCE_USERNAME: app
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      APP_PASSWORD: ${APP_PASSWORD:-changeme}
+      APP_JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-please-32-bytes-minimum}
+      APP_MEDIA_DIR: /data/media
+    volumes:
+      - media-data:/data/media
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  db-data:
+  media-data:
