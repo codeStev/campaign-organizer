@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: campaign-organizer
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/campaign_organizer}
+    username: ${SPRING_DATASOURCE_USERNAME:app}
+    password: ${SPRING_DATASOURCE_PASSWORD:changeme}
+  mvc:
+    problemdetails:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+  error:
+    include-message: always
+
+app:
+  # Single-password authentication (see docs/adr/0006-single-password-auth.md).
+  password: ${APP_PASSWORD:changeme}
+  jwt:
+    # HS256 secret; must be >= 32 bytes. Override in production.
+    secret: ${APP_JWT_SECRET:dev-secret-change-me-please-32-bytes-minimum}
+    expiration-hours: ${APP_JWT_EXPIRATION_HOURS:720}
+  media:
+    # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
+    dir: ${APP_MEDIA_DIR:./data/media}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    org.flywaydb: info
