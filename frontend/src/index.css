@@ -1,0 +1,106 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  --accent: #6d54c9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #14121a;
+  color: #eae7f2;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2c2838;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: #1d1a27;
+  border: 1px solid #2c2838;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login {
+  max-width: 360px;
+  margin: 3rem auto;
+}
+
+input,
+textarea {
+  background: #14121a;
+  border: 1px solid #3a3550;
+  border-radius: 6px;
+  color: inherit;
+  padding: 0.5rem;
+  font: inherit;
+}
+
+textarea {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.link-button {
+  background: none;
+  color: var(--accent);
+  padding: 0;
+}
+
+.link-button.danger {
+  color: #d9647a;
+}
+
+.world-list {
+  list-style: none;
+  padding: 0;
+}
+
+.world-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.muted {
+  color: #9a93ad;
+  margin: 0.25rem 0 0;
+}
+
+.error {
+  color: #d9647a;
+}
