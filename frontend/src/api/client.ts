@@ -95,3 +95,82 @@ export const worldsApi = {
     request<World>(`/worlds/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string) => request<void>(`/worlds/${id}`, { method: 'DELETE' }),
 };
+
+// ---- Wiki: articles & categories (mirrors docs/api/openapi.yaml) ----
+
+export type ArticleTemplate =
+  | 'GENERIC'
+  | 'CHARACTER'
+  | 'LOCATION'
+  | 'ORGANIZATION'
+  | 'SPECIES'
+  | 'ITEM'
+  | 'EVENT';
+
+export const ARTICLE_TEMPLATES: ArticleTemplate[] = [
+  'GENERIC',
+  'CHARACTER',
+  'LOCATION',
+  'ORGANIZATION',
+  'SPECIES',
+  'ITEM',
+  'EVENT',
+];
+
+export interface ArticleSummary {
+  id: string;
+  worldId: string;
+  categoryId?: string | null;
+  title: string;
+  slug: string;
+  template: ArticleTemplate;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Article extends ArticleSummary {
+  body?: string | null;
+}
+
+export interface ArticleRequest {
+  title: string;
+  slug?: string;
+  template?: ArticleTemplate;
+  categoryId?: string | null;
+  body?: string;
+}
+
+export interface Category {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function articlesApi(worldId: string) {
+  const base = `/worlds/${worldId}/articles`;
+  return {
+    list: (params?: { categoryId?: string; q?: string }) => {
+      const search = new URLSearchParams();
+      if (params?.categoryId) search.set('categoryId', params.categoryId);
+      if (params?.q) search.set('q', params.q);
+      const qs = search.toString();
+      return request<ArticleSummary[]>(qs ? `${base}?${qs}` : base);
+    },
+    get: (id: string) => request<Article>(`${base}/${id}`),
+    create: (body: ArticleRequest) =>
+      request<Article>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: ArticleRequest) =>
+      request<Article>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function categoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/categories`;
+  return {
+    list: () => request<Category[]>(base),
+  };
+}
