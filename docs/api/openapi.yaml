@@ -203,7 +203,7 @@ components:
       properties:
         token:
           type: string
-          description: Signed JWT to send as `Authorization: Bearer <token>`.
+          description: "Signed JWT to send as `Authorization: Bearer <token>`."
         tokenType:
           type: string
           const: Bearer
