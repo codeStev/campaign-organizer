@@ -2,10 +2,11 @@ import { FormEvent, useEffect, useState } from 'react';
 import { worldsApi, World, ApiError } from '../api/client';
 
 interface Props {
+  onOpenWorld: (world: World) => void;
   onAuthExpired: () => void;
 }
 
-export function WorldsPage({ onAuthExpired }: Props) {
+export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
   const [worlds, setWorlds] = useState<World[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -85,10 +86,10 @@ export function WorldsPage({ onAuthExpired }: Props) {
         <ul className="world-list">
           {worlds.map((world) => (
             <li key={world.id} className="card world-item">
-              <div>
+              <button className="world-open" onClick={() => onOpenWorld(world)}>
                 <strong>{world.name}</strong>
                 {world.description && <p className="muted">{world.description}</p>}
-              </div>
+              </button>
               <button className="link-button danger" onClick={() => handleDelete(world.id)}>
                 Delete
               </button>

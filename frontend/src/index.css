@@ -104,3 +104,108 @@ button:disabled {
 .error {
   color: #d9647a;
 }
+
+/* Worlds list: make the whole card body a clickable open target. */
+.world-open {
+  background: none;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  flex: 1;
+}
+
+.world-open strong {
+  color: var(--accent);
+}
+
+/* World / wiki view */
+.world-view-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.world-view-bar h2 {
+  margin: 0;
+}
+
+.wiki-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.wiki-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.article-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.article-link {
+  width: 100%;
+  background: #1d1a27;
+  color: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #2c2838;
+}
+
+.article-link.active {
+  border-color: var(--accent);
+}
+
+.title-input {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.editor {
+  border: 1px solid #3a3550;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  background: #14121a;
+  border-bottom: 1px solid #3a3550;
+}
+
+.editor-toolbar button {
+  background: #2c2838;
+  padding: 0.2rem 0.6rem;
+  min-width: 2rem;
+}
+
+.editor-toolbar button.active {
+  background: var(--accent);
+}
+
+.editor-content :focus-visible {
+  outline: none;
+}
+
+.editor-content .ProseMirror {
+  min-height: 12rem;
+  padding: 0.75rem;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
