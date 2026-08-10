@@ -1,0 +1,265 @@
+openapi: 3.1.0
+info:
+  title: Campaign Organizer API
+  version: 0.1.0
+  description: >
+    Personal worldbuilding and RPG campaign management application.
+    This document is the **canonical, design-first contract** for the API.
+    Both the Spring Boot backend and the React/TypeScript frontend are expected
+    to conform to it (see docs/adr/0008-contract-first-openapi.md).
+
+    Phase 0 covers single-password authentication and the `worlds` resource,
+    which is the top-level container every other domain object will hang off of.
+  license:
+    name: Proprietary (personal use)
+  contact:
+    name: Campaign Organizer
+
+servers:
+  - url: /api
+    description: Same-origin API root (frontend proxies /api to the backend)
+
+tags:
+  - name: auth
+    description: Authentication for the single owner user.
+  - name: worlds
+    description: Top-level worldbuilding containers.
+
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Exchange the app password for a bearer token
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /worlds:
+    get:
+      tags: [worlds]
+      summary: List all worlds
+      operationId: listWorlds
+      responses:
+        '200':
+          description: All worlds owned by the user, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/World'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [worlds]
+      summary: Create a world
+      operationId: createWorld
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorldRequest'
+      responses:
+        '201':
+          description: World created.
+          headers:
+            Location:
+              description: URI of the created world.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/World'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /worlds/{worldId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [worlds]
+      summary: Get a single world
+      operationId: getWorld
+      responses:
+        '200':
+          description: The world.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/World'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [worlds]
+      summary: Update a world
+      operationId: updateWorld
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorldRequest'
+      responses:
+        '200':
+          description: World updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/World'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [worlds]
+      summary: Delete a world
+      operationId: deleteWorld
+      responses:
+        '204':
+          description: World deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Bearer token obtained from POST /auth/login. Signed with HS256.
+
+  parameters:
+    WorldId:
+      name: worldId
+      in: path
+      required: true
+      description: Identifier of the world.
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: The request was malformed or failed validation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Unauthorized:
+      description: Missing or invalid bearer token / password.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+          description: The configured application password.
+          examples: ["changeme"]
+
+    TokenResponse:
+      type: object
+      required: [token, tokenType, expiresAt]
+      properties:
+        token:
+          type: string
+          description: Signed JWT to send as `Authorization: Bearer <token>`.
+        tokenType:
+          type: string
+          const: Bearer
+        expiresAt:
+          type: string
+          format: date-time
+          description: Expiry instant of the token (UTC).
+
+    WorldRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          examples: ["Aethelgard"]
+        description:
+          type: string
+          maxLength: 5000
+          description: Optional summary of the world.
+
+    World:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProblemDetail:
+      type: object
+      description: RFC 9457 / RFC 7807 problem response.
+      properties:
+        type:
+          type: string
+          format: uri
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+
+security:
+  - bearerAuth: []
