@@ -24,6 +24,10 @@ tags:
     description: Authentication for the single owner user.
   - name: worlds
     description: Top-level worldbuilding containers.
+  - name: categories
+    description: Hierarchical grouping of articles within a world.
+  - name: articles
+    description: Wiki articles within a world.
 
 paths:
   /auth/login:
@@ -147,6 +151,206 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [categories]
+      summary: List a world's categories
+      operationId: listCategories
+      responses:
+        '200':
+          description: Categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [categories]
+      summary: Create a category
+      operationId: createCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+      responses:
+        '201':
+          description: Category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [categories]
+      summary: Update a category
+      operationId: updateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+      responses:
+        '200':
+          description: Category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [categories]
+      summary: Delete a category (its articles are kept, uncategorized)
+      operationId: deleteCategory
+      responses:
+        '204':
+          description: Category deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [articles]
+      summary: List a world's articles
+      operationId: listArticles
+      parameters:
+        - name: categoryId
+          in: query
+          required: false
+          description: Filter to a single category.
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          description: Full-text search query over title and body.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching articles (summaries), newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArticleSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [articles]
+      summary: Create an article
+      operationId: createArticle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+      responses:
+        '201':
+          description: Article created.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    get:
+      tags: [articles]
+      summary: Get a single article
+      operationId: getArticle
+      responses:
+        '200':
+          description: The article, with rendered (auto-linked) body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [articles]
+      summary: Update an article
+      operationId: updateArticle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+      responses:
+        '200':
+          description: Article updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [articles]
+      summary: Delete an article
+      operationId: deleteArticle
+      responses:
+        '204':
+          description: Article deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -162,6 +366,22 @@ components:
       in: path
       required: true
       description: Identifier of the world.
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      description: Identifier of the category.
+      schema:
+        type: string
+        format: uuid
+    ArticleId:
+      name: articleId
+      in: path
+      required: true
+      description: Identifier of the article.
       schema:
         type: string
         format: uuid
@@ -243,6 +463,105 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    CategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent category for nesting, or null for a root category.
+
+    Category:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ArticleTemplate:
+      type: string
+      description: The kind of article; drives structured prompts later.
+      enum: [GENERIC, CHARACTER, LOCATION, ORGANIZATION, SPECIES, ITEM, EVENT]
+
+    ArticleRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 220
+          description: >
+            Optional URL-safe identifier, unique per world. Generated from the
+            title (and de-duplicated) when omitted.
+        template:
+          $ref: '#/components/schemas/ArticleTemplate'
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+        body:
+          type: string
+          description: Article body as HTML (see ADR-0013).
+
+    ArticleSummary:
+      type: object
+      required: [id, worldId, title, slug, template, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        template:
+          $ref: '#/components/schemas/ArticleTemplate'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Article:
+      allOf:
+        - $ref: '#/components/schemas/ArticleSummary'
+        - type: object
+          required: [body]
+          properties:
+            body:
+              type: [string, "null"]
+              description: Article body as HTML.
 
     ProblemDetail:
       type: object
