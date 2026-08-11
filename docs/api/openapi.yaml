@@ -28,6 +28,8 @@ tags:
     description: Hierarchical grouping of articles within a world.
   - name: articles
     description: Wiki articles within a world.
+  - name: templates
+    description: Static article template definitions and prompts.
 
 paths:
   /auth/login:
@@ -150,6 +152,23 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /article-templates:
+    get:
+      tags: [templates]
+      summary: List article template definitions and their prompts
+      operationId: listArticleTemplates
+      responses:
+        '200':
+          description: All template definitions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArticleTemplateInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /worlds/{worldId}/categories:
     parameters:
@@ -503,6 +522,28 @@ components:
       type: string
       description: The kind of article; drives structured prompts later.
       enum: [GENERIC, CHARACTER, LOCATION, ORGANIZATION, SPECIES, ITEM, EVENT]
+
+    TemplateSection:
+      type: object
+      required: [heading, hint]
+      properties:
+        heading:
+          type: string
+        hint:
+          type: string
+
+    ArticleTemplateInfo:
+      type: object
+      required: [template, label, sections]
+      properties:
+        template:
+          $ref: '#/components/schemas/ArticleTemplate'
+        label:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateSection'
 
     ArticleRequest:
       type: object
