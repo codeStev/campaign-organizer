@@ -202,6 +202,66 @@ export interface MediaAsset {
   createdAt: string;
 }
 
+export interface WorldMap {
+  id: string;
+  worldId: string;
+  name: string;
+  mediaId?: string | null;
+  imageUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MapRequest {
+  name: string;
+  mediaId: string;
+}
+
+export interface MapPin {
+  id: string;
+  mapId: string;
+  articleId?: string | null;
+  label?: string | null;
+  layer?: string | null;
+  x: number;
+  y: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MapPinRequest {
+  articleId?: string | null;
+  label?: string | null;
+  layer?: string | null;
+  x: number;
+  y: number;
+}
+
+export function mapsApi(worldId: string) {
+  const base = `/worlds/${worldId}/maps`;
+  return {
+    list: () => request<WorldMap[]>(base),
+    get: (id: string) => request<WorldMap>(`${base}/${id}`),
+    create: (body: MapRequest) =>
+      request<WorldMap>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: MapRequest) =>
+      request<WorldMap>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function pinsApi(worldId: string, mapId: string) {
+  const base = `/worlds/${worldId}/maps/${mapId}/pins`;
+  return {
+    list: () => request<MapPin[]>(base),
+    create: (body: MapPinRequest) =>
+      request<MapPin>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: MapPinRequest) =>
+      request<MapPin>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 export function mediaApi(worldId: string) {
   const base = `/worlds/${worldId}/media`;
   return {
