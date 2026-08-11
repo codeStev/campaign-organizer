@@ -6,6 +6,7 @@ import {
   ArticleTemplateInfo,
   ARTICLE_TEMPLATES,
   templatesApi,
+  mediaApi,
   ApiError,
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
@@ -37,6 +38,7 @@ const EMPTY_DRAFT: Draft = { id: null, title: '', template: 'GENERIC', body: '' 
 
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
   const api = articlesApi(worldId);
+  const media = mediaApi(worldId);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
@@ -201,7 +203,11 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
               </option>
             ))}
           </select>
-          <RichTextEditor value={draft.body} onChange={(body) => setDraft({ ...draft, body })} />
+          <RichTextEditor
+            value={draft.body}
+            onChange={(body) => setDraft({ ...draft, body })}
+            onUploadImage={async (file) => (await media.upload(file)).url}
+          />
           <div className="editor-actions">
             <button type="submit" disabled={draft.title.length === 0}>
               {draft.id ? 'Save changes' : 'Create article'}

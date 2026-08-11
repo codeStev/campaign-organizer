@@ -1,19 +1,35 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect } from 'react';
+import Image from '@tiptap/extension-image';
+import { ChangeEvent, useEffect, useRef } from 'react';
 
 interface Props {
   value: string;
   onChange: (html: string) => void;
+  /** Uploads a file and resolves to its URL; enables the image button when set. */
+  onUploadImage?: (file: File) => Promise<string>;
 }
 
 /** Minimal TipTap rich-text editor producing HTML (see ADR-0013). */
-export function RichTextEditor({ value, onChange }: Props) {
+export function RichTextEditor({ value, onChange, onUploadImage }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, Image],
     content: value,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  async function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !onUploadImage || !editor) return;
+    try {
+      const url = await onUploadImage(file);
+      editor.chain().focus().setImage({ src: url }).run();
+    } catch {
+      // Surfaced by the caller's error handling; keep the editor usable.
+    }
+  }
 
   // Keep the editor in sync when the selected article changes externally.
   useEffect(() => {
@@ -58,7 +74,19 @@ export function RichTextEditor({ value, onChange }: Props) {
         >
           • List
         </button>
+        {onUploadImage && (
+          <button type="button" onClick={() => fileInputRef.current?.click()}>
+            🖼 Image
+          </button>
+        )}
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={handleFileSelected}
+      />
       <EditorContent editor={editor} className="editor-content" />
     </div>
   );

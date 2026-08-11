@@ -11,6 +11,7 @@
     "gen:api": "openapi-typescript ../docs/api/openapi.yaml -o src/api/schema.ts"
   },
   "dependencies": {
+    "@tiptap/extension-image": "^2.10.0",
     "@tiptap/pm": "^2.10.0",
     "@tiptap/react": "^2.10.0",
     "@tiptap/starter-kit": "^2.10.0",

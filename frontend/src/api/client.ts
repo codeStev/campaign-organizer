@@ -191,3 +191,40 @@ export interface ArticleTemplateInfo {
 export const templatesApi = {
   list: () => request<ArticleTemplateInfo[]>('/article-templates'),
 };
+
+export interface MediaAsset {
+  id: string;
+  worldId: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+}
+
+export function mediaApi(worldId: string) {
+  const base = `/worlds/${worldId}/media`;
+  return {
+    list: () => request<MediaAsset[]>(base),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+    // Multipart upload: let the browser set the Content-Type boundary itself.
+    upload: async (file: File): Promise<MediaAsset> => {
+      const form = new FormData();
+      form.append('file', file);
+      const token = getToken();
+      const response = await fetch(`/api${base}`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: form,
+      });
+      if (response.status === 401) {
+        clearToken();
+        throw new ApiError(401, 'Not authenticated');
+      }
+      if (!response.ok) {
+        throw new ApiError(response.status, await safeProblemDetail(response));
+      }
+      return (await response.json()) as MediaAsset;
+    },
+  };
+}
