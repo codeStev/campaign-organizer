@@ -1,8 +1,10 @@
 package com.campaignorganizer;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.jayway.jsonpath.JsonPath;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -64,6 +66,17 @@ public abstract class AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Test World\"}"))
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.id");
+    }
+
+    /** Uploads a tiny PNG into the world and returns the media id. */
+    protected String uploadImage(String auth, String worldId) throws Exception {
+        var file = new MockMultipartFile("file", "map.png", "image/png",
+                new byte[] {(byte) 0x89, 'P', 'N', 'G', 1, 2, 3, 4});
+        String body = mockMvc.perform(multipart("/api/worlds/{w}/media", worldId)
+                        .file(file)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(body, "$.id");
     }
