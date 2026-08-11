@@ -30,6 +30,8 @@ tags:
     description: Wiki articles within a world.
   - name: templates
     description: Static article template definitions and prompts.
+  - name: media
+    description: Uploaded images stored on the local volume.
 
 paths:
   /auth/login:
@@ -169,6 +171,90 @@ paths:
                   $ref: '#/components/schemas/ArticleTemplateInfo'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /worlds/{worldId}/media:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [media]
+      summary: List a world's media assets
+      operationId: listMedia
+      responses:
+        '200':
+          description: Media assets, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MediaAsset'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [media]
+      summary: Upload an image
+      operationId: uploadMedia
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Media uploaded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/media/{mediaId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/MediaId'
+    delete:
+      tags: [media]
+      summary: Delete a media asset
+      operationId: deleteMedia
+      responses:
+        '204':
+          description: Media deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /media/{mediaId}/content:
+    parameters:
+      - $ref: '#/components/parameters/MediaId'
+    get:
+      tags: [media]
+      summary: Serve raw image bytes (public, addressed by unguessable id)
+      operationId: getMediaContent
+      security: []
+      responses:
+        '200':
+          description: The image bytes.
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /worlds/{worldId}/categories:
     parameters:
@@ -404,6 +490,14 @@ components:
       schema:
         type: string
         format: uuid
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      description: Identifier of the media asset.
+      schema:
+        type: string
+        format: uuid
 
   responses:
     BadRequest:
@@ -609,6 +703,30 @@ components:
               description: >
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
+
+    MediaAsset:
+      type: object
+      required: [id, worldId, filename, contentType, size, url, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+          format: int64
+        url:
+          type: string
+          description: Public URL serving the bytes.
+        createdAt:
+          type: string
+          format: date-time
 
     ProblemDetail:
       type: object
