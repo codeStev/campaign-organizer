@@ -3,3 +3,5 @@ app:
   jwt:
     secret: integration-test-secret-that-is-32-bytes-minimum
     expiration-hours: 1
+  media:
+    dir: /tmp/co-media-test
