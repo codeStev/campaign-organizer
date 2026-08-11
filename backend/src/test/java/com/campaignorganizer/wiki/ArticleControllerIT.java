@@ -117,6 +117,23 @@ class ArticleControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void ranksTitleMatchesAboveBodyMatches() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        // Body-only match created first (older), title match created second.
+        createArticle(auth, worldId,
+                "{\"title\":\"Ironhold\",\"body\":\"<p>A deep forest lies to the north.</p>\"}");
+        createArticle(auth, worldId, "{\"title\":\"Forest Kingdom\"}");
+
+        mockMvc.perform(get("/api/worlds/{w}/articles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .param("q", "forest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Forest Kingdom"));
+    }
+
+    @Test
     void resolvesWikiLinksInBodyHtml() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
