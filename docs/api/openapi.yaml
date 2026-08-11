@@ -561,7 +561,13 @@ components:
           properties:
             body:
               type: [string, "null"]
-              description: Article body as HTML.
+              description: Raw article body as HTML, including `[[target]]` wiki-links.
+            bodyHtml:
+              type: [string, "null"]
+              readOnly: true
+              description: >
+                Rendered body with wiki-links resolved to anchors (see
+                ADR-0014). Read-only; derived from `body`.
 
     ProblemDetail:
       type: object
