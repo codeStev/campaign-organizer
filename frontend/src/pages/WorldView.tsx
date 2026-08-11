@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { MapsView } from './MapsView';
+import { TimelinesView } from './TimelinesView';
 
 /** True when the HTML has no meaningful text content. */
 function isEmptyHtml(html: string): boolean {
@@ -45,7 +46,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [previewHtml, setPreviewHtml] = useState('');
   const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
-  const [tab, setTab] = useState<'articles' | 'maps'>('articles');
+  const [tab, setTab] = useState<'articles' | 'maps' | 'timelines'>('articles');
   const [error, setError] = useState<string | null>(null);
 
   const handleError = useCallback(
@@ -168,6 +169,12 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           >
             Maps
           </button>
+          <button
+            className={tab === 'timelines' ? 'tab active' : 'tab'}
+            onClick={() => setTab('timelines')}
+          >
+            Timelines
+          </button>
         </nav>
       </div>
 
@@ -175,6 +182,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
 
       {tab === 'maps' ? (
         <MapsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
+      ) : tab === 'timelines' ? (
+        <TimelinesView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
       ) : (
       <div className="wiki-layout">
         <aside className="wiki-sidebar">
