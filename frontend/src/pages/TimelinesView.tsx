@@ -3,9 +3,11 @@ import {
   timelinesApi,
   eventsApi,
   articlesApi,
+  calendarsApi,
   Timeline,
   TimelineEvent,
   ArticleSummary,
+  Calendar,
   ApiError,
 } from '../api/client';
 
@@ -35,7 +37,11 @@ const EMPTY_EVENT: EventDraft = {
   description: '',
 };
 
-function formatDate(e: TimelineEvent): string {
+function formatDate(e: TimelineEvent, calendar: Calendar | null): string {
+  if (calendar && e.month && e.month >= 1 && e.month <= calendar.months.length) {
+    const monthName = calendar.months[e.month - 1].name;
+    return `${e.day ? e.day + ' ' : ''}${monthName}, ${e.year}`;
+  }
   return [e.year, e.month, e.day].filter((v) => v !== null && v !== undefined).join('.');
 }
 
@@ -47,8 +53,11 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const [selected, setSelected] = useState<Timeline | null>(null);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [draft, setDraft] = useState<EventDraft>(EMPTY_EVENT);
   const [error, setError] = useState<string | null>(null);
+
+  const calendarApi = useMemo(() => calendarsApi(worldId), [worldId]);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -72,7 +81,25 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   useEffect(() => {
     api.list().then(setList).catch(handleError);
     articleApi.list().then(setArticles).catch(handleError);
-  }, [api, articleApi, handleError]);
+    calendarApi.list().then(setCalendars).catch(handleError);
+  }, [api, articleApi, calendarApi, handleError]);
+
+  const activeCalendar = calendars.find((c) => c.id === selected?.calendarId) ?? null;
+
+  async function setTimelineCalendar(calendarId: string | null) {
+    if (!selected) return;
+    try {
+      const updated = await api.update(selected.id, {
+        name: selected.name,
+        description: selected.description ?? undefined,
+        calendarId,
+      });
+      setSelected(updated);
+      setList(await api.list());
+    } catch (err) {
+      handleError(err);
+    }
+  }
 
   async function selectTimeline(timeline: Timeline) {
     setSelected(timeline);
@@ -181,9 +208,22 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
           <>
             <div className="map-bar">
               <strong>{selected.name}</strong>
-              <button className="link-button danger" onClick={() => deleteTimeline(selected)}>
-                Delete timeline
-              </button>
+              <div className="editor-actions">
+                <select
+                  value={selected.calendarId ?? ''}
+                  onChange={(e) => setTimelineCalendar(e.target.value || null)}
+                >
+                  <option value="">No calendar</option>
+                  {calendars.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <button className="link-button danger" onClick={() => deleteTimeline(selected)}>
+                  Delete timeline
+                </button>
+              </div>
             </div>
 
             <form className="card" onSubmit={saveEvent}>
@@ -248,7 +288,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
             <ol className="timeline">
               {events.map((event) => (
                 <li key={event.id} className="timeline-event card">
-                  <div className="timeline-date">{formatDate(event)}</div>
+                  <div className="timeline-date">{formatDate(event, activeCalendar)}</div>
                   <div className="timeline-body">
                     <strong>{event.title}</strong>
                     {event.description && <p className="muted">{event.description}</p>}
