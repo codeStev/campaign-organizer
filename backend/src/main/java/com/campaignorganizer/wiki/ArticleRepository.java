@@ -30,15 +30,14 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
     }
 
     /**
-     * Basic case-insensitive search over title and body within a world.
-     * Full Postgres FTS with ranking is a later refinement (FR-7).
+     * Ranked Postgres full-text search within a world (ADR-0017). Title matches
+     * outrank body matches via the A/B weighting on the generated tsvector.
      */
-    @Query("""
-            SELECT a FROM Article a
-            WHERE a.worldId = :worldId
-              AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%'))
-                   OR LOWER(a.body) LIKE LOWER(CONCAT('%', :q, '%')))
-            ORDER BY a.createdAt DESC
-            """)
+    @Query(value = """
+            SELECT * FROM articles
+            WHERE world_id = :worldId
+              AND search_vector @@ plainto_tsquery('english', :q)
+            ORDER BY ts_rank(search_vector, plainto_tsquery('english', :q)) DESC
+            """, nativeQuery = true)
     List<Article> search(@Param("worldId") UUID worldId, @Param("q") String q);
 }
