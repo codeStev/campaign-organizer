@@ -262,6 +262,66 @@ export function pinsApi(worldId: string, mapId: string) {
   };
 }
 
+export interface Timeline {
+  id: string;
+  worldId: string;
+  name: string;
+  description?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TimelineRequest {
+  name: string;
+  description?: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  timelineId: string;
+  articleId?: string | null;
+  title: string;
+  description?: string | null;
+  year: number;
+  month?: number | null;
+  day?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TimelineEventRequest {
+  title: string;
+  description?: string;
+  articleId?: string | null;
+  year: number;
+  month?: number | null;
+  day?: number | null;
+}
+
+export function timelinesApi(worldId: string) {
+  const base = `/worlds/${worldId}/timelines`;
+  return {
+    list: () => request<Timeline[]>(base),
+    create: (body: TimelineRequest) =>
+      request<Timeline>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: TimelineRequest) =>
+      request<Timeline>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function eventsApi(worldId: string, timelineId: string) {
+  const base = `/worlds/${worldId}/timelines/${timelineId}/events`;
+  return {
+    list: () => request<TimelineEvent[]>(base),
+    create: (body: TimelineEventRequest) =>
+      request<TimelineEvent>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: TimelineEventRequest) =>
+      request<TimelineEvent>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 export function mediaApi(worldId: string) {
   const base = `/worlds/${worldId}/media`;
   return {
