@@ -32,6 +32,8 @@ tags:
     description: Static article template definitions and prompts.
   - name: media
     description: Uploaded images stored on the local volume.
+  - name: maps
+    description: Interactive maps and their article-linked pins.
 
 paths:
   /auth/login:
@@ -253,6 +255,189 @@ paths:
               schema:
                 type: string
                 format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/maps:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [maps]
+      summary: List a world's maps
+      operationId: listMaps
+      responses:
+        '200':
+          description: Maps in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Map'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [maps]
+      summary: Create a map from an uploaded image
+      operationId: createMap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapRequest'
+      responses:
+        '201':
+          description: Map created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Map'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/maps/{mapId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/MapId'
+    get:
+      tags: [maps]
+      summary: Get a map
+      operationId: getMap
+      responses:
+        '200':
+          description: The map.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Map'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [maps]
+      summary: Update a map
+      operationId: updateMap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapRequest'
+      responses:
+        '200':
+          description: Map updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Map'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [maps]
+      summary: Delete a map (and its pins)
+      operationId: deleteMap
+      responses:
+        '204':
+          description: Map deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/maps/{mapId}/pins:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/MapId'
+    get:
+      tags: [maps]
+      summary: List a map's pins
+      operationId: listPins
+      responses:
+        '200':
+          description: Pins on the map.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MapPin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [maps]
+      summary: Add a pin to a map
+      operationId: createPin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapPinRequest'
+      responses:
+        '201':
+          description: Pin created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapPin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/maps/{mapId}/pins/{pinId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/MapId'
+      - $ref: '#/components/parameters/PinId'
+    put:
+      tags: [maps]
+      summary: Update a pin
+      operationId: updatePin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapPinRequest'
+      responses:
+        '200':
+          description: Pin updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapPin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [maps]
+      summary: Delete a pin
+      operationId: deletePin
+      responses:
+        '204':
+          description: Pin deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -498,6 +683,22 @@ components:
       schema:
         type: string
         format: uuid
+    MapId:
+      name: mapId
+      in: path
+      required: true
+      description: Identifier of the map.
+      schema:
+        type: string
+        format: uuid
+    PinId:
+      name: pinId
+      in: path
+      required: true
+      description: Identifier of the pin.
+      schema:
+        type: string
+        format: uuid
 
   responses:
     BadRequest:
@@ -703,6 +904,101 @@ components:
               description: >
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
+
+    MapRequest:
+      type: object
+      required: [name, mediaId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        mediaId:
+          type: string
+          format: uuid
+          description: The uploaded image used as the map's base layer.
+
+    Map:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mediaId:
+          type: [string, "null"]
+          format: uuid
+        imageUrl:
+          type: [string, "null"]
+          description: Public URL of the base image (null if the image was deleted).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MapPinRequest:
+      type: object
+      required: [x, y]
+      properties:
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        label:
+          type: [string, "null"]
+          maxLength: 200
+        layer:
+          type: [string, "null"]
+          maxLength: 100
+          description: Optional group used for toggling visibility.
+        x:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Horizontal position as a fraction of image width.
+        y:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Vertical position as a fraction of image height.
+
+    MapPin:
+      type: object
+      required: [id, mapId, x, y, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        mapId:
+          type: string
+          format: uuid
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        label:
+          type: [string, "null"]
+        layer:
+          type: [string, "null"]
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     MediaAsset:
       type: object
