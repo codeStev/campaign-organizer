@@ -262,11 +262,45 @@ export function pinsApi(worldId: string, mapId: string) {
   };
 }
 
+export interface CalendarMonthInput {
+  name: string;
+  days: number;
+}
+
+export interface Calendar {
+  id: string;
+  worldId: string;
+  name: string;
+  daysPerWeek?: number | null;
+  months: CalendarMonthInput[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarRequest {
+  name: string;
+  daysPerWeek?: number | null;
+  months: CalendarMonthInput[];
+}
+
+export function calendarsApi(worldId: string) {
+  const base = `/worlds/${worldId}/calendars`;
+  return {
+    list: () => request<Calendar[]>(base),
+    create: (body: CalendarRequest) =>
+      request<Calendar>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: CalendarRequest) =>
+      request<Calendar>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 export interface Timeline {
   id: string;
   worldId: string;
   name: string;
   description?: string | null;
+  calendarId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -274,6 +308,7 @@ export interface Timeline {
 export interface TimelineRequest {
   name: string;
   description?: string;
+  calendarId?: string | null;
 }
 
 export interface TimelineEvent {
