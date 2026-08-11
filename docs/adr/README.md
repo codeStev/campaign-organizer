@@ -24,6 +24,7 @@ the old one.
 | [0015](0015-article-template-prompts.md) | Article template prompts as backend metadata | Accepted |
 | [0016](0016-media-storage-and-serving.md) | Media storage abstraction and image serving | Accepted |
 | [0017](0017-postgres-full-text-search.md) | Full-text search via a generated tsvector | Accepted |
+| [0018](0018-interactive-maps-model.md) | Interactive maps model | Accepted |
 
 ## Template
 
