@@ -21,6 +21,7 @@ the old one.
 | [0012](0012-flyway-migrations.md) | Flyway schema migrations | Accepted |
 | [0013](0013-article-content-model.md) | Article content model (HTML, slugs, templates) | Accepted |
 | [0014](0014-wiki-auto-linking.md) | Wiki auto-linking via `[[target]]` | Accepted |
+| [0015](0015-article-template-prompts.md) | Article template prompts as backend metadata | Accepted |
 
 ## Template
 
