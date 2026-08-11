@@ -116,6 +116,27 @@ class ArticleControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void resolvesWikiLinksInBodyHtml() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String goblinId = JsonPath.read(createArticle(auth, worldId, "{\"title\":\"Goblin\"}"), "$.id");
+
+        String body = "{\"title\":\"Bestiary\",\"body\":"
+                + "\"<p>See [[Goblin]], [[goblin|the goblins]] and [[Missing]].</p>\"}";
+        String created = createArticle(auth, worldId, body);
+
+        String bodyHtml = JsonPath.read(created, "$.bodyHtml");
+        String rawBody = JsonPath.read(created, "$.body");
+
+        org.assertj.core.api.Assertions.assertThat(bodyHtml)
+                .contains("<a class=\"wiki-link\" data-article-id=\"" + goblinId + "\" href=\"#\">Goblin</a>")
+                .contains(">the goblins</a>")
+                .contains("<span class=\"broken-link\">Missing</span>");
+        // Raw body keeps the [[...]] tokens for editing.
+        org.assertj.core.api.Assertions.assertThat(rawBody).contains("[[Goblin]]");
+    }
+
     private String createArticle(String auth, String worldId, String json) throws Exception {
         return mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
