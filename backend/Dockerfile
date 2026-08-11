@@ -12,7 +12,11 @@ RUN mvn -q -B clean package -DskipTests
 # ---- Runtime stage ----
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-RUN useradd --system --uid 1001 spring
+# Create the media dir owned by the runtime user so a fresh named volume mounted
+# here inherits that ownership (the app runs as non-root and must write to it).
+RUN useradd --system --uid 1001 spring \
+    && mkdir -p /data/media \
+    && chown -R spring:spring /data
 COPY --from=build /app/target/*.jar app.jar
 USER spring
 EXPOSE 8080
