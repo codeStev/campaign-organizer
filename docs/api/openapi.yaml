@@ -34,6 +34,8 @@ tags:
     description: Uploaded images stored on the local volume.
   - name: maps
     description: Interactive maps and their article-linked pins.
+  - name: timelines
+    description: Timelines and their dated, article-linked events.
 
 paths:
   /auth/login:
@@ -441,6 +443,174 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/timelines:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [timelines]
+      summary: List a world's timelines
+      operationId: listTimelines
+      responses:
+        '200':
+          description: Timelines in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Timeline'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [timelines]
+      summary: Create a timeline
+      operationId: createTimeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelineRequest'
+      responses:
+        '201':
+          description: Timeline created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timeline'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/timelines/{timelineId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/TimelineId'
+    put:
+      tags: [timelines]
+      summary: Update a timeline
+      operationId: updateTimeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelineRequest'
+      responses:
+        '200':
+          description: Timeline updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timeline'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [timelines]
+      summary: Delete a timeline (and its events)
+      operationId: deleteTimeline
+      responses:
+        '204':
+          description: Timeline deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/timelines/{timelineId}/events:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/TimelineId'
+    get:
+      tags: [timelines]
+      summary: List a timeline's events (chronological)
+      operationId: listEvents
+      responses:
+        '200':
+          description: Events ordered by year, month, day.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelineEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [timelines]
+      summary: Add an event to a timeline
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelineEventRequest'
+      responses:
+        '201':
+          description: Event created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/timelines/{timelineId}/events/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/TimelineId'
+      - $ref: '#/components/parameters/EventId'
+    put:
+      tags: [timelines]
+      summary: Update an event
+      operationId: updateEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelineEventRequest'
+      responses:
+        '200':
+          description: Event updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [timelines]
+      summary: Delete an event
+      operationId: deleteEvent
+      responses:
+        '204':
+          description: Event deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/categories:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -683,6 +853,22 @@ components:
       schema:
         type: string
         format: uuid
+    TimelineId:
+      name: timelineId
+      in: path
+      required: true
+      description: Identifier of the timeline.
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      description: Identifier of the event.
+      schema:
+        type: string
+        format: uuid
     MapId:
       name: mapId
       in: path
@@ -904,6 +1090,93 @@ components:
               description: >
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
+
+    TimelineRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          maxLength: 5000
+
+    Timeline:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TimelineEventRequest:
+      type: object
+      required: [title, year]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          maxLength: 5000
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        year:
+          type: integer
+          description: Integer year; negative values denote pre-epoch dates.
+        month:
+          type: [integer, "null"]
+          minimum: 1
+        day:
+          type: [integer, "null"]
+          minimum: 1
+
+    TimelineEvent:
+      type: object
+      required: [id, timelineId, title, year, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        timelineId:
+          type: string
+          format: uuid
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        year:
+          type: integer
+        month:
+          type: [integer, "null"]
+        day:
+          type: [integer, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     MapRequest:
       type: object
