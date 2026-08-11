@@ -25,6 +25,7 @@ the old one.
 | [0016](0016-media-storage-and-serving.md) | Media storage abstraction and image serving | Accepted |
 | [0017](0017-postgres-full-text-search.md) | Full-text search via a generated tsvector | Accepted |
 | [0018](0018-interactive-maps-model.md) | Interactive maps model | Accepted |
+| [0019](0019-timelines-model.md) | Timelines model | Accepted |
 
 ## Template
 
