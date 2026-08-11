@@ -36,6 +36,8 @@ tags:
     description: Interactive maps and their article-linked pins.
   - name: timelines
     description: Timelines and their dated, article-linked events.
+  - name: calendars
+    description: Custom fantasy calendars with named months.
 
 paths:
   /auth/login:
@@ -438,6 +440,89 @@ paths:
       responses:
         '204':
           description: Pin deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/calendars:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [calendars]
+      summary: List a world's calendars
+      operationId: listCalendars
+      responses:
+        '200':
+          description: Calendars in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Calendar'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [calendars]
+      summary: Create a calendar
+      operationId: createCalendar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarRequest'
+      responses:
+        '201':
+          description: Calendar created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calendar'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/calendars/{calendarId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CalendarId'
+    put:
+      tags: [calendars]
+      summary: Update a calendar (replaces its months)
+      operationId: updateCalendar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarRequest'
+      responses:
+        '200':
+          description: Calendar updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calendar'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [calendars]
+      summary: Delete a calendar
+      operationId: deleteCalendar
+      responses:
+        '204':
+          description: Calendar deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -853,6 +938,14 @@ components:
       schema:
         type: string
         format: uuid
+    CalendarId:
+      name: calendarId
+      in: path
+      required: true
+      description: Identifier of the calendar.
+      schema:
+        type: string
+        format: uuid
     TimelineId:
       name: timelineId
       in: path
@@ -1091,6 +1184,69 @@ components:
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
 
+    CalendarMonthInput:
+      type: object
+      required: [name, days]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        days:
+          type: integer
+          minimum: 1
+
+    CalendarMonth:
+      type: object
+      required: [name, days]
+      properties:
+        name:
+          type: string
+        days:
+          type: integer
+
+    CalendarRequest:
+      type: object
+      required: [name, months]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        daysPerWeek:
+          type: [integer, "null"]
+          minimum: 1
+        months:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CalendarMonthInput'
+
+    Calendar:
+      type: object
+      required: [id, worldId, name, months, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        daysPerWeek:
+          type: [integer, "null"]
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarMonth'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     TimelineRequest:
       type: object
       required: [name]
@@ -1102,6 +1258,10 @@ components:
         description:
           type: [string, "null"]
           maxLength: 5000
+        calendarId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional calendar used to render and validate event dates.
 
     Timeline:
       type: object
@@ -1117,6 +1277,9 @@ components:
           type: string
         description:
           type: [string, "null"]
+        calendarId:
+          type: [string, "null"]
+          format: uuid
         createdAt:
           type: string
           format: date-time
