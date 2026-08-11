@@ -237,3 +237,60 @@ button:disabled {
   color: #d9647a;
   border-bottom: 1px dotted #d9647a;
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.tab {
+  background: #1d1a27;
+  border: 1px solid #2c2838;
+  padding: 0.35rem 0.9rem;
+}
+
+.tab.active {
+  background: var(--accent);
+}
+
+/* Maps */
+.map-canvas {
+  height: 520px;
+  border-radius: 8px;
+  border: 1px solid #2c2838;
+  overflow: hidden;
+}
+
+.leaflet-container {
+  background: #0f0d15;
+  font-family: inherit;
+}
+
+.map-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.layer-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #2c2838;
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pin-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

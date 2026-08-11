@@ -10,6 +10,7 @@ import {
   ApiError,
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { MapsView } from './MapsView';
 
 /** True when the HTML has no meaningful text content. */
 function isEmptyHtml(html: string): boolean {
@@ -44,6 +45,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [previewHtml, setPreviewHtml] = useState('');
   const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
+  const [tab, setTab] = useState<'articles' | 'maps'>('articles');
   const [error, setError] = useState<string | null>(null);
 
   const handleError = useCallback(
@@ -104,6 +106,11 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     }
   }
 
+  function openFromMap(id: string) {
+    setTab('articles');
+    void openArticle(id);
+  }
+
   function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
     const link = (event.target as HTMLElement).closest('.wiki-link');
     if (link) {
@@ -148,10 +155,27 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           ← Worlds
         </button>
         <h2>{worldName}</h2>
+        <nav className="tabs">
+          <button
+            className={tab === 'articles' ? 'tab active' : 'tab'}
+            onClick={() => setTab('articles')}
+          >
+            Articles
+          </button>
+          <button
+            className={tab === 'maps' ? 'tab active' : 'tab'}
+            onClick={() => setTab('maps')}
+          >
+            Maps
+          </button>
+        </nav>
       </div>
 
       {error && <p className="error">{error}</p>}
 
+      {tab === 'maps' ? (
+        <MapsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
+      ) : (
       <div className="wiki-layout">
         <aside className="wiki-sidebar">
           <input
@@ -237,6 +261,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         )}
         </div>
       </div>
+      )}
     </section>
   );
 }
