@@ -176,3 +176,18 @@ export function categoriesApi(worldId: string) {
     list: () => request<Category[]>(base),
   };
 }
+
+export interface TemplateSection {
+  heading: string;
+  hint: string;
+}
+
+export interface ArticleTemplateInfo {
+  template: ArticleTemplate;
+  label: string;
+  sections: TemplateSection[];
+}
+
+export const templatesApi = {
+  list: () => request<ArticleTemplateInfo[]>('/article-templates'),
+};

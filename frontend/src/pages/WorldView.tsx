@@ -3,10 +3,21 @@ import {
   articlesApi,
   ArticleSummary,
   ArticleTemplate,
+  ArticleTemplateInfo,
   ARTICLE_TEMPLATES,
+  templatesApi,
   ApiError,
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
+
+/** True when the HTML has no meaningful text content. */
+function isEmptyHtml(html: string): boolean {
+  return html.replace(/<[^>]*>/g, '').trim().length === 0;
+}
+
+function outlineHtml(info: ArticleTemplateInfo): string {
+  return info.sections.map((s) => `<h2>${s.heading}</h2><p></p>`).join('');
+}
 
 interface Props {
   worldId: string;
@@ -30,6 +41,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleError = useCallback(
@@ -58,6 +70,22 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     void refresh(query);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
+
+  useEffect(() => {
+    templatesApi.list().then(setTemplates).catch(handleError);
+  }, [handleError]);
+
+  // Changing the template on an empty draft seeds an outline (ADR-0015).
+  function selectTemplate(template: ArticleTemplate) {
+    setDraft((current) => {
+      const next = { ...current, template };
+      if (isEmptyHtml(current.body)) {
+        const info = templates.find((t) => t.template === template);
+        if (info) next.body = outlineHtml(info);
+      }
+      return next;
+    });
+  }
 
   async function openArticle(id: string) {
     try {
@@ -165,7 +193,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           />
           <select
             value={draft.template}
-            onChange={(e) => setDraft({ ...draft, template: e.target.value as ArticleTemplate })}
+            onChange={(e) => selectTemplate(e.target.value as ArticleTemplate)}
           >
             {ARTICLE_TEMPLATES.map((t) => (
               <option key={t} value={t}>
