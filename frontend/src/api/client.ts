@@ -130,6 +130,8 @@ export interface ArticleSummary {
 
 export interface Article extends ArticleSummary {
   body?: string | null;
+  /** Server-rendered body with `[[wiki-links]]` resolved (read-only, ADR-0014). */
+  bodyHtml?: string | null;
 }
 
 export interface ArticleRequest {

@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, MouseEvent, useCallback, useEffect, useState } from 'react';
 import {
   articlesApi,
   ArticleSummary,
@@ -29,6 +29,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [previewHtml, setPreviewHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleError = useCallback(
@@ -67,8 +68,18 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         template: article.template,
         body: article.body ?? '',
       });
+      setPreviewHtml(article.bodyHtml ?? '');
     } catch (err) {
       handleError(err);
+    }
+  }
+
+  function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
+    const link = (event.target as HTMLElement).closest('.wiki-link');
+    if (link) {
+      event.preventDefault();
+      const id = link.getAttribute('data-article-id');
+      if (id) void openArticle(id);
     }
   }
 
@@ -81,6 +92,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         ? await api.update(draft.id, payload)
         : await api.create(payload);
       setDraft({ id: saved.id, title: saved.title, template: saved.template, body: saved.body ?? '' });
+      setPreviewHtml(saved.bodyHtml ?? '');
       await refresh(query);
     } catch (err) {
       handleError(err);
@@ -92,6 +104,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     try {
       await api.remove(draft.id);
       setDraft(EMPTY_DRAFT);
+      setPreviewHtml('');
       await refresh(query);
     } catch (err) {
       handleError(err);
@@ -117,7 +130,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button onClick={() => setDraft(EMPTY_DRAFT)}>+ New article</button>
+          <button
+            onClick={() => {
+              setDraft(EMPTY_DRAFT);
+              setPreviewHtml('');
+            }}
+          >
+            + New article
+          </button>
           <ul className="article-list">
             {articles.map((a) => (
               <li key={a.id}>
@@ -134,6 +154,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           </ul>
         </aside>
 
+        <div className="wiki-main">
         <form className="wiki-editor card" onSubmit={handleSave}>
           <input
             className="title-input"
@@ -163,7 +184,24 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
               </button>
             )}
           </div>
+          <p className="muted hint">
+            Tip: link to another article with <code>[[Title]]</code> or{' '}
+            <code>[[Title|label]]</code>.
+          </p>
         </form>
+
+        {previewHtml && (
+          <div className="card preview">
+            <h3 className="muted">Preview</h3>
+            {/* eslint-disable-next-line react/no-danger */}
+            <div
+              className="preview-body"
+              onClick={handlePreviewClick}
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
+          </div>
+        )}
+        </div>
       </div>
     </section>
   );

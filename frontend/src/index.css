@@ -209,3 +209,31 @@ button:disabled {
   align-items: center;
   gap: 1rem;
 }
+
+.wiki-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hint {
+  font-size: 0.85rem;
+}
+
+.hint code {
+  background: #14121a;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.preview-body .wiki-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+}
+
+.preview-body .broken-link {
+  color: #d9647a;
+  border-bottom: 1px dotted #d9647a;
+}
