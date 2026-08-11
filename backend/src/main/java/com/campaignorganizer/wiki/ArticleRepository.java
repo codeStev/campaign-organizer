@@ -17,6 +17,18 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
 
     boolean existsByWorldIdAndSlug(UUID worldId, String slug);
 
+    /** Lightweight id/slug/title projection used for auto-link resolution (ADR-0014). */
+    @Query("SELECT a.id AS id, a.slug AS slug, a.title AS title FROM Article a WHERE a.worldId = :worldId")
+    List<ArticleRef> findRefsByWorldId(@Param("worldId") UUID worldId);
+
+    interface ArticleRef {
+        UUID getId();
+
+        String getSlug();
+
+        String getTitle();
+    }
+
     /**
      * Basic case-insensitive search over title and body within a world.
      * Full Postgres FTS with ranking is a later refinement (FR-7).

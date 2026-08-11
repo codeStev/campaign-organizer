@@ -35,7 +35,7 @@ public final class ArticleDtos {
         }
     }
 
-    /** Detail view: includes the body. */
+    /** Detail view: raw body plus the auto-linked rendering (ADR-0014). */
     public record ArticleResponse(
             UUID id,
             UUID worldId,
@@ -44,12 +44,13 @@ public final class ArticleDtos {
             String slug,
             ArticleTemplate template,
             String body,
+            String bodyHtml,
             Instant createdAt,
             Instant updatedAt) {
 
-        public static ArticleResponse from(Article a) {
+        public static ArticleResponse from(Article a, String bodyHtml) {
             return new ArticleResponse(a.getId(), a.getWorldId(), a.getCategoryId(),
-                    a.getTitle(), a.getSlug(), a.getTemplate(), a.getBody(),
+                    a.getTitle(), a.getSlug(), a.getTemplate(), a.getBody(), bodyHtml,
                     a.getCreatedAt(), a.getUpdatedAt());
         }
     }

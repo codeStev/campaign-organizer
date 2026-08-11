@@ -29,12 +29,14 @@ public class ArticleController {
     private final ArticleRepository articles;
     private final CategoryRepository categories;
     private final WorldRepository worlds;
+    private final AutoLinker autoLinker;
 
     public ArticleController(ArticleRepository articles, CategoryRepository categories,
-                             WorldRepository worlds) {
+                             WorldRepository worlds, AutoLinker autoLinker) {
         this.articles = articles;
         this.categories = categories;
         this.worlds = worlds;
+        this.autoLinker = autoLinker;
     }
 
     @GetMapping
@@ -55,7 +57,7 @@ public class ArticleController {
 
     @GetMapping("/{articleId}")
     public ArticleResponse get(@PathVariable UUID worldId, @PathVariable UUID articleId) {
-        return ArticleResponse.from(findOrThrow(worldId, articleId));
+        return toResponse(findOrThrow(worldId, articleId));
     }
 
     @PostMapping
@@ -69,7 +71,7 @@ public class ArticleController {
                 worldId, request.categoryId(), request.title(), slug, template, request.body()));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/articles/" + saved.getId()))
-                .body(ArticleResponse.from(saved));
+                .body(toResponse(saved));
     }
 
     @PutMapping("/{articleId}")
@@ -80,13 +82,17 @@ public class ArticleController {
         ArticleTemplate template = request.template() == null ? ArticleTemplate.GENERIC : request.template();
         String slug = resolveSlugForUpdate(worldId, request, article);
         article.update(request.categoryId(), request.title(), slug, template, request.body());
-        return ArticleResponse.from(articles.save(article));
+        return toResponse(articles.save(article));
     }
 
     @DeleteMapping("/{articleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID articleId) {
         articles.delete(findOrThrow(worldId, articleId));
+    }
+
+    private ArticleResponse toResponse(Article article) {
+        return ArticleResponse.from(article, autoLinker.render(article.getWorldId(), article.getBody()));
     }
 
     private Article findOrThrow(UUID worldId, UUID articleId) {
