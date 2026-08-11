@@ -1,5 +1,7 @@
 package com.campaignorganizer.timeline;
 
+import com.campaignorganizer.calendar.CalendarMonth;
+import com.campaignorganizer.calendar.CalendarMonthRepository;
 import com.campaignorganizer.timeline.TimelineEventDtos.TimelineEventRequest;
 import com.campaignorganizer.timeline.TimelineEventDtos.TimelineEventResponse;
 import com.campaignorganizer.wiki.ArticleRepository;
@@ -27,12 +29,14 @@ public class TimelineEventController {
     private final TimelineEventRepository events;
     private final TimelineRepository timelines;
     private final ArticleRepository articles;
+    private final CalendarMonthRepository calendarMonths;
 
     public TimelineEventController(TimelineEventRepository events, TimelineRepository timelines,
-                                   ArticleRepository articles) {
+                                   ArticleRepository articles, CalendarMonthRepository calendarMonths) {
         this.events = events;
         this.timelines = timelines;
         this.articles = articles;
+        this.calendarMonths = calendarMonths;
     }
 
     @GetMapping
@@ -47,8 +51,9 @@ public class TimelineEventController {
     public ResponseEntity<TimelineEventResponse> create(@PathVariable UUID worldId,
                                                         @PathVariable UUID timelineId,
                                                         @Valid @RequestBody TimelineEventRequest request) {
-        requireTimeline(worldId, timelineId);
+        Timeline timeline = requireTimeline(worldId, timelineId);
         validateArticle(worldId, request.articleId());
+        validateAgainstCalendar(timeline, request.month(), request.day());
         TimelineEvent saved = events.save(new TimelineEvent(timelineId, request.articleId(),
                 request.title(), request.description(), request.year(), request.month(), request.day()));
         return ResponseEntity
@@ -61,8 +66,9 @@ public class TimelineEventController {
     public TimelineEventResponse update(@PathVariable UUID worldId, @PathVariable UUID timelineId,
                                         @PathVariable UUID eventId,
                                         @Valid @RequestBody TimelineEventRequest request) {
-        requireTimeline(worldId, timelineId);
+        Timeline timeline = requireTimeline(worldId, timelineId);
         validateArticle(worldId, request.articleId());
+        validateAgainstCalendar(timeline, request.month(), request.day());
         TimelineEvent event = events.findByIdAndTimelineId(eventId, timelineId)
                 .orElseThrow(this::eventNotFound);
         event.update(request.articleId(), request.title(), request.description(),
@@ -80,15 +86,36 @@ public class TimelineEventController {
         events.delete(event);
     }
 
-    private void requireTimeline(UUID worldId, UUID timelineId) {
-        if (!timelines.existsByIdAndWorldId(timelineId, worldId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Timeline not found");
-        }
+    private Timeline requireTimeline(UUID worldId, UUID timelineId) {
+        return timelines.findByIdAndWorldId(timelineId, worldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Timeline not found"));
     }
 
     private void validateArticle(UUID worldId, UUID articleId) {
         if (articleId != null && !articles.existsByIdAndWorldId(articleId, worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
+        }
+    }
+
+    /** When the timeline has a calendar, month/day must fit its month definitions (ADR-0020). */
+    private void validateAgainstCalendar(Timeline timeline, Integer month, Integer day) {
+        if (timeline.getCalendarId() == null || month == null) {
+            return;
+        }
+        List<CalendarMonth> months = calendarMonths.findByCalendarIdOrderByPositionAsc(timeline.getCalendarId());
+        if (months.isEmpty()) {
+            return;
+        }
+        if (month < 1 || month > months.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Month is out of range for the timeline's calendar");
+        }
+        if (day != null) {
+            int length = months.get(month - 1).getDays();
+            if (day < 1 || day > length) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Day is out of range for that month");
+            }
         }
     }
 

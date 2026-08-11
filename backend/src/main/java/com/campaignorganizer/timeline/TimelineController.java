@@ -1,5 +1,6 @@
 package com.campaignorganizer.timeline;
 
+import com.campaignorganizer.calendar.CalendarRepository;
 import com.campaignorganizer.timeline.TimelineDtos.TimelineRequest;
 import com.campaignorganizer.timeline.TimelineDtos.TimelineResponse;
 import com.campaignorganizer.world.WorldRepository;
@@ -26,10 +27,13 @@ public class TimelineController {
 
     private final TimelineRepository timelines;
     private final WorldRepository worlds;
+    private final CalendarRepository calendars;
 
-    public TimelineController(TimelineRepository timelines, WorldRepository worlds) {
+    public TimelineController(TimelineRepository timelines, WorldRepository worlds,
+                              CalendarRepository calendars) {
         this.timelines = timelines;
         this.worlds = worlds;
+        this.calendars = calendars;
     }
 
     @GetMapping
@@ -44,7 +48,9 @@ public class TimelineController {
     public ResponseEntity<TimelineResponse> create(@PathVariable UUID worldId,
                                                    @Valid @RequestBody TimelineRequest request) {
         requireWorld(worldId);
-        Timeline saved = timelines.save(new Timeline(worldId, request.name(), request.description()));
+        validateCalendar(worldId, request.calendarId());
+        Timeline saved = timelines.save(
+                new Timeline(worldId, request.name(), request.description(), request.calendarId()));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/timelines/" + saved.getId()))
                 .body(TimelineResponse.from(saved));
@@ -54,7 +60,8 @@ public class TimelineController {
     public TimelineResponse update(@PathVariable UUID worldId, @PathVariable UUID timelineId,
                                    @Valid @RequestBody TimelineRequest request) {
         Timeline timeline = findOrThrow(worldId, timelineId);
-        timeline.update(request.name(), request.description());
+        validateCalendar(worldId, request.calendarId());
+        timeline.update(request.name(), request.description(), request.calendarId());
         return TimelineResponse.from(timelines.save(timeline));
     }
 
@@ -72,6 +79,12 @@ public class TimelineController {
     private void requireWorld(UUID worldId) {
         if (!worlds.existsById(worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found");
+        }
+    }
+
+    private void validateCalendar(UUID worldId, UUID calendarId) {
+        if (calendarId != null && !calendars.existsByIdAndWorldId(calendarId, worldId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Calendar not found in this world");
         }
     }
 }

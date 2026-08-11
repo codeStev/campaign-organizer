@@ -12,7 +12,8 @@ public final class TimelineDtos {
 
     public record TimelineRequest(
             @NotBlank @Size(max = 200) String name,
-            @Size(max = 5000) String description) {
+            @Size(max = 5000) String description,
+            UUID calendarId) {
     }
 
     public record TimelineResponse(
@@ -20,12 +21,13 @@ public final class TimelineDtos {
             UUID worldId,
             String name,
             String description,
+            UUID calendarId,
             Instant createdAt,
             Instant updatedAt) {
 
         public static TimelineResponse from(Timeline t) {
             return new TimelineResponse(t.getId(), t.getWorldId(), t.getName(),
-                    t.getDescription(), t.getCreatedAt(), t.getUpdatedAt());
+                    t.getDescription(), t.getCalendarId(), t.getCreatedAt(), t.getUpdatedAt());
         }
     }
 }

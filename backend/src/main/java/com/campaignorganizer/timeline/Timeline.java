@@ -25,6 +25,9 @@ public class Timeline {
     @Column(columnDefinition = "text")
     private String description;
 
+    @Column(name = "calendar_id")
+    private UUID calendarId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -35,10 +38,11 @@ public class Timeline {
         // for JPA
     }
 
-    public Timeline(UUID worldId, String name, String description) {
+    public Timeline(UUID worldId, String name, String description, UUID calendarId) {
         this.worldId = worldId;
         this.name = name;
         this.description = description;
+        this.calendarId = calendarId;
     }
 
     @PrePersist
@@ -56,9 +60,14 @@ public class Timeline {
         updatedAt = Instant.now();
     }
 
-    public void update(String name, String description) {
+    public void update(String name, String description, UUID calendarId) {
         this.name = name;
         this.description = description;
+        this.calendarId = calendarId;
+    }
+
+    public UUID getCalendarId() {
+        return calendarId;
     }
 
     public UUID getId() {
