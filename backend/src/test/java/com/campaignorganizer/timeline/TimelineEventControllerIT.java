@@ -1,7 +1,9 @@
 package com.campaignorganizer.timeline;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,6 +84,35 @@ class TimelineEventControllerIT extends AbstractIntegrationTest {
                         .content("{\"title\":\"War begins\",\"year\":1000,\"articleId\":\"" + articleId + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.articleId").value(articleId));
+    }
+
+    @Test
+    void updatesAndDeletesEvent() throws Exception {
+        setup();
+        String created = mockMvc.perform(post("/api/worlds/{w}/timelines/{t}/events", worldId, timelineId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Draft\",\"year\":100}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String eventId = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(put("/api/worlds/{w}/timelines/{t}/events/{e}", worldId, timelineId, eventId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Final\",\"year\":200,\"month\":2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Final"))
+                .andExpect(jsonPath("$.year").value(200))
+                .andExpect(jsonPath("$.month").value(2));
+
+        mockMvc.perform(delete("/api/worlds/{w}/timelines/{t}/events/{e}", worldId, timelineId, eventId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/worlds/{w}/timelines/{t}/events", worldId, timelineId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test

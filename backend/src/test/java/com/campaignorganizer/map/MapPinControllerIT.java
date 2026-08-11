@@ -3,6 +3,7 @@ package com.campaignorganizer.map;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -59,6 +60,27 @@ class MapPinControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void updatesPin() throws Exception {
+        setup();
+        String pin = mockMvc.perform(post("/api/worlds/{w}/maps/{m}/pins", worldId, mapId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\":0.1,\"y\":0.1,\"label\":\"old\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String pinId = JsonPath.read(pin, "$.id");
+
+        mockMvc.perform(put("/api/worlds/{w}/maps/{m}/pins/{p}", worldId, mapId, pinId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\":0.7,\"y\":0.8,\"label\":\"new\",\"layer\":\"ruins\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.x").value(0.7))
+                .andExpect(jsonPath("$.label").value("new"))
+                .andExpect(jsonPath("$.layer").value("ruins"));
     }
 
     @Test

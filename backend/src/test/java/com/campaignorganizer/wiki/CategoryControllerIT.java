@@ -3,6 +3,7 @@ package com.campaignorganizer.wiki;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -43,6 +44,32 @@ class CategoryControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(delete("/api/worlds/{w}/categories/{c}", worldId, rootId)
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void updatesCategoryAndRejectsSelfParent() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String cat = mockMvc.perform(post("/api/worlds/{w}/categories", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Places\"}"))
+                .andReturn().getResponse().getContentAsString();
+        String catId = JsonPath.read(cat, "$.id");
+
+        mockMvc.perform(put("/api/worlds/{w}/categories/{c}", worldId, catId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Locations\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Locations"));
+
+        // A category cannot be its own parent.
+        mockMvc.perform(put("/api/worlds/{w}/categories/{c}", worldId, catId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Locations\",\"parentId\":\"" + catId + "\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
