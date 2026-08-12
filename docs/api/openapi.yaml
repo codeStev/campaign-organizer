@@ -1107,6 +1107,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/character-sheets:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [sheets]
+      summary: List a world's character sheets
+      operationId: listCharacterSheets
+      responses:
+        '200':
+          description: Character sheets in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterSheet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [sheets]
+      summary: Create a character sheet
+      operationId: createCharacterSheet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterSheetRequest'
+      responses:
+        '201':
+          description: Sheet created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterSheet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/character-sheets/{sheetId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/SheetId'
+    get:
+      tags: [sheets]
+      summary: Get a character sheet
+      operationId: getCharacterSheet
+      responses:
+        '200':
+          description: The sheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterSheet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [sheets]
+      summary: Update a character sheet
+      operationId: updateCharacterSheet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterSheetRequest'
+      responses:
+        '200':
+          description: Sheet updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterSheet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a character sheet
+      operationId: deleteCharacterSheet
+      responses:
+        '204':
+          description: Sheet deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/arcs:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1561,6 +1659,14 @@ components:
       schema:
         type: string
         format: uuid
+    SheetId:
+      name: sheetId
+      in: path
+      required: true
+      description: Identifier of the character sheet.
+      schema:
+        type: string
+        format: uuid
     ArcId:
       name: arcId
       in: path
@@ -1716,6 +1822,54 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SheetSection'
+
+    CharacterSheetRequest:
+      type: object
+      required: [name, templateId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        templateId:
+          type: string
+          format: uuid
+        articleId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional linked article (the character's wiki page).
+        values:
+          type: object
+          additionalProperties: true
+          description: Field values keyed by the template's field keys.
+
+    CharacterSheet:
+      type: object
+      required: [id, worldId, templateId, name, values, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        templateId:
+          type: string
+          format: uuid
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        values:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     ArcStatus:
       type: string
