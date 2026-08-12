@@ -676,6 +676,14 @@ button:disabled {
 
 .dice-form input {
   flex: 1;
+  /* Allow the input to shrink so the Roll button stays inside the sidebar
+     instead of overflowing onto the sheet list. */
+  min-width: 0;
+}
+
+.dice-result {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
 }
 
 .dice-presets {
