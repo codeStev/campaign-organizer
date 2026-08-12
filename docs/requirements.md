@@ -61,6 +61,21 @@ non-functional). Each maps to a roadmap phase.
 - **FR-21 Revision history.** Track article edits over time.
 - **FR-22 Export.** Export a world/campaign to PDF/JSON.
 
+### Interoperability (later — non-core)
+These are explicitly **planned for later** and are **not core features**; they
+integrate the app with the tools the owner already uses.
+- **FR-23 Obsidian import/export.** Round-trip a world with an Obsidian vault
+  that follows the owner's conventions (frontmatter `type`, folders per category
+  like `Characters/`, `Locations/`, `Arcs/`, and `[[wiki-links]]`). Import maps
+  folders→categories and `type`→template; export writes the same structure back.
+  A one-off importer already exists at `scripts/seed-from-obsidian.mjs` and is the
+  seed for this feature. Depends on: articles/categories (FR-3, FR-4),
+  auto-linking (FR-5).
+- **FR-24 Foundry VTT journal export.** Export article/journal content as
+  Foundry VTT–compatible Journal Entries (e.g. an importable JSON / world-adventure
+  package), so prepared lore can be pushed into a Foundry game. Depends on:
+  articles (FR-3); relates to export (FR-22).
+
 ---
 
 ## 2. Non-functional requirements
@@ -100,3 +115,4 @@ multi-user collaboration. Rationale in ADR-0005.
 | 3 | GM campaign manager | FR-12 … FR-15 |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
+| Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
