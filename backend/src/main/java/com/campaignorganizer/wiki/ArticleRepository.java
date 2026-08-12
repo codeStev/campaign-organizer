@@ -32,14 +32,23 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
     }
 
     /**
-     * Ranked Postgres full-text search within a world (ADR-0017). Title matches
-     * outrank body matches via the A/B weighting on the generated tsvector.
+     * Fuzzy article search within a world (ADR-0022). Matches partial words via
+     * ILIKE and tolerates typos via trigram similarity, so "water" and
+     * "watredeep" both find "Waterdeep". Title substring matches rank first,
+     * then trigram closeness, then body matches.
      */
     @Query(value = """
-            SELECT * FROM articles
-            WHERE world_id = :worldId
-              AND search_vector @@ plainto_tsquery('english', :q)
-            ORDER BY ts_rank(search_vector, plainto_tsquery('english', :q)) DESC
+            SELECT * FROM articles a
+            WHERE a.world_id = :worldId
+              AND (
+                a.title ILIKE '%' || :q || '%'
+                OR a.body ILIKE '%' || :q || '%'
+                OR similarity(a.title, :q) > 0.15
+              )
+            ORDER BY
+              CASE WHEN a.title ILIKE '%' || :q || '%' THEN 0 ELSE 1 END,
+              similarity(a.title, :q) DESC,
+              a.updated_at DESC
             """, nativeQuery = true)
     List<Article> search(@Param("worldId") UUID worldId, @Param("q") String q);
 }
