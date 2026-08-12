@@ -42,6 +42,8 @@ tags:
     description: Directed or undirected links between articles (relationship webs).
   - name: campaigns
     description: Gamemaster campaigns and their play sessions.
+  - name: arcs
+    description: Story arcs and their ordered beats within a campaign.
 
 paths:
   /auth/login:
@@ -988,6 +990,178 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/arcs:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [arcs]
+      summary: List a campaign's arcs (ordered)
+      operationId: listArcs
+      responses:
+        '200':
+          description: Arcs ordered by position.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Arc'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [arcs]
+      summary: Create an arc
+      operationId: createArc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArcRequest'
+      responses:
+        '201':
+          description: Arc created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/arcs/{arcId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/ArcId'
+    put:
+      tags: [arcs]
+      summary: Update an arc
+      operationId: updateArc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArcRequest'
+      responses:
+        '200':
+          description: Arc updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [arcs]
+      summary: Delete an arc (and its beats)
+      operationId: deleteArc
+      responses:
+        '204':
+          description: Arc deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/arcs/{arcId}/beats:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/ArcId'
+    get:
+      tags: [arcs]
+      summary: List an arc's beats (ordered)
+      operationId: listBeats
+      responses:
+        '200':
+          description: Beats ordered by position.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Beat'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [arcs]
+      summary: Add a beat to an arc
+      operationId: createBeat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatRequest'
+      responses:
+        '201':
+          description: Beat created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Beat'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/arcs/{arcId}/beats/{beatId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/ArcId'
+      - $ref: '#/components/parameters/BeatId'
+    put:
+      tags: [arcs]
+      summary: Update a beat
+      operationId: updateBeat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatRequest'
+      responses:
+        '200':
+          description: Beat updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Beat'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [arcs]
+      summary: Delete a beat
+      operationId: deleteBeat
+      responses:
+        '204':
+          description: Beat deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/categories:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1262,6 +1436,22 @@ components:
       schema:
         type: string
         format: uuid
+    ArcId:
+      name: arcId
+      in: path
+      required: true
+      description: Identifier of the arc.
+      schema:
+        type: string
+        format: uuid
+    BeatId:
+      name: beatId
+      in: path
+      required: true
+      description: Identifier of the beat.
+      schema:
+        type: string
+        format: uuid
     TimelineId:
       name: timelineId
       in: path
@@ -1316,6 +1506,108 @@ components:
             $ref: '#/components/schemas/ProblemDetail'
 
   schemas:
+    ArcStatus:
+      type: string
+      enum: [PLANNED, ACTIVE, COMPLETED, ABANDONED]
+
+    ArcRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          maxLength: 5000
+        status:
+          $ref: '#/components/schemas/ArcStatus'
+        position:
+          type: [integer, "null"]
+          description: Ordering index within the campaign.
+
+    Arc:
+      type: object
+      required: [id, campaignId, title, status, position, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        status:
+          $ref: '#/components/schemas/ArcStatus'
+        position:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BeatRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: [string, "null"]
+          maxLength: 20000
+        done:
+          type: boolean
+          default: false
+        articleId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional linked article (NPC, location, …).
+        sessionId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional session where this beat occurred.
+        position:
+          type: [integer, "null"]
+
+    Beat:
+      type: object
+      required: [id, arcId, title, done, position, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        arcId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: [string, "null"]
+        done:
+          type: boolean
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        sessionId:
+          type: [string, "null"]
+          format: uuid
+        position:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     CampaignRequest:
       type: object
       required: [name]
