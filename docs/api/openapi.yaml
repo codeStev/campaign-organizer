@@ -1457,6 +1457,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/character-sheets/{sheetId}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/SheetId'
+    get:
+      tags: [sheets]
+      summary: Export a character sheet as a filled fillable PDF (D&D 5e only)
+      operationId: exportCharacterSheetPdf
+      responses:
+        '200':
+          description: The filled PDF (still fillable).
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/arcs:
     parameters:
       - $ref: '#/components/parameters/WorldId'
