@@ -656,3 +656,128 @@ button:disabled {
   flex: 1;
   min-width: 8rem;
 }
+
+/* Character sheets & dice */
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.dice-widget {
+  gap: 0.4rem;
+}
+
+.dice-form {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.dice-form input {
+  flex: 1;
+}
+
+.dice-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.dice-result {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-top: 1px solid #2c2838;
+  padding-top: 0.4rem;
+}
+
+.dice-total {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sheets-panel {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.sheets-list-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.sheet-detail {
+  min-width: 0;
+}
+
+.sheet-head {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sheet-head .title-input {
+  flex: 1;
+}
+
+.sheet-article {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sheet-section {
+  border: 1px solid #2c2838;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.sheet-section legend {
+  color: var(--accent);
+  font-weight: 600;
+  padding: 0 0.35rem;
+}
+
+.sheet-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  color: #9a93ad;
+}
+
+.sheet-field.field-textarea {
+  grid-column: 1 / -1;
+}
+
+.sheet-field.field-boolean {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 680px) {
+  .sheets-panel {
+    grid-template-columns: 1fr;
+  }
+}
