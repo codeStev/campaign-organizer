@@ -50,6 +50,8 @@ tags:
     description: Stateless dice roller.
   - name: statblocks
     description: Reusable NPC/monster statblocks.
+  - name: export
+    description: Export a world as a JSON bundle.
 
 paths:
   /auth/login:
@@ -1129,6 +1131,31 @@ paths:
       responses:
         '204':
           description: Template deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/export:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [export]
+      summary: Export the whole world as a JSON bundle (downloadable)
+      operationId: exportWorld
+      responses:
+        '200':
+          description: A self-describing JSON bundle of every entity in the world.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: >
+                  Keyed collections (world, articles, categories, maps, mapPins,
+                  timelines, timelineEvents, calendars, calendarMonths,
+                  relationships, campaigns, sessions, arcs, beats, sheetTemplates,
+                  characterSheets, statblocks) plus exportVersion/exportedAt.
+                additionalProperties: true
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
