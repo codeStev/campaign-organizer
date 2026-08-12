@@ -83,6 +83,29 @@ class ArticleControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void fuzzySearchMatchesPartialWordsAndTypos() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        createArticle(auth, worldId, "{\"title\":\"Waterdeep\"}");
+        createArticle(auth, worldId, "{\"title\":\"Ironhold\"}");
+
+        // Partial word (the old full-text search returned nothing here).
+        mockMvc.perform(get("/api/worlds/{w}/articles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .param("q", "water"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Waterdeep"));
+
+        // Typo tolerance via trigram similarity.
+        mockMvc.perform(get("/api/worlds/{w}/articles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .param("q", "watredeep"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Waterdeep"));
+    }
+
+    @Test
     void updateAndDelete() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
