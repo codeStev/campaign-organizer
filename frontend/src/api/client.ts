@@ -677,3 +677,22 @@ export const diceApi = {
   roll: (expression: string) =>
     request<DiceRollResult>('/dice/roll', { method: 'POST', body: JSON.stringify({ expression }) }),
 };
+
+export interface ArticleRevision {
+  id: string;
+  articleId: string;
+  title: string;
+  slug: string;
+  template: ArticleTemplate;
+  body?: string | null;
+  createdAt: string;
+}
+
+export function articleRevisionsApi(worldId: string, articleId: string) {
+  const base = `/worlds/${worldId}/articles/${articleId}/revisions`;
+  return {
+    list: () => request<ArticleRevision[]>(base),
+    restore: (revisionId: string) =>
+      request<Article>(`${base}/${revisionId}/restore`, { method: 'POST' }),
+  };
+}

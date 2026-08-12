@@ -1,7 +1,9 @@
 import { FormEvent, MouseEvent, useCallback, useEffect, useState } from 'react';
 import {
   articlesApi,
+  articleRevisionsApi,
   ArticleSummary,
+  ArticleRevision,
   ArticleTemplate,
   ArticleTemplateInfo,
   ARTICLE_TEMPLATES,
@@ -57,6 +59,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [mode, setMode] = useState<'read' | 'edit'>('read');
   // Active article-type filters; empty set means no filtering (show all).
   const [typeFilter, setTypeFilter] = useState<Set<ArticleTemplate>>(new Set());
+  // Revision history for the open article (null = panel hidden).
+  const [revisions, setRevisions] = useState<ArticleRevision[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const visibleArticles = articles.filter(
@@ -130,6 +134,38 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       });
       setPreviewHtml(article.bodyHtml ?? '');
       setMode('read');
+      setRevisions(null);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function toggleHistory() {
+    if (revisions !== null) {
+      setRevisions(null);
+      return;
+    }
+    if (!draft.id) return;
+    try {
+      setRevisions(await articleRevisionsApi(worldId, draft.id).list());
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function restoreRevision(revisionId: string) {
+    if (!draft.id) return;
+    try {
+      const restored = await articleRevisionsApi(worldId, draft.id).restore(revisionId);
+      setDraft({
+        id: restored.id,
+        title: restored.title,
+        template: restored.template,
+        body: restored.body ?? '',
+      });
+      setPreviewHtml(restored.bodyHtml ?? '');
+      setRevisions(null);
+      await refresh(query);
     } catch (err) {
       handleError(err);
     }
@@ -367,11 +403,32 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   <button type="button" onClick={() => setMode('edit')}>
                     Edit
                   </button>
+                  <button type="button" className="link-button" onClick={toggleHistory}>
+                    History
+                  </button>
                   <button type="button" className="link-button danger" onClick={handleDelete}>
                     Delete
                   </button>
                 </div>
               </div>
+
+              {revisions !== null && (
+                <div className="revisions card">
+                  <strong className="muted">Revision history</strong>
+                  {revisions.length === 0 && <p className="muted">No prior versions yet.</p>}
+                  <ul className="revision-list">
+                    {revisions.map((r) => (
+                      <li key={r.id} className="revision-item">
+                        <span className="muted">{new Date(r.createdAt).toLocaleString()}</span>
+                        <button className="link-button" onClick={() => restoreRevision(r.id)}>
+                          Restore
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* eslint-disable-next-line react/no-danger */}
               <div
                 className="preview-body"
