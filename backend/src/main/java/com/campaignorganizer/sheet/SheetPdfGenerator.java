@@ -1,14 +1,17 @@
 package com.campaignorganizer.sheet;
 
+import com.campaignorganizer.sheet.SheetSchema.FieldType;
 import com.campaignorganizer.sheet.SheetSchema.SheetField;
 import com.campaignorganizer.sheet.SheetSchema.SheetSection;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -26,8 +29,9 @@ import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
 import org.springframework.stereotype.Service;
 
 /**
- * Builds a fillable AcroForm PDF from an arbitrary sheet template (ADR-0029),
- * used for systems without a bundled official sheet. The output stays fillable.
+ * Builds a fillable AcroForm PDF from an arbitrary sheet template (ADR-0029,
+ * ADR-0030). Fields pack into rows by their width (side by side); CIRCLES render
+ * as a row of checkboxes. The output stays fillable.
  */
 @Service
 public class SheetPdfGenerator {
@@ -36,7 +40,10 @@ public class SheetPdfGenerator {
     private static final float LABEL_SIZE = 9;
     private static final float FIELD_H = 16;
     private static final float TEXTAREA_H = 54;
-    private static final float LINE_GAP = 6;
+    private static final float CIRCLE = 12;
+    private static final float CIRCLE_GAP = 4;
+    private static final float COL_GAP = 10;
+    private static final float ROW_GAP = 8;
 
     private final PDFont font = new PDType1Font(FontName.HELVETICA);
     private final PDFont bold = new PDType1Font(FontName.HELVETICA_BOLD);
@@ -54,10 +61,23 @@ public class SheetPdfGenerator {
             Layout layout = new Layout(doc, form);
             layout.title(title == null ? "Character Sheet" : title);
             Set<String> usedKeys = new HashSet<>();
+
             for (SheetSection section : sections == null ? List.<SheetSection>of() : sections) {
                 layout.heading(section.title());
-                for (SheetField field : section.fields() == null ? List.<SheetField>of() : field(section)) {
-                    layout.field(field, uniqueKey(field.key(), usedKeys), v.get(field.key()));
+                List<SheetField> row = new ArrayList<>();
+                int usedCols = 0;
+                for (SheetField f : section.fields() == null ? List.<SheetField>of() : section.fields()) {
+                    int span = spanOf(f.width());
+                    if (usedCols + span > 12 && !row.isEmpty()) {
+                        layout.row(row, v, usedKeys);
+                        row.clear();
+                        usedCols = 0;
+                    }
+                    row.add(f);
+                    usedCols += span;
+                }
+                if (!row.isEmpty()) {
+                    layout.row(row, v, usedKeys);
                 }
             }
             layout.close();
@@ -70,8 +90,20 @@ public class SheetPdfGenerator {
         }
     }
 
-    private static List<SheetField> field(SheetSection section) {
-        return section.fields();
+    private static int spanOf(String width) {
+        if (width == null) {
+            return 12;
+        }
+        return switch (width.toUpperCase()) {
+            case "QUARTER" -> 3;
+            case "THIRD" -> 4;
+            case "HALF" -> 6;
+            default -> 12;
+        };
+    }
+
+    private static float widgetHeight(SheetField f) {
+        return f.type() == FieldType.TEXTAREA ? TEXTAREA_H : FIELD_H;
     }
 
     private static String uniqueKey(String key, Set<String> used) {
@@ -84,7 +116,7 @@ public class SheetPdfGenerator {
         return candidate;
     }
 
-    /** Cursor-based single-column layout that paginates as it fills the page. */
+    /** Cursor-based layout that renders one row of side-by-side cells at a time. */
     private final class Layout {
         private final PDDocument doc;
         private final PDAcroForm form;
@@ -108,45 +140,60 @@ public class SheetPdfGenerator {
             y = page.getMediaBox().getHeight() - MARGIN;
         }
 
-        private void ensure(float needed) throws IOException {
-            if (y - needed < MARGIN) {
-                newPage();
-            }
-        }
-
         void title(String text) throws IOException {
             drawText(text, bold, 16, MARGIN, y);
             y -= 26;
         }
 
         void heading(String text) throws IOException {
-            ensure(24);
+            if (y - 24 < MARGIN) {
+                newPage();
+            }
             y -= 6;
             drawText(text == null ? "" : text, bold, 12, MARGIN, y);
-            float width = contentWidth();
             cs.moveTo(MARGIN, y - 4);
-            cs.lineTo(MARGIN + width, y - 4);
+            cs.lineTo(MARGIN + contentWidth(), y - 4);
             cs.stroke();
             y -= 18;
         }
 
-        void field(SheetField f, String key, Object value) throws IOException {
-            boolean area = f.type() == SheetSchema.FieldType.TEXTAREA;
-            boolean check = f.type() == SheetSchema.FieldType.BOOLEAN;
-            float boxH = area ? TEXTAREA_H : FIELD_H;
-            ensure(LABEL_SIZE + 2 + boxH + LINE_GAP);
-
-            drawText(f.label() == null ? key : f.label(), font, LABEL_SIZE, MARGIN, y);
-            y -= (LABEL_SIZE + 3);
-
-            float width = check ? FIELD_H : contentWidth();
-            PDRectangle rect = new PDRectangle(MARGIN, y - boxH, width, boxH);
-            if (check) {
-                addCheckbox(key, rect, truthy(value));
-            } else {
-                addTextField(key, rect, str(value), area);
+        void row(List<SheetField> fields, Map<String, Object> values, Set<String> usedKeys) throws IOException {
+            float labelBand = LABEL_SIZE + 3;
+            float maxWidget = 0;
+            for (SheetField f : fields) {
+                maxWidget = Math.max(maxWidget, widgetHeight(f));
             }
-            y -= (boxH + LINE_GAP);
+            float rowHeight = labelBand + maxWidget;
+            if (y - rowHeight < MARGIN) {
+                newPage();
+            }
+            float rowTop = y;
+            float content = contentWidth();
+            int usedCols = 0;
+            for (SheetField f : fields) {
+                int span = spanOf(f.width());
+                float cellX = MARGIN + (usedCols / 12f) * content;
+                float cellW = (span / 12f) * content - COL_GAP;
+                String key = uniqueKey(f.key(), usedKeys);
+
+                drawText(f.label() == null ? key : f.label(), font, LABEL_SIZE, cellX, rowTop);
+                float widgetTop = rowTop - labelBand;
+                renderWidget(f, key, cellX, widgetTop, cellW, values.get(f.key()));
+                usedCols += span;
+            }
+            y = rowTop - rowHeight - ROW_GAP;
+        }
+
+        private void renderWidget(SheetField f, String key, float x, float top, float w, Object value)
+                throws IOException {
+            switch (f.type()) {
+                case BOOLEAN -> addCheckbox(key, new PDRectangle(x, top - FIELD_H, FIELD_H, FIELD_H),
+                        truthy(value));
+                case CIRCLES -> addCircles(key, x, top, count(f), filled(value));
+                case TEXTAREA -> addTextField(key, new PDRectangle(x, top - TEXTAREA_H, w, TEXTAREA_H),
+                        str(value), true);
+                default -> addTextField(key, new PDRectangle(x, top - FIELD_H, w, FIELD_H), str(value), false);
+            }
         }
 
         private void addTextField(String key, PDRectangle rect, String value, boolean multiline)
@@ -157,7 +204,12 @@ public class SheetPdfGenerator {
             if (multiline) {
                 field.setMultiline(true);
             }
-            attachWidget(field, rect);
+            PDAnnotationWidget widget = field.getWidgets().get(0);
+            widget.setRectangle(rect);
+            widget.setPage(page);
+            widget.setPrinted(true);
+            widget.setAppearanceCharacteristics(new PDAppearanceCharacteristicsDictionary(new COSDictionary()));
+            page.getAnnotations().add(widget);
             form.getFields().add(field);
             if (value != null && !value.isBlank()) {
                 field.setValue(value);
@@ -170,10 +222,8 @@ public class SheetPdfGenerator {
             PDAnnotationWidget widget = box.getWidgets().get(0);
             widget.setRectangle(rect);
             widget.setPage(page);
-            PDAppearanceCharacteristicsDictionary appearance =
-                    new PDAppearanceCharacteristicsDictionary(new org.apache.pdfbox.cos.COSDictionary());
-            widget.setAppearanceCharacteristics(appearance);
             widget.setPrinted(true);
+            widget.setAppearanceCharacteristics(new PDAppearanceCharacteristicsDictionary(new COSDictionary()));
             page.getAnnotations().add(widget);
             form.getFields().add(box);
             if (checked) {
@@ -183,15 +233,13 @@ public class SheetPdfGenerator {
             }
         }
 
-        private void attachWidget(PDTextField field, PDRectangle rect) throws IOException {
-            PDAnnotationWidget widget = field.getWidgets().get(0);
-            widget.setRectangle(rect);
-            widget.setPage(page);
-            widget.setPrinted(true);
-            // Light border so the field is visible.
-            var border = new PDAppearanceCharacteristicsDictionary(new org.apache.pdfbox.cos.COSDictionary());
-            widget.setAppearanceCharacteristics(border);
-            page.getAnnotations().add(widget);
+        /** A row of {@code count} checkbox pips; the first {@code filled} are checked. */
+        private void addCircles(String key, float x, float top, int count, int filled) throws IOException {
+            for (int i = 0; i < count; i++) {
+                float cx = x + i * (CIRCLE + CIRCLE_GAP);
+                addCheckbox(key + "_" + (i + 1),
+                        new PDRectangle(cx, top - CIRCLE, CIRCLE, CIRCLE), i < filled);
+            }
         }
 
         private void drawText(String text, PDFont f, float size, float x, float yy) throws IOException {
@@ -210,6 +258,21 @@ public class SheetPdfGenerator {
             if (cs != null) {
                 cs.close();
             }
+        }
+    }
+
+    private static int count(SheetField f) {
+        return f.count() == null || f.count() < 1 ? 3 : Math.min(f.count(), 20);
+    }
+
+    private static int filled(Object value) {
+        if (value instanceof Number n) {
+            return Math.max(0, n.intValue());
+        }
+        try {
+            return value == null ? 0 : Math.max(0, Integer.parseInt(value.toString().trim()));
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 
