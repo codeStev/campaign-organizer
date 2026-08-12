@@ -46,8 +46,10 @@ non-functional). Each maps to a roadmap phase.
 - **FR-12 Campaigns.** Group sessions and notes under a campaign tied to a world.
 - **FR-13 Sessions.** Record sessions with notes and links to NPCs/locations.
 - **FR-14 Story arcs.** Track arcs/beats so plot threads are not lost.
-- **FR-15 GM-only content.** Mark articles/sections as hidden ("GM-only") to
-  toggle spoilers at the table. (Replaces World Anvil subscriber groups.)
+- **FR-15 GM-only content.** ~~Mark articles/sections as hidden ("GM-only") to
+  toggle spoilers at the table.~~ **Dropped (2026-08-12):** the app is
+  single-user and players never access it, so there is no audience to hide
+  content from.
 
 ### Character sheets & dice (Phase 4)
 - **FR-16 Sheet engine.** Schema-driven character sheets supporting multiple
@@ -112,7 +114,7 @@ multi-user collaboration. Rationale in ADR-0005.
 | 0 | Foundations (auth, worlds, deploy, CI) | FR-1, FR-2, NFR-* |
 | 1 | Wiki MVP | FR-3 … FR-7 |
 | 2 | Maps & timelines | FR-8 … FR-11 |
-| 3 | GM campaign manager | FR-12 … FR-15 |
+| 3 | GM campaign manager | FR-12 … FR-14 (FR-15 dropped) |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
