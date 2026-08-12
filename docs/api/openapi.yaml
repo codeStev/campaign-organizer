@@ -1648,6 +1648,49 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/articles/{articleId}/revisions:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    get:
+      tags: [articles]
+      summary: List an article's revisions (newest first)
+      operationId: listArticleRevisions
+      responses:
+        '200':
+          description: Snapshots of the article's prior states.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArticleRevision'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}/revisions/{revisionId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+      - $ref: '#/components/parameters/RevisionId'
+    post:
+      tags: [articles]
+      summary: Restore the article to a prior revision
+      operationId: restoreArticleRevision
+      responses:
+        '200':
+          description: The article after restoring (current state snapshotted first).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/articles/{articleId}:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1733,6 +1776,14 @@ components:
       in: path
       required: true
       description: Identifier of the article.
+      schema:
+        type: string
+        format: uuid
+    RevisionId:
+      name: revisionId
+      in: path
+      required: true
+      description: Identifier of the article revision.
       schema:
         type: string
         format: uuid
@@ -2463,6 +2514,28 @@ components:
               description: >
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
+
+    ArticleRevision:
+      type: object
+      required: [id, articleId, title, slug, template, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        articleId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        template:
+          $ref: '#/components/schemas/ArticleTemplate'
+        body:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
 
     RelationshipRequest:
       type: object
