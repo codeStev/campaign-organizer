@@ -36,6 +36,7 @@ the old one.
 | [0027](0027-whiteboards-model.md) | Whiteboards model | Accepted |
 | [0028](0028-character-sheet-pdf-export.md) | Character sheet PDF export | Accepted |
 | [0029](0029-generated-sheet-pdf-and-builder.md) | Generated fillable PDFs + template builder | Accepted |
+| [0030](0030-visual-template-builder.md) | Field widths, circle trackers, drag-and-drop builder | Accepted |
 
 ## Template
 
