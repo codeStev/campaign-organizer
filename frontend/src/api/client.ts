@@ -262,6 +262,36 @@ export function pinsApi(worldId: string, mapId: string) {
   };
 }
 
+export interface Relationship {
+  id: string;
+  worldId: string;
+  fromArticleId: string;
+  toArticleId: string;
+  label?: string | null;
+  directed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RelationshipRequest {
+  fromArticleId: string;
+  toArticleId: string;
+  label?: string | null;
+  directed?: boolean;
+}
+
+export function relationshipsApi(worldId: string) {
+  const base = `/worlds/${worldId}/relationships`;
+  return {
+    list: () => request<Relationship[]>(base),
+    create: (body: RelationshipRequest) =>
+      request<Relationship>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: RelationshipRequest) =>
+      request<Relationship>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 export interface CalendarMonthInput {
   name: string;
   days: number;
