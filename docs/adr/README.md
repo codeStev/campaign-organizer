@@ -31,6 +31,7 @@ the old one.
 | [0022](0022-fuzzy-search.md) | Fuzzy article search via trigrams (supersedes 0017 query) | Accepted |
 | [0023](0023-campaign-manager-model.md) | GM campaign manager model | Accepted |
 | [0024](0024-character-sheet-engine.md) | Schema-driven character sheet engine | Accepted |
+| [0025](0025-html-sanitization.md) | Sanitize article HTML on write | Accepted |
 
 ## Template
 
