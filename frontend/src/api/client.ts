@@ -546,13 +546,17 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
 
 // ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
 
-export type SheetFieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT';
+export type SheetFieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'CIRCLES';
+
+export type FieldWidth = 'FULL' | 'HALF' | 'THIRD' | 'QUARTER';
 
 export interface SheetField {
   key: string;
   label: string;
   type: SheetFieldType;
   options?: string[] | null;
+  width?: FieldWidth | null;
+  count?: number | null;
 }
 
 export interface SheetSection {
