@@ -349,3 +349,35 @@ button:disabled {
 .month-row input[type='number'] {
   width: 5rem;
 }
+
+/* Relationship graph */
+.rel-graph {
+  width: 100%;
+  height: auto;
+  background: #14121a;
+  border-radius: 8px;
+}
+
+.rel-node {
+  cursor: pointer;
+}
+
+.rel-node-label {
+  fill: #eae7f2;
+  font-size: 11px;
+}
+
+.rel-edge-label {
+  fill: #9a93ad;
+  font-size: 10px;
+}
+
+.rel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #2c2838;
+  border-radius: 6px;
+}
