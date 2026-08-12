@@ -56,10 +56,10 @@ public final class BuiltinSheetTemplates {
     }
 
     private static SheetField field(String key, String label, FieldType type) {
-        return new SheetField(key, label, type, null);
+        return new SheetField(key, label, type, null, null, null);
     }
 
     private static SheetField select(String key, String label, List<String> options) {
-        return new SheetField(key, label, FieldType.SELECT, options);
+        return new SheetField(key, label, FieldType.SELECT, options, null, null);
     }
 }
