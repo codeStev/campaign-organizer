@@ -723,3 +723,49 @@ export async function exportWorld(worldId: string): Promise<void> {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// ---- Whiteboards (mirrors docs/api/openapi.yaml) ----
+
+export interface WhiteboardNode {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color?: string | null;
+}
+
+export interface WhiteboardEdge {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  label?: string | null;
+}
+
+export interface Whiteboard {
+  id: string;
+  worldId: string;
+  name: string;
+  nodes: WhiteboardNode[];
+  edges: WhiteboardEdge[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhiteboardRequest {
+  name: string;
+  nodes: WhiteboardNode[];
+  edges: WhiteboardEdge[];
+}
+
+export function whiteboardsApi(worldId: string) {
+  const base = `/worlds/${worldId}/whiteboards`;
+  return {
+    list: () => request<Whiteboard[]>(base),
+    get: (id: string) => request<Whiteboard>(`${base}/${id}`),
+    create: (body: WhiteboardRequest) =>
+      request<Whiteboard>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: WhiteboardRequest) =>
+      request<Whiteboard>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
