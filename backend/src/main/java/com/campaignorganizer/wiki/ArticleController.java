@@ -30,13 +30,15 @@ public class ArticleController {
     private final CategoryRepository categories;
     private final WorldRepository worlds;
     private final AutoLinker autoLinker;
+    private final HtmlSanitizer htmlSanitizer;
 
     public ArticleController(ArticleRepository articles, CategoryRepository categories,
-                             WorldRepository worlds, AutoLinker autoLinker) {
+                             WorldRepository worlds, AutoLinker autoLinker, HtmlSanitizer htmlSanitizer) {
         this.articles = articles;
         this.categories = categories;
         this.worlds = worlds;
         this.autoLinker = autoLinker;
+        this.htmlSanitizer = htmlSanitizer;
     }
 
     @GetMapping
@@ -68,7 +70,8 @@ public class ArticleController {
         ArticleTemplate template = request.template() == null ? ArticleTemplate.GENERIC : request.template();
         String slug = resolveSlugForCreate(worldId, request);
         Article saved = articles.save(new Article(
-                worldId, request.categoryId(), request.title(), slug, template, request.body()));
+                worldId, request.categoryId(), request.title(), slug, template,
+                htmlSanitizer.sanitize(request.body())));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/articles/" + saved.getId()))
                 .body(toResponse(saved));
@@ -81,7 +84,8 @@ public class ArticleController {
         validateCategory(worldId, request.categoryId());
         ArticleTemplate template = request.template() == null ? ArticleTemplate.GENERIC : request.template();
         String slug = resolveSlugForUpdate(worldId, request, article);
-        article.update(request.categoryId(), request.title(), slug, template, request.body());
+        article.update(request.categoryId(), request.title(), slug, template,
+                htmlSanitizer.sanitize(request.body()));
         return toResponse(articles.save(article));
     }
 
