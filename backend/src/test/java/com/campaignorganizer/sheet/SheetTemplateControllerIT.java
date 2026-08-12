@@ -61,6 +61,47 @@ class SheetTemplateControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void roundTripsWidthAndCirclesFields() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Homebrew\",\"sections\":[{\"title\":\"Core\",\"fields\":["
+                                + "{\"key\":\"str\",\"label\":\"STR\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
+                                + "{\"key\":\"dex\",\"label\":\"DEX\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
+                                + "{\"key\":\"wounds\",\"label\":\"Wounds\",\"type\":\"CIRCLES\",\"count\":5}]}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sections[0].fields[0].width").value("HALF"))
+                .andExpect(jsonPath("$.sections[0].fields[2].type").value("CIRCLES"))
+                .andExpect(jsonPath("$.sections[0].fields[2].count").value(5))
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(created, "$.id");
+
+        // Read back from the database.
+        mockMvc.perform(get("/api/worlds/{w}/sheet-templates/{t}", worldId, id)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sections[0].fields[1].width").value("HALF"))
+                .andExpect(jsonPath("$.sections[0].fields[2].count").value(5));
+    }
+
+    @Test
+    void acceptsLegacyFieldsWithoutWidthOrCount() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        // Fields without the new width/count properties must still deserialize.
+        mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Legacy\",\"sections\":[{\"title\":\"S\",\"fields\":["
+                                + "{\"key\":\"a\",\"label\":\"A\",\"type\":\"TEXT\"}]}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sections[0].fields[0].key").value("a"));
+    }
+
+    @Test
     void rejectsTemplateWithoutName() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
