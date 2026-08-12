@@ -3,8 +3,10 @@ import {
   sheetTemplatesApi,
   builtinSheetTemplatesApi,
   SheetTemplate,
+  SheetTemplateRequest,
   BuiltinSheetTemplate,
 } from '../api/client';
+import { TemplateBuilder } from '../components/TemplateBuilder';
 
 interface Props {
   worldId: string;
@@ -17,6 +19,9 @@ export function SheetTemplatesPanel({ worldId, templates, onChanged, onError }: 
   const api = sheetTemplatesApi(worldId);
   const [builtins, setBuiltins] = useState<BuiltinSheetTemplate[]>([]);
   const [choice, setChoice] = useState('');
+  // Which template is open in the builder: an existing one, 'new', or null.
+  const [editing, setEditing] = useState<SheetTemplate | null>(null);
+  const [building, setBuilding] = useState(false);
 
   useEffect(() => {
     builtinSheetTemplatesApi.list().then(setBuiltins).catch(onError);
@@ -34,11 +39,12 @@ export function SheetTemplatesPanel({ worldId, templates, onChanged, onError }: 
     }
   }
 
-  async function addBlank() {
-    const name = window.prompt('Template name?');
-    if (!name) return;
+  async function saveTemplate(body: SheetTemplateRequest) {
     try {
-      await api.create({ name, sections: [] });
+      if (editing) await api.update(editing.id, body);
+      else await api.create(body);
+      setBuilding(false);
+      setEditing(null);
       onChanged();
     } catch (err) {
       onError(err);
@@ -53,6 +59,19 @@ export function SheetTemplatesPanel({ worldId, templates, onChanged, onError }: 
     } catch (err) {
       onError(err);
     }
+  }
+
+  if (building) {
+    return (
+      <TemplateBuilder
+        initial={editing}
+        onSave={saveTemplate}
+        onCancel={() => {
+          setBuilding(false);
+          setEditing(null);
+        }}
+      />
+    );
   }
 
   return (
@@ -70,26 +89,37 @@ export function SheetTemplatesPanel({ worldId, templates, onChanged, onError }: 
         <button onClick={addFromBuiltin} disabled={!choice}>
           Add starter
         </button>
-        <button className="link-button" onClick={addBlank}>
-          Blank template
+        <button
+          onClick={() => {
+            setEditing(null);
+            setBuilding(true);
+          }}
+        >
+          Build new
         </button>
       </div>
 
       <ul className="article-list">
         {templates.map((t) => (
           <li key={t.id} className="rel-row">
-            <span>
+            <button
+              className="link-button template-open"
+              onClick={() => {
+                setEditing(t);
+                setBuilding(true);
+              }}
+            >
               <strong>{t.name}</strong>{' '}
               <small className="muted">
                 {t.system ?? 'custom'} · {t.sections.length} sections
               </small>
-            </span>
+            </button>
             <button className="link-button danger" onClick={() => remove(t)}>
               ✕
             </button>
           </li>
         ))}
-        {templates.length === 0 && <li className="muted">No templates yet. Add a starter above.</li>}
+        {templates.length === 0 && <li className="muted">No templates yet. Add a starter or build one.</li>}
       </ul>
     </div>
   );
