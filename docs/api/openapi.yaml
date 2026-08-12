@@ -40,6 +40,8 @@ tags:
     description: Custom fantasy calendars with named months.
   - name: relationships
     description: Directed or undirected links between articles (relationship webs).
+  - name: campaigns
+    description: Gamemaster campaigns and their play sessions.
 
 paths:
   /auth/login:
@@ -803,6 +805,189 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [campaigns]
+      summary: List a world's campaigns
+      operationId: listCampaigns
+      responses:
+        '200':
+          description: Campaigns in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [campaigns]
+      summary: Create a campaign
+      operationId: createCampaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+      responses:
+        '201':
+          description: Campaign created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      summary: Get a campaign
+      operationId: getCampaign
+      responses:
+        '200':
+          description: The campaign.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [campaigns]
+      summary: Update a campaign
+      operationId: updateCampaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+      responses:
+        '200':
+          description: Campaign updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [campaigns]
+      summary: Delete a campaign (and its sessions and arcs)
+      operationId: deleteCampaign
+      responses:
+        '204':
+          description: Campaign deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/sessions:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      summary: List a campaign's sessions (ordered)
+      operationId: listSessions
+      responses:
+        '200':
+          description: Sessions ordered by number then date.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [campaigns]
+      summary: Add a session to a campaign
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+      responses:
+        '201':
+          description: Session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    put:
+      tags: [campaigns]
+      summary: Update a session
+      operationId: updateSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+      responses:
+        '200':
+          description: Session updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [campaigns]
+      summary: Delete a session
+      operationId: deleteSession
+      responses:
+        '204':
+          description: Session deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/categories:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1061,6 +1246,22 @@ components:
       schema:
         type: string
         format: uuid
+    CampaignId:
+      name: campaignId
+      in: path
+      required: true
+      description: Identifier of the campaign.
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      description: Identifier of the session.
+      schema:
+        type: string
+        format: uuid
     TimelineId:
       name: timelineId
       in: path
@@ -1115,6 +1316,96 @@ components:
             $ref: '#/components/schemas/ProblemDetail'
 
   schemas:
+    CampaignRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          maxLength: 5000
+        notes:
+          type: [string, "null"]
+          maxLength: 20000
+          description: Free-text GM notes for the campaign.
+
+    Campaign:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: [string, "null"]
+        notes:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SessionRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sessionNumber:
+          type: [integer, "null"]
+          description: Ordering index within the campaign.
+        date:
+          type: [string, "null"]
+          format: date
+          description: Real-world date the session was played.
+        summary:
+          type: [string, "null"]
+          maxLength: 20000
+        notes:
+          type: [string, "null"]
+          maxLength: 20000
+          description: Private GM notes for the session.
+
+    Session:
+      type: object
+      required: [id, campaignId, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sessionNumber:
+          type: [integer, "null"]
+        date:
+          type: [string, "null"]
+          format: date
+        summary:
+          type: [string, "null"]
+        notes:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     LoginRequest:
       type: object
       required: [password]
