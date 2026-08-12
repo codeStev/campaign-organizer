@@ -32,6 +32,7 @@ the old one.
 | [0023](0023-campaign-manager-model.md) | GM campaign manager model | Accepted |
 | [0024](0024-character-sheet-engine.md) | Schema-driven character sheet engine | Accepted |
 | [0025](0025-html-sanitization.md) | Sanitize article HTML on write | Accepted |
+| [0026](0026-article-revision-history.md) | Article revision history | Accepted |
 
 ## Template
 
