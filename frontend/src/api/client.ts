@@ -413,3 +413,133 @@ export function mediaApi(worldId: string) {
     },
   };
 }
+
+// ---- GM campaign manager (mirrors docs/api/openapi.yaml) ----
+
+export interface Campaign {
+  id: string;
+  worldId: string;
+  name: string;
+  description?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignRequest {
+  name: string;
+  description?: string | null;
+  notes?: string | null;
+}
+
+export interface Session {
+  id: string;
+  campaignId: string;
+  title: string;
+  sessionNumber?: number | null;
+  date?: string | null;
+  summary?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SessionRequest {
+  title: string;
+  sessionNumber?: number | null;
+  date?: string | null;
+  summary?: string | null;
+  notes?: string | null;
+}
+
+export type ArcStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+export const ARC_STATUSES: ArcStatus[] = ['PLANNED', 'ACTIVE', 'COMPLETED', 'ABANDONED'];
+
+export interface Arc {
+  id: string;
+  campaignId: string;
+  title: string;
+  description?: string | null;
+  status: ArcStatus;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArcRequest {
+  title: string;
+  description?: string | null;
+  status?: ArcStatus;
+  position?: number | null;
+}
+
+export interface Beat {
+  id: string;
+  arcId: string;
+  title: string;
+  body?: string | null;
+  done: boolean;
+  articleId?: string | null;
+  sessionId?: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BeatRequest {
+  title: string;
+  body?: string | null;
+  done?: boolean;
+  articleId?: string | null;
+  sessionId?: string | null;
+  position?: number | null;
+}
+
+export function campaignsApi(worldId: string) {
+  const base = `/worlds/${worldId}/campaigns`;
+  return {
+    list: () => request<Campaign[]>(base),
+    get: (id: string) => request<Campaign>(`${base}/${id}`),
+    create: (body: CampaignRequest) =>
+      request<Campaign>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: CampaignRequest) =>
+      request<Campaign>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function sessionsApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions`;
+  return {
+    list: () => request<Session[]>(base),
+    create: (body: SessionRequest) =>
+      request<Session>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: SessionRequest) =>
+      request<Session>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function arcsApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/arcs`;
+  return {
+    list: () => request<Arc[]>(base),
+    create: (body: ArcRequest) =>
+      request<Arc>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: ArcRequest) =>
+      request<Arc>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function beatsApi(worldId: string, campaignId: string, arcId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/arcs/${arcId}/beats`;
+  return {
+    list: () => request<Beat[]>(base),
+    create: (body: BeatRequest) =>
+      request<Beat>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: BeatRequest) =>
+      request<Beat>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
