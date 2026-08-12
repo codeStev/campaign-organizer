@@ -157,6 +157,21 @@ class ArticleControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void sanitizesScriptFromBodyOnWrite() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = createArticle(auth, worldId,
+                "{\"title\":\"XSS\",\"body\":\"<p>ok</p><script>alert('x')</script>\"}");
+        String rawBody = JsonPath.read(created, "$.body");
+        String bodyHtml = JsonPath.read(created, "$.bodyHtml");
+
+        org.assertj.core.api.Assertions.assertThat(rawBody).contains("<p>ok</p>");
+        org.assertj.core.api.Assertions.assertThat(rawBody).doesNotContainIgnoringCase("script");
+        org.assertj.core.api.Assertions.assertThat(bodyHtml).doesNotContainIgnoringCase("script");
+    }
+
+    @Test
     void resolvesWikiLinksInBodyHtml() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
