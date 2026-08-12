@@ -35,6 +35,7 @@ the old one.
 | [0026](0026-article-revision-history.md) | Article revision history | Accepted |
 | [0027](0027-whiteboards-model.md) | Whiteboards model | Accepted |
 | [0028](0028-character-sheet-pdf-export.md) | Character sheet PDF export | Accepted |
+| [0029](0029-generated-sheet-pdf-and-builder.md) | Generated fillable PDFs + template builder | Accepted |
 
 ## Template
 
