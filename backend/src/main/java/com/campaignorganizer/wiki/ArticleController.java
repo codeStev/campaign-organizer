@@ -31,14 +31,17 @@ public class ArticleController {
     private final WorldRepository worlds;
     private final AutoLinker autoLinker;
     private final HtmlSanitizer htmlSanitizer;
+    private final ArticleRevisionRepository revisions;
 
     public ArticleController(ArticleRepository articles, CategoryRepository categories,
-                             WorldRepository worlds, AutoLinker autoLinker, HtmlSanitizer htmlSanitizer) {
+                             WorldRepository worlds, AutoLinker autoLinker, HtmlSanitizer htmlSanitizer,
+                             ArticleRevisionRepository revisions) {
         this.articles = articles;
         this.categories = categories;
         this.worlds = worlds;
         this.autoLinker = autoLinker;
         this.htmlSanitizer = htmlSanitizer;
+        this.revisions = revisions;
     }
 
     @GetMapping
@@ -82,6 +85,8 @@ public class ArticleController {
                                   @Valid @RequestBody ArticleRequest request) {
         Article article = findOrThrow(worldId, articleId);
         validateCategory(worldId, request.categoryId());
+        // Snapshot the pre-update state so the change can be reviewed/undone (ADR-0026).
+        revisions.save(ArticleRevision.of(article));
         ArticleTemplate template = request.template() == null ? ArticleTemplate.GENERIC : request.template();
         String slug = resolveSlugForUpdate(worldId, request, article);
         article.update(request.categoryId(), request.title(), slug, template,
