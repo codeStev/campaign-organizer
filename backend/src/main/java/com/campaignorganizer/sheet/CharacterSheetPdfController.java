@@ -19,12 +19,14 @@ public class CharacterSheetPdfController {
     private final CharacterSheetRepository sheets;
     private final SheetTemplateRepository templates;
     private final CharacterSheetPdfService pdfService;
+    private final SheetPdfGenerator pdfGenerator;
 
     public CharacterSheetPdfController(CharacterSheetRepository sheets, SheetTemplateRepository templates,
-                                       CharacterSheetPdfService pdfService) {
+                                       CharacterSheetPdfService pdfService, SheetPdfGenerator pdfGenerator) {
         this.sheets = sheets;
         this.templates = templates;
         this.pdfService = pdfService;
+        this.pdfGenerator = pdfGenerator;
     }
 
     @GetMapping
@@ -35,12 +37,12 @@ public class CharacterSheetPdfController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Template not found"));
 
         String system = template.getSystem();
-        if (system == null || !pdfService.supports(system)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "No PDF export available for this sheet's system");
-        }
-
-        byte[] pdf = pdfService.fill(system, sheet.getName(), sheet.getValues());
+        // Use the polished bundled sheet when we have one; otherwise generate a
+        // fillable PDF from the template schema (ADR-0029).
+        byte[] pdf = (system != null && pdfService.supports(system))
+                ? pdfService.fill(system, sheet.getName(), sheet.getValues())
+                : pdfGenerator.generate(sheet.getName() + " — " + template.getName(),
+                        template.getSections(), sheet.getValues());
         String filename = "character-" + slug(sheet.getName()) + ".pdf";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
