@@ -104,4 +104,37 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
             assertThat(form.getField("alive")).isNotNull();
         }
     }
+
+    @Test
+    void rendersCirclesAsCheckboxRowFilledToValue() throws Exception {
+        auth = authHeader();
+        worldId = createWorld(auth);
+        String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Trackers\",\"system\":\"custom\",\"sections\":["
+                                + "{\"title\":\"State\",\"fields\":["
+                                + "{\"key\":\"str\",\"label\":\"STR\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
+                                + "{\"key\":\"dex\",\"label\":\"DEX\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
+                                + "{\"key\":\"wounds\",\"label\":\"Wounds\",\"type\":\"CIRCLES\",\"count\":5}]}]}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        String sheetId = sheet(templateId, "{\"str\":16,\"dex\":12,\"wounds\":3}");
+
+        byte[] pdf = mockMvc.perform(get("/api/worlds/{w}/character-sheets/{s}/pdf", worldId, sheetId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            PDAcroForm form = doc.getDocumentCatalog().getAcroForm();
+            // Five circle checkboxes; the first three are checked (wounds = 3).
+            assertThat(form.getField("wounds_1").getValueAsString()).isNotEqualTo("Off");
+            assertThat(form.getField("wounds_3").getValueAsString()).isNotEqualTo("Off");
+            assertThat(form.getField("wounds_4").getValueAsString()).isEqualTo("Off");
+            assertThat(form.getField("wounds_5").getValueAsString()).isEqualTo("Off");
+            // The two HALF-width ability fields both exist (side by side).
+            assertThat(form.getField("str").getValueAsString()).isEqualTo("16");
+            assertThat(form.getField("dex").getValueAsString()).isEqualTo("12");
+        }
+    }
 }
