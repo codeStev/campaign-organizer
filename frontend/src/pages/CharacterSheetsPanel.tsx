@@ -178,8 +178,8 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
               <button onClick={save} disabled={!draft.name}>
                 {draft.id ? 'Save sheet' : 'Create sheet'}
               </button>
-              {draft.id && template?.system === 'dnd5e' && (
-                <button className="link-button" onClick={exportPdf} title="Download filled D&D 5e PDF">
+              {draft.id && template && (
+                <button className="link-button" onClick={exportPdf} title="Download a filled fillable PDF">
                   ⭳ Export PDF
                 </button>
               )}

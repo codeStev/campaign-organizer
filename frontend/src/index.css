@@ -880,3 +880,55 @@ button:disabled {
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
+/* Sheet template builder */
+.template-builder {
+  gap: 0.75rem;
+}
+
+.builder-head {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.builder-head .title-input {
+  flex: 1;
+}
+
+.builder-section {
+  border: 1px solid #2c2838;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.builder-section legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.35rem;
+}
+
+.builder-section legend input {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.builder-field {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.builder-field .field-label-in {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.template-open {
+  text-align: left;
+  flex: 1;
+}
