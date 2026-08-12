@@ -46,6 +46,8 @@ tags:
     description: Story arcs and their ordered beats within a campaign.
   - name: sheets
     description: Schema-driven character sheet templates and character sheets.
+  - name: dice
+    description: Stateless dice roller.
 
 paths:
   /auth/login:
@@ -992,6 +994,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /dice/roll:
+    post:
+      tags: [dice]
+      summary: Roll a dice expression (e.g. 2d6+3, 2d20kh1)
+      operationId: rollDice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiceRollRequest'
+      responses:
+        '200':
+          description: The roll result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiceRollResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /sheet-templates/builtin:
     get:
       tags: [sheets]
@@ -1737,6 +1762,44 @@ components:
             $ref: '#/components/schemas/ProblemDetail'
 
   schemas:
+    DiceRollRequest:
+      type: object
+      required: [expression]
+      properties:
+        expression:
+          type: string
+          minLength: 1
+          maxLength: 200
+          examples: ["2d6+3"]
+
+    DieRoll:
+      type: object
+      required: [sides, value, kept]
+      properties:
+        sides:
+          type: integer
+        value:
+          type: integer
+        kept:
+          type: boolean
+          description: False for dice dropped by keep-highest/lowest.
+
+    DiceRollResult:
+      type: object
+      required: [expression, total, rolls, breakdown]
+      properties:
+        expression:
+          type: string
+        total:
+          type: integer
+        rolls:
+          type: array
+          items:
+            $ref: '#/components/schemas/DieRoll'
+        breakdown:
+          type: string
+          description: Human-readable summary, e.g. "2d6 [4, 5] + 3 = 12".
+
     SheetFieldType:
       type: string
       enum: [TEXT, TEXTAREA, NUMBER, BOOLEAN, SELECT]
