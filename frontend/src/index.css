@@ -948,14 +948,63 @@ button:disabled {
   gap: 0.4rem;
   align-items: center;
   flex-wrap: wrap;
+  background: #1d1a27;
+  border: 1px solid #2c2838;
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
 }
 
 .builder-field .field-label-in {
   flex: 1;
-  min-width: 8rem;
+  min-width: 6rem;
+}
+
+.builder-field .field-type {
+  font-size: 0.72rem;
+  min-width: 4rem;
+}
+
+.builder-field .circle-count {
+  width: 3.5rem;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #9a93ad;
+  padding: 0 0.2rem;
+  user-select: none;
 }
 
 .template-open {
   text-align: left;
   flex: 1;
+}
+
+/* Palette of draggable components */
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px dashed #3a3550;
+  border-radius: 8px;
+}
+
+.palette-chip {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: grab;
+  user-select: none;
+}
+
+.drop-hint {
+  font-size: 0.72rem;
+  text-align: center;
+  padding: 0.25rem;
+  border: 1px dashed #2c2838;
+  border-radius: 6px;
 }
