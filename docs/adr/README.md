@@ -33,6 +33,7 @@ the old one.
 | [0024](0024-character-sheet-engine.md) | Schema-driven character sheet engine | Accepted |
 | [0025](0025-html-sanitization.md) | Sanitize article HTML on write | Accepted |
 | [0026](0026-article-revision-history.md) | Article revision history | Accepted |
+| [0027](0027-whiteboards-model.md) | Whiteboards model | Accepted |
 
 ## Template
 
