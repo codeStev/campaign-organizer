@@ -51,7 +51,28 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [tab, setTab] = useState<
     'articles' | 'maps' | 'timelines' | 'calendars' | 'relationships'
   >('articles');
+  // Article panel mode: read (rendered, clickable links) vs edit (TipTap form).
+  const [mode, setMode] = useState<'read' | 'edit'>('read');
+  // Active article-type filters; empty set means no filtering (show all).
+  const [typeFilter, setTypeFilter] = useState<Set<ArticleTemplate>>(new Set());
   const [error, setError] = useState<string | null>(null);
+
+  const visibleArticles = articles.filter(
+    (a) => typeFilter.size === 0 || typeFilter.has(a.template),
+  );
+
+  function toggleType(t: ArticleTemplate) {
+    setTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  }
+
+  function templateLabel(t: ArticleTemplate) {
+    return t.charAt(0) + t.slice(1).toLowerCase();
+  }
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -106,6 +127,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         body: article.body ?? '',
       });
       setPreviewHtml(article.bodyHtml ?? '');
+      setMode('read');
     } catch (err) {
       handleError(err);
     }
@@ -135,6 +157,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         : await api.create(payload);
       setDraft({ id: saved.id, title: saved.title, template: saved.template, body: saved.body ?? '' });
       setPreviewHtml(saved.bodyHtml ?? '');
+      setMode('read');
       await refresh(query);
     } catch (err) {
       handleError(err);
@@ -217,12 +240,28 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
             onClick={() => {
               setDraft(EMPTY_DRAFT);
               setPreviewHtml('');
+              setMode('edit');
             }}
           >
             + New article
           </button>
+
+          <div className="type-filters">
+            {ARTICLE_TEMPLATES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={typeFilter.has(t) ? 'type-chip active' : 'type-chip'}
+                onClick={() => toggleType(t)}
+                title={`Filter by ${templateLabel(t)}`}
+              >
+                {templateLabel(t)}
+              </button>
+            ))}
+          </div>
+
           <ul className="article-list">
-            {articles.map((a) => (
+            {visibleArticles.map((a) => (
               <li key={a.id}>
                 <button
                   className={a.id === draft.id ? 'article-link active' : 'article-link'}
@@ -233,61 +272,96 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                 </button>
               </li>
             ))}
-            {articles.length === 0 && <li className="muted">No articles yet.</li>}
+            {visibleArticles.length === 0 && (
+              <li className="muted">
+                {articles.length === 0 ? 'No articles yet.' : 'No articles match the filter.'}
+              </li>
+            )}
           </ul>
         </aside>
 
         <div className="wiki-main">
-        <form className="wiki-editor card" onSubmit={handleSave}>
-          <input
-            className="title-input"
-            placeholder="Article title"
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            required
-          />
-          <select
-            value={draft.template}
-            onChange={(e) => selectTemplate(e.target.value as ArticleTemplate)}
-          >
-            {ARTICLE_TEMPLATES.map((t) => (
-              <option key={t} value={t}>
-                {t.charAt(0) + t.slice(1).toLowerCase()}
-              </option>
-            ))}
-          </select>
-          <RichTextEditor
-            value={draft.body}
-            onChange={(body) => setDraft({ ...draft, body })}
-            onUploadImage={async (file) => (await media.upload(file)).url}
-          />
-          <div className="editor-actions">
-            <button type="submit" disabled={draft.title.length === 0}>
-              {draft.id ? 'Save changes' : 'Create article'}
-            </button>
-            {draft.id && (
-              <button type="button" className="link-button danger" onClick={handleDelete}>
-                Delete
-              </button>
-            )}
-          </div>
-          <p className="muted hint">
-            Tip: link to another article with <code>[[Title]]</code> or{' '}
-            <code>[[Title|label]]</code>.
-          </p>
-        </form>
+          {mode === 'edit' ? (
+            <>
+              <form className="wiki-editor card" onSubmit={handleSave}>
+                <input
+                  className="title-input"
+                  placeholder="Article title"
+                  value={draft.title}
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                  required
+                />
+                <select
+                  value={draft.template}
+                  onChange={(e) => selectTemplate(e.target.value as ArticleTemplate)}
+                >
+                  {ARTICLE_TEMPLATES.map((t) => (
+                    <option key={t} value={t}>
+                      {templateLabel(t)}
+                    </option>
+                  ))}
+                </select>
+                <RichTextEditor
+                  value={draft.body}
+                  onChange={(body) => setDraft({ ...draft, body })}
+                  onUploadImage={async (file) => (await media.upload(file)).url}
+                />
+                <div className="editor-actions">
+                  <button type="submit" disabled={draft.title.length === 0}>
+                    {draft.id ? 'Save changes' : 'Create article'}
+                  </button>
+                  {draft.id && (
+                    <button type="button" className="link-button" onClick={() => setMode('read')}>
+                      Cancel
+                    </button>
+                  )}
+                  {draft.id && (
+                    <button type="button" className="link-button danger" onClick={handleDelete}>
+                      Delete
+                    </button>
+                  )}
+                </div>
+                <p className="muted hint">
+                  Tip: link to another article with <code>[[Title]]</code> or{' '}
+                  <code>[[Title|label]]</code>.
+                </p>
+              </form>
 
-        {previewHtml && (
-          <div className="card preview">
-            <h3 className="muted">Preview</h3>
-            {/* eslint-disable-next-line react/no-danger */}
-            <div
-              className="preview-body"
-              onClick={handlePreviewClick}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
-          </div>
-        )}
+              {previewHtml && (
+                <div className="card preview">
+                  <h3 className="muted">Preview</h3>
+                  {/* eslint-disable-next-line react/no-danger */}
+                  <div
+                    className="preview-body"
+                    onClick={handlePreviewClick}
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                </div>
+              )}
+            </>
+          ) : draft.id ? (
+            <article className="card article-read">
+              <div className="article-read-head">
+                <h2>{draft.title}</h2>
+                <div className="editor-actions">
+                  <button type="button" onClick={() => setMode('edit')}>
+                    Edit
+                  </button>
+                  <button type="button" className="link-button danger" onClick={handleDelete}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+              {/* eslint-disable-next-line react/no-danger */}
+              <div
+                className="preview-body"
+                onClick={handlePreviewClick}
+                dangerouslySetInnerHTML={{ __html: previewHtml || '<p class="muted">(empty)</p>' }}
+              />
+            </article>
+          ) : (
+            <p className="muted">Select an article from the list, or create a new one.</p>
+          )}
         </div>
       </div>
       )}

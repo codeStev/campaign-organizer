@@ -172,6 +172,47 @@ button:disabled {
   font-weight: 600;
 }
 
+/* Article-type filter chips */
+.type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.type-chip {
+  background: #1d1a27;
+  border: 1px solid #2c2838;
+  color: #9a93ad;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  align-self: auto;
+}
+
+.type-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Read view */
+.article-read-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.article-read-head h2 {
+  margin: 0;
+}
+
+.article-read .preview-body {
+  line-height: 1.6;
+}
+
 .editor {
   border: 1px solid #3a3550;
   border-radius: 6px;
