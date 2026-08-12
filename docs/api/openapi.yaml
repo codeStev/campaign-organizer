@@ -48,6 +48,8 @@ tags:
     description: Schema-driven character sheet templates and character sheets.
   - name: dice
     description: Stateless dice roller.
+  - name: statblocks
+    description: Reusable NPC/monster statblocks.
 
 paths:
   /auth/login:
@@ -1132,6 +1134,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/statblocks:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [statblocks]
+      summary: List a world's statblocks
+      operationId: listStatblocks
+      responses:
+        '200':
+          description: Statblocks in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Statblock'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [statblocks]
+      summary: Create a statblock
+      operationId: createStatblock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatblockRequest'
+      responses:
+        '201':
+          description: Statblock created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statblock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/statblocks/{statblockId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/StatblockId'
+    get:
+      tags: [statblocks]
+      summary: Get a statblock
+      operationId: getStatblock
+      responses:
+        '200':
+          description: The statblock.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statblock'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [statblocks]
+      summary: Update a statblock
+      operationId: updateStatblock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatblockRequest'
+      responses:
+        '200':
+          description: Statblock updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statblock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [statblocks]
+      summary: Delete a statblock
+      operationId: deleteStatblock
+      responses:
+        '204':
+          description: Statblock deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/character-sheets:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1692,6 +1792,14 @@ components:
       schema:
         type: string
         format: uuid
+    StatblockId:
+      name: statblockId
+      in: path
+      required: true
+      description: Identifier of the statblock.
+      schema:
+        type: string
+        format: uuid
     ArcId:
       name: arcId
       in: path
@@ -1885,6 +1993,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SheetSection'
+
+    StatblockRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        stats:
+          type: object
+          additionalProperties: true
+          description: Freeform key/value stats (e.g. AC, HP, speed).
+        notes:
+          type: [string, "null"]
+          maxLength: 20000
+
+    Statblock:
+      type: object
+      required: [id, worldId, name, stats, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        articleId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        stats:
+          type: object
+          additionalProperties: true
+        notes:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     CharacterSheetRequest:
       type: object
