@@ -38,6 +38,8 @@ tags:
     description: Timelines and their dated, article-linked events.
   - name: calendars
     description: Custom fantasy calendars with named months.
+  - name: relationships
+    description: Directed or undirected links between articles (relationship webs).
 
 paths:
   /auth/login:
@@ -440,6 +442,111 @@ paths:
       responses:
         '204':
           description: Pin deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/relationships:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [relationships]
+      summary: List all relationships in a world (the full graph)
+      operationId: listRelationships
+      responses:
+        '200':
+          description: All relationship edges in the world.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Relationship'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [relationships]
+      summary: Create a relationship between two articles
+      operationId: createRelationship
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RelationshipRequest'
+      responses:
+        '201':
+          description: Relationship created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/relationships/{relationshipId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/RelationshipId'
+    put:
+      tags: [relationships]
+      summary: Update a relationship
+      operationId: updateRelationship
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RelationshipRequest'
+      responses:
+        '200':
+          description: Relationship updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [relationships]
+      summary: Delete a relationship
+      operationId: deleteRelationship
+      responses:
+        '204':
+          description: Relationship deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}/relationships:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    get:
+      tags: [relationships]
+      summary: List relationships touching one article (its neighbourhood)
+      operationId: listArticleRelationships
+      responses:
+        '200':
+          description: Edges where the article is either endpoint.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Relationship'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -946,6 +1053,14 @@ components:
       schema:
         type: string
         format: uuid
+    RelationshipId:
+      name: relationshipId
+      in: path
+      required: true
+      description: Identifier of the relationship.
+      schema:
+        type: string
+        format: uuid
     TimelineId:
       name: timelineId
       in: path
@@ -1183,6 +1298,52 @@ components:
               description: >
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
+
+    RelationshipRequest:
+      type: object
+      required: [fromArticleId, toArticleId]
+      properties:
+        fromArticleId:
+          type: string
+          format: uuid
+        toArticleId:
+          type: string
+          format: uuid
+        label:
+          type: [string, "null"]
+          maxLength: 100
+          description: Free-text relationship, e.g. "parent of", "allied with".
+        directed:
+          type: boolean
+          default: true
+          description: When true, the link has a direction from -> to.
+
+    Relationship:
+      type: object
+      required: [id, worldId, fromArticleId, toArticleId, directed, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        fromArticleId:
+          type: string
+          format: uuid
+        toArticleId:
+          type: string
+          format: uuid
+        label:
+          type: [string, "null"]
+        directed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     CalendarMonthInput:
       type: object
