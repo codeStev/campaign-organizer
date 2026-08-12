@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   characterSheetsApi,
+  exportCharacterSheetPdf,
   CharacterSheet,
   SheetTemplate,
   ArticleSummary,
@@ -93,6 +94,15 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
     }
   }
 
+  async function exportPdf() {
+    if (!draft?.id) return;
+    try {
+      await exportCharacterSheetPdf(worldId, draft.id);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   return (
     <div className="sheets-panel">
       <div className="sheets-list-col">
@@ -168,6 +178,11 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
               <button onClick={save} disabled={!draft.name}>
                 {draft.id ? 'Save sheet' : 'Create sheet'}
               </button>
+              {draft.id && template?.system === 'dnd5e' && (
+                <button className="link-button" onClick={exportPdf} title="Download filled D&D 5e PDF">
+                  ⭳ Export PDF
+                </button>
+              )}
               {draft.id && (
                 <button className="link-button danger" onClick={remove}>
                   Delete
