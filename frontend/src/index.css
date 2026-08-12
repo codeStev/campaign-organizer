@@ -805,3 +805,7 @@ button:disabled {
   border: 1px solid #2c2838;
   border-radius: 6px;
 }
+
+.export-btn {
+  white-space: nowrap;
+}

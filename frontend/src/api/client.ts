@@ -696,3 +696,30 @@ export function articleRevisionsApi(worldId: string, articleId: string) {
       request<Article>(`${base}/${revisionId}/restore`, { method: 'POST' }),
   };
 }
+
+/** Downloads the world's JSON export bundle via the browser. */
+export async function exportWorld(worldId: string): Promise<void> {
+  const token = getToken();
+  const response = await fetch(`/api/worlds/${worldId}/export`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (response.status === 401) {
+    clearToken();
+    throw new ApiError(401, 'Not authenticated');
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeProblemDetail(response));
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : `world-${worldId}.json`;
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

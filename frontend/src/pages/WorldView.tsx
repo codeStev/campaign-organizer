@@ -2,6 +2,7 @@ import { FormEvent, MouseEvent, useCallback, useEffect, useState } from 'react';
 import {
   articlesApi,
   articleRevisionsApi,
+  exportWorld,
   ArticleSummary,
   ArticleRevision,
   ArticleTemplate,
@@ -214,6 +215,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     }
   }
 
+  async function handleExport() {
+    try {
+      await exportWorld(worldId);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   return (
     <section className="world-view">
       <div className="world-view-bar">
@@ -221,6 +230,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           ← Worlds
         </button>
         <h2>{worldName}</h2>
+        <button className="link-button export-btn" onClick={handleExport} title="Download world as JSON">
+          ⭳ Export
+        </button>
         <nav className="tabs">
           <button
             className={tab === 'articles' ? 'tab active' : 'tab'}
