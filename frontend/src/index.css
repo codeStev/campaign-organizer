@@ -497,3 +497,162 @@ button:disabled {
     height: 380px;
   }
 }
+
+/* Campaign manager */
+.gm-notes {
+  min-height: 6rem;
+}
+
+.session-form-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.session-form-row input[type='number'].num-input {
+  width: 3.5rem;
+}
+
+.session-form-row input:last-child {
+  flex: 1;
+}
+
+.session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.session-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.session-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 5rem;
+}
+
+.session-num {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.session-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.arc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.arc-card {
+  border: 1px solid #2c2838;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.arc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arc-toggle {
+  background: none;
+  color: inherit;
+  padding: 0;
+  flex: 1;
+  text-align: left;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.arc-toggle .caret {
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.arc-status {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #3a3550;
+  color: #9a93ad;
+}
+
+.arc-planned {
+  color: #9a93ad;
+}
+.arc-active {
+  color: #6ad39f;
+  border-color: #6ad39f;
+}
+.arc-completed {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.arc-abandoned {
+  color: #d9647a;
+  border-color: #d9647a;
+}
+
+.arc-beats {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #2c2838;
+}
+
+.beat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.beat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.beat-check {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.beat-done {
+  text-decoration: line-through;
+  color: #9a93ad;
+}
+
+.beat-link {
+  font-size: 0.8rem;
+}
+
+.beat-form {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.beat-form input {
+  flex: 1;
+  min-width: 8rem;
+}
