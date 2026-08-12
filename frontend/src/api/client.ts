@@ -543,3 +543,137 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
+
+// ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
+
+export type SheetFieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT';
+
+export interface SheetField {
+  key: string;
+  label: string;
+  type: SheetFieldType;
+  options?: string[] | null;
+}
+
+export interface SheetSection {
+  title: string;
+  fields: SheetField[];
+}
+
+export interface SheetTemplate {
+  id: string;
+  worldId: string;
+  name: string;
+  system?: string | null;
+  sections: SheetSection[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SheetTemplateRequest {
+  name: string;
+  system?: string | null;
+  sections: SheetSection[];
+}
+
+export interface BuiltinSheetTemplate {
+  name: string;
+  system?: string | null;
+  sections: SheetSection[];
+}
+
+export interface CharacterSheet {
+  id: string;
+  worldId: string;
+  templateId: string;
+  articleId?: string | null;
+  name: string;
+  values: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CharacterSheetRequest {
+  name: string;
+  templateId: string;
+  articleId?: string | null;
+  values?: Record<string, unknown>;
+}
+
+export interface Statblock {
+  id: string;
+  worldId: string;
+  articleId?: string | null;
+  name: string;
+  stats: Record<string, unknown>;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StatblockRequest {
+  name: string;
+  articleId?: string | null;
+  stats?: Record<string, unknown>;
+  notes?: string | null;
+}
+
+export interface DieRoll {
+  sides: number;
+  value: number;
+  kept: boolean;
+}
+
+export interface DiceRollResult {
+  expression: string;
+  total: number;
+  rolls: DieRoll[];
+  breakdown: string;
+}
+
+export function sheetTemplatesApi(worldId: string) {
+  const base = `/worlds/${worldId}/sheet-templates`;
+  return {
+    list: () => request<SheetTemplate[]>(base),
+    get: (id: string) => request<SheetTemplate>(`${base}/${id}`),
+    create: (body: SheetTemplateRequest) =>
+      request<SheetTemplate>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: SheetTemplateRequest) =>
+      request<SheetTemplate>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export const builtinSheetTemplatesApi = {
+  list: () => request<BuiltinSheetTemplate[]>('/sheet-templates/builtin'),
+};
+
+export function characterSheetsApi(worldId: string) {
+  const base = `/worlds/${worldId}/character-sheets`;
+  return {
+    list: () => request<CharacterSheet[]>(base),
+    get: (id: string) => request<CharacterSheet>(`${base}/${id}`),
+    create: (body: CharacterSheetRequest) =>
+      request<CharacterSheet>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: CharacterSheetRequest) =>
+      request<CharacterSheet>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function statblocksApi(worldId: string) {
+  const base = `/worlds/${worldId}/statblocks`;
+  return {
+    list: () => request<Statblock[]>(base),
+    create: (body: StatblockRequest) =>
+      request<Statblock>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: StatblockRequest) =>
+      request<Statblock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export const diceApi = {
+  roll: (expression: string) =>
+    request<DiceRollResult>('/dice/roll', { method: 'POST', body: JSON.stringify({ expression }) }),
+};
