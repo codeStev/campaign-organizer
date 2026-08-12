@@ -15,9 +15,9 @@ body {
 }
 
 .app {
-  max-width: 720px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: clamp(0.75rem, 2vw, 2rem);
 }
 
 .app-header {
@@ -132,7 +132,7 @@ button:disabled {
 
 .wiki-layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -141,6 +141,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .article-list {
@@ -214,6 +215,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
 }
 
 .hint {
@@ -241,8 +243,15 @@ button:disabled {
 /* Tabs */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   margin-left: auto;
+}
+
+.preview-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
 }
 
 .tab {
@@ -380,4 +389,55 @@ button:disabled {
   padding: 0.35rem 0.5rem;
   border: 1px solid #2c2838;
   border-radius: 6px;
+}
+
+/* ---- Responsive: tablet ---- */
+@media (max-width: 900px) {
+  .wiki-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+}
+
+/* ---- Responsive: mobile & small tablets ---- */
+@media (max-width: 680px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Stack the wiki sidebar above the content on narrow screens. */
+  .wiki-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Header/tabs wrap to their own row and scroll horizontally if needed. */
+  .world-view-bar {
+    flex-wrap: wrap;
+  }
+
+  .tabs {
+    margin-left: 0;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+
+  /* Give tappable controls more height on touch devices. */
+  button,
+  .tab {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .date-fields {
+    flex-wrap: wrap;
+  }
+
+  .map-canvas {
+    height: 380px;
+  }
 }
