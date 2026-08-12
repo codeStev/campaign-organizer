@@ -34,6 +34,7 @@ the old one.
 | [0025](0025-html-sanitization.md) | Sanitize article HTML on write | Accepted |
 | [0026](0026-article-revision-history.md) | Article revision history | Accepted |
 | [0027](0027-whiteboards-model.md) | Whiteboards model | Accepted |
+| [0028](0028-character-sheet-pdf-export.md) | Character sheet PDF export | Accepted |
 
 ## Template
 
