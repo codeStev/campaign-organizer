@@ -2119,7 +2119,7 @@ components:
 
     SheetFieldType:
       type: string
-      enum: [TEXT, TEXTAREA, NUMBER, BOOLEAN, SELECT]
+      enum: [TEXT, TEXTAREA, NUMBER, BOOLEAN, SELECT, CIRCLES]
 
     SheetField:
       type: object
@@ -2137,6 +2137,14 @@ components:
           items:
             type: string
           description: Choices for a SELECT field.
+        width:
+          type: [string, "null"]
+          enum: [FULL, HALF, THIRD, QUARTER, null]
+          description: Column width for side-by-side layout; defaults to FULL.
+        count:
+          type: [integer, "null"]
+          minimum: 1
+          description: Number of circles for a CIRCLES field.
 
     SheetSection:
       type: object
