@@ -76,14 +76,32 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void unsupportedSystemIsBadRequest() throws Exception {
+    void generatesPdfFromTemplateForCustomSystem() throws Exception {
         auth = authHeader();
         worldId = createWorld(auth);
-        String templateId = template("pathfinder");
-        String sheetId = sheet(templateId, "{}");
+        // A homebrew template with a custom field; no bundled system PDF exists.
+        String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Homebrew\",\"system\":\"custom\",\"sections\":["
+                                + "{\"title\":\"Core\",\"fields\":["
+                                + "{\"key\":\"grit\",\"label\":\"Grit\",\"type\":\"NUMBER\"},"
+                                + "{\"key\":\"alive\",\"label\":\"Alive\",\"type\":\"BOOLEAN\"}]}]}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        String sheetId = sheet(templateId, "{\"grit\":7,\"alive\":true}");
 
-        mockMvc.perform(get("/api/worlds/{w}/character-sheets/{s}/pdf", worldId, sheetId)
+        byte[] pdf = mockMvc.perform(get("/api/worlds/{w}/character-sheets/{s}/pdf", worldId, sheetId)
                         .header(HttpHeaders.AUTHORIZATION, auth))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE))
+                .andReturn().getResponse().getContentAsByteArray();
+
+        assertThat(new String(pdf, 0, 4)).isEqualTo("%PDF");
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            PDAcroForm form = doc.getDocumentCatalog().getAcroForm();
+            assertThat(form.getField("grit")).isNotNull();
+            assertThat(form.getField("grit").getValueAsString()).isEqualTo("7");
+            assertThat(form.getField("alive")).isNotNull();
+        }
     }
 }
