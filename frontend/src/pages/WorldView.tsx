@@ -19,6 +19,7 @@ import { CalendarsView } from './CalendarsView';
 import { RelationshipsView } from './RelationshipsView';
 import { CampaignsView } from './CampaignsView';
 import { SheetsView } from './SheetsView';
+import { WhiteboardsView } from './WhiteboardsView';
 
 /** True when the HTML has no meaningful text content. */
 function isEmptyHtml(html: string): boolean {
@@ -54,7 +55,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [previewHtml, setPreviewHtml] = useState('');
   const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
   const [tab, setTab] = useState<
-    'articles' | 'maps' | 'timelines' | 'calendars' | 'relationships' | 'campaigns' | 'sheets'
+    | 'articles'
+    | 'maps'
+    | 'timelines'
+    | 'calendars'
+    | 'relationships'
+    | 'campaigns'
+    | 'sheets'
+    | 'whiteboards'
   >('articles');
   // Article panel mode: read (rendered, clickable links) vs edit (TipTap form).
   const [mode, setMode] = useState<'read' | 'edit'>('read');
@@ -276,6 +284,12 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           >
             Sheets
           </button>
+          <button
+            className={tab === 'whiteboards' ? 'tab active' : 'tab'}
+            onClick={() => setTab('whiteboards')}
+          >
+            Whiteboards
+          </button>
         </nav>
       </div>
 
@@ -293,6 +307,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         <CampaignsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
       ) : tab === 'sheets' ? (
         <SheetsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
+      ) : tab === 'whiteboards' ? (
+        <WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />
       ) : (
       <div className="wiki-layout">
         <aside className="wiki-sidebar">
