@@ -52,6 +52,8 @@ tags:
     description: Reusable NPC/monster statblocks.
   - name: export
     description: Export a world as a JSON bundle.
+  - name: whiteboards
+    description: Free-form plotting whiteboards (nodes and connections).
 
 paths:
   /auth/login:
@@ -1136,6 +1138,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/whiteboards:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [whiteboards]
+      summary: List a world's whiteboards
+      operationId: listWhiteboards
+      responses:
+        '200':
+          description: Whiteboards in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Whiteboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [whiteboards]
+      summary: Create a whiteboard
+      operationId: createWhiteboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhiteboardRequest'
+      responses:
+        '201':
+          description: Whiteboard created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiteboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/whiteboards/{whiteboardId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/WhiteboardId'
+    get:
+      tags: [whiteboards]
+      summary: Get a whiteboard
+      operationId: getWhiteboard
+      responses:
+        '200':
+          description: The whiteboard.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiteboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [whiteboards]
+      summary: Update a whiteboard (replaces nodes and edges)
+      operationId: updateWhiteboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhiteboardRequest'
+      responses:
+        '200':
+          description: Whiteboard updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiteboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [whiteboards]
+      summary: Delete a whiteboard
+      operationId: deleteWhiteboard
+      responses:
+        '204':
+          description: Whiteboard deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/export:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1878,6 +1978,14 @@ components:
       schema:
         type: string
         format: uuid
+    WhiteboardId:
+      name: whiteboardId
+      in: path
+      required: true
+      description: Identifier of the whiteboard.
+      schema:
+        type: string
+        format: uuid
     ArcId:
       name: arcId
       in: path
@@ -2071,6 +2179,80 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SheetSection'
+
+    WhiteboardNode:
+      type: object
+      required: [id, text, x, y]
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
+        color:
+          type: [string, "null"]
+
+    WhiteboardEdge:
+      type: object
+      required: [id, fromNodeId, toNodeId]
+      properties:
+        id:
+          type: string
+        fromNodeId:
+          type: string
+        toNodeId:
+          type: string
+        label:
+          type: [string, "null"]
+
+    WhiteboardRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhiteboardNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhiteboardEdge'
+
+    Whiteboard:
+      type: object
+      required: [id, worldId, name, nodes, edges, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhiteboardNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhiteboardEdge'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     StatblockRequest:
       type: object
