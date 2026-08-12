@@ -44,6 +44,8 @@ tags:
     description: Gamemaster campaigns and their play sessions.
   - name: arcs
     description: Story arcs and their ordered beats within a campaign.
+  - name: sheets
+    description: Schema-driven character sheet templates and character sheets.
 
 paths:
   /auth/login:
@@ -990,6 +992,121 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /sheet-templates/builtin:
+    get:
+      tags: [sheets]
+      summary: List built-in starter sheet templates (reference data)
+      operationId: listBuiltinSheetTemplates
+      responses:
+        '200':
+          description: The built-in templates.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BuiltinSheetTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /worlds/{worldId}/sheet-templates:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [sheets]
+      summary: List a world's sheet templates
+      operationId: listSheetTemplates
+      responses:
+        '200':
+          description: Sheet templates in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SheetTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [sheets]
+      summary: Create a sheet template
+      operationId: createSheetTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetTemplateRequest'
+      responses:
+        '201':
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/sheet-templates/{templateId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/SheetTemplateId'
+    get:
+      tags: [sheets]
+      summary: Get a sheet template
+      operationId: getSheetTemplate
+      responses:
+        '200':
+          description: The template.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [sheets]
+      summary: Update a sheet template
+      operationId: updateSheetTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetTemplateRequest'
+      responses:
+        '200':
+          description: Template updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a sheet template
+      operationId: deleteSheetTemplate
+      responses:
+        '204':
+          description: Template deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/arcs:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1436,6 +1553,14 @@ components:
       schema:
         type: string
         format: uuid
+    SheetTemplateId:
+      name: templateId
+      in: path
+      required: true
+      description: Identifier of the sheet template.
+      schema:
+        type: string
+        format: uuid
     ArcId:
       name: arcId
       in: path
@@ -1506,6 +1631,92 @@ components:
             $ref: '#/components/schemas/ProblemDetail'
 
   schemas:
+    SheetFieldType:
+      type: string
+      enum: [TEXT, TEXTAREA, NUMBER, BOOLEAN, SELECT]
+
+    SheetField:
+      type: object
+      required: [key, label, type]
+      properties:
+        key:
+          type: string
+          description: Stable identifier used as the key in a sheet's values.
+        label:
+          type: string
+        type:
+          $ref: '#/components/schemas/SheetFieldType'
+        options:
+          type: [array, "null"]
+          items:
+            type: string
+          description: Choices for a SELECT field.
+
+    SheetSection:
+      type: object
+      required: [title, fields]
+      properties:
+        title:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/SheetField'
+
+    SheetTemplateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        system:
+          type: [string, "null"]
+          maxLength: 100
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SheetSection'
+
+    SheetTemplate:
+      type: object
+      required: [id, worldId, name, sections, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        system:
+          type: [string, "null"]
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SheetSection'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BuiltinSheetTemplate:
+      type: object
+      required: [name, sections]
+      properties:
+        name:
+          type: string
+        system:
+          type: [string, "null"]
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SheetSection'
+
     ArcStatus:
       type: string
       enum: [PLANNED, ACTIVE, COMPLETED, ABANDONED]
