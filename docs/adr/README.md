@@ -29,6 +29,7 @@ the old one.
 | [0020](0020-fantasy-calendars-model.md) | Fantasy calendars model | Accepted |
 | [0021](0021-relationship-graph-model.md) | Relationship graph model | Accepted |
 | [0022](0022-fuzzy-search.md) | Fuzzy article search via trigrams (supersedes 0017 query) | Accepted |
+| [0023](0023-campaign-manager-model.md) | GM campaign manager model | Accepted |
 
 ## Template
 
