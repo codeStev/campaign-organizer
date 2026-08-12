@@ -1,4 +1,4 @@
-import { SheetSection } from '../api/client';
+import { SheetField, SheetSection } from '../api/client';
 
 interface Props {
   sections: SheetSection[];
@@ -6,7 +6,13 @@ interface Props {
   onChange: (values: Record<string, unknown>) => void;
 }
 
-/** Renders an editable form purely from a template's field definitions (ADR-0024). */
+const SPAN: Record<string, number> = { FULL: 12, HALF: 6, THIRD: 4, QUARTER: 3 };
+
+function span(field: SheetField): number {
+  return SPAN[field.width ?? 'FULL'] ?? 12;
+}
+
+/** Renders an editable form from a template's fields, laid out in a 12-col grid (ADR-0030). */
 export function SheetForm({ sections, values, onChange }: Props) {
   function set(key: string, value: unknown) {
     onChange({ ...values, [key]: value });
@@ -17,39 +23,41 @@ export function SheetForm({ sections, values, onChange }: Props) {
       {sections.map((section) => (
         <fieldset key={section.title} className="sheet-section">
           <legend>{section.title}</legend>
-          <div className="sheet-fields">
+          <div className="sheet-grid">
             {section.fields.map((field) => {
               const value = values[field.key];
-              const common = { id: field.key };
               return (
-                <label key={field.key} className={`sheet-field field-${field.type.toLowerCase()}`}>
+                <label
+                  key={field.key}
+                  className={`sheet-field field-${field.type.toLowerCase()}`}
+                  style={{ gridColumn: `span ${span(field)}` }}
+                >
                   <span className="field-label">{field.label}</span>
                   {field.type === 'TEXTAREA' ? (
                     <textarea
-                      {...common}
                       value={(value as string) ?? ''}
                       onChange={(e) => set(field.key, e.target.value)}
                     />
                   ) : field.type === 'NUMBER' ? (
                     <input
-                      {...common}
                       type="number"
                       value={(value as number | string) ?? ''}
                       onChange={(e) => set(field.key, e.target.value === '' ? null : Number(e.target.value))}
                     />
                   ) : field.type === 'BOOLEAN' ? (
                     <input
-                      {...common}
                       type="checkbox"
                       checked={Boolean(value)}
                       onChange={(e) => set(field.key, e.target.checked)}
                     />
+                  ) : field.type === 'CIRCLES' ? (
+                    <CircleTracker
+                      count={field.count ?? 3}
+                      filled={Number(value) || 0}
+                      onChange={(n) => set(field.key, n)}
+                    />
                   ) : field.type === 'SELECT' ? (
-                    <select
-                      {...common}
-                      value={(value as string) ?? ''}
-                      onChange={(e) => set(field.key, e.target.value)}
-                    >
+                    <select value={(value as string) ?? ''} onChange={(e) => set(field.key, e.target.value)}>
                       <option value="">—</option>
                       {(field.options ?? []).map((opt) => (
                         <option key={opt} value={opt}>
@@ -58,11 +66,7 @@ export function SheetForm({ sections, values, onChange }: Props) {
                       ))}
                     </select>
                   ) : (
-                    <input
-                      {...common}
-                      value={(value as string) ?? ''}
-                      onChange={(e) => set(field.key, e.target.value)}
-                    />
+                    <input value={(value as string) ?? ''} onChange={(e) => set(field.key, e.target.value)} />
                   )}
                 </label>
               );
@@ -70,6 +74,33 @@ export function SheetForm({ sections, values, onChange }: Props) {
           </div>
         </fieldset>
       ))}
+    </div>
+  );
+}
+
+interface CircleTrackerProps {
+  count: number;
+  filled: number;
+  onChange: (n: number) => void;
+}
+
+/** A row of n pips; clicking pip i fills 1..i (clicking the last filled clears it). */
+function CircleTracker({ count, filled, onChange }: CircleTrackerProps) {
+  return (
+    <div className="circle-tracker">
+      {Array.from({ length: Math.max(0, count) }, (_, i) => {
+        const n = i + 1;
+        const on = n <= filled;
+        return (
+          <button
+            key={n}
+            type="button"
+            className={on ? 'pip on' : 'pip'}
+            title={`${n}`}
+            onClick={() => onChange(filled === n ? n - 1 : n)}
+          />
+        );
+      })}
     </div>
   );
 }

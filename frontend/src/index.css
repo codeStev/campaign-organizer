@@ -757,9 +757,9 @@ button:disabled {
   padding: 0 0.35rem;
 }
 
-.sheet-fields {
+.sheet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(12, 1fr);
   gap: 0.5rem;
 }
 
@@ -767,6 +767,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .field-label {
@@ -774,14 +775,40 @@ button:disabled {
   color: #9a93ad;
 }
 
-.sheet-field.field-textarea {
-  grid-column: 1 / -1;
-}
-
 .sheet-field.field-boolean {
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
+}
+
+/* Circle tracker (pips) */
+.circle-tracker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding-top: 0.15rem;
+}
+
+.pip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  padding: 0;
+  background: #14121a;
+  border: 2px solid var(--accent);
+  cursor: pointer;
+  align-self: auto;
+}
+
+.pip.on {
+  background: var(--accent);
+}
+
+/* On narrow screens collapse the 12-col grid to a single column. */
+@media (max-width: 680px) {
+  .sheet-grid > .sheet-field {
+    grid-column: 1 / -1 !important;
+  }
 }
 
 @media (max-width: 680px) {
