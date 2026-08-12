@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   articlesApi,
   ArticleSummary,
@@ -7,6 +7,8 @@ import {
   ARTICLE_TEMPLATES,
   templatesApi,
   mediaApi,
+  categoriesApi,
+  Category,
   ApiError,
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
@@ -55,17 +57,49 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [mode, setMode] = useState<'read' | 'edit'>('read');
   // Active article-type filters; empty set means no filtering (show all).
   const [typeFilter, setTypeFilter] = useState<Set<ArticleTemplate>>(new Set());
+  // Categories for grouping the list, and which groups are collapsed.
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+
+  const UNCATEGORIZED = '__uncat__';
 
   const visibleArticles = articles.filter(
     (a) => typeFilter.size === 0 || typeFilter.has(a.template),
   );
+
+  // Bucket visible articles by category, in category order, non-empty groups only.
+  const groups = useMemo(() => {
+    const nameById = new Map(categories.map((c) => [c.id, c.name]));
+    const buckets = new Map<string, ArticleSummary[]>();
+    for (const a of visibleArticles) {
+      const key = a.categoryId ?? UNCATEGORIZED;
+      (buckets.get(key) ?? buckets.set(key, []).get(key)!).push(a);
+    }
+    const order = [...categories.map((c) => c.id), UNCATEGORIZED];
+    return order
+      .filter((id) => buckets.has(id))
+      .map((id) => ({
+        id,
+        name: id === UNCATEGORIZED ? 'Uncategorized' : nameById.get(id) ?? 'Unknown',
+        articles: buckets.get(id)!,
+      }));
+  }, [visibleArticles, categories]);
 
   function toggleType(t: ArticleTemplate) {
     setTypeFilter((prev) => {
       const next = new Set(prev);
       if (next.has(t)) next.delete(t);
       else next.add(t);
+      return next;
+    });
+  }
+
+  function toggleCat(id: string) {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -104,6 +138,10 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   useEffect(() => {
     templatesApi.list().then(setTemplates).catch(handleError);
   }, [handleError]);
+
+  useEffect(() => {
+    categoriesApi(worldId).list().then(setCategories).catch(handleError);
+  }, [worldId, handleError]);
 
   // Changing the template on an empty draft seeds an outline (ADR-0015).
   function selectTemplate(template: ArticleTemplate) {
@@ -260,24 +298,46 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
             ))}
           </div>
 
-          <ul className="article-list">
-            {visibleArticles.map((a) => (
-              <li key={a.id}>
-                <button
-                  className={a.id === draft.id ? 'article-link active' : 'article-link'}
-                  onClick={() => openArticle(a.id)}
-                >
-                  <span>{a.title}</span>
-                  <small className="muted">{a.template.toLowerCase()}</small>
-                </button>
-              </li>
-            ))}
-            {visibleArticles.length === 0 && (
-              <li className="muted">
+          <div className="article-list-scroll">
+            {groups.map((g) => {
+              // While searching, keep everything expanded so matches are visible.
+              const collapsed = query.trim() === '' && collapsedCats.has(g.id);
+              return (
+                <div key={g.id} className="article-group">
+                  <button
+                    type="button"
+                    className="article-group-head"
+                    onClick={() => toggleCat(g.id)}
+                    aria-expanded={!collapsed}
+                  >
+                    <span className="caret">{collapsed ? '▶' : '▼'}</span>
+                    <span>{g.name}</span>
+                    <span className="muted">({g.articles.length})</span>
+                  </button>
+                  {!collapsed && (
+                    <ul className="article-list">
+                      {g.articles.map((a) => (
+                        <li key={a.id}>
+                          <button
+                            className={a.id === draft.id ? 'article-link active' : 'article-link'}
+                            onClick={() => openArticle(a.id)}
+                          >
+                            <span>{a.title}</span>
+                            <small className="muted">{a.template.toLowerCase()}</small>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+            {groups.length === 0 && (
+              <p className="muted">
                 {articles.length === 0 ? 'No articles yet.' : 'No articles match the filter.'}
-              </li>
+              </p>
             )}
-          </ul>
+          </div>
         </aside>
 
         <div className="wiki-main">
