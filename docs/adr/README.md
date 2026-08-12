@@ -28,6 +28,7 @@ the old one.
 | [0019](0019-timelines-model.md) | Timelines model | Accepted |
 | [0020](0020-fantasy-calendars-model.md) | Fantasy calendars model | Accepted |
 | [0021](0021-relationship-graph-model.md) | Relationship graph model | Accepted |
+| [0022](0022-fuzzy-search.md) | Fuzzy article search via trigrams (supersedes 0017 query) | Accepted |
 
 ## Template
 
