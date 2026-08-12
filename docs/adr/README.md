@@ -27,6 +27,7 @@ the old one.
 | [0018](0018-interactive-maps-model.md) | Interactive maps model | Accepted |
 | [0019](0019-timelines-model.md) | Timelines model | Accepted |
 | [0020](0020-fantasy-calendars-model.md) | Fantasy calendars model | Accepted |
+| [0021](0021-relationship-graph-model.md) | Relationship graph model | Accepted |
 
 ## Template
 
