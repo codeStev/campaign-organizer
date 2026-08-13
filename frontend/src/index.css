@@ -670,6 +670,23 @@ button:disabled {
   min-width: 8rem;
 }
 
+.beat-article-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.beat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #1d1a27;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8rem;
+}
+
 .beat-check {
   flex: 1;
   display: flex;

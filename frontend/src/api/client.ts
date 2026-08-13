@@ -479,7 +479,7 @@ export interface Beat {
   title: string;
   body?: string | null;
   done: boolean;
-  articleId?: string | null;
+  articleIds: string[];
   sessionId?: string | null;
   position: number;
   createdAt: string;
@@ -490,7 +490,7 @@ export interface BeatRequest {
   title: string;
   body?: string | null;
   done?: boolean;
-  articleId?: string | null;
+  articleIds?: string[];
   sessionId?: string | null;
   position?: number | null;
 }

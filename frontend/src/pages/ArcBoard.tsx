@@ -125,7 +125,7 @@ interface ArcCardProps {
 interface BeatDraft {
   title: string;
   body: string;
-  articleId: string;
+  articleIds: string[];
   sessionId: string;
 }
 
@@ -144,9 +144,8 @@ function ArcCard({
   const [beats, setBeats] = useState<Beat[]>([]);
   const [open, setOpen] = useState(false);
   const [beatTitle, setBeatTitle] = useState('');
-  const [beatArticle, setBeatArticle] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<BeatDraft>({ title: '', body: '', articleId: '', sessionId: '' });
+  const [draft, setDraft] = useState<BeatDraft>({ title: '', body: '', articleIds: [], sessionId: '' });
   const titleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
   const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
 
@@ -166,9 +165,8 @@ function ArcCard({
     e.preventDefault();
     if (!beatTitle) return;
     try {
-      await api.create({ title: beatTitle, articleId: beatArticle || null });
+      await api.create({ title: beatTitle });
       setBeatTitle('');
-      setBeatArticle('');
       await refresh();
     } catch (err) {
       onError(err);
@@ -181,7 +179,7 @@ function ArcCard({
         title: beat.title,
         body: beat.body,
         done: !beat.done,
-        articleId: beat.articleId,
+        articleIds: beat.articleIds,
         sessionId: beat.sessionId,
         position: beat.position,
       });
@@ -205,9 +203,15 @@ function ArcCard({
     setDraft({
       title: beat.title,
       body: beat.body ?? '',
-      articleId: beat.articleId ?? '',
+      articleIds: beat.articleIds ?? [],
       sessionId: beat.sessionId ?? '',
     });
+  }
+
+  function addDraftArticle(id: string) {
+    if (id && !draft.articleIds.includes(id)) {
+      setDraft({ ...draft, articleIds: [...draft.articleIds, id] });
+    }
   }
 
   async function saveEdit(beat: Beat) {
@@ -216,7 +220,7 @@ function ArcCard({
         title: draft.title || beat.title,
         body: draft.body || null,
         done: beat.done,
-        articleId: draft.articleId || null,
+        articleIds: draft.articleIds,
         sessionId: draft.sessionId || null,
         position: beat.position,
       });
@@ -257,11 +261,13 @@ function ArcCard({
                     <input type="checkbox" checked={b.done} onChange={() => toggle(b)} />
                     <span className={b.done ? 'beat-done' : ''}>{b.title}</span>
                   </label>
-                  {b.articleId && titleById.has(b.articleId) && (
-                    <button className="link-button beat-link" onClick={() => onOpenArticle(b.articleId!)}>
-                      {titleById.get(b.articleId)}
-                    </button>
-                  )}
+                  {b.articleIds
+                    .filter((id) => titleById.has(id))
+                    .map((id) => (
+                      <button key={id} className="link-button beat-link" onClick={() => onOpenArticle(id)}>
+                        {titleById.get(id)}
+                      </button>
+                    ))}
                   {b.sessionId && sessionById.has(b.sessionId) && (
                     <span className="beat-session muted">{sessionLabel(sessionById.get(b.sessionId)!)}</span>
                   )}
@@ -288,14 +294,34 @@ function ArcCard({
                       value={draft.body}
                       onChange={(e) => setDraft({ ...draft, body: e.target.value })}
                     />
-                    <div className="beat-links">
-                      <select value={draft.articleId} onChange={(e) => setDraft({ ...draft, articleId: e.target.value })}>
-                        <option value="">link article (world lore)…</option>
-                        {articles.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.title}
-                          </option>
+                    {draft.articleIds.length > 0 && (
+                      <div className="beat-article-chips">
+                        {draft.articleIds.map((id) => (
+                          <span key={id} className="beat-chip">
+                            {titleById.get(id) ?? 'article'}
+                            <button
+                              type="button"
+                              className="link-button danger"
+                              onClick={() =>
+                                setDraft({ ...draft, articleIds: draft.articleIds.filter((x) => x !== id) })
+                              }
+                            >
+                              ✕
+                            </button>
+                          </span>
                         ))}
+                      </div>
+                    )}
+                    <div className="beat-links">
+                      <select value="" onChange={(e) => addDraftArticle(e.target.value)}>
+                        <option value="">+ link article (place, NPC…)</option>
+                        {articles
+                          .filter((a) => !draft.articleIds.includes(a.id))
+                          .map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.title}
+                            </option>
+                          ))}
                       </select>
                       <select value={draft.sessionId} onChange={(e) => setDraft({ ...draft, sessionId: e.target.value })}>
                         <option value="">link session…</option>
@@ -320,18 +346,10 @@ function ArcCard({
           </ul>
           <form className="beat-form" onSubmit={addBeat}>
             <input
-              placeholder="New beat"
+              placeholder="New beat — then Edit to add notes & links"
               value={beatTitle}
               onChange={(e) => setBeatTitle(e.target.value)}
             />
-            <select value={beatArticle} onChange={(e) => setBeatArticle(e.target.value)}>
-              <option value="">link article…</option>
-              {articles.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.title}
-                </option>
-              ))}
-            </select>
             <button type="submit" disabled={!beatTitle}>
               Add
             </button>
