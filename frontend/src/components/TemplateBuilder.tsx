@@ -42,6 +42,8 @@ const WIDTHS: { w: FieldWidth; label: string }[] = [
   { w: 'QUARTER', label: '¼' },
 ];
 
+const SPAN: Record<FieldWidth, number> = { FULL: 12, HALF: 6, THIRD: 4, QUARTER: 3 };
+
 type Drag = { kind: 'new'; type: SheetFieldType } | { kind: 'move'; si: number; fi: number };
 
 function defaultLabel(type: SheetFieldType): string {
@@ -207,72 +209,81 @@ export function TemplateBuilder({ initial, onSave, onCancel }: Props) {
             </button>
           </legend>
 
-          {sec.fields.map((f, fi) => (
-            <div
-              key={fi}
-              className="builder-field"
-              onDragOver={allowDrop}
-              onDrop={(e) => handleDrop(si, fi, e)}
-            >
-              <span
-                className="drag-handle"
-                draggable
-                onDragStart={() => (drag.current = { kind: 'move', si, fi })}
-                title="Drag to move"
+          <div className="builder-grid">
+            {sec.fields.map((f, fi) => (
+              <div
+                key={fi}
+                className="builder-field"
+                style={{ gridColumn: `span ${SPAN[f.width]}` }}
+                onDragOver={allowDrop}
+                onDrop={(e) => handleDrop(si, fi, e)}
               >
-                ⠿
-              </span>
-              <input
-                className="field-label-in"
-                placeholder="Label"
-                value={f.label}
-                onChange={(e) => mutateField(si, fi, { label: e.target.value })}
-              />
-              <span className="muted field-type">{defaultLabel(f.type)}</span>
-              <select
-                value={f.width}
-                title="Width"
-                onChange={(e) => mutateField(si, fi, { width: e.target.value as FieldWidth })}
-              >
-                {WIDTHS.map((w) => (
-                  <option key={w.w} value={w.w}>
-                    {w.label}
-                  </option>
-                ))}
-              </select>
-              {f.type === 'SELECT' && (
-                <input
-                  placeholder="options, comma separated"
-                  value={f.optionsText}
-                  onChange={(e) => mutateField(si, fi, { optionsText: e.target.value })}
-                />
-              )}
-              {f.type === 'CIRCLES' && (
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  className="circle-count"
-                  title="Number of circles"
-                  value={f.count}
-                  onChange={(e) => mutateField(si, fi, { count: Number(e.target.value) })}
-                />
-              )}
-              <button type="button" className="link-button" onClick={() => moveArrow(si, fi, -1)} title="Up">
-                ↑
-              </button>
-              <button type="button" className="link-button" onClick={() => moveArrow(si, fi, 1)} title="Down">
-                ↓
-              </button>
-              <button
-                type="button"
-                className="link-button danger"
-                onClick={() => mutateSection(si, { fields: sec.fields.filter((_, k) => k !== fi) })}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+                <div className="bf-row">
+                  <span
+                    className="drag-handle"
+                    draggable
+                    onDragStart={() => (drag.current = { kind: 'move', si, fi })}
+                    title="Drag to move"
+                  >
+                    ⠿
+                  </span>
+                  <input
+                    className="field-label-in"
+                    placeholder="Label"
+                    value={f.label}
+                    onChange={(e) => mutateField(si, fi, { label: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="link-button danger"
+                    onClick={() => mutateSection(si, { fields: sec.fields.filter((_, k) => k !== fi) })}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="bf-row">
+                  <span className="muted field-type">{defaultLabel(f.type)}</span>
+                  <select
+                    value={f.width}
+                    title="Width — set two to ½ to place them side by side"
+                    onChange={(e) => mutateField(si, fi, { width: e.target.value as FieldWidth })}
+                  >
+                    {WIDTHS.map((w) => (
+                      <option key={w.w} value={w.w}>
+                        {w.label}
+                      </option>
+                    ))}
+                  </select>
+                  {f.type === 'CIRCLES' && (
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      className="circle-count"
+                      title="Number of circles"
+                      value={f.count}
+                      onChange={(e) => mutateField(si, fi, { count: Number(e.target.value) })}
+                    />
+                  )}
+                  <span className="bf-spacer" />
+                  <button type="button" className="link-button" onClick={() => moveArrow(si, fi, -1)} title="Move earlier">
+                    ↑
+                  </button>
+                  <button type="button" className="link-button" onClick={() => moveArrow(si, fi, 1)} title="Move later">
+                    ↓
+                  </button>
+                </div>
+                {f.type === 'SELECT' && (
+                  <input
+                    className="bf-options"
+                    placeholder="options, comma separated"
+                    value={f.optionsText}
+                    onChange={(e) => mutateField(si, fi, { optionsText: e.target.value })}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
           <div className="drop-hint muted">Drop components here</div>
         </fieldset>
       ))}

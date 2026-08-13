@@ -943,29 +943,63 @@ button:disabled {
   color: var(--accent);
 }
 
+/* WYSIWYG builder grid: cards sit side by side by their width. */
+.builder-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.4rem;
+}
+
 .builder-field {
   display: flex;
-  gap: 0.4rem;
-  align-items: center;
-  flex-wrap: wrap;
-  background: #1d1a27;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  background: #14121a;
   border: 1px solid #2c2838;
   border-radius: 6px;
-  padding: 0.3rem 0.4rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.bf-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.bf-spacer {
+  flex: 1;
 }
 
 .builder-field .field-label-in {
   flex: 1;
-  min-width: 6rem;
+  min-width: 0;
+  font-weight: 600;
 }
 
 .builder-field .field-type {
-  font-size: 0.72rem;
-  min-width: 4rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.builder-field select {
+  padding: 0.2rem 0.3rem;
 }
 
 .builder-field .circle-count {
-  width: 3.5rem;
+  width: 3.2rem;
+}
+
+.builder-field .bf-options {
+  width: 100%;
+}
+
+@media (max-width: 680px) {
+  .builder-grid > .builder-field {
+    grid-column: 1 / -1 !important;
+  }
 }
 
 .drag-handle {
