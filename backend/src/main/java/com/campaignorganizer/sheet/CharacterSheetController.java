@@ -1,5 +1,6 @@
 package com.campaignorganizer.sheet;
 
+import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetRequest;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetResponse;
 import com.campaignorganizer.wiki.ArticleRepository;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,22 +30,27 @@ public class CharacterSheetController {
     private final CharacterSheetRepository sheets;
     private final SheetTemplateRepository templates;
     private final ArticleRepository articles;
+    private final CampaignRepository campaigns;
     private final WorldRepository worlds;
 
     public CharacterSheetController(CharacterSheetRepository sheets, SheetTemplateRepository templates,
-                                    ArticleRepository articles, WorldRepository worlds) {
+                                    ArticleRepository articles, CampaignRepository campaigns,
+                                    WorldRepository worlds) {
         this.sheets = sheets;
         this.templates = templates;
         this.articles = articles;
+        this.campaigns = campaigns;
         this.worlds = worlds;
     }
 
     @GetMapping
-    public List<CharacterSheetResponse> list(@PathVariable UUID worldId) {
+    public List<CharacterSheetResponse> list(@PathVariable UUID worldId,
+                                             @RequestParam(required = false) UUID campaignId) {
         requireWorld(worldId);
-        return sheets.findByWorldIdOrderByCreatedAtDesc(worldId).stream()
-                .map(CharacterSheetResponse::from)
-                .toList();
+        List<CharacterSheet> result = campaignId == null
+                ? sheets.findByWorldIdOrderByCreatedAtDesc(worldId)
+                : sheets.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId);
+        return result.stream().map(CharacterSheetResponse::from).toList();
     }
 
     @GetMapping("/{sheetId}")
@@ -57,7 +64,7 @@ public class CharacterSheetController {
         requireWorld(worldId);
         validateLinks(worldId, request);
         CharacterSheet saved = sheets.save(new CharacterSheet(worldId, request.templateId(),
-                request.articleId(), request.name(), request.values()));
+                request.articleId(), request.campaignId(), request.name(), request.values()));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/character-sheets/" + saved.getId()))
                 .body(CharacterSheetResponse.from(saved));
@@ -68,7 +75,8 @@ public class CharacterSheetController {
                                          @Valid @RequestBody CharacterSheetRequest request) {
         CharacterSheet sheet = findOrThrow(worldId, sheetId);
         validateLinks(worldId, request);
-        sheet.update(request.templateId(), request.articleId(), request.name(), request.values());
+        sheet.update(request.templateId(), request.articleId(), request.campaignId(),
+                request.name(), request.values());
         return CharacterSheetResponse.from(sheets.save(sheet));
     }
 
@@ -95,6 +103,9 @@ public class CharacterSheetController {
         }
         if (request.articleId() != null && !articles.existsByIdAndWorldId(request.articleId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
+        }
+        if (request.campaignId() != null && !campaigns.existsByIdAndWorldId(request.campaignId(), worldId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Campaign not found in this world");
         }
     }
 }

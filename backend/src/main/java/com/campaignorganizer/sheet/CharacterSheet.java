@@ -29,6 +29,10 @@ public class CharacterSheet {
     @Column(name = "article_id")
     private UUID articleId;
 
+    /** Optional campaign this sheet's character belongs to; null = shared (ADR-0031). */
+    @Column(name = "campaign_id")
+    private UUID campaignId;
+
     @Column(nullable = false, length = 200)
     private String name;
 
@@ -47,11 +51,12 @@ public class CharacterSheet {
         // for JPA
     }
 
-    public CharacterSheet(UUID worldId, UUID templateId, UUID articleId, String name,
+    public CharacterSheet(UUID worldId, UUID templateId, UUID articleId, UUID campaignId, String name,
                           Map<String, Object> values) {
         this.worldId = worldId;
         this.templateId = templateId;
         this.articleId = articleId;
+        this.campaignId = campaignId;
         this.name = name;
         this.values = values == null ? new HashMap<>() : values;
     }
@@ -71,9 +76,11 @@ public class CharacterSheet {
         updatedAt = Instant.now();
     }
 
-    public void update(UUID templateId, UUID articleId, String name, Map<String, Object> values) {
+    public void update(UUID templateId, UUID articleId, UUID campaignId, String name,
+                       Map<String, Object> values) {
         this.templateId = templateId;
         this.articleId = articleId;
+        this.campaignId = campaignId;
         this.name = name;
         this.values = values == null ? new HashMap<>() : values;
     }
@@ -92,6 +99,10 @@ public class CharacterSheet {
 
     public UUID getArticleId() {
         return articleId;
+    }
+
+    public UUID getCampaignId() {
+        return campaignId;
     }
 
     public String getName() {
