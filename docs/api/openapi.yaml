@@ -2469,10 +2469,12 @@ components:
         done:
           type: boolean
           default: false
-        articleId:
-          type: [string, "null"]
-          format: uuid
-          description: Optional linked article (NPC, location, …).
+        articleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Linked articles (place, NPC, item, …).
         sessionId:
           type: [string, "null"]
           format: uuid
@@ -2482,7 +2484,7 @@ components:
 
     Beat:
       type: object
-      required: [id, arcId, title, done, position, createdAt, updatedAt]
+      required: [id, arcId, title, done, articleIds, position, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2496,9 +2498,11 @@ components:
           type: [string, "null"]
         done:
           type: boolean
-        articleId:
-          type: [string, "null"]
-          format: uuid
+        articleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         sessionId:
           type: [string, "null"]
           format: uuid
