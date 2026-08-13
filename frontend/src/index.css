@@ -626,8 +626,48 @@ button:disabled {
 
 .beat-item {
   display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #2c2838;
+}
+
+.beat-row {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.beat-session {
+  font-size: 0.72rem;
+}
+
+.beat-body {
+  margin: 0;
+  padding-left: 1.6rem;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+}
+
+.beat-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  background: #14121a;
+  border: 1px solid #2c2838;
+  border-radius: 6px;
+}
+
+.beat-links {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.beat-links select {
+  flex: 1;
+  min-width: 8rem;
 }
 
 .beat-check {

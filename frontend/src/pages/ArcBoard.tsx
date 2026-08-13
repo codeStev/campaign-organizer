@@ -2,12 +2,20 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   arcsApi,
   beatsApi,
+  sessionsApi,
   Arc,
   ArcStatus,
   ARC_STATUSES,
   Beat,
+  Session,
   ArticleSummary,
 } from '../api/client';
+
+function sessionLabel(s: Session): string {
+  const num = s.sessionNumber != null ? `#${s.sessionNumber} ` : '';
+  const date = s.date ? `${s.date} ` : '';
+  return `${num}${date}${s.title}`.trim();
+}
 
 interface Props {
   worldId: string;
@@ -19,7 +27,9 @@ interface Props {
 
 export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError }: Props) {
   const api = useMemo(() => arcsApi(worldId, campaignId), [worldId, campaignId]);
+  const sessionApi = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
   const [arcs, setArcs] = useState<Arc[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [newTitle, setNewTitle] = useState('');
 
   const refresh = useCallback(async () => {
@@ -32,7 +42,8 @@ export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    sessionApi.list().then(setSessions).catch(onError);
+  }, [refresh, sessionApi, onError]);
 
   async function addArc(e: FormEvent) {
     e.preventDefault();
@@ -86,6 +97,7 @@ export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError
             campaignId={campaignId}
             arc={arc}
             articles={articles}
+            sessions={sessions}
             onOpenArticle={onOpenArticle}
             onError={onError}
             onStatus={(s) => setStatus(arc, s)}
@@ -103,10 +115,18 @@ interface ArcCardProps {
   campaignId: string;
   arc: Arc;
   articles: ArticleSummary[];
+  sessions: Session[];
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
   onStatus: (status: ArcStatus) => void;
   onRemove: () => void;
+}
+
+interface BeatDraft {
+  title: string;
+  body: string;
+  articleId: string;
+  sessionId: string;
 }
 
 function ArcCard({
@@ -114,6 +134,7 @@ function ArcCard({
   campaignId,
   arc,
   articles,
+  sessions,
   onOpenArticle,
   onError,
   onStatus,
@@ -124,7 +145,10 @@ function ArcCard({
   const [open, setOpen] = useState(false);
   const [beatTitle, setBeatTitle] = useState('');
   const [beatArticle, setBeatArticle] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<BeatDraft>({ title: '', body: '', articleId: '', sessionId: '' });
   const titleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
+  const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
 
   const refresh = useCallback(async () => {
     try {
@@ -176,6 +200,33 @@ function ArcCard({
     }
   }
 
+  function startEdit(beat: Beat) {
+    setEditingId(beat.id);
+    setDraft({
+      title: beat.title,
+      body: beat.body ?? '',
+      articleId: beat.articleId ?? '',
+      sessionId: beat.sessionId ?? '',
+    });
+  }
+
+  async function saveEdit(beat: Beat) {
+    try {
+      await api.update(beat.id, {
+        title: draft.title || beat.title,
+        body: draft.body || null,
+        done: beat.done,
+        articleId: draft.articleId || null,
+        sessionId: draft.sessionId || null,
+        position: beat.position,
+      });
+      setEditingId(null);
+      await refresh();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   return (
     <div className="arc-card">
       <div className="arc-head">
@@ -201,18 +252,68 @@ function ArcCard({
           <ul className="beat-list">
             {beats.map((b) => (
               <li key={b.id} className="beat-item">
-                <label className="beat-check">
-                  <input type="checkbox" checked={b.done} onChange={() => toggle(b)} />
-                  <span className={b.done ? 'beat-done' : ''}>{b.title}</span>
-                </label>
-                {b.articleId && titleById.has(b.articleId) && (
-                  <button className="link-button beat-link" onClick={() => onOpenArticle(b.articleId!)}>
-                    {titleById.get(b.articleId)}
+                <div className="beat-row">
+                  <label className="beat-check">
+                    <input type="checkbox" checked={b.done} onChange={() => toggle(b)} />
+                    <span className={b.done ? 'beat-done' : ''}>{b.title}</span>
+                  </label>
+                  {b.articleId && titleById.has(b.articleId) && (
+                    <button className="link-button beat-link" onClick={() => onOpenArticle(b.articleId!)}>
+                      {titleById.get(b.articleId)}
+                    </button>
+                  )}
+                  {b.sessionId && sessionById.has(b.sessionId) && (
+                    <span className="beat-session muted">{sessionLabel(sessionById.get(b.sessionId)!)}</span>
+                  )}
+                  <span className="bf-spacer" />
+                  <button className="link-button" onClick={() => (editingId === b.id ? setEditingId(null) : startEdit(b))}>
+                    {editingId === b.id ? 'Close' : 'Edit'}
                   </button>
+                  <button className="link-button danger" onClick={() => removeBeat(b)}>
+                    ✕
+                  </button>
+                </div>
+
+                {editingId !== b.id && b.body && <p className="beat-body muted">{b.body}</p>}
+
+                {editingId === b.id && (
+                  <div className="beat-editor">
+                    <input
+                      value={draft.title}
+                      placeholder="Beat title"
+                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                    />
+                    <textarea
+                      placeholder="Notes — e.g. 'a survivor begs the party for help'"
+                      value={draft.body}
+                      onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                    />
+                    <div className="beat-links">
+                      <select value={draft.articleId} onChange={(e) => setDraft({ ...draft, articleId: e.target.value })}>
+                        <option value="">link article (world lore)…</option>
+                        {articles.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.title}
+                          </option>
+                        ))}
+                      </select>
+                      <select value={draft.sessionId} onChange={(e) => setDraft({ ...draft, sessionId: e.target.value })}>
+                        <option value="">link session…</option>
+                        {sessions.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {sessionLabel(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="editor-actions">
+                      <button onClick={() => saveEdit(b)}>Save beat</button>
+                      <button className="link-button" onClick={() => setEditingId(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 )}
-                <button className="link-button danger" onClick={() => removeBeat(b)}>
-                  ✕
-                </button>
               </li>
             ))}
             {beats.length === 0 && <li className="muted">No beats yet.</li>}
