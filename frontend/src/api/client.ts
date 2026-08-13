@@ -151,17 +151,27 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface Usage {
+  type: 'BEAT' | 'MAP_PIN' | 'TIMELINE_EVENT' | 'RELATIONSHIP' | 'CHARACTER_SHEET' | 'STATBLOCK' | 'ARTICLE_LINK';
+  label: string;
+  targetId?: string | null;
+  campaignId?: string | null;
+  campaignName?: string | null;
+}
+
 export function articlesApi(worldId: string) {
   const base = `/worlds/${worldId}/articles`;
   return {
-    list: (params?: { categoryId?: string; q?: string }) => {
+    list: (params?: { categoryId?: string; q?: string; campaignId?: string }) => {
       const search = new URLSearchParams();
       if (params?.categoryId) search.set('categoryId', params.categoryId);
       if (params?.q) search.set('q', params.q);
+      if (params?.campaignId) search.set('campaignId', params.campaignId);
       const qs = search.toString();
       return request<ArticleSummary[]>(qs ? `${base}?${qs}` : base);
     },
     get: (id: string) => request<Article>(`${base}/${id}`),
+    usages: (id: string) => request<{ usages: Usage[] }>(`${base}/${id}/usages`),
     create: (body: ArticleRequest) =>
       request<Article>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: ArticleRequest) =>

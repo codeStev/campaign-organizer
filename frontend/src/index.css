@@ -898,6 +898,57 @@ button:disabled {
   border-radius: 6px;
 }
 
+.campaign-filter {
+  width: 100%;
+}
+
+.usages {
+  gap: 0.4rem;
+}
+
+.usage-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.usage-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #2c2838;
+  border-radius: 6px;
+}
+
+.usage-type {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #a89fc4;
+  background: #2c2838;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+}
+
+.usage-label {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.usage-campaign {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: #c9b78a;
+  background: #33301f;
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+}
+
 .export-btn {
   white-space: nowrap;
 }

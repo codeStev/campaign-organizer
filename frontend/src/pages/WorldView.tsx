@@ -2,12 +2,15 @@ import { FormEvent, MouseEvent, useCallback, useEffect, useState } from 'react';
 import {
   articlesApi,
   articleRevisionsApi,
+  campaignsApi,
   exportWorld,
   ArticleSummary,
   ArticleRevision,
   ArticleTemplate,
   ArticleTemplateInfo,
   ARTICLE_TEMPLATES,
+  Campaign,
+  Usage,
   templatesApi,
   mediaApi,
   ApiError,
@@ -70,6 +73,12 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [typeFilter, setTypeFilter] = useState<Set<ArticleTemplate>>(new Set());
   // Revision history for the open article (null = panel hidden).
   const [revisions, setRevisions] = useState<ArticleRevision[] | null>(null);
+  // Campaigns in this world, for the "used in campaign" filter and usage tags.
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  // Narrow the article list to entries referenced by this campaign ('' = all).
+  const [campaignFilter, setCampaignFilter] = useState('');
+  // "Used by" panel for the open article (null = hidden).
+  const [usages, setUsages] = useState<Usage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const visibleArticles = articles.filter(
@@ -89,6 +98,16 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     return t.charAt(0) + t.slice(1).toLowerCase();
   }
 
+  const USAGE_LABELS: Record<Usage['type'], string> = {
+    BEAT: 'Beat',
+    MAP_PIN: 'Map',
+    TIMELINE_EVENT: 'Timeline',
+    RELATIONSHIP: 'Relationship',
+    CHARACTER_SHEET: 'Sheet',
+    STATBLOCK: 'Statblock',
+    ARTICLE_LINK: 'Wiki-link',
+  };
+
   const handleError = useCallback(
     (err: unknown) => {
       if (err instanceof ApiError && err.status === 401) {
@@ -101,9 +120,12 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   );
 
   const refresh = useCallback(
-    async (q: string) => {
+    async (q: string, campaignId: string) => {
       try {
-        setArticles(await api.list(q ? { q } : undefined));
+        const params: { q?: string; campaignId?: string } = {};
+        if (q) params.q = q;
+        if (campaignId) params.campaignId = campaignId;
+        setArticles(await api.list(Object.keys(params).length ? params : undefined));
       } catch (err) {
         handleError(err);
       }
@@ -112,13 +134,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   );
 
   useEffect(() => {
-    void refresh(query);
+    void refresh(query, campaignFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, campaignFilter]);
 
   useEffect(() => {
     templatesApi.list().then(setTemplates).catch(handleError);
-  }, [handleError]);
+    campaignsApi(worldId).list().then(setCampaigns).catch(handleError);
+  }, [handleError, worldId]);
 
   // Changing the template on an empty draft seeds an outline (ADR-0015).
   function selectTemplate(template: ArticleTemplate) {
@@ -144,6 +167,21 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setPreviewHtml(article.bodyHtml ?? '');
       setMode('read');
       setRevisions(null);
+      setUsages(null);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function toggleUsages() {
+    if (usages !== null) {
+      setUsages(null);
+      return;
+    }
+    if (!draft.id) return;
+    try {
+      const res = await api.usages(draft.id);
+      setUsages(res.usages);
     } catch (err) {
       handleError(err);
     }
@@ -174,7 +212,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       });
       setPreviewHtml(restored.bodyHtml ?? '');
       setRevisions(null);
-      await refresh(query);
+      await refresh(query, campaignFilter);
     } catch (err) {
       handleError(err);
     }
@@ -205,7 +243,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setDraft({ id: saved.id, title: saved.title, template: saved.template, body: saved.body ?? '' });
       setPreviewHtml(saved.bodyHtml ?? '');
       setMode('read');
-      await refresh(query);
+      await refresh(query, campaignFilter);
     } catch (err) {
       handleError(err);
     }
@@ -217,7 +255,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       await api.remove(draft.id);
       setDraft(EMPTY_DRAFT);
       setPreviewHtml('');
-      await refresh(query);
+      await refresh(query, campaignFilter);
     } catch (err) {
       handleError(err);
     }
@@ -342,6 +380,22 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
             ))}
           </div>
 
+          {campaigns.length > 0 && (
+            <select
+              className="campaign-filter"
+              value={campaignFilter}
+              onChange={(e) => setCampaignFilter(e.target.value)}
+              title="Show only articles used in a campaign"
+            >
+              <option value="">All campaigns</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  Used in {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <div className="article-list-scroll">
             <ul className="article-list">
               {visibleArticles.map((a) => (
@@ -431,6 +485,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   <button type="button" onClick={() => setMode('edit')}>
                     Edit
                   </button>
+                  <button type="button" className="link-button" onClick={toggleUsages}>
+                    Used by
+                  </button>
                   <button type="button" className="link-button" onClick={toggleHistory}>
                     History
                   </button>
@@ -439,6 +496,39 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   </button>
                 </div>
               </div>
+
+              {usages !== null && (
+                <div className="usages card">
+                  <strong className="muted">Used by</strong>
+                  {usages.length === 0 && (
+                    <p className="muted">Not referenced anywhere yet.</p>
+                  )}
+                  <ul className="usage-list">
+                    {usages.map((u, i) => {
+                      const clickable =
+                        (u.type === 'ARTICLE_LINK' || u.type === 'RELATIONSHIP') && u.targetId;
+                      return (
+                        <li key={i} className="usage-item">
+                          <span className="usage-type">{USAGE_LABELS[u.type]}</span>
+                          {clickable ? (
+                            <button
+                              className="link-button usage-label"
+                              onClick={() => openArticle(u.targetId!)}
+                            >
+                              {u.label}
+                            </button>
+                          ) : (
+                            <span className="usage-label">{u.label}</span>
+                          )}
+                          {u.campaignName && (
+                            <span className="usage-campaign">{u.campaignName}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
 
               {revisions !== null && (
                 <div className="revisions card">
