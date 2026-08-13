@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { statblocksApi, Statblock } from '../api/client';
+import { statblocksApi, Statblock, Campaign } from '../api/client';
 
 interface Props {
   worldId: string;
+  campaigns: Campaign[];
   onError: (err: unknown) => void;
 }
 
@@ -15,35 +16,43 @@ interface Draft {
   id: string | null;
   name: string;
   notes: string;
+  campaignId: string;
   rows: StatRow[];
 }
 
-const EMPTY: Draft = { id: null, name: '', notes: '', rows: [{ key: '', value: '' }] };
+const EMPTY: Draft = { id: null, name: '', notes: '', campaignId: '', rows: [{ key: '', value: '' }] };
 
 function toRows(stats: Record<string, unknown>): StatRow[] {
   const rows = Object.entries(stats).map(([key, value]) => ({ key, value: String(value) }));
   return rows.length ? rows : [{ key: '', value: '' }];
 }
 
-export function StatblocksPanel({ worldId, onError }: Props) {
+export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Statblock[]>([]);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [filterCampaign, setFilterCampaign] = useState('');
 
   const refresh = useCallback(async () => {
     try {
-      setList(await api.list());
+      setList(await api.list(filterCampaign || undefined));
     } catch (err) {
       onError(err);
     }
-  }, [api, onError]);
+  }, [api, filterCampaign, onError]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   function edit(sb: Statblock) {
-    setDraft({ id: sb.id, name: sb.name, notes: sb.notes ?? '', rows: toRows(sb.stats) });
+    setDraft({
+      id: sb.id,
+      name: sb.name,
+      notes: sb.notes ?? '',
+      campaignId: sb.campaignId ?? '',
+      rows: toRows(sb.stats),
+    });
   }
 
   async function save() {
@@ -54,11 +63,11 @@ export function StatblocksPanel({ worldId, onError }: Props) {
         stats[r.key.trim()] = r.value !== '' && !Number.isNaN(num) ? num : r.value;
       }
     }
-    const body = { name: draft.name, stats, notes: draft.notes || null };
+    const body = { name: draft.name, stats, notes: draft.notes || null, campaignId: draft.campaignId || null };
     try {
       if (draft.id) await api.update(draft.id, body);
       else await api.create(body);
-      setDraft(EMPTY);
+      setDraft({ ...EMPTY, campaignId: filterCampaign });
       await refresh();
     } catch (err) {
       onError(err);
@@ -82,7 +91,21 @@ export function StatblocksPanel({ worldId, onError }: Props) {
   return (
     <div className="sheets-panel">
       <div className="sheets-list-col">
-        <button onClick={() => setDraft(EMPTY)}>+ New statblock</button>
+        <button onClick={() => setDraft({ ...EMPTY, campaignId: filterCampaign })}>+ New statblock</button>
+        {campaigns.length > 0 && (
+          <select
+            value={filterCampaign}
+            onChange={(e) => setFilterCampaign(e.target.value)}
+            title="Filter by campaign"
+          >
+            <option value="">All campaigns</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
         <ul className="article-list">
           {list.map((sb) => (
             <li key={sb.id}>
@@ -105,6 +128,22 @@ export function StatblocksPanel({ worldId, onError }: Props) {
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
         />
+        {campaigns.length > 0 && (
+          <label className="sheet-article">
+            <span className="muted">Campaign</span>
+            <select
+              value={draft.campaignId}
+              onChange={(e) => setDraft({ ...draft, campaignId: e.target.value })}
+            >
+              <option value="">— shared (no campaign) —</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <strong className="muted">Stats</strong>
         {draft.rows.map((row, i) => (
           <div key={i} className="month-row">

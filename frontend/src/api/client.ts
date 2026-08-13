@@ -610,6 +610,7 @@ export interface Statblock {
   id: string;
   worldId: string;
   articleId?: string | null;
+  campaignId?: string | null;
   name: string;
   stats: Record<string, unknown>;
   notes?: string | null;
@@ -620,6 +621,7 @@ export interface Statblock {
 export interface StatblockRequest {
   name: string;
   articleId?: string | null;
+  campaignId?: string | null;
   stats?: Record<string, unknown>;
   notes?: string | null;
 }
@@ -671,7 +673,8 @@ export function characterSheetsApi(worldId: string) {
 export function statblocksApi(worldId: string) {
   const base = `/worlds/${worldId}/statblocks`;
   return {
-    list: () => request<Statblock[]>(base),
+    list: (campaignId?: string) =>
+      request<Statblock[]>(campaignId ? `${base}?campaignId=${campaignId}` : base),
     create: (body: StatblockRequest) =>
       request<Statblock>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: StatblockRequest) =>
