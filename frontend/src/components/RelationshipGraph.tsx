@@ -110,7 +110,8 @@ export function RelationshipGraph({ nodeLabels, relationships, onSelectNode }: P
         <g key={n.id} className="rel-node" onClick={() => onSelectNode(n.id)}>
           <circle cx={n.x} cy={n.y} r={8} fill="#6d54c9" stroke="#14121a" strokeWidth={2} />
           <text x={n.x} y={n.y - 12} textAnchor="middle" className="rel-node-label">
-            {n.label}
+            {/* Resolve live: labels may load after the layout seeds. */}
+            {nodeLabels.get(n.id) ?? n.label}
           </text>
         </g>
       ))}
