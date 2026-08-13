@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   sheetTemplatesApi,
   articlesApi,
+  campaignsApi,
   SheetTemplate,
   ArticleSummary,
+  Campaign,
   ApiError,
 } from '../api/client';
 import { DiceRollerWidget } from '../components/DiceRollerWidget';
@@ -22,9 +24,11 @@ type SubTab = 'characters' | 'statblocks' | 'templates';
 export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const templatesApiRef = useMemo(() => sheetTemplatesApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
+  const campaignApi = useMemo(() => campaignsApi(worldId), [worldId]);
   const [sub, setSub] = useState<SubTab>('characters');
   const [templates, setTemplates] = useState<SheetTemplate[]>([]);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const onError = useCallback(
@@ -42,7 +46,8 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   useEffect(() => {
     loadTemplates();
     articleApi.list().then(setArticles).catch(onError);
-  }, [loadTemplates, articleApi, onError]);
+    campaignApi.list().then(setCampaigns).catch(onError);
+  }, [loadTemplates, articleApi, campaignApi, onError]);
 
   return (
     <div className="wiki-layout">
@@ -68,6 +73,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
             worldId={worldId}
             templates={templates}
             articles={articles}
+            campaigns={campaigns}
             onOpenArticle={onOpenArticle}
             onError={onError}
           />

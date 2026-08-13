@@ -5,6 +5,7 @@ import {
   CharacterSheet,
   SheetTemplate,
   ArticleSummary,
+  Campaign,
 } from '../api/client';
 import { SheetForm } from '../components/SheetForm';
 
@@ -12,6 +13,7 @@ interface Props {
   worldId: string;
   templates: SheetTemplate[];
   articles: ArticleSummary[];
+  campaigns: Campaign[];
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
 }
@@ -21,21 +23,31 @@ interface Draft {
   name: string;
   templateId: string;
   articleId: string;
+  campaignId: string;
   values: Record<string, unknown>;
 }
 
-export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArticle, onError }: Props) {
+export function CharacterSheetsPanel({
+  worldId,
+  templates,
+  articles,
+  campaigns,
+  onOpenArticle,
+  onError,
+}: Props) {
   const api = useMemo(() => characterSheetsApi(worldId), [worldId]);
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
+  // '' = all campaigns; a campaign id = only that party's sheets.
+  const [filterCampaign, setFilterCampaign] = useState('');
 
   const refresh = useCallback(async () => {
     try {
-      setSheets(await api.list());
+      setSheets(await api.list(filterCampaign || undefined));
     } catch (err) {
       onError(err);
     }
-  }, [api, onError]);
+  }, [api, filterCampaign, onError]);
 
   useEffect(() => {
     void refresh();
@@ -48,7 +60,14 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
       onError(new Error('Create a template first (Templates tab).'));
       return;
     }
-    setDraft({ id: null, name: '', templateId: templates[0].id, articleId: '', values: {} });
+    setDraft({
+      id: null,
+      name: '',
+      templateId: templates[0].id,
+      articleId: '',
+      campaignId: filterCampaign, // default new sheets to the active campaign
+      values: {},
+    });
   }
 
   async function open(id: string) {
@@ -59,6 +78,7 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
         name: sheet.name,
         templateId: sheet.templateId,
         articleId: sheet.articleId ?? '',
+        campaignId: sheet.campaignId ?? '',
         values: sheet.values ?? {},
       });
     } catch (err) {
@@ -72,6 +92,7 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
       name: draft.name,
       templateId: draft.templateId,
       articleId: draft.articleId || null,
+      campaignId: draft.campaignId || null,
       values: draft.values,
     };
     try {
@@ -107,6 +128,20 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
     <div className="sheets-panel">
       <div className="sheets-list-col">
         <button onClick={newSheet}>+ New sheet</button>
+        {campaigns.length > 0 && (
+          <select
+            value={filterCampaign}
+            onChange={(e) => setFilterCampaign(e.target.value)}
+            title="Filter by campaign"
+          >
+            <option value="">All campaigns</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
         <ul className="article-list">
           {sheets.map((s) => (
             <li key={s.id}>
@@ -165,6 +200,23 @@ export function CharacterSheetsPanel({ worldId, templates, articles, onOpenArtic
                 </button>
               )}
             </label>
+
+            {campaigns.length > 0 && (
+              <label className="sheet-article">
+                <span className="muted">Campaign</span>
+                <select
+                  value={draft.campaignId}
+                  onChange={(e) => setDraft({ ...draft, campaignId: e.target.value })}
+                >
+                  <option value="">— shared (no campaign) —</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             {template && (
               <SheetForm
