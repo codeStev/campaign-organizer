@@ -1366,6 +1366,14 @@ paths:
       tags: [sheets]
       summary: List a world's character sheets
       operationId: listCharacterSheets
+      parameters:
+        - name: campaignId
+          in: query
+          required: false
+          description: Filter to a single campaign's party.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Character sheets in the world, newest first.
@@ -2346,6 +2354,10 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional linked article (the character's wiki page).
+        campaignId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional campaign this character belongs to; null = shared.
         values:
           type: object
           additionalProperties: true
@@ -2365,6 +2377,9 @@ components:
           type: string
           format: uuid
         articleId:
+          type: [string, "null"]
+          format: uuid
+        campaignId:
           type: [string, "null"]
           format: uuid
         name:
