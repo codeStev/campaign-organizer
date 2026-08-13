@@ -591,6 +591,7 @@ export interface CharacterSheet {
   worldId: string;
   templateId: string;
   articleId?: string | null;
+  campaignId?: string | null;
   name: string;
   values: Record<string, unknown>;
   createdAt: string;
@@ -601,6 +602,7 @@ export interface CharacterSheetRequest {
   name: string;
   templateId: string;
   articleId?: string | null;
+  campaignId?: string | null;
   values?: Record<string, unknown>;
 }
 
@@ -655,7 +657,8 @@ export const builtinSheetTemplatesApi = {
 export function characterSheetsApi(worldId: string) {
   const base = `/worlds/${worldId}/character-sheets`;
   return {
-    list: () => request<CharacterSheet[]>(base),
+    list: (campaignId?: string) =>
+      request<CharacterSheet[]>(campaignId ? `${base}?campaignId=${campaignId}` : base),
     get: (id: string) => request<CharacterSheet>(`${base}/${id}`),
     create: (body: CharacterSheetRequest) =>
       request<CharacterSheet>(base, { method: 'POST', body: JSON.stringify(body) }),
