@@ -1772,6 +1772,15 @@ paths:
           description: Full-text search query over title and body.
           schema:
             type: string
+        - name: campaignId
+          in: query
+          required: false
+          description: >
+            Filter to articles referenced by that campaign's play content
+            (beats, character sheets, statblocks). Standalone filter.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Matching articles (summaries), newest first.
@@ -1831,6 +1840,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ArticleRevision'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}/usages:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    get:
+      tags: [articles]
+      summary: List everything that references this article (backlinks)
+      operationId: listArticleUsages
+      responses:
+        '200':
+          description: References to the article, with resolved names.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2788,6 +2817,34 @@ components:
               description: >
                 Rendered body with wiki-links resolved to anchors (see
                 ADR-0014). Read-only; derived from `body`.
+
+    Usage:
+      type: object
+      required: [type, label]
+      properties:
+        type:
+          type: string
+          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK]
+        label:
+          type: string
+        targetId:
+          type: [string, "null"]
+          format: uuid
+          description: An article the client can open (RELATIONSHIP, ARTICLE_LINK); else null.
+        campaignId:
+          type: [string, "null"]
+          format: uuid
+        campaignName:
+          type: [string, "null"]
+
+    UsageResponse:
+      type: object
+      required: [usages]
+      properties:
+        usages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Usage'
 
     ArticleRevision:
       type: object
