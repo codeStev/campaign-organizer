@@ -31,6 +31,14 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
 
+    private String createCampaign(String name) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
     @Test
     void requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/worlds/{w}/character-sheets", UUID.randomUUID()))
@@ -117,5 +125,72 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void assignsAndFiltersByCampaign() throws Exception {
+        setup();
+        String campA = createCampaign("Ashes");
+        String campB = createCampaign("Reckoning");
+
+        mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Thalia\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                                + campA + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.campaignId").value(campA));
+        mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Runa\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                                + campB + "\"}"))
+                .andExpect(status().isCreated());
+
+        // Filter to campaign A -> only Thalia.
+        mockMvc.perform(get("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .param("campaignId", campA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Thalia"));
+        // No filter -> both.
+        mockMvc.perform(get("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void rejectsForeignCampaign() throws Exception {
+        setup();
+        mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"X\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                                + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deletingCampaignUnlinksSheetButKeepsIt() throws Exception {
+        setup();
+        String camp = createCampaign("Doomed Run");
+        String sheetId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Survivor\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                                + camp + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(delete("/api/worlds/{w}/campaigns/{c}", worldId, camp)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNoContent());
+
+        // Sheet survives with campaignId cleared (ON DELETE SET NULL).
+        mockMvc.perform(get("/api/worlds/{w}/character-sheets/{s}", worldId, sheetId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Survivor"))
+                .andExpect(jsonPath("$.campaignId").doesNotExist());
     }
 }
