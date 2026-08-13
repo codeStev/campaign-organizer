@@ -1268,6 +1268,14 @@ paths:
       tags: [statblocks]
       summary: List a world's statblocks
       operationId: listStatblocks
+      parameters:
+        - name: campaignId
+          in: query
+          required: false
+          description: Filter to a single campaign's statblocks.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Statblocks in the world, newest first.
@@ -2304,6 +2312,10 @@ components:
         articleId:
           type: [string, "null"]
           format: uuid
+        campaignId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional campaign this statblock belongs to; null = shared.
         stats:
           type: object
           additionalProperties: true
@@ -2323,6 +2335,9 @@ components:
           type: string
           format: uuid
         articleId:
+          type: [string, "null"]
+          format: uuid
+        campaignId:
           type: [string, "null"]
           format: uuid
         name:

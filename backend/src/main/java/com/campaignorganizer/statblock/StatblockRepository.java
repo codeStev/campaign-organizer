@@ -9,5 +9,9 @@ public interface StatblockRepository extends JpaRepository<Statblock, UUID> {
 
     List<Statblock> findByWorldIdOrderByCreatedAtDesc(UUID worldId);
 
+    List<Statblock> findByWorldIdAndCampaignIdOrderByCreatedAtDesc(UUID worldId, UUID campaignId);
+
+    List<Statblock> findByWorldIdAndArticleId(UUID worldId, UUID articleId);
+
     Optional<Statblock> findByIdAndWorldId(UUID id, UUID worldId);
 }

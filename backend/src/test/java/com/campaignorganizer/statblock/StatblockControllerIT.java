@@ -68,4 +68,45 @@ class StatblockControllerIT extends AbstractIntegrationTest {
                         .content("{\"name\":\"Orphan\",\"articleId\":\"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void assignsAndFiltersByCampaign() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String camp = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Boss Run\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Ancient Dragon\",\"campaignId\":\"" + camp + "\",\"stats\":{\"CR\":24}}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.campaignId").value(camp));
+        mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .param("campaignId", camp))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Ancient Dragon"));
+    }
+
+    @Test
+    void rejectsForeignCampaign() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"X\",\"campaignId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

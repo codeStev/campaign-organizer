@@ -26,6 +26,10 @@ public class Statblock {
     @Column(name = "article_id")
     private UUID articleId;
 
+    /** Optional campaign this statblock belongs to; null = shared (ADR-0032). */
+    @Column(name = "campaign_id")
+    private UUID campaignId;
+
     @Column(nullable = false, length = 200)
     private String name;
 
@@ -46,9 +50,11 @@ public class Statblock {
         // for JPA
     }
 
-    public Statblock(UUID worldId, UUID articleId, String name, Map<String, Object> stats, String notes) {
+    public Statblock(UUID worldId, UUID articleId, UUID campaignId, String name,
+                     Map<String, Object> stats, String notes) {
         this.worldId = worldId;
         this.articleId = articleId;
+        this.campaignId = campaignId;
         this.name = name;
         this.stats = stats == null ? new HashMap<>() : stats;
         this.notes = notes;
@@ -69,8 +75,9 @@ public class Statblock {
         updatedAt = Instant.now();
     }
 
-    public void update(UUID articleId, String name, Map<String, Object> stats, String notes) {
+    public void update(UUID articleId, UUID campaignId, String name, Map<String, Object> stats, String notes) {
         this.articleId = articleId;
+        this.campaignId = campaignId;
         this.name = name;
         this.stats = stats == null ? new HashMap<>() : stats;
         this.notes = notes;
@@ -86,6 +93,10 @@ public class Statblock {
 
     public UUID getArticleId() {
         return articleId;
+    }
+
+    public UUID getCampaignId() {
+        return campaignId;
     }
 
     public String getName() {

@@ -1,5 +1,6 @@
 package com.campaignorganizer.statblock;
 
+import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.statblock.StatblockDtos.StatblockRequest;
 import com.campaignorganizer.statblock.StatblockDtos.StatblockResponse;
 import com.campaignorganizer.wiki.ArticleRepository;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,21 +29,25 @@ public class StatblockController {
 
     private final StatblockRepository statblocks;
     private final ArticleRepository articles;
+    private final CampaignRepository campaigns;
     private final WorldRepository worlds;
 
     public StatblockController(StatblockRepository statblocks, ArticleRepository articles,
-                              WorldRepository worlds) {
+                              CampaignRepository campaigns, WorldRepository worlds) {
         this.statblocks = statblocks;
         this.articles = articles;
+        this.campaigns = campaigns;
         this.worlds = worlds;
     }
 
     @GetMapping
-    public List<StatblockResponse> list(@PathVariable UUID worldId) {
+    public List<StatblockResponse> list(@PathVariable UUID worldId,
+                                        @RequestParam(required = false) UUID campaignId) {
         requireWorld(worldId);
-        return statblocks.findByWorldIdOrderByCreatedAtDesc(worldId).stream()
-                .map(StatblockResponse::from)
-                .toList();
+        List<Statblock> result = campaignId == null
+                ? statblocks.findByWorldIdOrderByCreatedAtDesc(worldId)
+                : statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId);
+        return result.stream().map(StatblockResponse::from).toList();
     }
 
     @GetMapping("/{statblockId}")
@@ -53,9 +59,9 @@ public class StatblockController {
     public ResponseEntity<StatblockResponse> create(@PathVariable UUID worldId,
                                                     @Valid @RequestBody StatblockRequest request) {
         requireWorld(worldId);
-        validateArticle(worldId, request.articleId());
+        validateLinks(worldId, request);
         Statblock saved = statblocks.save(new Statblock(worldId, request.articleId(),
-                request.name(), request.stats(), request.notes()));
+                request.campaignId(), request.name(), request.stats(), request.notes()));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/statblocks/" + saved.getId()))
                 .body(StatblockResponse.from(saved));
@@ -65,8 +71,9 @@ public class StatblockController {
     public StatblockResponse update(@PathVariable UUID worldId, @PathVariable UUID statblockId,
                                     @Valid @RequestBody StatblockRequest request) {
         Statblock statblock = findOrThrow(worldId, statblockId);
-        validateArticle(worldId, request.articleId());
-        statblock.update(request.articleId(), request.name(), request.stats(), request.notes());
+        validateLinks(worldId, request);
+        statblock.update(request.articleId(), request.campaignId(), request.name(),
+                request.stats(), request.notes());
         return StatblockResponse.from(statblocks.save(statblock));
     }
 
@@ -87,9 +94,12 @@ public class StatblockController {
         }
     }
 
-    private void validateArticle(UUID worldId, UUID articleId) {
-        if (articleId != null && !articles.existsByIdAndWorldId(articleId, worldId)) {
+    private void validateLinks(UUID worldId, StatblockRequest request) {
+        if (request.articleId() != null && !articles.existsByIdAndWorldId(request.articleId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
+        }
+        if (request.campaignId() != null && !campaigns.existsByIdAndWorldId(request.campaignId(), worldId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Campaign not found in this world");
         }
     }
 }
