@@ -38,6 +38,7 @@ the old one.
 | [0029](0029-generated-sheet-pdf-and-builder.md) | Generated fillable PDFs + template builder | Accepted |
 | [0030](0030-visual-template-builder.md) | Field widths, circle trackers, drag-and-drop builder | Accepted |
 | [0031](0031-per-campaign-play-content.md) | Per-campaign play content (parties, beat detail) | Accepted |
+| [0032](0032-multi-article-beats-and-statblock-campaigns.md) | Multi-article beats, campaign-scoped statblocks | Accepted |
 
 ## Template
 
