@@ -54,7 +54,7 @@ public class BeatController {
         requireArc(worldId, campaignId, arcId);
         validateLinks(worldId, campaignId, request);
         int position = request.position() == null ? 0 : request.position();
-        ArcBeat saved = beats.save(new ArcBeat(arcId, request.articleId(), request.sessionId(),
+        ArcBeat saved = beats.save(new ArcBeat(arcId, request.articleIdsOrEmpty(), request.sessionId(),
                 request.title(), request.body(), request.doneOrDefault(), position));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/campaigns/" + campaignId
@@ -70,7 +70,7 @@ public class BeatController {
         validateLinks(worldId, campaignId, request);
         ArcBeat beat = beats.findByIdAndArcId(beatId, arcId).orElseThrow(this::beatNotFound);
         int position = request.position() == null ? beat.getPosition() : request.position();
-        beat.update(request.articleId(), request.sessionId(), request.title(), request.body(),
+        beat.update(request.articleIdsOrEmpty(), request.sessionId(), request.title(), request.body(),
                 request.doneOrDefault(), position);
         return BeatResponse.from(beats.save(beat));
     }
@@ -92,8 +92,10 @@ public class BeatController {
     }
 
     private void validateLinks(UUID worldId, UUID campaignId, BeatRequest request) {
-        if (request.articleId() != null && !articles.existsByIdAndWorldId(request.articleId(), worldId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
+        for (UUID articleId : request.articleIdsOrEmpty()) {
+            if (!articles.existsByIdAndWorldId(articleId, worldId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
+            }
         }
         if (request.sessionId() != null
                 && sessions.findByIdAndCampaignId(request.sessionId(), campaignId).isEmpty()) {

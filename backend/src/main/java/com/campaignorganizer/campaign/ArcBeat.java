@@ -1,12 +1,18 @@
 package com.campaignorganizer.campaign;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -19,8 +25,11 @@ public class ArcBeat {
     @Column(name = "arc_id", nullable = false, updatable = false)
     private UUID arcId;
 
+    /** Articles this beat concerns (place, NPC, item…); stored in beat_articles (ADR-0032). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "beat_articles", joinColumns = @JoinColumn(name = "beat_id"))
     @Column(name = "article_id")
-    private UUID articleId;
+    private List<UUID> articleIds = new ArrayList<>();
 
     @Column(name = "session_id")
     private UUID sessionId;
@@ -47,10 +56,10 @@ public class ArcBeat {
         // for JPA
     }
 
-    public ArcBeat(UUID arcId, UUID articleId, UUID sessionId, String title, String body,
+    public ArcBeat(UUID arcId, List<UUID> articleIds, UUID sessionId, String title, String body,
                    boolean done, int position) {
         this.arcId = arcId;
-        this.articleId = articleId;
+        this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
         this.sessionId = sessionId;
         this.title = title;
         this.body = body;
@@ -73,9 +82,9 @@ public class ArcBeat {
         updatedAt = Instant.now();
     }
 
-    public void update(UUID articleId, UUID sessionId, String title, String body,
+    public void update(List<UUID> articleIds, UUID sessionId, String title, String body,
                        boolean done, int position) {
-        this.articleId = articleId;
+        this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
         this.sessionId = sessionId;
         this.title = title;
         this.body = body;
@@ -91,8 +100,8 @@ public class ArcBeat {
         return arcId;
     }
 
-    public UUID getArticleId() {
-        return articleId;
+    public List<UUID> getArticleIds() {
+        return articleIds;
     }
 
     public UUID getSessionId() {
