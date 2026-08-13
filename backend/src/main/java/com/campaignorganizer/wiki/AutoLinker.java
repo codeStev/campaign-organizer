@@ -2,9 +2,11 @@ package com.campaignorganizer.wiki;
 
 import com.campaignorganizer.wiki.ArticleRepository.ArticleRef;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +26,19 @@ public class AutoLinker {
 
     public AutoLinker(ArticleRepository articles) {
         this.articles = articles;
+    }
+
+    /** Lowercased {@code [[target]]} names referenced in a body (before any {@code |}). */
+    public static Set<String> linkTargets(String body) {
+        Set<String> targets = new HashSet<>();
+        if (body == null || !body.contains("[[")) {
+            return targets;
+        }
+        Matcher matcher = LINK.matcher(body);
+        while (matcher.find()) {
+            targets.add(matcher.group(1).trim().toLowerCase(Locale.ROOT));
+        }
+        return targets;
     }
 
     /** Return {@code body} with wiki-links resolved against the world's articles. */

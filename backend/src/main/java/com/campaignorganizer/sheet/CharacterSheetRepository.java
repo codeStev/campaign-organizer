@@ -11,5 +11,7 @@ public interface CharacterSheetRepository extends JpaRepository<CharacterSheet, 
 
     List<CharacterSheet> findByWorldIdAndCampaignIdOrderByCreatedAtDesc(UUID worldId, UUID campaignId);
 
+    List<CharacterSheet> findByWorldIdAndArticleId(UUID worldId, UUID articleId);
+
     Optional<CharacterSheet> findByIdAndWorldId(UUID id, UUID worldId);
 }

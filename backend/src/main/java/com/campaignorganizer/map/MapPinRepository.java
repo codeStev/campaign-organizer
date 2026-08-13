@@ -9,5 +9,7 @@ public interface MapPinRepository extends JpaRepository<MapPin, UUID> {
 
     List<MapPin> findByMapIdOrderByCreatedAtAsc(UUID mapId);
 
+    List<MapPin> findByArticleId(UUID articleId);
+
     Optional<MapPin> findByIdAndMapId(UUID id, UUID mapId);
 }

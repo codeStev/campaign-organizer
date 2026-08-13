@@ -18,4 +18,6 @@ public interface TimelineEventRepository extends JpaRepository<TimelineEvent, UU
     List<TimelineEvent> findOrdered(@Param("timelineId") UUID timelineId);
 
     Optional<TimelineEvent> findByIdAndTimelineId(UUID id, UUID timelineId);
+
+    List<TimelineEvent> findByArticleId(UUID articleId);
 }

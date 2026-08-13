@@ -32,25 +32,35 @@ public class ArticleController {
     private final AutoLinker autoLinker;
     private final HtmlSanitizer htmlSanitizer;
     private final ArticleRevisionRepository revisions;
+    private final com.campaignorganizer.usage.UsageService usageService;
 
     public ArticleController(ArticleRepository articles, CategoryRepository categories,
                              WorldRepository worlds, AutoLinker autoLinker, HtmlSanitizer htmlSanitizer,
-                             ArticleRevisionRepository revisions) {
+                             ArticleRevisionRepository revisions,
+                             com.campaignorganizer.usage.UsageService usageService) {
         this.articles = articles;
         this.categories = categories;
         this.worlds = worlds;
         this.autoLinker = autoLinker;
         this.htmlSanitizer = htmlSanitizer;
         this.revisions = revisions;
+        this.usageService = usageService;
     }
 
     @GetMapping
     public List<ArticleSummaryResponse> list(@PathVariable UUID worldId,
                                              @RequestParam(required = false) UUID categoryId,
+                                             @RequestParam(required = false) UUID campaignId,
                                              @RequestParam(required = false) String q) {
         requireWorld(worldId);
         List<Article> result;
-        if (q != null && !q.isBlank()) {
+        if (campaignId != null) {
+            // Articles referenced by that campaign's play content (ADR-0033).
+            var ids = usageService.articleIdsUsedInCampaign(worldId, campaignId);
+            result = articles.findByWorldIdOrderByCreatedAtDesc(worldId).stream()
+                    .filter(a -> ids.contains(a.getId()))
+                    .toList();
+        } else if (q != null && !q.isBlank()) {
             result = articles.search(worldId, q.trim());
         } else if (categoryId != null) {
             result = articles.findByWorldIdAndCategoryIdOrderByCreatedAtDesc(worldId, categoryId);
