@@ -134,7 +134,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   );
 
   useEffect(() => {
-    void refresh(query, campaignFilter);
+    // Debounce so typing a query doesn't fire a request per keystroke.
+    const handle = setTimeout(() => void refresh(query, campaignFilter), 150);
+    return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, campaignFilter]);
 
