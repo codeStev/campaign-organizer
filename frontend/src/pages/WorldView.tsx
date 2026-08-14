@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   articlesApi,
   articleRevisionsApi,
@@ -16,6 +16,7 @@ import {
   ApiError,
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { CommandPalette, Command } from '../components/CommandPalette';
 import { MapsView } from './MapsView';
 import { TimelinesView } from './TimelinesView';
 import { CalendarsView } from './CalendarsView';
@@ -49,6 +50,27 @@ interface Draft {
 
 const EMPTY_DRAFT: Draft = { id: null, title: '', template: 'GENERIC', body: '' };
 
+type Tab =
+  | 'articles'
+  | 'maps'
+  | 'timelines'
+  | 'calendars'
+  | 'relationships'
+  | 'campaigns'
+  | 'sheets'
+  | 'whiteboards';
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'articles', label: 'Articles' },
+  { key: 'maps', label: 'Maps' },
+  { key: 'timelines', label: 'Timelines' },
+  { key: 'calendars', label: 'Calendars' },
+  { key: 'relationships', label: 'Relationships' },
+  { key: 'campaigns', label: 'Campaigns' },
+  { key: 'sheets', label: 'Sheets' },
+  { key: 'whiteboards', label: 'Whiteboards' },
+];
+
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
   const api = articlesApi(worldId);
   const media = mediaApi(worldId);
@@ -57,16 +79,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [previewHtml, setPreviewHtml] = useState('');
   const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
-  const [tab, setTab] = useState<
-    | 'articles'
-    | 'maps'
-    | 'timelines'
-    | 'calendars'
-    | 'relationships'
-    | 'campaigns'
-    | 'sheets'
-    | 'whiteboards'
-  >('articles');
+  const [tab, setTab] = useState<Tab>('articles');
   // Article panel mode: read (rendered, clickable links) vs edit (TipTap form).
   const [mode, setMode] = useState<'read' | 'edit'>('read');
   // Active article-type filters; empty set means no filtering (show all).
@@ -79,6 +92,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [campaignFilter, setCampaignFilter] = useState('');
   // "Used by" panel for the open article (null = hidden).
   const [usages, setUsages] = useState<Usage[] | null>(null);
+  // Ctrl/Cmd-K command palette; its article list is unfiltered by the sidebar.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteArticles, setPaletteArticles] = useState<ArticleSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const visibleArticles = articles.filter(
@@ -225,6 +241,47 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     void openArticle(id);
   }
 
+  const openPalette = useCallback(async () => {
+    setPaletteOpen(true);
+    try {
+      // Always the full, unfiltered list so the palette can reach any article.
+      setPaletteArticles(await api.list());
+    } catch (err) {
+      handleError(err);
+    }
+  }, [api, handleError]);
+
+  // Global Ctrl/Cmd-K opens the palette.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        void openPalette();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openPalette]);
+
+  const commands = useMemo<Command[]>(() => {
+    const nav: Command[] = TABS.map((t) => ({
+      id: `tab:${t.key}`,
+      label: `Go to ${t.label}`,
+      group: 'Navigate',
+      keywords: t.key,
+      run: () => setTab(t.key),
+    }));
+    const articleCmds: Command[] = paletteArticles.map((a) => ({
+      id: `article:${a.id}`,
+      label: a.title,
+      group: 'Articles',
+      keywords: a.template,
+      run: () => openFromMap(a.id),
+    }));
+    return [...nav, ...articleCmds];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paletteArticles]);
+
   function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
     const link = (event.target as HTMLElement).closest('.wiki-link');
     if (link) {
@@ -273,11 +330,23 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
 
   return (
     <section className="world-view">
+      <CommandPalette
+        open={paletteOpen}
+        commands={commands}
+        onClose={() => setPaletteOpen(false)}
+      />
       <div className="world-view-bar">
         <button className="link-button" onClick={onBack}>
           ← Worlds
         </button>
         <h2>{worldName}</h2>
+        <button
+          className="link-button palette-btn"
+          onClick={() => void openPalette()}
+          title="Jump to anything (Ctrl/⌘-K)"
+        >
+          ⌘K Jump…
+        </button>
         <button className="link-button export-btn" onClick={handleExport} title="Download world as JSON">
           ⭳ Export
         </button>

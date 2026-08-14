@@ -953,6 +953,83 @@ button:disabled {
   white-space: nowrap;
 }
 
+.palette-btn {
+  white-space: nowrap;
+}
+
+/* Command palette */
+.palette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 6, 14, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.palette {
+  width: min(560px, 92vw);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: #1b1826;
+  border: 1px solid #3a3550;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.palette-input {
+  border: none;
+  border-bottom: 1px solid #3a3550;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  color: inherit;
+}
+
+.palette-input:focus {
+  outline: none;
+}
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  overflow-y: auto;
+}
+
+.palette-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+}
+
+.palette-item.active {
+  background: #2c2740;
+}
+
+.palette-group {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a80a8;
+  margin-top: 0.25rem;
+}
+
+.palette-label {
+  color: #ece8f6;
+}
+
+.palette-empty {
+  padding: 0.6rem 1rem;
+}
+
 /* Whiteboards */
 .whiteboard {
   display: flex;
