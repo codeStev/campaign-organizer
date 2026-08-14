@@ -41,6 +41,7 @@ the old one.
 | [0032](0032-multi-article-beats-and-statblock-campaigns.md) | Multi-article beats, campaign-scoped statblocks | Accepted |
 | [0033](0033-article-usage-backlinks.md) | Article usage backlinks + campaign-usage filter | Accepted |
 | [0034](0034-command-palette.md) | Command palette for in-world navigation | Accepted |
+| [0035](0035-print-view.md) | Print / PDF view via the browser | Accepted |
 
 ## Template
 

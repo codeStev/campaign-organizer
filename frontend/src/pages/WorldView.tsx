@@ -17,6 +17,7 @@ import {
 } from '../api/client';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
+import { PrintView } from './PrintView';
 import { MapsView } from './MapsView';
 import { TimelinesView } from './TimelinesView';
 import { CalendarsView } from './CalendarsView';
@@ -96,6 +97,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   // Ctrl/Cmd-K command palette; its article list is unfiltered by the sidebar.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteArticles, setPaletteArticles] = useState<ArticleSummary[]>([]);
+  // Full-screen print/PDF view.
+  const [printOpen, setPrintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const visibleArticles = articles.filter(
@@ -338,6 +341,15 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         commands={commands}
         onClose={() => setPaletteOpen(false)}
       />
+      {printOpen && (
+        <PrintView
+          worldId={worldId}
+          worldName={worldName}
+          campaigns={campaigns}
+          onClose={() => setPrintOpen(false)}
+          onError={handleError}
+        />
+      )}
       <div className="world-view-bar">
         <button className="link-button" onClick={onBack}>
           ← Worlds
@@ -349,6 +361,13 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           title="Jump to anything (Ctrl/⌘-K)"
         >
           ⌘K Jump…
+        </button>
+        <button
+          className="link-button print-btn"
+          onClick={() => setPrintOpen(true)}
+          title="Print or save as PDF"
+        >
+          🖨 Print
         </button>
         <button className="link-button export-btn" onClick={handleExport} title="Download world as JSON">
           ⭳ Export
