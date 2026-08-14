@@ -50,6 +50,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
 
   const [list, setList] = useState<Timeline[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Timeline | null>(null);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
@@ -79,7 +80,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   );
 
   useEffect(() => {
-    api.list().then(setList).catch(handleError);
+    api.list().then(setList).catch(handleError).finally(() => setLoading(false));
     articleApi.list().then(setArticles).catch(handleError);
     calendarApi.list().then(setCalendars).catch(handleError);
   }, [api, articleApi, calendarApi, handleError]);
@@ -197,7 +198,8 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="muted">No timelines yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && list.length === 0 && <li className="muted">No timelines yet.</li>}
         </ul>
       </aside>
 

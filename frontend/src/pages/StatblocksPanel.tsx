@@ -30,6 +30,7 @@ function toRows(stats: Record<string, unknown>): StatRow[] {
 export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Statblock[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [filterCampaign, setFilterCampaign] = useState('');
 
@@ -38,6 +39,8 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
       setList(await api.list(filterCampaign || undefined));
     } catch (err) {
       onError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, filterCampaign, onError]);
 
@@ -117,7 +120,8 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="muted">No statblocks yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && list.length === 0 && <li className="muted">No statblocks yet.</li>}
         </ul>
       </div>
 

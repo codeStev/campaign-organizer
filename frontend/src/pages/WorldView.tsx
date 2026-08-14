@@ -90,6 +90,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   // Narrow the article list to entries referenced by this campaign ('' = all).
   const [campaignFilter, setCampaignFilter] = useState('');
+  const [articlesLoading, setArticlesLoading] = useState(true);
   // "Used by" panel for the open article (null = hidden).
   const [usages, setUsages] = useState<Usage[] | null>(null);
   // Ctrl/Cmd-K command palette; its article list is unfiltered by the sidebar.
@@ -144,6 +145,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         setArticles(await api.list(Object.keys(params).length ? params : undefined));
       } catch (err) {
         handleError(err);
+      } finally {
+        setArticlesLoading(false);
       }
     },
     [api, handleError],
@@ -480,7 +483,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   </button>
                 </li>
               ))}
-              {visibleArticles.length === 0 && (
+              {articlesLoading && <li className="muted">Loading…</li>}
+              {!articlesLoading && visibleArticles.length === 0 && (
                 <li className="muted">
                   {articles.length === 0 ? 'No articles yet.' : 'No articles match the filter.'}
                 </li>

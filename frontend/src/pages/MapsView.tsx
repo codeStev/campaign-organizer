@@ -24,6 +24,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [list, setList] = useState<WorldMap[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<WorldMap | null>(null);
   const [pins, setPins] = useState<MapPin[]>([]);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
@@ -51,7 +52,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   );
 
   useEffect(() => {
-    maps.list().then(setList).catch(handleError);
+    maps.list().then(setList).catch(handleError).finally(() => setLoading(false));
     articleApi.list().then(setArticles).catch(handleError);
   }, [maps, articleApi, handleError]);
 
@@ -162,7 +163,8 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="muted">No maps yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && list.length === 0 && <li className="muted">No maps yet.</li>}
         </ul>
 
         {layers.length > 0 && (

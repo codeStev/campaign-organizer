@@ -37,6 +37,7 @@ export function CharacterSheetsPanel({
 }: Props) {
   const api = useMemo(() => characterSheetsApi(worldId), [worldId]);
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
   // '' = all campaigns; a campaign id = only that party's sheets.
   const [filterCampaign, setFilterCampaign] = useState('');
@@ -46,6 +47,8 @@ export function CharacterSheetsPanel({
       setSheets(await api.list(filterCampaign || undefined));
     } catch (err) {
       onError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, filterCampaign, onError]);
 
@@ -153,7 +156,10 @@ export function CharacterSheetsPanel({
               </button>
             </li>
           ))}
-          {sheets.length === 0 && <li className="muted">No character sheets yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && sheets.length === 0 && (
+            <li className="muted">No character sheets yet.</li>
+          )}
         </ul>
       </div>
 

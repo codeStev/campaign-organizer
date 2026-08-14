@@ -20,6 +20,7 @@ const EMPTY: Draft = { id: null, title: '', sessionNumber: '', date: '', summary
 export function SessionLog({ worldId, campaignId, onError }: Props) {
   const api = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY);
 
   const refresh = useCallback(async () => {
@@ -27,6 +28,8 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
       setSessions(await api.list());
     } catch (err) {
       onError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, onError]);
 
@@ -134,7 +137,10 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
             </div>
           </li>
         ))}
-        {sessions.length === 0 && <li className="muted">No sessions logged yet.</li>}
+        {loading && <li className="muted">Loading…</li>}
+        {!loading && sessions.length === 0 && (
+          <li className="muted">No sessions logged yet.</li>
+        )}
       </ol>
     </section>
   );

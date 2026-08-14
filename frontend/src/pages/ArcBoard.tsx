@@ -29,6 +29,7 @@ export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError
   const api = useMemo(() => arcsApi(worldId, campaignId), [worldId, campaignId]);
   const sessionApi = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
   const [arcs, setArcs] = useState<Arc[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [newTitle, setNewTitle] = useState('');
 
@@ -37,6 +38,8 @@ export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError
       setArcs(await api.list());
     } catch (err) {
       onError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, onError]);
 
@@ -104,7 +107,8 @@ export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError
             onRemove={() => removeArc(arc)}
           />
         ))}
-        {arcs.length === 0 && <p className="muted">No arcs yet.</p>}
+        {loading && <p className="muted">Loading…</p>}
+        {!loading && arcs.length === 0 && <p className="muted">No arcs yet.</p>}
       </div>
     </section>
   );

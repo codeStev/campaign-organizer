@@ -16,6 +16,7 @@ interface Props {
 export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
   const api = useMemo(() => whiteboardsApi(worldId), [worldId]);
   const [list, setList] = useState<Whiteboard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Whiteboard | null>(null);
   const [nodes, setNodes] = useState<WhiteboardNode[]>([]);
   const [edges, setEdges] = useState<WhiteboardEdge[]>([]);
@@ -35,6 +36,8 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       setList(await api.list());
     } catch (err) {
       handleError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, handleError]);
 
@@ -104,7 +107,8 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="muted">No whiteboards yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && list.length === 0 && <li className="muted">No whiteboards yet.</li>}
         </ul>
       </aside>
 

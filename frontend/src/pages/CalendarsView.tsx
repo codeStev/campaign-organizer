@@ -23,6 +23,7 @@ const EMPTY_DRAFT: Draft = {
 export function CalendarsView({ worldId, onAuthExpired }: Props) {
   const api = useMemo(() => calendarsApi(worldId), [worldId]);
   const [list, setList] = useState<Calendar[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +40,8 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       setList(await api.list());
     } catch (err) {
       handleError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, handleError]);
 
@@ -111,7 +114,8 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="muted">No calendars yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && list.length === 0 && <li className="muted">No calendars yet.</li>}
         </ul>
       </aside>
 

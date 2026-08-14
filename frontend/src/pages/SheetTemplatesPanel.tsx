@@ -11,11 +11,12 @@ import { TemplateBuilder } from '../components/TemplateBuilder';
 interface Props {
   worldId: string;
   templates: SheetTemplate[];
+  loading: boolean;
   onChanged: () => void;
   onError: (err: unknown) => void;
 }
 
-export function SheetTemplatesPanel({ worldId, templates, onChanged, onError }: Props) {
+export function SheetTemplatesPanel({ worldId, templates, loading, onChanged, onError }: Props) {
   const api = sheetTemplatesApi(worldId);
   const [builtins, setBuiltins] = useState<BuiltinSheetTemplate[]>([]);
   const [choice, setChoice] = useState('');
@@ -119,7 +120,10 @@ export function SheetTemplatesPanel({ worldId, templates, onChanged, onError }: 
             </button>
           </li>
         ))}
-        {templates.length === 0 && <li className="muted">No templates yet. Add a starter or build one.</li>}
+        {loading && <li className="muted">Loading…</li>}
+        {!loading && templates.length === 0 && (
+          <li className="muted">No templates yet. Add a starter or build one.</li>
+        )}
       </ul>
     </div>
   );

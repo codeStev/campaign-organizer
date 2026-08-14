@@ -27,6 +27,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const campaignApi = useMemo(() => campaignsApi(worldId), [worldId]);
   const [sub, setSub] = useState<SubTab>('characters');
   const [templates, setTemplates] = useState<SheetTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +41,11 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   );
 
   const loadTemplates = useCallback(() => {
-    templatesApiRef.list().then(setTemplates).catch(onError);
+    templatesApiRef
+      .list()
+      .then(setTemplates)
+      .catch(onError)
+      .finally(() => setTemplatesLoading(false));
   }, [templatesApiRef, onError]);
 
   useEffect(() => {
@@ -85,6 +90,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           <SheetTemplatesPanel
             worldId={worldId}
             templates={templates}
+            loading={templatesLoading}
             onChanged={loadTemplates}
             onError={onError}
           />

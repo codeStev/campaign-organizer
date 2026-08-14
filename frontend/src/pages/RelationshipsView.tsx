@@ -19,6 +19,7 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
 
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -39,6 +40,8 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
       setRelationships(await api.list());
     } catch (err) {
       handleError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, handleError]);
 
@@ -123,7 +126,10 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
               </button>
             </li>
           ))}
-          {relationships.length === 0 && <li className="muted">No relationships yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && relationships.length === 0 && (
+            <li className="muted">No relationships yet.</li>
+          )}
         </ul>
       </aside>
 

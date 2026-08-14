@@ -19,6 +19,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const api = useMemo(() => campaignsApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const [list, setList] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [notes, setNotes] = useState('');
@@ -38,6 +39,8 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       setList(await api.list());
     } catch (err) {
       handleError(err);
+    } finally {
+      setLoading(false);
     }
   }, [api, handleError]);
 
@@ -105,7 +108,8 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="muted">No campaigns yet.</li>}
+          {loading && <li className="muted">Loading…</li>}
+          {!loading && list.length === 0 && <li className="muted">No campaigns yet.</li>}
         </ul>
       </aside>
 
