@@ -10,6 +10,10 @@ interface Props {
   /** Fill colour per layer name; pins without a layer use defaultColor. */
   colorByLayer?: Record<string, string>;
   defaultColor?: string;
+  /** Effective label per pin id (own label or article-title fallback). */
+  pinLabels?: Record<string, string>;
+  /** When true, labels are shown permanently beside the pin (else on hover). */
+  showLabels?: boolean;
   onMapClick: (x: number, y: number) => void;
   onPinClick: (pinId: string) => void;
 }
@@ -24,6 +28,8 @@ export function MapCanvas({
   selectedPinId,
   colorByLayer = {},
   defaultColor = '#6d54c9',
+  pinLabels = {},
+  showLabels = false,
   onMapClick,
   onPinClick,
 }: Props) {
@@ -85,18 +91,26 @@ export function MapCanvas({
       const d = dimsRef.current;
       if (!markers || !d) return false;
       markers.clearLayers();
-      pins.forEach((pin) => {
+      pins.forEach((pin, i) => {
         const selected = pin.id === selectedPinId;
         const fill = pin.layer ? colorByLayer[pin.layer] ?? defaultColor : defaultColor;
-        const marker = L.circleMarker([d.h * (1 - pin.y), d.w * pin.x], {
-          radius: selected ? 9 : 6,
-          // Selected pins get a bright ring so the layer colour still shows as fill.
-          color: selected ? '#ffffff' : '#14121a',
-          weight: selected ? 3 : 2,
-          fillColor: fill,
-          fillOpacity: 1,
+        // Numbered badge (matches the legend); layer colour as its fill.
+        const icon = L.divIcon({
+          className: 'pin-div',
+          html: `<span class="pin-badge${selected ? ' selected' : ''}" style="background:${fill}">${i + 1}</span>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
         });
-        if (pin.label) marker.bindTooltip(pin.label);
+        const marker = L.marker([d.h * (1 - pin.y), d.w * pin.x], { icon });
+        const label = pinLabels[pin.id] || pin.label || '';
+        if (label) {
+          marker.bindTooltip(
+            label,
+            showLabels
+              ? { permanent: true, direction: 'right', offset: [10, 0], className: 'pin-label-tip' }
+              : undefined,
+          );
+        }
         marker.on('click', () => pinClickRef.current(pin.id));
         marker.addTo(markers);
       });
@@ -108,7 +122,7 @@ export function MapCanvas({
       if (draw()) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
-  }, [pins, selectedPinId, colorByLayer, defaultColor]);
+  }, [pins, selectedPinId, colorByLayer, defaultColor, pinLabels, showLabels]);
 
   return <div ref={containerRef} className="map-canvas" />;
 }

@@ -378,6 +378,90 @@ button:disabled {
   cursor: pointer;
 }
 
+/* Strip Leaflet's default divIcon chrome so only our badge shows. */
+.leaflet-div-icon.pin-div {
+  background: none;
+  border: 0;
+}
+
+/* Permanent pin labels drawn on the map. */
+.leaflet-tooltip.pin-label-tip {
+  background: rgba(20, 18, 26, 0.85);
+  color: #ece8f6;
+  border: none;
+  box-shadow: none;
+  font-size: 0.75rem;
+  padding: 0.05rem 0.35rem;
+}
+
+.leaflet-tooltip.pin-label-tip::before {
+  display: none; /* hide the callout arrow */
+}
+
+/* Numbered pin badge (Leaflet marker + legend share the look). */
+.pin-badge,
+.pin-legend-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 2px solid #14121a;
+  box-sizing: border-box;
+}
+
+.pin-badge.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #14121a;
+}
+
+.pin-legend {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0.4rem;
+  max-height: 30vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pin-legend-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.2rem 0.3rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.pin-legend-item.active .pin-legend-btn,
+.pin-legend-btn:hover {
+  background: #2c2740;
+}
+
+.pin-legend-badge {
+  flex: 0 0 auto;
+}
+
+.pin-legend-label {
+  flex: 1;
+}
+
+.pin-legend-layer {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+}
+
 .pin-panel {
   gap: 0.5rem;
 }

@@ -51,6 +51,7 @@ the old one.
 | [0042](0042-github-style-diff.md) | GitHub-style unified revision diff | Accepted |
 | [0043](0043-beat-statblocks.md) | Reference statblocks from beats | Accepted |
 | [0044](0044-map-pin-ux.md) | Map pin UX — inline editing and layer colours | Accepted |
+| [0045](0045-map-pin-legend-labels.md) | Numbered pins, legend, and on-map labels | Accepted |
 
 ## Template
 

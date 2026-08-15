@@ -46,6 +46,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+  const [showLabels, setShowLabels] = useState(false);
   // Per-layer colour overrides, persisted locally (auto colour used otherwise).
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
     try {
@@ -162,6 +163,24 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const visiblePins = pins.filter((p) => !p.layer || !hiddenLayers.has(p.layer));
   const selectedPin = pins.find((p) => p.id === selectedPinId) ?? null;
 
+  const articleTitleById = useMemo(
+    () => new Map(articles.map((a) => [a.id, a.title])),
+    [articles],
+  );
+  // A pin's shown label: its own label, else the linked article's title.
+  const labelFor = useCallback(
+    (pin: MapPin) => pin.label || (pin.articleId ? articleTitleById.get(pin.articleId) ?? '' : ''),
+    [articleTitleById],
+  );
+  const pinLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    pins.forEach((p) => {
+      const l = labelFor(p);
+      if (l) map[p.id] = l;
+    });
+    return map;
+  }, [pins, labelFor]);
+
   const colorForLayer = useCallback(
     (layer: string) => colorOverrides[layer] ?? autoColor(layer),
     [colorOverrides],
@@ -247,6 +266,14 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           <>
             <div className="map-bar">
               <strong>{selected.name}</strong>
+              <label className="layer-toggle" title="Show each pin's label on the map">
+                <input
+                  type="checkbox"
+                  checked={showLabels}
+                  onChange={(e) => setShowLabels(e.target.checked)}
+                />
+                Labels
+              </label>
               <button className="link-button danger" onClick={() => deleteMap(selected)}>
                 Delete map
               </button>
@@ -258,11 +285,37 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 selectedPinId={selectedPinId}
                 colorByLayer={colorByLayer}
                 defaultColor={DEFAULT_PIN_COLOR}
+                pinLabels={pinLabels}
+                showLabels={showLabels}
                 onMapClick={addPin}
                 onPinClick={setSelectedPinId}
               />
             ) : (
               <p className="error">This map's image is missing.</p>
+            )}
+
+            {visiblePins.length > 0 && (
+              <ol className="pin-legend card">
+                {visiblePins.map((p, i) => (
+                  <li
+                    key={p.id}
+                    className={p.id === selectedPinId ? 'pin-legend-item active' : 'pin-legend-item'}
+                  >
+                    <button className="pin-legend-btn" onClick={() => setSelectedPinId(p.id)}>
+                      <span
+                        className="pin-legend-badge"
+                        style={{ background: p.layer ? colorByLayer[p.layer] ?? DEFAULT_PIN_COLOR : DEFAULT_PIN_COLOR }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="pin-legend-label">
+                        {labelFor(p) || <em className="muted">(no label)</em>}
+                      </span>
+                      {p.layer && <span className="pin-legend-layer muted">{p.layer}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ol>
             )}
 
             {selectedPin && (
@@ -301,9 +354,12 @@ function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEdito
   const dirty =
     label !== (pin.label ?? '') || layer !== (pin.layer ?? '') || articleId !== (pin.articleId ?? '');
 
+  const fallbackTitle =
+    pin.label || (pin.articleId ? articles.find((a) => a.id === pin.articleId)?.title : '') || 'Pin';
+
   return (
     <div className="card pin-panel">
-      <strong>{pin.label || 'Pin'}</strong>
+      <strong>{fallbackTitle}</strong>
       <label>
         Label
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Old Keep" />
