@@ -40,6 +40,8 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
   const [printableMaps, setPrintableMaps] = useState<PrintableMap[]>([]);
 
   const scopeName = scope ? campaigns.find((c) => c.id === scope)?.name ?? '' : '';
+  // Maps only print at whole-world scope, so `articles` covers every linked pin.
+  const articleTitleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,7 +175,9 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
               {pins.length > 0 && (
                 <ol className="print-map-legend">
                   {pins.map((p) => (
-                    <li key={p.id}>{p.label || 'Unlabeled pin'}</li>
+                    <li key={p.id}>
+                      {p.label || (p.articleId ? articleTitleById.get(p.articleId) : '') || 'Unlabeled pin'}
+                    </li>
                   ))}
                 </ol>
               )}
