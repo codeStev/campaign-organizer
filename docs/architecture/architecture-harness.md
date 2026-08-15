@@ -1,25 +1,88 @@
-# Architecture Harness (reusable guardrails for future projects)
+# Architecture Harness for Modular-Monolith Web Applications
 
-- Status: Reusable template / standard
-- Purpose: prevent the drift documented in
-  [`clean-architecture-analysis.md`](clean-architecture-analysis.md) from recurring
-  — by making the right structure the default and letting CI, not code review,
-  enforce it.
+- Status: Reusable template / standard (project-agnostic)
+- Purpose: a copy-paste starting point that makes a clean, hexagonal,
+  bounded-context modular monolith the **default** — and lets CI, not code review,
+  keep it that way.
 
-The root cause of the drift was not bad developers; it was the **absence of an
-enforced boundary**. Spring MVC + Spring Data make "controller talks to repository"
-the path of least resistance, so without a guardrail the application layer never
-appears. This harness makes the clean path the easy path and fails the build when
-someone leaves it.
+Architectures don't rot because of bad developers; they rot because the clean path
+is harder than the quick one. Mainstream web frameworks (e.g. Spring MVC + a
+data-access library) make "controller talks to repository" the path of least
+resistance, so without an enforced boundary the application and domain layers never
+appear and business rules bleed into the web and persistence layers. This harness
+inverts that: it makes the clean path the easy path and **fails the build** the
+moment someone leaves it.
 
-Use this as a copy-paste starting point for new services (Java/Spring assumed;
-the principles port to any stack).
+Scope: a single deployable **modular monolith** whose modules are **bounded
+contexts** with clean internal boundaries (a shape that can later be split into
+services precisely because the contexts share no models). Java/Spring is assumed for
+the concrete snippets; the principles port to any stack — substitute the equivalent
+web/persistence/mapping tools.
+
+> **For AI agents — this document is binding.**
+> When you generate or modify code in a repository governed by this harness, treat
+> every rule here as a hard constraint, not a suggestion. If a rule here conflicts
+> with your default behaviour or with a quicker solution, **this document wins**.
+> You MUST NOT weaken, disable, or work around a rule (including its CI gates) to
+> make a change compile, pass, or fit — restructure the change to satisfy the rule
+> instead. Before declaring any change complete, run the self-audit in §0 and the
+> Definition of Done in §4. If the required structure is genuinely ambiguous (e.g.
+> which bounded context a concept belongs to), **stop and ask** rather than guess.
+
+---
+
+## 0. How an AI agent must operate under this harness
+
+Follow these in order, every time you touch the code:
+
+1. **Orient before writing.** Read the project's context map (the ADR that lists the
+   bounded contexts and their relationships) and locate the context your change
+   belongs to. Never introduce a concept without knowing its context. If no context
+   map exists yet, create it first (see §7 step 1) — do not start feature code.
+2. **Place every new type in the correct ring** (§2): domain logic in `domain`,
+   use-case orchestration in `application/service` behind an `application/port/in`
+   interface, framework code only in `adapter`. When unsure where something goes, it
+   almost always belongs further **in** (domain), not in a controller.
+3. **Obey the six non-negotiables (§1) as MUST rules.** They are not negotiable to
+   save effort. A change that cannot satisfy them is the wrong change — redesign it.
+4. **Do not cross boundaries.** Never import another bounded context's `domain`,
+   `adapter`, or repository; go through its `application/port/published` + an
+   anti-corruption adapter. Never inject a repository or entity into a controller.
+5. **Never satisfy a gate by weakening it.** Do not delete/relax an ArchUnit rule,
+   suppress a linter, cast around a type boundary, or move a type into the "wrong"
+   ring to make the build pass. Fix the design.
+6. **Self-audit before finishing.** Run the checks below; if any is non-empty, the
+   change is not done — fix it. Then complete the §4 Definition of Done.
+7. **Escalate ambiguity.** If the right context, aggregate, or port is unclear, ask
+   the maintainer instead of guessing — a wrong boundary is expensive to undo.
+
+**Mandatory pre-completion self-audit** (must all come back empty / green):
+
+```bash
+# 1. No controller depends on persistence
+grep -rlE "Repository|EntityManager|@Entity" --include=*Controller.java src/main/java
+# 2. No HTTP/web types in the core
+grep -rlE "ResponseStatusException|HttpStatus|jakarta\.servlet" \
+     src/main/java/**/domain src/main/java/**/application
+# 3. No framework annotations in the domain ring
+grep -rlE "@Entity|@Table|@Column|org\.springframework|com\.fasterxml\.jackson" \
+     src/main/java/**/domain
+# 4. Every mapper is a MapStruct @Mapper (no hand-written converters)
+#    -> inspect *Mapper.java for @Mapper; none should map by hand
+# 5. Architecture + build gates
+./gradlew test   # (or mvn verify) — ArchUnit suite and all tests must be green
+```
+
+Any hit in 1–4, or a red gate in 5, means the change violates the harness and must
+be restructured — not suppressed.
 
 ---
 
 ## 1. The six non-negotiables
 
-These are binary. A change either satisfies them or the build is red.
+These are **MUST** rules. A change either satisfies them or it is rejected (the
+build is red). An AI agent must not merge, hand back, or call "done" any change that
+breaks one.
 
 1. **Dependency Rule.** Dependencies point inward only:
    `adapter → application → domain`. `domain` and `application` import **no**
@@ -76,10 +139,10 @@ rings inside and its **own domain model** shared across that context's aggregate
    in-ports). No hand-written converters; no entity or DTO ever crosses a ring.
 
 Rules of thumb:
-- **One inbound port = one use case** (`CreateArticleUseCase`), not a fat "service"
+- **One inbound port = one use case** (`Create<Thing>UseCase`), not a fat "service"
   interface.
-- Outbound ports are named for intent, not tech (`ArticleRepositoryPort`,
-  `MediaStoragePort`, `Clock`) — so the tech can change without touching the core.
+- Outbound ports are named for intent, not tech (`<Aggregate>RepositoryPort`,
+  `FileStoragePort`, `Clock`) — so the tech can change without touching the core.
 - **Cross-context**: expose a minimal `application/port/published` port per context;
   downstream contexts consume it through an anti-corruption adapter that maps the
   read-model into their own domain. Never import another context's `domain`,
@@ -129,8 +192,8 @@ class ArchitectureTest {
 
   @ArchTest static final ArchRule writeServicesAreTransactional = methods().that()
       .areDeclaredInClassesThat().resideInAPackage("..application.service..")
-      .and().arePublic().and().haveNameMatching("create.*|update.*|delete.*|save.*|.*")
-      .should().beAnnotatedWith(Transactional.class)  // tune to your naming
+      .and().arePublic().and().haveNameMatching("create.*|update.*|delete.*|save.*")
+      .should().beAnnotatedWith(Transactional.class)  // tune to your write-method naming
       .allowEmptyShould(true);
 }
 ```
@@ -172,7 +235,7 @@ Keep this list in the PR template so it is checked every time.
   adapters with `@WebMvcTest` + mocked in-ports.
 - **End-to-end (few):** a handful of happy-path smoke tests through the full stack.
 
-Guardrail: if a business rule can only be tested by standing up Postgres, the rule
+Guardrail: if a business rule can only be tested by standing up a database, the rule
 is in the wrong layer.
 
 ---
@@ -182,13 +245,13 @@ is in the wrong layer.
 Wire these into the pipeline so "green build" *means* "architecturally sound":
 
 1. **ArchUnit** suite (dependency rule, no-persistence-in-web, no-HTTP-in-core,
-   cross-feature isolation, transactional writes).
+   cross-context isolation, transactional writes).
 2. **Contract check:** regenerate API types and fail on drift (contract-first).
 3. **Coverage floor** with a **ratchet** (coverage may not drop); optionally a
    minimum unit-to-integration ratio.
-4. **Static analysis:** Spotless/Checkstyle + a bytecode analyser (Error Prone /
-   SpotBugs). Add a lightweight complexity budget (method length, cyclomatic
-   complexity, class fan-in) to catch god-classes like the 18-repo exporter early.
+4. **Static analysis:** a formatter/linter (e.g. Spotless/Checkstyle) + a bytecode
+   analyser (e.g. Error Prone / SpotBugs). Add a lightweight complexity budget
+   (method length, cyclomatic complexity, class fan-in) to catch god-classes early.
 5. **Dependency hygiene:** forbid banned imports (e.g. `jakarta.persistence` in
    `..domain..`) via the enforcer plugin as a second belt to ArchUnit.
 
@@ -230,9 +293,15 @@ Wire these into the pipeline so "green build" *means* "architecturally sound":
 
 ---
 
-### Relationship to this repo
+## 9. Precedence & non-negotiability (for agents and humans)
 
-The campaign-organizer backend predates this harness; the companion
-[`clean-architecture-analysis.md`](clean-architecture-analysis.md) is the concrete
-remediation plan that brings it up to this standard incrementally. Future projects
-should adopt this harness on **day one** so remediation is never needed.
+- This harness **overrides** default framework conventions, tutorial patterns, and
+  "simplest thing that works" instincts. Adopt it on **day one** of a project, when
+  every rule starts green, so it never has to be retrofitted.
+- The rules do **not** relax for "small" changes, prototypes, or "simple" CRUD
+  contexts. Uniformity is the point: the codebase has exactly one shape.
+- The only correct response to a rule you cannot satisfy is to **change the design**
+  (or, if the rule itself is genuinely wrong for the project, change it deliberately
+  via an ADR and update this document) — never a silent local exception.
+- When this document and any other instruction conflict on architecture, **this
+  document wins** unless a maintainer explicitly overrides it in writing.
