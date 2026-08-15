@@ -15,7 +15,7 @@ import com.campaignorganizer.sheet.SheetTemplateRepository;
 import com.campaignorganizer.statblock.StatblockRepository;
 import com.campaignorganizer.timeline.TimelineRepository;
 import com.campaignorganizer.timeline.TimelineEventRepository;
-import com.campaignorganizer.whiteboard.WhiteboardRepository;
+import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
 import com.campaignorganizer.wiki.ArticleRepository;
 import com.campaignorganizer.wiki.CategoryRepository;
 import com.campaignorganizer.world.World;
@@ -65,7 +65,7 @@ public class WorldExportController {
     private final SheetTemplateRepository sheetTemplates;
     private final CharacterSheetRepository characterSheets;
     private final StatblockRepository statblocks;
-    private final WhiteboardRepository whiteboards;
+    private final WhiteboardJpaRepository whiteboards;
 
     public WorldExportController(WorldRepository worlds, CategoryRepository categories,
                                 ArticleRepository articles, WorldMapRepository maps, MapPinRepository pins,
@@ -75,7 +75,7 @@ public class WorldExportController {
                                 SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
                                 SheetTemplateRepository sheetTemplates,
                                 CharacterSheetRepository characterSheets, StatblockRepository statblocks,
-                                WhiteboardRepository whiteboards) {
+                                WhiteboardJpaRepository whiteboards) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;

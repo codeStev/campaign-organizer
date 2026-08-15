@@ -24,6 +24,7 @@ domain model shared across its aggregates, and no context shares types with anot
 | **campaign** | campaign, session, arc, beat | Core |
 | **characters** (CharactersAndRules) | character sheet + template (`sheet`), statblock, dice | Core |
 | **media** | media asset + storage (`media`) | Generic / supporting |
+| **whiteboard** | free-form plotting canvas (`whiteboard`) | Generic / supporting |
 | **identity** | auth, security, config | Generic / supporting |
 | **interchange** | export, usage backlinks, session packet | Cross-context orchestration |
 
