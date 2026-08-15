@@ -100,6 +100,39 @@ class StatblockControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void campaignFilterIncludesSharedStatblocksReferencedByBeats() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String camp = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin Wars\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        String arc = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs", worldId, camp)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Arc\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        // A shared statblock (no campaignId) referenced only by a beat in the campaign.
+        String shared = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin Spearman\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, camp, arc)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Ambush\",\"statblockIds\":[\"" + shared + "\"]}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .param("campaignId", camp))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].name", org.hamcrest.Matchers.hasItem("Goblin Spearman")));
+    }
+
+    @Test
     void rejectsForeignCampaign() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);

@@ -106,6 +106,40 @@ class BeatControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.sessionId").value(sessionId));
     }
 
+    private String statblockId(String name) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void linksStatblocksToBeat() throws Exception {
+        setup();
+        String spearman = statblockId("Goblin Spearman");
+        String archer = statblockId("Goblin Archer");
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Goblin ambush\",\"statblockIds\":[\""
+                                + spearman + "\",\"" + archer + "\"]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.statblockIds.length()").value(2))
+                .andExpect(jsonPath("$.statblockIds", org.hamcrest.Matchers.hasItems(spearman, archer)));
+    }
+
+    @Test
+    void rejectsBeatWithForeignStatblock() throws Exception {
+        setup();
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"statblockIds\":[\"" + UUID.randomUUID() + "\"]}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void rejectsBeatWithForeignSession() throws Exception {
         setup();
