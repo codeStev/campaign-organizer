@@ -94,7 +94,8 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   resolved wiki-links, and annotated maps — via the browser's print / Save-as-PDF.
   (ADR-0035)
 - **FR-28 Session prep packet.** One-click printable packet for a session: its
-  scheduled beats, the articles they reference, and campaign statblocks. (ADR-0036)
+  scheduled beats, the articles they reference, maps those articles are pinned on,
+  and campaign statblocks. (ADR-0036, ADR-0046)
 - **FR-29 Statblock cards.** Print statblocks as cut-out reference cards; tick
   specific statblocks to print a chosen subset, or print the whole filtered list.
   (ADR-0037, ADR-0041)

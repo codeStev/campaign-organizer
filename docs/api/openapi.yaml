@@ -2701,9 +2701,36 @@ components:
         bodyHtml:
           type: [string, "null"]
 
+    PacketPin:
+      type: object
+      required: [x, y]
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        label:
+          type: [string, "null"]
+
+    PacketMap:
+      type: object
+      required: [id, name, pins]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        imageUrl:
+          type: [string, "null"]
+        pins:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketPin'
+
     SessionPacket:
       type: object
-      required: [session, campaignName, beats, articles, statblocks]
+      required: [session, campaignName, beats, articles, maps, statblocks]
       description: Everything needed to run one session, aggregated for print.
       properties:
         session:
@@ -2718,6 +2745,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PacketArticle'
+        maps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketMap'
         statblocks:
           type: array
           items:

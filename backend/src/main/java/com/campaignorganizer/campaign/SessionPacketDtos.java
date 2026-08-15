@@ -26,10 +26,24 @@ public final class SessionPacketDtos {
             String template,
             String bodyHtml) {}
 
+    /** A pin on a packet map; label is resolved (own label or linked article title). */
+    public record PacketPin(
+            double x,
+            double y,
+            String label) {}
+
+    /** A map reachable from the session's beats (via a pin to a beat article). */
+    public record PacketMap(
+            UUID id,
+            String name,
+            String imageUrl,
+            List<PacketPin> pins) {}
+
     public record SessionPacketResponse(
             SessionResponse session,
             String campaignName,
             List<PacketBeat> beats,
             List<PacketArticle> articles,
+            List<PacketMap> maps,
             List<StatblockResponse> statblocks) {}
 }

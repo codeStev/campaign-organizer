@@ -118,6 +118,33 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </article>
             ))}
 
+            {packet.maps.map((m) => (
+              <section key={m.id} className="print-map-section">
+                <h1>{m.name}</h1>
+                {m.imageUrl && (
+                  <div className="print-map-figure">
+                    <img src={m.imageUrl} alt={m.name} />
+                    {m.pins.map((p, i) => (
+                      <span
+                        key={i}
+                        className="print-map-marker"
+                        style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
+                      >
+                        {i + 1}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {m.pins.length > 0 && (
+                  <ol className="print-map-legend">
+                    {m.pins.map((p, i) => (
+                      <li key={i}>{p.label || 'Unlabeled pin'}</li>
+                    ))}
+                  </ol>
+                )}
+              </section>
+            ))}
+
             {packet.statblocks.length > 0 && (
               <section className="print-map-section">
                 <h1>Statblocks</h1>

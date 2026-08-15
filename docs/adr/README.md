@@ -52,6 +52,7 @@ the old one.
 | [0043](0043-beat-statblocks.md) | Reference statblocks from beats | Accepted |
 | [0044](0044-map-pin-ux.md) | Map pin UX — inline editing and layer colours | Accepted |
 | [0045](0045-map-pin-legend-labels.md) | Numbered pins, legend, and on-map labels | Accepted |
+| [0046](0046-packet-maps.md) | Session packet includes linked maps | Accepted |
 
 ## Template
 

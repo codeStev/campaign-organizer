@@ -536,11 +536,25 @@ export interface PacketArticle {
   bodyHtml?: string | null;
 }
 
+export interface PacketPin {
+  x: number;
+  y: number;
+  label?: string | null;
+}
+
+export interface PacketMap {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+  pins: PacketPin[];
+}
+
 export interface SessionPacket {
   session: Session;
   campaignName: string;
   beats: PacketBeat[];
   articles: PacketArticle[];
+  maps: PacketMap[];
   statblocks: Statblock[];
 }
 

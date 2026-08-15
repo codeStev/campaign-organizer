@@ -81,4 +81,29 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
                         .value(Matchers.hasItem(Matchers.containsString("A knight."))))
                 .andExpect(jsonPath("$.statblocks[*].name", Matchers.hasItem("Klarg")));
     }
+
+    @Test
+    void includesMapsLinkedViaBeatArticles() throws Exception {
+        setup();
+        String place = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Phandalin\"}");
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
+                "{\"title\":\"Arrive\",\"sessionId\":\"" + sessionId + "\",\"articleIds\":[\"" + place + "\"]}");
+
+        // A map with an (unlabeled) pin linking the beat's article.
+        String mediaId = uploadImage(auth, worldId);
+        String mapId = create("/api/worlds/" + worldId + "/maps",
+                "{\"name\":\"Sword Coast\",\"mediaId\":\"" + mediaId + "\"}");
+        create("/api/worlds/" + worldId + "/maps/" + mapId + "/pins",
+                "{\"x\":0.4,\"y\":0.6,\"articleId\":\"" + place + "\"}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maps[*].name", Matchers.hasItem("Sword Coast")))
+                // The pin has no label, so it falls back to the linked article's title.
+                .andExpect(jsonPath("$.maps[0].pins[0].label").value("Phandalin"));
+    }
 }
