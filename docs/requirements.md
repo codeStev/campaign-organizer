@@ -78,6 +78,24 @@ integrate the app with the tools the owner already uses.
   package), so prepared lore can be pushed into a Foundry game. Depends on:
   articles (FR-3); relates to export (FR-22).
 
+### Prep & print (Phase 6 — added post-roadmap)
+The owner preps in the app but runs sessions from **paper**; print/PDF output is
+first-class (screen-sharing/GM-only was declined — see FR-15).
+- **FR-25 Usage backlinks & campaign filter.** Per-article "Used by" panel
+  (beats, map pins, timeline events, relationships, sheets, statblocks, wiki-links)
+  and an article-list filter by campaign usage. (ADR-0033)
+- **FR-26 Command palette.** `Ctrl/⌘-K` jump-to-anything (articles + views).
+  (ADR-0034)
+- **FR-27 Print / PDF compendium.** Print a world or a single campaign as a clean
+  black-on-white document — cover, contents, articles with embedded images and
+  resolved wiki-links, and annotated maps — via the browser's print / Save-as-PDF.
+  (ADR-0035)
+- **FR-28 Session prep packet.** One-click printable packet for a session: its
+  scheduled beats, the articles they reference, and campaign statblocks. (ADR-0036)
+- **FR-29 Statblock cards.** Print statblocks as cut-out reference cards. (ADR-0037)
+- **FR-30 Print in a separate tab.** Print views open in their own browser tab so
+  the app view is never hijacked. (ADR-0038)
+
 ---
 
 ## 2. Non-functional requirements
@@ -117,4 +135,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 3 | GM campaign manager | FR-12 … FR-14 (FR-15 dropped) |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
+| 6 | Prep & print (paper-first workflow) | FR-25 … FR-30 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
