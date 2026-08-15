@@ -14,6 +14,8 @@ interface Props {
   pinLabels?: Record<string, string>;
   /** When true, labels are shown permanently beside the pin (else on hover). */
   showLabels?: boolean;
+  /** SVG markup for a pin's layer icon, or null to show its number. */
+  pinIcon?: (pin: MapPin) => string | null;
   onMapClick: (x: number, y: number) => void;
   onPinClick: (pinId: string) => void;
 }
@@ -30,6 +32,7 @@ export function MapCanvas({
   defaultColor = '#6d54c9',
   pinLabels = {},
   showLabels = false,
+  pinIcon,
   onMapClick,
   onPinClick,
 }: Props) {
@@ -94,10 +97,11 @@ export function MapCanvas({
       pins.forEach((pin, i) => {
         const selected = pin.id === selectedPinId;
         const fill = pin.layer ? colorByLayer[pin.layer] ?? defaultColor : defaultColor;
-        // Numbered badge (matches the legend); layer colour as its fill.
+        // Badge shows the layer icon when set, else the pin number; layer colour fills it.
+        const inner = pinIcon?.(pin) || `${i + 1}`;
         const icon = L.divIcon({
           className: 'pin-div',
-          html: `<span class="pin-badge${selected ? ' selected' : ''}" style="background:${fill}">${i + 1}</span>`,
+          html: `<span class="pin-badge${selected ? ' selected' : ''}" style="background:${fill}">${inner}</span>`,
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });
@@ -122,7 +126,7 @@ export function MapCanvas({
       if (draw()) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
-  }, [pins, selectedPinId, colorByLayer, defaultColor, pinLabels, showLabels]);
+  }, [pins, selectedPinId, colorByLayer, defaultColor, pinLabels, showLabels, pinIcon]);
 
   return <div ref={containerRef} className="map-canvas" />;
 }

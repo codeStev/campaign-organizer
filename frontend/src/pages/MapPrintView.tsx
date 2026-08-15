@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { WorldMap, MapPin } from '../api/client';
+import { iconComponent } from '../components/mapIcons';
 
 interface Props {
   map: WorldMap;
   pins: MapPin[];
   layers: string[];
   colorByLayer: Record<string, string>;
+  iconByLayer: Record<string, string>;
   pinLabels: Record<string, string>;
   defaultColor: string;
   onClose: () => void;
@@ -32,6 +34,7 @@ export function MapPrintView({
   pins,
   layers,
   colorByLayer,
+  iconByLayer,
   pinLabels,
   defaultColor,
   onClose,
@@ -62,6 +65,10 @@ export function MapPrintView({
 
   function colorOf(p: MapPin): string {
     return p.layer ? colorByLayer[p.layer] ?? defaultColor : defaultColor;
+  }
+
+  function iconOf(p: MapPin) {
+    return iconComponent(p.layer ? iconByLayer[p.layer] : null);
   }
 
   return (
@@ -140,34 +147,43 @@ export function MapPrintView({
         {map.imageUrl ? (
           <div className="print-map-figure" style={{ width: `${scale}%` }}>
             <img src={map.imageUrl} alt={map.name} style={{ filter: filterCss || undefined }} />
-            {shownPins.map((p, i) => (
-              <span
-                key={p.id}
-                className="map-print-marker"
-                style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
-              >
-                <span className="pin-badge" style={{ background: colorOf(p) }}>
-                  {i + 1}
+            {shownPins.map((p, i) => {
+              const Icon = iconOf(p);
+              return (
+                <span
+                  key={p.id}
+                  className="map-print-marker"
+                  style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
+                >
+                  <span className="pin-badge" style={{ background: colorOf(p) }}>
+                    {Icon ? <Icon size={13} color="#fff" strokeWidth={2.5} /> : i + 1}
+                  </span>
+                  {showLabels && pinLabels[p.id] && (
+                    <span className="map-print-label">{pinLabels[p.id]}</span>
+                  )}
                 </span>
-                {showLabels && pinLabels[p.id] && (
-                  <span className="map-print-label">{pinLabels[p.id]}</span>
-                )}
-              </span>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="print-status">This map's image is missing.</p>
         )}
 
         {showLegend && shownPins.length > 0 && (
-          <ol className="print-map-legend">
-            {shownPins.map((p, i) => (
-              <li key={p.id}>
-                {i + 1}. {pinLabels[p.id] || 'Unlabeled pin'}
-                {p.layer ? ` — ${p.layer}` : ''}
-              </li>
-            ))}
-          </ol>
+          <ul className="print-map-legend map-print-legend">
+            {shownPins.map((p, i) => {
+              const Icon = iconOf(p);
+              return (
+                <li key={p.id} className="map-print-legend-item">
+                  <span className="pin-legend-badge" style={{ background: colorOf(p) }}>
+                    {Icon ? <Icon size={13} color="#fff" strokeWidth={2.5} /> : i + 1}
+                  </span>
+                  <span>{pinLabels[p.id] || 'Unlabeled pin'}</span>
+                  {p.layer && <span className="muted">— {p.layer}</span>}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </NewWindowPortal>

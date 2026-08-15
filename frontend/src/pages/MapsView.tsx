@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
+import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 
 interface Props {
   worldId: string;
@@ -53,6 +54,14 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem(`mapLayerColors:${worldId}`) || '{}');
+    } catch {
+      return {};
+    }
+  });
+  // Per-layer icon choices (icon key), persisted locally like colours.
+  const [iconOverrides, setIconOverrides] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`mapLayerIcons:${worldId}`) || '{}');
     } catch {
       return {};
     }
@@ -205,6 +214,37 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     });
   }
 
+  const iconByLayer = useMemo(() => {
+    const map: Record<string, string> = {};
+    layers.forEach((l) => {
+      if (iconOverrides[l]) map[l] = iconOverrides[l];
+    });
+    return map;
+  }, [layers, iconOverrides]);
+
+  // SVG markup for a pin's layer icon (white), or null to fall back to the number.
+  const pinIcon = useCallback(
+    (pin: MapPin) => {
+      const key = pin.layer ? iconOverrides[pin.layer] : undefined;
+      return key ? iconSvg(key, 14, '#fff') : null;
+    },
+    [iconOverrides],
+  );
+
+  function setLayerIcon(layer: string, key: string) {
+    setIconOverrides((prev) => {
+      const next = { ...prev };
+      if (key) next[layer] = key;
+      else delete next[layer];
+      try {
+        localStorage.setItem(`mapLayerIcons:${worldId}`, JSON.stringify(next));
+      } catch {
+        // Non-fatal.
+      }
+      return next;
+    });
+  }
+
   function toggleLayer(layer: string) {
     setHiddenLayers((prev) => {
       const next = new Set(prev);
@@ -247,6 +287,19 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                   onChange={(e) => setLayerColor(layer, e.target.value)}
                   title={`Colour for ${layer}`}
                 />
+                <select
+                  className="layer-icon-select"
+                  value={iconOverrides[layer] ?? ''}
+                  onChange={(e) => setLayerIcon(layer, e.target.value)}
+                  title={`Icon for ${layer}`}
+                >
+                  <option value="">#</option>
+                  {LAYER_ICONS.map((ic) => (
+                    <option key={ic.key} value={ic.key}>
+                      {ic.label}
+                    </option>
+                  ))}
+                </select>
                 <label className="layer-toggle">
                   <input
                     type="checkbox"
@@ -292,6 +345,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 defaultColor={DEFAULT_PIN_COLOR}
                 pinLabels={pinLabels}
                 showLabels={showLabels}
+                pinIcon={pinIcon}
                 onMapClick={addPin}
                 onPinClick={setSelectedPinId}
               />
@@ -311,7 +365,11 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                         className="pin-legend-badge"
                         style={{ background: p.layer ? colorByLayer[p.layer] ?? DEFAULT_PIN_COLOR : DEFAULT_PIN_COLOR }}
                       >
-                        {i + 1}
+                        {(() => {
+                          const key = p.layer ? iconOverrides[p.layer] : undefined;
+                          const Icon = iconComponent(key);
+                          return Icon ? <Icon size={13} color="#fff" strokeWidth={2.5} /> : i + 1;
+                        })()}
                       </span>
                       <span className="pin-legend-label">
                         {labelFor(p) || <em className="muted">(no label)</em>}
@@ -341,6 +399,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 pins={pins}
                 layers={layers}
                 colorByLayer={colorByLayer}
+                iconByLayer={iconByLayer}
                 pinLabels={pinLabels}
                 defaultColor={DEFAULT_PIN_COLOR}
                 onClose={() => setPrintOpen(false)}

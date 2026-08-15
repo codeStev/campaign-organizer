@@ -419,6 +419,28 @@ button:disabled {
   box-shadow: 0 0 0 2px #14121a;
 }
 
+/* Icons render as inline SVG inside the badge. */
+.pin-badge svg,
+.pin-legend-badge svg {
+  display: block;
+}
+
+.layer-icon-select {
+  flex: 0 0 auto;
+  max-width: 6.5rem;
+}
+
+.map-print-legend {
+  list-style: none;
+  padding: 0;
+}
+
+.map-print-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .pin-legend {
   list-style: none;
   margin: 0.6rem 0 0;
