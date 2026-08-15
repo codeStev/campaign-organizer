@@ -88,34 +88,58 @@ function wordSegs(aLine: string, bLine: string): { del: Seg[]; add: Seg[] } {
 interface Row {
   type: 'same' | 'add' | 'del';
   segs: Seg[]; // for a changed line, may carry intra-line word highlights
+  oldNo?: number; // line number in the older version (blank for added lines)
+  newNo?: number; // line number in the newer version (blank for removed lines)
+}
+
+interface LineOp {
+  type: 'same' | 'add' | 'del';
+  value: string;
+  oldNo?: number;
+  newNo?: number;
 }
 
 /** Turn line ops into GitHub-style rows, pairing adjacent del/add lines for word highlight. */
 function buildRows(aText: string, bText: string): Row[] {
   const ops = lcsDiff(aText.split('\n'), bText.split('\n'));
+
+  // Assign line numbers per side before pairing so they stay monotonic.
+  const annotated: LineOp[] = [];
+  let oldNo = 1;
+  let newNo = 1;
+  for (const op of ops) {
+    if (op.type === 'same') annotated.push({ type: 'same', value: op.value, oldNo: oldNo++, newNo: newNo++ });
+    else if (op.type === 'del') annotated.push({ type: 'del', value: op.value, oldNo: oldNo++ });
+    else annotated.push({ type: 'add', value: op.value, newNo: newNo++ });
+  }
+
   const rows: Row[] = [];
-  let dels: string[] = [];
-  let adds: string[] = [];
+  let dels: LineOp[] = [];
+  let adds: LineOp[] = [];
 
   const flush = () => {
     const paired = Math.min(dels.length, adds.length);
     for (let k = 0; k < paired; k++) {
-      const { del, add } = wordSegs(dels[k], adds[k]);
-      rows.push({ type: 'del', segs: del });
-      rows.push({ type: 'add', segs: add });
+      const { del, add } = wordSegs(dels[k].value, adds[k].value);
+      rows.push({ type: 'del', segs: del, oldNo: dels[k].oldNo });
+      rows.push({ type: 'add', segs: add, newNo: adds[k].newNo });
     }
-    for (let k = paired; k < dels.length; k++) rows.push({ type: 'del', segs: [{ type: 'del', text: dels[k] }] });
-    for (let k = paired; k < adds.length; k++) rows.push({ type: 'add', segs: [{ type: 'add', text: adds[k] }] });
+    for (let k = paired; k < dels.length; k++) {
+      rows.push({ type: 'del', segs: [{ type: 'del', text: dels[k].value }], oldNo: dels[k].oldNo });
+    }
+    for (let k = paired; k < adds.length; k++) {
+      rows.push({ type: 'add', segs: [{ type: 'add', text: adds[k].value }], newNo: adds[k].newNo });
+    }
     dels = [];
     adds = [];
   };
 
-  for (const op of ops) {
-    if (op.type === 'del') dels.push(op.value);
-    else if (op.type === 'add') adds.push(op.value);
+  for (const op of annotated) {
+    if (op.type === 'del') dels.push(op);
+    else if (op.type === 'add') adds.push(op);
     else {
       flush();
-      rows.push({ type: 'same', segs: [{ type: 'same', text: op.value }] });
+      rows.push({ type: 'same', segs: [{ type: 'same', text: op.value }], oldNo: op.oldNo, newNo: op.newNo });
     }
   }
   flush();
@@ -160,6 +184,8 @@ export function RevisionDiff({ a, b }: Props) {
         <div className="diff-view">
           {rows.map((r, i) => (
             <div key={i} className={`diff-row ${r.type}`}>
+              <span className="diff-lineno">{r.oldNo ?? ''}</span>
+              <span className="diff-lineno">{r.newNo ?? ''}</span>
               <span className="diff-gutter">{r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' '}</span>
               <span className="diff-line">
                 <SegText segs={r.segs} />

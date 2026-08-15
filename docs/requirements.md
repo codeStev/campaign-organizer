@@ -102,8 +102,8 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   (ADR-0039; refines FR-6.)
 - **FR-32 Revision diff.** Tick any two article versions (or a version against
   current) in the History panel to compare them as a GitHub-style unified line
-  diff (red/green rows with per-word highlighting); the newer version is always
-  the “+” side. (ADR-0040, ADR-0042; refines FR-21.)
+  diff (old/new line numbers, red/green rows, per-word highlighting); the newer
+  version is always the “+” side. (ADR-0040, ADR-0042; refines FR-21.)
 - **FR-33 Beat statblock references.** Attach statblocks to a beat directly (no
   article needed). A statblock referenced by a campaign's beats is treated as
   relevant to that campaign — its statblock list and session packets include such
