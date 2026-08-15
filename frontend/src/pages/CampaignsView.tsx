@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   campaignsApi,
   articlesApi,
+  statblocksApi,
   Campaign,
   ArticleSummary,
+  Statblock,
   ApiError,
 } from '../api/client';
 import { SessionLog } from './SessionLog';
@@ -18,10 +20,12 @@ interface Props {
 export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const api = useMemo(() => campaignsApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
+  const statblockApi = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [statblocks, setStatblocks] = useState<Statblock[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +51,8 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   useEffect(() => {
     void refresh();
     articleApi.list().then(setArticles).catch(handleError);
-  }, [refresh, articleApi, handleError]);
+    statblockApi.list().then(setStatblocks).catch(handleError);
+  }, [refresh, articleApi, statblockApi, handleError]);
 
   function select(campaign: Campaign) {
     setSelected(campaign);
@@ -149,6 +154,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               worldId={worldId}
               campaignId={selected.id}
               articles={articles}
+              statblocks={statblocks}
               onOpenArticle={onOpenArticle}
               onError={handleError}
             />

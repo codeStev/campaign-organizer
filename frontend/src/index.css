@@ -715,6 +715,17 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+/* Statblock reference on a beat (row label + editor chip). */
+.beat-statblock {
+  font-size: 0.8rem;
+  color: #c9b78a;
+  white-space: nowrap;
+}
+
+.beat-chip-statblock {
+  border-color: #c9b78a;
+}
+
 .beat-form {
   display: flex;
   gap: 0.4rem;

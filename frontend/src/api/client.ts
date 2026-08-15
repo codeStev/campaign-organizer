@@ -490,6 +490,7 @@ export interface Beat {
   body?: string | null;
   done: boolean;
   articleIds: string[];
+  statblockIds: string[];
   sessionId?: string | null;
   position: number;
   createdAt: string;
@@ -501,6 +502,7 @@ export interface BeatRequest {
   body?: string | null;
   done?: boolean;
   articleIds?: string[];
+  statblockIds?: string[];
   sessionId?: string | null;
   position?: number | null;
 }

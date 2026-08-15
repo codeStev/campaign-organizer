@@ -9,6 +9,7 @@ import {
   Beat,
   Session,
   ArticleSummary,
+  Statblock,
 } from '../api/client';
 
 function sessionLabel(s: Session): string {
@@ -21,11 +22,12 @@ interface Props {
   worldId: string;
   campaignId: string;
   articles: ArticleSummary[];
+  statblocks: Statblock[];
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
 }
 
-export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError }: Props) {
+export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArticle, onError }: Props) {
   const api = useMemo(() => arcsApi(worldId, campaignId), [worldId, campaignId]);
   const sessionApi = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
   const [arcs, setArcs] = useState<Arc[]>([]);
@@ -100,6 +102,7 @@ export function ArcBoard({ worldId, campaignId, articles, onOpenArticle, onError
             campaignId={campaignId}
             arc={arc}
             articles={articles}
+            statblocks={statblocks}
             sessions={sessions}
             onOpenArticle={onOpenArticle}
             onError={onError}
@@ -119,6 +122,7 @@ interface ArcCardProps {
   campaignId: string;
   arc: Arc;
   articles: ArticleSummary[];
+  statblocks: Statblock[];
   sessions: Session[];
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
@@ -130,6 +134,7 @@ interface BeatDraft {
   title: string;
   body: string;
   articleIds: string[];
+  statblockIds: string[];
   sessionId: string;
 }
 
@@ -138,6 +143,7 @@ function ArcCard({
   campaignId,
   arc,
   articles,
+  statblocks,
   sessions,
   onOpenArticle,
   onError,
@@ -149,8 +155,18 @@ function ArcCard({
   const [open, setOpen] = useState(false);
   const [beatTitle, setBeatTitle] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<BeatDraft>({ title: '', body: '', articleIds: [], sessionId: '' });
+  const [draft, setDraft] = useState<BeatDraft>({
+    title: '',
+    body: '',
+    articleIds: [],
+    statblockIds: [],
+    sessionId: '',
+  });
   const titleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
+  const statblockNameById = useMemo(
+    () => new Map(statblocks.map((s) => [s.id, s.name])),
+    [statblocks],
+  );
   const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
 
   const refresh = useCallback(async () => {
@@ -184,6 +200,7 @@ function ArcCard({
         body: beat.body,
         done: !beat.done,
         articleIds: beat.articleIds,
+        statblockIds: beat.statblockIds,
         sessionId: beat.sessionId,
         position: beat.position,
       });
@@ -208,6 +225,7 @@ function ArcCard({
       title: beat.title,
       body: beat.body ?? '',
       articleIds: beat.articleIds ?? [],
+      statblockIds: beat.statblockIds ?? [],
       sessionId: beat.sessionId ?? '',
     });
   }
@@ -218,6 +236,12 @@ function ArcCard({
     }
   }
 
+  function addDraftStatblock(id: string) {
+    if (id && !draft.statblockIds.includes(id)) {
+      setDraft({ ...draft, statblockIds: [...draft.statblockIds, id] });
+    }
+  }
+
   async function saveEdit(beat: Beat) {
     try {
       await api.update(beat.id, {
@@ -225,6 +249,7 @@ function ArcCard({
         body: draft.body || null,
         done: beat.done,
         articleIds: draft.articleIds,
+        statblockIds: draft.statblockIds,
         sessionId: draft.sessionId || null,
         position: beat.position,
       });
@@ -272,6 +297,13 @@ function ArcCard({
                         {titleById.get(id)}
                       </button>
                     ))}
+                  {b.statblockIds
+                    .filter((id) => statblockNameById.has(id))
+                    .map((id) => (
+                      <span key={id} className="beat-statblock" title="Statblock">
+                        ⚔ {statblockNameById.get(id)}
+                      </span>
+                    ))}
                   {b.sessionId && sessionById.has(b.sessionId) && (
                     <span className="beat-session muted">{sessionLabel(sessionById.get(b.sessionId)!)}</span>
                   )}
@@ -298,7 +330,7 @@ function ArcCard({
                       value={draft.body}
                       onChange={(e) => setDraft({ ...draft, body: e.target.value })}
                     />
-                    {draft.articleIds.length > 0 && (
+                    {(draft.articleIds.length > 0 || draft.statblockIds.length > 0) && (
                       <div className="beat-article-chips">
                         {draft.articleIds.map((id) => (
                           <span key={id} className="beat-chip">
@@ -308,6 +340,23 @@ function ArcCard({
                               className="link-button danger"
                               onClick={() =>
                                 setDraft({ ...draft, articleIds: draft.articleIds.filter((x) => x !== id) })
+                              }
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                        {draft.statblockIds.map((id) => (
+                          <span key={id} className="beat-chip beat-chip-statblock">
+                            ⚔ {statblockNameById.get(id) ?? 'statblock'}
+                            <button
+                              type="button"
+                              className="link-button danger"
+                              onClick={() =>
+                                setDraft({
+                                  ...draft,
+                                  statblockIds: draft.statblockIds.filter((x) => x !== id),
+                                })
                               }
                             >
                               ✕
@@ -324,6 +373,16 @@ function ArcCard({
                           .map((a) => (
                             <option key={a.id} value={a.id}>
                               {a.title}
+                            </option>
+                          ))}
+                      </select>
+                      <select value="" onChange={(e) => addDraftStatblock(e.target.value)}>
+                        <option value="">+ link statblock (monster, NPC…)</option>
+                        {statblocks
+                          .filter((s) => !draft.statblockIds.includes(s.id))
+                          .map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
                             </option>
                           ))}
                       </select>
