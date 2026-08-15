@@ -11,9 +11,20 @@ interface Props {
 
 type Seg = { type: 'same' | 'add' | 'del'; text: string };
 
-/** HTML → readable plain text, preserving block boundaries as newlines. */
+/** A short, stable marker for an image so its presence (and changes) show in the diff. */
+function imageMarker(tag: string): string {
+  const alt = /alt="([^"]*)"/i.exec(tag)?.[1];
+  const src = /src="([^"]*)"/i.exec(tag)?.[1] ?? '';
+  // Our media URLs are /api/media/{id}/content — the id is the stable identifier.
+  const id = /\/api\/media\/([^/]+)\/content/.exec(src)?.[1];
+  const label = alt || id || src || 'image';
+  return `\n🖼 [image: ${label}]\n`;
+}
+
+/** HTML → readable plain text, preserving block boundaries and image markers. */
 function textFromHtml(html: string): string {
   const withBreaks = (html || '')
+    .replace(/<img\b[^>]*>/gi, imageMarker)
     .replace(/<\/(p|h1|h2|h3|h4|li|div|blockquote|tr)>/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n');
   const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
