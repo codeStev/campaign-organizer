@@ -11,11 +11,11 @@ import org.springframework.stereotype.Component;
  * modelled inside this context — ADR-0050.)
  */
 @Component
-public class WorldExistsAdapter implements WorldExistsPort {
+public class WhiteboardWorldExistsAdapter implements WorldExistsPort {
 
     private final WorldRepository worlds;
 
-    public WorldExistsAdapter(WorldRepository worlds) {
+    public WhiteboardWorldExistsAdapter(WorldRepository worlds) {
         this.worlds = worlds;
     }
 

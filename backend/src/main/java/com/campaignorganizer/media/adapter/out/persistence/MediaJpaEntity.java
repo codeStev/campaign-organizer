@@ -1,16 +1,16 @@
-package com.campaignorganizer.media;
+package com.campaignorganizer.media.adapter.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Persistence model for a media asset (maps the {@code media} table). */
 @Entity
 @Table(name = "media")
-public class MediaAsset {
+public class MediaJpaEntity {
 
     @Id
     private UUID id;
@@ -33,51 +33,63 @@ public class MediaAsset {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    protected MediaAsset() {
+    protected MediaJpaEntity() {
         // for JPA
-    }
-
-    public MediaAsset(UUID worldId, String filename, String contentType, long sizeBytes, String storageKey) {
-        this.worldId = worldId;
-        this.filename = filename;
-        this.contentType = contentType;
-        this.sizeBytes = sizeBytes;
-        this.storageKey = storageKey;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        createdAt = Instant.now();
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public void setWorldId(UUID worldId) {
+        this.worldId = worldId;
     }
 
     public String getFilename() {
         return filename;
     }
 
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
+
     public String getContentType() {
         return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
     }
 
     public long getSizeBytes() {
         return sizeBytes;
     }
 
+    public void setSizeBytes(long sizeBytes) {
+        this.sizeBytes = sizeBytes;
+    }
+
     public String getStorageKey() {
         return storageKey;
     }
 
+    public void setStorageKey(String storageKey) {
+        this.storageKey = storageKey;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

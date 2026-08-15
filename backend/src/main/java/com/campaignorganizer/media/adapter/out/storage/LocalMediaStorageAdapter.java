@@ -1,22 +1,22 @@
-package com.campaignorganizer.media;
+package com.campaignorganizer.media.adapter.out.storage;
 
 import com.campaignorganizer.config.AppProperties;
+import com.campaignorganizer.media.application.port.out.MediaStoragePort;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-/** {@link MediaStorage} that writes one file per asset under {@code app.media.dir}. */
+/** {@link MediaStoragePort} that writes one file per asset under {@code app.media.dir}. */
 @Component
-public class LocalMediaStorage implements MediaStorage {
+public class LocalMediaStorageAdapter implements MediaStoragePort {
 
     private final Path root;
 
-    public LocalMediaStorage(AppProperties properties) {
+    public LocalMediaStorageAdapter(AppProperties properties) {
         this.root = Path.of(properties.media().dir()).toAbsolutePath().normalize();
     }
 
@@ -33,8 +33,16 @@ public class LocalMediaStorage implements MediaStorage {
     }
 
     @Override
-    public Resource load(String key) {
-        return new FileSystemResource(resolve(key));
+    public Optional<byte[]> load(String key) {
+        Path path = resolve(key);
+        if (!Files.exists(path)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Files.readAllBytes(path));
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to load media", e);
+        }
     }
 
     @Override

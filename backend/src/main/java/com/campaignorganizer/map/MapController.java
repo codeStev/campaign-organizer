@@ -2,7 +2,7 @@ package com.campaignorganizer.map;
 
 import com.campaignorganizer.map.MapDtos.MapRequest;
 import com.campaignorganizer.map.MapDtos.MapResponse;
-import com.campaignorganizer.media.MediaRepository;
+import com.campaignorganizer.media.application.port.published.MediaLookupPort;
 import com.campaignorganizer.world.WorldRepository;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -26,10 +26,10 @@ import org.springframework.web.server.ResponseStatusException;
 public class MapController {
 
     private final WorldMapRepository maps;
-    private final MediaRepository media;
+    private final MediaLookupPort media;
     private final WorldRepository worlds;
 
-    public MapController(WorldMapRepository maps, MediaRepository media, WorldRepository worlds) {
+    public MapController(WorldMapRepository maps, MediaLookupPort media, WorldRepository worlds) {
         this.maps = maps;
         this.media = media;
         this.worlds = worlds;
@@ -86,7 +86,7 @@ public class MapController {
     }
 
     private void requireImage(UUID worldId, UUID mediaId) {
-        if (media.findByIdAndWorldId(mediaId, worldId).isEmpty()) {
+        if (!media.existsInWorld(mediaId, worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image not found in this world");
         }
     }
