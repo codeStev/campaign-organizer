@@ -177,6 +177,46 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/layer-styles:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [worlds]
+      summary: Get per-layer map styling (colour + icon) for a world
+      operationId: getLayerStyles
+      responses:
+        '200':
+          description: Layer styles, keyed by layer name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LayerStyleMap'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [worlds]
+      summary: Replace per-layer map styling for a world
+      operationId: putLayerStyles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LayerStyleMap'
+      responses:
+        '200':
+          description: Updated layer styles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LayerStyleMap'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /article-templates:
     get:
       tags: [templates]
@@ -2804,12 +2844,29 @@ components:
           type: string
         description:
           type: [string, "null"]
+        layerStyles:
+          $ref: '#/components/schemas/LayerStyleMap'
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+
+    LayerStyle:
+      type: object
+      description: Styling for a map layer.
+      properties:
+        color:
+          type: [string, "null"]
+        icon:
+          type: [string, "null"]
+
+    LayerStyleMap:
+      type: object
+      description: Per-layer styling keyed by layer name.
+      additionalProperties:
+        $ref: '#/components/schemas/LayerStyle'
 
     CategoryRequest:
       type: object

@@ -36,12 +36,12 @@ non-functional). Each maps to a roadmap phase.
 ### Worldbuilding tools (Phase 2)
 - **FR-8 Interactive maps.** Upload a map image, place pins (edited inline for
   label, layer, and linked article), and toggle layers. Pins are colour-coded by
-  layer (adjustable colour and icon per layer), numbered/iconised with a legend,
-  and can show labels on the map; a pin with no label falls back to its linked
-  article's title. A single map
-  can be printed on its own with scale, visual-filter, per-layer pin filtering
-  (e.g. a players' copy hiding secret locations), and label/legend options.
-  (ADR-0018, ADR-0044, ADR-0045, ADR-0047)
+  layer (adjustable colour and icon per layer, persisted on the world so they
+  export and sync across devices), numbered/iconised with a legend, and can show
+  labels on the map; a pin with no label falls back to its linked article's title.
+  A single map can be printed on its own with scale, visual-filter, per-layer pin
+  filtering (e.g. a players' copy hiding secret locations), and label/legend
+  options. (ADR-0018, ADR-0044, ADR-0045, ADR-0047, ADR-0049)
 - **FR-9 Timelines.** Events with dates, linked to articles; parallel timelines.
 - **FR-10 Calendars.** Custom (fantasy) calendar systems that drive timeline
   dates.

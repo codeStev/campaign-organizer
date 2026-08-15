@@ -7,7 +7,11 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "worlds")
@@ -21,6 +25,11 @@ public class World {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    /** Per-layer map styling (colour + icon), keyed by layer name (ADR-0049). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "layer_styles", nullable = false, columnDefinition = "jsonb")
+    private Map<String, LayerStyle> layerStyles = new HashMap<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -67,6 +76,14 @@ public class World {
 
     public String getDescription() {
         return description;
+    }
+
+    public Map<String, LayerStyle> getLayerStyles() {
+        return layerStyles;
+    }
+
+    public void setLayerStyles(Map<String, LayerStyle> layerStyles) {
+        this.layerStyles = layerStyles == null ? new HashMap<>() : layerStyles;
     }
 
     public Instant getCreatedAt() {

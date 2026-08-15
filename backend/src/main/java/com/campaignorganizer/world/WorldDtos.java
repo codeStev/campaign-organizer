@@ -3,6 +3,7 @@ package com.campaignorganizer.world;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 /** Request/response payloads for the worlds resource (mirrors docs/api/openapi.yaml). */
@@ -20,6 +21,7 @@ public final class WorldDtos {
             UUID id,
             String name,
             String description,
+            Map<String, LayerStyle> layerStyles,
             Instant createdAt,
             Instant updatedAt) {
 
@@ -28,6 +30,7 @@ public final class WorldDtos {
                     world.getId(),
                     world.getName(),
                     world.getDescription(),
+                    world.getLayerStyles(),
                     world.getCreatedAt(),
                     world.getUpdatedAt());
         }

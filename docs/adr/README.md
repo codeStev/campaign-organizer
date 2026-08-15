@@ -55,6 +55,7 @@ the old one.
 | [0046](0046-packet-maps.md) | Session packet includes linked maps | Accepted |
 | [0047](0047-map-print.md) | Direct map printing with options | Accepted |
 | [0048](0048-layer-icons.md) | Per-layer pin icons | Accepted |
+| [0049](0049-persist-layer-styles.md) | Persist per-layer map styling on the world | Accepted |
 
 ## Template
 

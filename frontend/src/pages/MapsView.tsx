@@ -4,9 +4,11 @@ import {
   pinsApi,
   mediaApi,
   articlesApi,
+  layerStylesApi,
   WorldMap,
   MapPin,
   ArticleSummary,
+  LayerStyle,
   ApiError,
 } from '../api/client';
 import { MapCanvas } from '../components/MapCanvas';
@@ -38,8 +40,8 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const maps = useMemo(() => mapsApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
+  const stylesApi = useMemo(() => layerStylesApi(worldId), [worldId]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const colorKey = `mapLayerColors:${worldId}`;
 
   const [list, setList] = useState<WorldMap[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,22 +52,9 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
-  // Per-layer colour overrides, persisted locally (auto colour used otherwise).
-  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(`mapLayerColors:${worldId}`) || '{}');
-    } catch {
-      return {};
-    }
-  });
-  // Per-layer icon choices (icon key), persisted locally like colours.
-  const [iconOverrides, setIconOverrides] = useState<Record<string, string>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(`mapLayerIcons:${worldId}`) || '{}');
-    } catch {
-      return {};
-    }
-  });
+  // Per-layer styling (colour + icon), persisted on the world so it travels
+  // with the export and across devices (ADR-0049).
+  const [styles, setStyles] = useState<Record<string, LayerStyle>>({});
   const [error, setError] = useState<string | null>(null);
 
   const handleError = useCallback(
@@ -90,7 +79,17 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   useEffect(() => {
     maps.list().then(setList).catch(handleError).finally(() => setLoading(false));
     articleApi.list().then(setArticles).catch(handleError);
-  }, [maps, articleApi, handleError]);
+    stylesApi.get().then(setStyles).catch(handleError);
+  }, [maps, articleApi, stylesApi, handleError]);
+
+  // Persist a layer-styling change to the world (merged with existing styles).
+  const saveStyles = useCallback(
+    (next: Record<string, LayerStyle>) => {
+      setStyles(next);
+      stylesApi.put(next).catch(handleError);
+    },
+    [stylesApi, handleError],
+  );
 
   async function selectMap(map: WorldMap) {
     setSelected(map);
@@ -193,8 +192,8 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   }, [pins, labelFor]);
 
   const colorForLayer = useCallback(
-    (layer: string) => colorOverrides[layer] ?? autoColor(layer),
-    [colorOverrides],
+    (layer: string) => styles[layer]?.color || autoColor(layer),
+    [styles],
   );
   const colorByLayer = useMemo(() => {
     const map: Record<string, string> = {};
@@ -202,47 +201,30 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     return map;
   }, [layers, colorForLayer]);
 
-  function setLayerColor(layer: string, color: string) {
-    setColorOverrides((prev) => {
-      const next = { ...prev, [layer]: color };
-      try {
-        localStorage.setItem(colorKey, JSON.stringify(next));
-      } catch {
-        // Non-fatal: colours just won't persist across reloads.
-      }
-      return next;
-    });
-  }
-
   const iconByLayer = useMemo(() => {
     const map: Record<string, string> = {};
     layers.forEach((l) => {
-      if (iconOverrides[l]) map[l] = iconOverrides[l];
+      const icon = styles[l]?.icon;
+      if (icon) map[l] = icon;
     });
     return map;
-  }, [layers, iconOverrides]);
+  }, [layers, styles]);
 
   // SVG markup for a pin's layer icon (white), or null to fall back to the number.
   const pinIcon = useCallback(
     (pin: MapPin) => {
-      const key = pin.layer ? iconOverrides[pin.layer] : undefined;
+      const key = pin.layer ? styles[pin.layer]?.icon : undefined;
       return key ? iconSvg(key, 14, '#fff') : null;
     },
-    [iconOverrides],
+    [styles],
   );
 
+  function setLayerColor(layer: string, color: string) {
+    saveStyles({ ...styles, [layer]: { ...styles[layer], color } });
+  }
+
   function setLayerIcon(layer: string, key: string) {
-    setIconOverrides((prev) => {
-      const next = { ...prev };
-      if (key) next[layer] = key;
-      else delete next[layer];
-      try {
-        localStorage.setItem(`mapLayerIcons:${worldId}`, JSON.stringify(next));
-      } catch {
-        // Non-fatal.
-      }
-      return next;
-    });
+    saveStyles({ ...styles, [layer]: { ...styles[layer], icon: key || null } });
   }
 
   function toggleLayer(layer: string) {
@@ -289,7 +271,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 />
                 <select
                   className="layer-icon-select"
-                  value={iconOverrides[layer] ?? ''}
+                  value={styles[layer]?.icon ?? ''}
                   onChange={(e) => setLayerIcon(layer, e.target.value)}
                   title={`Icon for ${layer}`}
                 >
@@ -366,7 +348,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                         style={{ background: p.layer ? colorByLayer[p.layer] ?? DEFAULT_PIN_COLOR : DEFAULT_PIN_COLOR }}
                       >
                         {(() => {
-                          const key = p.layer ? iconOverrides[p.layer] : undefined;
+                          const key = p.layer ? styles[p.layer]?.icon : undefined;
                           const Icon = iconComponent(key);
                           return Icon ? <Icon size={13} color="#fff" strokeWidth={2.5} /> : i + 1;
                         })()}

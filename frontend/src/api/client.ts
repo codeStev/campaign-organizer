@@ -260,6 +260,20 @@ export function mapsApi(worldId: string) {
   };
 }
 
+export interface LayerStyle {
+  color?: string | null;
+  icon?: string | null;
+}
+
+export function layerStylesApi(worldId: string) {
+  const base = `/worlds/${worldId}/layer-styles`;
+  return {
+    get: () => request<Record<string, LayerStyle>>(base),
+    put: (styles: Record<string, LayerStyle>) =>
+      request<Record<string, LayerStyle>>(base, { method: 'PUT', body: JSON.stringify(styles) }),
+  };
+}
+
 export function pinsApi(worldId: string, mapId: string) {
   const base = `/worlds/${worldId}/maps/${mapId}/pins`;
   return {

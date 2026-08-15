@@ -23,6 +23,30 @@ class WorldControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void persistsLayerStyles() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        mockMvc.perform(put("/api/worlds/{w}/layer-styles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"cities\":{\"color\":\"#e6194b\",\"icon\":\"castle\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cities.color").value("#e6194b"))
+                .andExpect(jsonPath("$.cities.icon").value("castle"));
+
+        // Survives a re-fetch and rides along on the world (so it exports).
+        mockMvc.perform(get("/api/worlds/{w}/layer-styles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cities.icon").value("castle"));
+        mockMvc.perform(get("/api/worlds/{w}", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.layerStyles.cities.color").value("#e6194b"));
+    }
+
+    @Test
     void supportsFullWorldLifecycle() throws Exception {
         String auth = "Bearer " + obtainToken();
 
