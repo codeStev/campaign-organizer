@@ -98,6 +98,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **FR-31 Image embedding.** Embed images in articles via the toolbar, paste, or
   drag-and-drop; resize inline (S/M/L/Full); oversized images are capped to fit.
   (ADR-0039; refines FR-6.)
+- **FR-32 Revision diff.** Compare any two article versions (or a version against
+  current) in the History panel, with additions/deletions highlighted.
+  (ADR-0040; refines FR-21.)
 
 ---
 
@@ -138,5 +141,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 3 | GM campaign manager | FR-12 … FR-14 (FR-15 dropped) |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
-| 6 | Prep & print (paper-first workflow) | FR-25 … FR-31 |
+| 6 | Prep & print (paper-first workflow) | FR-25 … FR-32 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |

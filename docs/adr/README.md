@@ -46,6 +46,7 @@ the old one.
 | [0037](0037-statblock-cards.md) | Printable statblock cards | Accepted |
 | [0038](0038-print-in-new-tab.md) | Print views open in a separate tab | Accepted |
 | [0039](0039-article-image-embedding.md) | Article image embedding — paste, drop, resize, cap | Accepted |
+| [0040](0040-revision-diff.md) | Diff article revisions | Accepted |
 
 ## Template
 
