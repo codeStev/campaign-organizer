@@ -44,6 +44,7 @@ the old one.
 | [0035](0035-print-view.md) | Print / PDF view via the browser | Accepted |
 | [0036](0036-session-prep-packet.md) | Session prep packet | Accepted |
 | [0037](0037-statblock-cards.md) | Printable statblock cards | Accepted |
+| [0038](0038-print-in-new-tab.md) | Print views open in a separate tab | Accepted |
 
 ## Template
 

@@ -1,4 +1,4 @@
-import { createPortal } from 'react-dom';
+import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Statblock } from '../api/client';
 
 interface Props {
@@ -13,8 +13,8 @@ interface Props {
  * <body> so the print CSS (ADR-0035) can hide the app.
  */
 export function StatblockCardsView({ statblocks, title, onClose }: Props) {
-  return createPortal(
-    <div className="print-overlay">
+  return (
+    <NewWindowPortal title={`Cards — ${title}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Statblock cards</strong>
         <span className="muted">{title}</span>
@@ -49,7 +49,6 @@ export function StatblockCardsView({ statblocks, title, onClose }: Props) {
           );
         })}
       </div>
-    </div>,
-    document.body,
+    </NewWindowPortal>
   );
 }

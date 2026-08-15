@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { NewWindowPortal } from '../components/NewWindowPortal';
 import { sessionsApi, SessionPacket } from '../api/client';
 
 interface Props {
@@ -37,8 +37,8 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
     ? `${s.sessionNumber != null ? `Session ${s.sessionNumber}: ` : ''}${s.title}`
     : 'Session';
 
-  return createPortal(
-    <div className="print-overlay">
+  return (
+    <NewWindowPortal title={`Packet — ${heading}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Session packet</strong>
         <span className="print-toolbar-spacer" />
@@ -133,7 +133,6 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
           </>
         )}
       </div>
-    </div>,
-    document.body,
+    </NewWindowPortal>
   );
 }

@@ -961,14 +961,11 @@ button:disabled {
   white-space: nowrap;
 }
 
-/* Print / PDF view */
-.print-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
+/* Print / PDF view (rendered in a separate tab, ADR-0038) */
+.print-window {
+  min-height: 100vh;
   background: #fff;
   color: #111;
-  overflow: auto;
 }
 
 .print-toolbar {
@@ -1198,16 +1195,9 @@ button:disabled {
 }
 
 @media print {
-  /* Hide the app entirely; the print overlay is portalled to <body>. */
-  #root {
-    display: none !important;
-  }
+  /* The document is its own tab; just drop the toolbar and tighten the page. */
   .print-toolbar {
     display: none !important;
-  }
-  .print-overlay {
-    position: static;
-    overflow: visible;
   }
   .print-doc {
     max-width: none;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { NewWindowPortal } from '../components/NewWindowPortal';
 import {
   articlesApi,
   mapsApi,
@@ -72,9 +72,8 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
 
   const today = new Date().toLocaleDateString();
 
-  // Portal to <body> so print CSS can hide the app (#root) and print only this.
-  return createPortal(
-    <div className="print-overlay">
+  return (
+    <NewWindowPortal title={`Print — ${worldName}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Print / PDF</strong>
         <label>
@@ -181,7 +180,6 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
             </section>
           ))}
       </div>
-    </div>,
-    document.body,
+    </NewWindowPortal>
   );
 }
