@@ -56,6 +56,7 @@ the old one.
 | [0047](0047-map-print.md) | Direct map printing with options | Accepted |
 | [0048](0048-layer-icons.md) | Per-layer pin icons | Accepted |
 | [0049](0049-persist-layer-styles.md) | Persist per-layer map styling on the world | Accepted |
+| [0050](0050-bounded-contexts-and-context-map.md) | Bounded contexts and context map | Accepted |
 
 ## Template
 

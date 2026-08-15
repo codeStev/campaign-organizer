@@ -23,6 +23,18 @@ World Anvil. Not multi-tenant, no community features.
 - **Tests:** unit + Testcontainers integration; run in CI. — ADR-0011
 - **Schema:** Flyway migrations; Hibernate `ddl-auto: validate`. — ADR-0012
 
+## Architecture (in migration)
+The backend is being refactored to a **hexagonal, bounded-context modular monolith**.
+Two documents govern this and are **binding** for any agent touching backend code:
+- [`docs/architecture/architecture-harness.md`](docs/architecture/architecture-harness.md)
+  — the universal, non-negotiable rule set (rings, three models + MapStruct,
+  published-port integration, mandatory self-audit). Follow it exactly for **new or
+  migrated** backend code.
+- [`docs/architecture/clean-architecture-analysis.md`](docs/architecture/clean-architecture-analysis.md)
+  — this project's context map, findings, and incremental migration plan (M0–M13).
+Legacy code predates the harness; migrate feature-by-context per the plan, keeping
+tests green. Do not add new logic to a controller — put it behind a use-case port.
+
 ## Conventions
 - **API changes start in the contract.** Edit `docs/api/openapi.yaml` first, then
   the backend, then regenerate frontend types (`npm run gen:api`).
