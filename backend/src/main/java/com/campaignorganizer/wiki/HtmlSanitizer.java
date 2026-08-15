@@ -26,6 +26,8 @@ public class HtmlSanitizer {
                     .allowUrlProtocols("http", "https")
                     .allowElements("img")
                     .allowAttributes("src").matching(HtmlSanitizer::isAllowedImageSrc).onElements("img")
+                    // Persist an editor-chosen display width (px or %); nothing else.
+                    .allowAttributes("width").matching(HtmlSanitizer::isAllowedWidth).onElements("img")
                     .toFactory());
 
     public String sanitize(String html) {
@@ -37,5 +39,10 @@ public class HtmlSanitizer {
 
     private static boolean isAllowedImageSrc(String src) {
         return src.startsWith("/api/media/") || src.startsWith("http://") || src.startsWith("https://");
+    }
+
+    /** A bare pixel width, e.g. "480". (Percent is not accepted by the images policy.) */
+    private static boolean isAllowedWidth(String width) {
+        return width.matches("\\d{1,4}");
     }
 }

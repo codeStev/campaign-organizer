@@ -43,6 +43,14 @@ class HtmlSanitizerTest {
     }
 
     @Test
+    void keepsImageDisplayWidthButNotOtherAttributes() {
+        String out = sanitizer.sanitize(
+                "<img src=\"/api/media/abc/content\" width=\"480\" style=\"position:fixed\" />");
+        assertThat(out).contains("width=\"480\"");
+        assertThat(out).doesNotContain("style");
+    }
+
+    @Test
     void leavesWikiLinkTokensUntouched() {
         String out = sanitizer.sanitize("<p>See [[Goblin]] and [[Waterdeep|the city]].</p>");
         assertThat(out).contains("[[Goblin]]");

@@ -305,6 +305,18 @@ button:disabled {
   border-radius: 6px;
 }
 
+/* Never let a large source image overflow the editor; respect its set width. */
+.editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.editor-content img.ProseMirror-selectednode {
+  outline: 2px solid #6d54c9;
+  outline-offset: 2px;
+}
+
 .tab {
   background: #1d1a27;
   border: 1px solid #2c2838;

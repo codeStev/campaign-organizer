@@ -95,6 +95,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **FR-29 Statblock cards.** Print statblocks as cut-out reference cards. (ADR-0037)
 - **FR-30 Print in a separate tab.** Print views open in their own browser tab so
   the app view is never hijacked. (ADR-0038)
+- **FR-31 Image embedding.** Embed images in articles via the toolbar, paste, or
+  drag-and-drop; resize inline (S/M/L/Full); oversized images are capped to fit.
+  (ADR-0039; refines FR-6.)
 
 ---
 
@@ -135,5 +138,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 3 | GM campaign manager | FR-12 … FR-14 (FR-15 dropped) |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
-| 6 | Prep & print (paper-first workflow) | FR-25 … FR-30 |
+| 6 | Prep & print (paper-first workflow) | FR-25 … FR-31 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
