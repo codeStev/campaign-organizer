@@ -10,6 +10,7 @@ import {
   ApiError,
 } from '../api/client';
 import { MapCanvas } from '../components/MapCanvas';
+import { MapPrintView } from './MapPrintView';
 
 interface Props {
   worldId: string;
@@ -47,6 +48,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
   // Per-layer colour overrides, persisted locally (auto colour used otherwise).
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
     try {
@@ -274,6 +276,9 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 />
                 Labels
               </label>
+              <button className="link-button" onClick={() => setPrintOpen(true)} title="Print or save as PDF">
+                🖨 Print map
+              </button>
               <button className="link-button danger" onClick={() => deleteMap(selected)}>
                 Delete map
               </button>
@@ -327,6 +332,18 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 onSave={(fields) => savePin(selectedPin, fields)}
                 onOpen={onOpenArticle}
                 onDelete={() => deletePin(selectedPin)}
+              />
+            )}
+
+            {printOpen && (
+              <MapPrintView
+                map={selected}
+                pins={pins}
+                layers={layers}
+                colorByLayer={colorByLayer}
+                pinLabels={pinLabels}
+                defaultColor={DEFAULT_PIN_COLOR}
+                onClose={() => setPrintOpen(false)}
               />
             )}
           </>

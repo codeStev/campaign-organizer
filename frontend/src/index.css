@@ -1320,6 +1320,47 @@ button:disabled {
   line-height: 1.7;
 }
 
+/* Direct map print */
+.map-print-toolbar,
+.map-print-layers {
+  flex-wrap: wrap;
+}
+
+.map-print-layers {
+  gap: 0.75rem;
+  border-bottom: 1px solid #ccc;
+}
+
+.map-print-swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  margin: 0 0.15rem;
+  vertical-align: middle;
+}
+
+.map-print-title {
+  margin: 0 0 0.5rem;
+}
+
+.map-print-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.map-print-label {
+  background: rgba(20, 18, 26, 0.85);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.02rem 0.3rem;
+  border-radius: 3px;
+}
+
 .print-prewrap {
   white-space: pre-wrap;
 }
