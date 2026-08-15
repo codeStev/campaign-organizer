@@ -1100,6 +1100,51 @@ button:disabled {
   line-height: 1.7;
 }
 
+.print-prewrap {
+  white-space: pre-wrap;
+}
+
+.print-beats {
+  padding-left: 1.4rem;
+}
+
+.print-beat {
+  margin-bottom: 0.6rem;
+}
+
+.print-beat-title {
+  font-weight: 600;
+}
+
+.print-beat-arc {
+  color: #666;
+}
+
+.print-statblock {
+  break-inside: avoid;
+  margin-bottom: 1.2rem;
+}
+
+.print-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.15rem 1rem;
+  margin: 0.3rem 0;
+}
+
+.print-stat {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.print-stat dt {
+  font-weight: 600;
+}
+
+.print-stat dd {
+  margin: 0;
+}
+
 @media print {
   /* Hide the app entirely; the print overlay is portalled to <body>. */
   #root {

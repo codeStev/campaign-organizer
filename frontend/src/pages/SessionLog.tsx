@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { sessionsApi, Session } from '../api/client';
+import { SessionPacketView } from './SessionPacketView';
 
 interface Props {
   worldId: string;
@@ -22,6 +23,8 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  // Session whose print packet is open (null = none).
+  const [packetSessionId, setPacketSessionId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -130,6 +133,13 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
                 <button className="link-button" onClick={() => edit(s)}>
                   Edit
                 </button>
+                <button
+                  className="link-button"
+                  onClick={() => setPacketSessionId(s.id)}
+                  title="Print a one-page prep packet for this session"
+                >
+                  🖨 Packet
+                </button>
                 <button className="link-button danger" onClick={() => remove(s.id)}>
                   Delete
                 </button>
@@ -142,6 +152,16 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
           <li className="muted">No sessions logged yet.</li>
         )}
       </ol>
+
+      {packetSessionId && (
+        <SessionPacketView
+          worldId={worldId}
+          campaignId={campaignId}
+          sessionId={packetSessionId}
+          onClose={() => setPacketSessionId(null)}
+          onError={onError}
+        />
+      )}
     </section>
   );
 }

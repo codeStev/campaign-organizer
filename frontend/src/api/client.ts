@@ -518,10 +518,35 @@ export function campaignsApi(worldId: string) {
   };
 }
 
+export interface PacketBeat {
+  id: string;
+  title: string;
+  body?: string | null;
+  done: boolean;
+  arcTitle?: string | null;
+  articleIds: string[];
+}
+
+export interface PacketArticle {
+  id: string;
+  title: string;
+  template: string;
+  bodyHtml?: string | null;
+}
+
+export interface SessionPacket {
+  session: Session;
+  campaignName: string;
+  beats: PacketBeat[];
+  articles: PacketArticle[];
+  statblocks: Statblock[];
+}
+
 export function sessionsApi(worldId: string, campaignId: string) {
   const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions`;
   return {
     list: () => request<Session[]>(base),
+    packet: (id: string) => request<SessionPacket>(`${base}/${id}/packet`),
     create: (body: SessionRequest) =>
       request<Session>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: SessionRequest) =>
