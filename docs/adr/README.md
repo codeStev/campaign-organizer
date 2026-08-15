@@ -48,6 +48,7 @@ the old one.
 | [0039](0039-article-image-embedding.md) | Article image embedding — paste, drop, resize, cap | Accepted |
 | [0040](0040-revision-diff.md) | Diff article revisions | Accepted |
 | [0041](0041-statblock-card-selection.md) | Select specific statblocks to print | Accepted |
+| [0042](0042-github-style-diff.md) | GitHub-style unified revision diff | Accepted |
 
 ## Template
 

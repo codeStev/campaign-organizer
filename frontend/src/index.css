@@ -990,25 +990,8 @@ button:disabled {
   font-size: 0.8rem;
 }
 
-.diff-view {
-  white-space: pre-wrap;
-  line-height: 1.5;
-  max-height: 45vh;
-  overflow-y: auto;
-}
-
 .diff-title {
   margin: 0;
-}
-
-.diff-add {
-  background: rgba(74, 165, 90, 0.28);
-  text-decoration: none;
-}
-
-.diff-del {
-  background: rgba(200, 70, 70, 0.28);
-  text-decoration: line-through;
 }
 
 .diff-add-key {
@@ -1017,6 +1000,62 @@ button:disabled {
 
 .diff-del-key {
   color: #e08a8a;
+}
+
+/* GitHub-style unified line diff */
+.diff-view {
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid #2c2838;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.diff-row {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+}
+
+.diff-gutter {
+  text-align: center;
+  user-select: none;
+  color: #7a7391;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.diff-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-right: 0.4rem;
+}
+
+.diff-row.add {
+  background: rgba(74, 165, 90, 0.16);
+}
+
+.diff-row.add .diff-gutter {
+  color: #7bd28a;
+}
+
+.diff-row.del {
+  background: rgba(200, 70, 70, 0.16);
+}
+
+.diff-row.del .diff-gutter {
+  color: #e08a8a;
+}
+
+/* Intra-line word emphasis on changed lines. */
+.diff-word-add {
+  background: rgba(74, 165, 90, 0.45);
+  border-radius: 2px;
+}
+
+.diff-word-del {
+  background: rgba(200, 70, 70, 0.45);
+  border-radius: 2px;
 }
 
 .palette-btn {
