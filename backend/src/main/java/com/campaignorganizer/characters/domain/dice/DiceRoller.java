@@ -1,17 +1,17 @@
-package com.campaignorganizer.dice;
+package com.campaignorganizer.characters.domain.dice;
 
+import com.campaignorganizer.shared.domain.ValidationException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.random.RandomGenerator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Parses and evaluates dice expressions such as {@code 2d6+3}, {@code d20-1},
- * or {@code 2d20kh1} (keep highest, i.e. advantage). Pure logic — no Spring —
- * so it can be unit-tested with a seeded generator. See FR-19.
+ * Parses and evaluates dice expressions such as {@code 2d6+3}, {@code d20-1}, or
+ * {@code 2d20kh1} (keep highest = advantage). Pure domain logic — randomness comes
+ * from a {@link RandomSource} so it is deterministic under test (FR-19).
  */
 public final class DiceRoller {
 
@@ -21,22 +21,12 @@ public final class DiceRoller {
     private static final Pattern TERM = Pattern.compile(
             "([+-]?)\\s*(?:(\\d*)d(\\d+)(?:k([hl])(\\d+))?|(\\d+))", Pattern.CASE_INSENSITIVE);
 
-    public record DieRoll(int sides, int value, boolean kept) {
-    }
-
-    public record RollResult(String expression, int total, List<DieRoll> rolls, String breakdown) {
-    }
-
     private DiceRoller() {
     }
 
-    public static RollResult roll(String expression) {
-        return roll(expression, ThreadLocalRandom.current());
-    }
-
-    static RollResult roll(String expression, RandomGenerator rng) {
+    public static RollResult roll(String expression, RandomSource rng) {
         if (expression == null || expression.isBlank()) {
-            throw new IllegalArgumentException("Empty dice expression");
+            throw new ValidationException("Empty dice expression");
         }
         String expr = expression.replaceAll("\\s+", "");
         Matcher m = TERM.matcher(expr);
@@ -62,10 +52,10 @@ public final class DiceRoller {
             int count = m.group(2).isEmpty() ? 1 : Integer.parseInt(m.group(2));
             int sides = Integer.parseInt(m.group(3));
             if (count < 1 || count > MAX_DICE) {
-                throw new IllegalArgumentException("Dice count must be between 1 and " + MAX_DICE);
+                throw new ValidationException("Dice count must be between 1 and " + MAX_DICE);
             }
             if (sides < 1 || sides > MAX_SIDES) {
-                throw new IllegalArgumentException("Die must have between 1 and " + MAX_SIDES + " sides");
+                throw new ValidationException("Die must have between 1 and " + MAX_SIDES + " sides");
             }
 
             List<DieRoll> termRolls = new ArrayList<>();
@@ -85,7 +75,7 @@ public final class DiceRoller {
         }
 
         if (matchedChars != expr.length()) {
-            throw new IllegalArgumentException("Invalid dice expression: " + expression);
+            throw new ValidationException("Invalid dice expression: " + expression);
         }
         return new RollResult(expression, total, rolls, String.join(" ", parts) + " = " + total);
     }
@@ -96,13 +86,12 @@ public final class DiceRoller {
             return;
         }
         int keep = Math.min(Integer.parseInt(keepCountRaw), termRolls.size());
-        // Rank original indices by value so duplicate rolls are handled correctly.
         Integer[] idx = new Integer[termRolls.size()];
         for (int i = 0; i < idx.length; i++) {
             idx[i] = i;
         }
         Comparator<Integer> byValue = Comparator.comparingInt(i -> termRolls.get(i).value());
-        java.util.Arrays.sort(idx, "h".equalsIgnoreCase(keepMode) ? byValue.reversed() : byValue);
+        Arrays.sort(idx, "h".equalsIgnoreCase(keepMode) ? byValue.reversed() : byValue);
         for (int rank = keep; rank < idx.length; rank++) {
             int i = idx[rank];
             DieRoll d = termRolls.get(i);
