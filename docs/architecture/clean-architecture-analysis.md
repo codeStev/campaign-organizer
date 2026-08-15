@@ -123,61 +123,130 @@ services.
 
 ---
 
-## 3. Target architecture (pragmatic hexagonal)
+## 3. Target architecture (full hexagonal, organised by bounded context)
 
-Keep **package-by-feature**; add **layered rings inside each feature** with a strict
-inward dependency direction. Proposed per-feature layout (illustrated for `wiki`):
+The unit of modelling is the **bounded context (domain)**, not the technical
+feature. The current feature packages (`wiki`, `map`, `campaign`, …) are a
+*delivery* decomposition; several of them belong to the **same** domain and must
+**share one domain model**, while others are separate domains that must **not**
+share types. So: one domain model **per bounded context**, and each context is a
+top-level module with the ring structure inside it.
+
+### 3.1 Bounded contexts (proposed) and the context map
+
+Derived from the current packages and their relationships:
+
+| Bounded context (module) | Absorbs today's packages | Core domain? |
+| --- | --- | --- |
+| **Worldbuilding** | `world`, `wiki`, `map`, `timeline`, `calendar`, `relationship` | Core |
+| **Campaign** (GM/play) | `campaign` (campaigns, sessions, arcs, beats) | Core |
+| **CharactersAndRules** | `sheet`, `statblock`, `dice` | Core |
+| **Media** | `media` | Generic subdomain (supporting) |
+| **Identity** | `auth`, `security`, `config` | Generic subdomain (supporting) |
+| **Interchange / Reporting** | `export`, `usage`, session-packet | Cross-context orchestration |
+
+Context relationships (who depends on whom, and the integration style):
+
+- **Campaign → Worldbuilding** and **Campaign → CharactersAndRules**: a beat links
+  Worldbuilding *articles* and CharactersAndRules *statblocks*. Campaign is the
+  **downstream/consumer**; it integrates through **published lookup ports** exposed
+  by the upstream contexts, mapped through an **anti-corruption layer** into its own
+  domain vocabulary. It never imports the other contexts' domain or entity types.
+- **CharactersAndRules → Worldbuilding** (a sheet/statblock may link an article) and
+  **CharactersAndRules ↔ Campaign** (campaign-scoped sheets/statblocks, beat
+  references): same rule — published ports + ACL, no shared types.
+- **Interchange/Reporting** (export, usage backlinks, session packet) is an
+  application-level orchestrator that composes the core contexts **only via their
+  published ports/read-models** — it owns no core domain rules.
+- **Media / Identity** are generic supporting contexts consumed via ports.
+
+The context map (published ports + ACL) is what makes the boundaries real; without
+it, "per feature" packages silently share entities, which is exactly finding F7.
+
+### 3.2 Ring structure (inside each bounded context)
+
+Full hexagonal rings, illustrated for the **Worldbuilding** context (with `wiki`,
+`map`, … as aggregates/use-case groups *inside* it, sharing one domain model):
 
 ```
-com.campaignorganizer.wiki
-├── domain/                 # entities/value objects + pure domain logic (no Spring/JPA)
-│   ├── Article.java
-│   ├── Slug.java           # value object (slugify/dedup rule)
-│   └── ArticleNotFoundException.java   # domain exception
+com.campaignorganizer.worldbuilding
+├── domain/                 # ONE shared domain model for the whole context — PURE Java
+│   ├── article/            # Article aggregate, ArticleId, Slug (value objects), invariants
+│   ├── map/                # WorldMap, MapPin (fractional coords VO)
+│   ├── timeline/ calendar/ relationship/ world/
+│   └── shared/             # cross-aggregate value objects + domain exceptions
 ├── application/
-│   ├── port/in/            # inbound ports = use cases (interfaces + commands/results)
+│   ├── port/in/            # inbound ports = use cases (interfaces + Command/Result records)
 │   │   ├── CreateArticleUseCase.java
 │   │   └── UpdateArticleUseCase.java
-│   ├── port/out/           # outbound ports (interfaces the app needs)
+│   ├── port/out/           # outbound ports (speak in DOMAIN types, not entities)
 │   │   ├── ArticleRepositoryPort.java
 │   │   └── HtmlSanitizerPort.java
-│   └── service/            # application services implement in-ports, use out-ports, own @Transactional
+│   ├── port/published/     # ports this context PUBLISHES to other contexts (e.g. ArticleLookupPort)
+│   └── service/            # application services: implement in-ports, use out-ports, own @Transactional
 │       └── ArticleService.java
 └── adapter/
-    ├── in/web/             # controllers (thin), request/response DTOs, mappers
-    │   └── ArticleController.java
-    └── out/persistence/    # JPA entities + Spring Data repos implementing out-ports, mappers
-        ├── ArticleJpaEntity.java
-        ├── ArticleJpaRepository.java   # extends JpaRepository
-        └── ArticlePersistenceAdapter.java  # implements ArticleRepositoryPort
+    ├── in/web/             # controllers (thin) + request/response DTOs + MapStruct web mapper
+    │   ├── ArticleController.java
+    │   ├── ArticleWebDtos.java          # request/response records (web model)
+    │   └── ArticleWebMapper.java        # @Mapper: DTO ↔ Command/Result ↔ domain
+    ├── out/persistence/    # JPA entities + Spring Data repo + port impl + MapStruct persistence mapper
+    │   ├── ArticleJpaEntity.java        # persistence model (@Entity), no logic
+    │   ├── ArticleJpaRepository.java     # extends JpaRepository<ArticleJpaEntity, UUID>
+    │   ├── ArticlePersistenceAdapter.java  # implements ArticleRepositoryPort (domain ↔ entity)
+    │   └── ArticlePersistenceMapper.java   # @Mapper: domain ↔ ArticleJpaEntity
+    └── out/context/        # anti-corruption adapters that implement THIS context's out-ports
+        └── CampaignArticleLookupAdapter.java  # calls Worldbuilding's published port, maps into local domain
 ```
 
-**Dependency direction:** `adapter.in.web → application.port.in`;
+The domain model is **shared within the context** across its aggregates
+(`article`, `map`, …) and is the same in every use case of that context. It is a
+compile error (ArchUnit) for another context to reference it.
+
+**Dependency direction (within a context):** `adapter.in.web → application.port.in`;
 `application.service → application.port.out` and `→ domain`;
 `adapter.out.persistence → application.port.out` (implements it) `→ domain`.
 The domain and application rings never import Spring MVC, Hibernate, Jackson, or
-another feature's internals.
+**any other context's packages**.
 
-**Cross-feature contracts:** each feature *publishes* a small set of ports/read
-models (e.g. `wiki` exposes `ArticleLookupPort`; `statblock` exposes
-`StatblockCampaignPort`). Orchestrators (`usage`, session packet, export) depend on
-those published ports — never on foreign repositories or entities.
+**Between contexts (the context map):** a context depends only on another context's
+`application.port.published` interfaces, and translates the returned read-models
+into its **own** domain via an anti-corruption adapter (`adapter/out/context/`).
+No context imports another context's `domain`, `adapter`, or JPA repositories.
+Orchestrators (Interchange/Reporting: export, usage, session packet) live in their
+own module and compose the core contexts strictly through published ports.
 
-### Pragmatism (this is a single-user app — avoid gold-plating)
-Full hexagonal purity (a separate hand-mapped domain model for every entity) is not
-always worth it here. Two acceptable levels:
+### 3.3 Full hexagonal purity (no pragmatic shortcuts)
+This is a deliberate decision: aim for a **pristine enterprise-standard** hexagonal
+architecture with **no** Level-A/Level-B compromise. Although the app is single-user
+*today*, that is **not guaranteed to stay true** (multi-tenant / multi-user is a
+plausible future), and even absent that, a clean core is the maintainability
+baseline this project wants. We therefore accept the boilerplate cost up front.
 
-- **Level A (recommended, high ROI):** introduce the **application layer + ports +
-  thin web + domain exceptions + transactions + cross-feature decoupling**. Keep
-  JPA entities as the persistence model but *hide them behind out-ports* that return
-  domain-facing types (or the entity treated as an aggregate). This removes every
-  finding except F3's "entities carry JPA annotations".
-- **Level B (only where it pays):** additionally split domain model from JPA entity
-  (mappers both ways) for the few aggregates with real invariants (e.g. `Article`
-  with slug/revision rules, `ArcBeat` with link rules). Skip it for anaemic CRUD
-  types (calendars, whiteboards) where it is pure ceremony.
+Concretely, **every bounded context** — including anaemic CRUD ones — gets the full
+ring set and **three distinct models** (the domain model is *shared across the
+context's aggregates*, but never shared with another context or with the entity/DTO
+layers):
 
-Adopt Level A everywhere; apply Level B selectively.
+1. **Domain model** — pure Java (records / aggregates / value objects), **no**
+   Spring, JPA, or Jackson annotations. Holds identity, invariants, and behaviour.
+   IDs and timestamps come from injected ports (`IdGenerator`, `Clock`), never from
+   `@PrePersist`.
+2. **Persistence model** — JPA `@Entity` classes living only in
+   `adapter.out.persistence`. Never referenced outside that package.
+3. **Web model** — request/response DTOs living only in `adapter.in.web`. Plus
+   `Command`/`Result` records on the inbound ports.
+
+**All mapping between the three is done with [MapStruct]** (`@Mapper`, compile-time
+generated, no hand-written converters): DTO ↔ command/result ↔ domain in the web
+adapter, and domain ↔ JPA entity in the persistence adapter. Mappers live in the
+adapter that owns the outer type; MapStruct's generated code is the only place a
+domain type and an entity/DTO meet.
+
+The domain model is the single source of truth for business rules; entities and DTOs
+are **dumb, annotation-only carriers** with zero logic. This fully resolves F3 and
+F4 (not just their symptoms) and makes the domain unit-testable without any
+framework.
 
 ---
 
@@ -185,92 +254,118 @@ Adopt Level A everywhere; apply Level B selectively.
 
 | # | Measure | Addresses | Effort |
 | --- | --- | --- | --- |
-| **M1** | Define the per-feature ring layout (§3) and document it in an ADR ("Hexagonal layering"). Add `package-info.java` per ring. | F1,F2 | S |
-| **M2** | Introduce **outbound persistence ports**: an `*RepositoryPort` interface in `application/port/out`, implemented by a persistence adapter that wraps the existing Spring Data repo. Controllers/services depend on the port, not `JpaRepository`. | F1,F3,F7 | M |
-| **M3** | Introduce **application services** per feature that own the use cases; move all rule logic out of controllers (slug/sanitize/revision, campaign aggregation, link validation). | F1,F2,F9 | L |
-| **M4** | Define **inbound ports** (use-case interfaces) with explicit `Command`/`Result` types; controllers map request DTO → command, call the port, map result → response DTO. | F1,F2 | M |
-| **M5** | Add **domain exceptions** (`NotFoundException`, `DomainValidationException`, …) thrown by domain/application; add one `@RestControllerAdvice` that maps them to RFC 9457 `problem+json` (centralising ADR-0009). Remove `ResponseStatusException` from services and business logic. | F5 | M |
-| **M6** | Put `@Transactional` on **write** application-service methods; `@Transactional(readOnly = true)` on queries/aggregations (packet, usage, export). | F6 | S |
-| **M7** | **Decouple features**: each feature publishes read/lookup ports; refactor `UsageService`, `SessionPacketService`, `StatblockController` aggregation, and export to depend on published ports, not foreign repositories. | F7 | L |
-| **M8** | Rework **export** into an application service that composes per-feature `Export*Port`s and returns **export DTOs** (stop serialising JPA entities; stop injecting 18 repos). | F4 | M |
-| **M9** | Introduce `Clock` and `IdGenerator` ports; inject them so entity/aggregate creation is deterministic and unit-testable. | F3,F8 | S |
-| **M10** | Adopt an explicit **mapping** strategy between rings (hand-written mappers, or MapStruct). No entity crosses the web boundary; no request/response type crosses into the domain. | F3,F4 | M |
-| **M11** | Rebalance tests: **unit-test application services** against mocked out-ports; keep Testcontainers ITs for persistence/web adapters only. Target a healthy pyramid (many unit, some IT). | F8 | M |
-| **M12** | Add **ArchUnit** tests to enforce the dependency rule (e.g. "domain must not depend on Spring/JPA", "web must not depend on persistence", "no feature depends on another feature's `adapter`/`domain`"). | F1,F7 | S |
+| **M0** | **Draw the bounded contexts + context map** (§3.1): agree the context boundaries, the aggregates in each, and the upstream/downstream relationships. This decides where every type lives and precedes all other work. | F7 | S |
+| **M1** | Define the per-**context** ring layout (§3.2), document it in an ADR ("Hexagonal layering by bounded context"). Add `package-info.java` per ring; one Java module/package root per context. | F1,F2 | S |
+| **M2** | Introduce **outbound persistence ports** that speak **domain types** (`*RepositoryPort`), implemented by a persistence adapter wrapping the Spring Data repo + a MapStruct mapper. Services depend on the port, never `JpaRepository`. | F1,F3,F7 | M |
+| **M3** | Introduce **application services** per context that own the use cases; move all rule logic out of controllers (slug/sanitize/revision, campaign aggregation, link validation) into the **domain model**. | F1,F2,F9 | L |
+| **M4** | Define **inbound ports** (use-case interfaces) with explicit `Command`/`Result` records; controllers map request DTO → command, call the port, map result → response DTO (via MapStruct). | F1,F2 | M |
+| **M5** | **Separate domain model per context** (full purity): pure-Java aggregates/value objects with **no** Spring/JPA/Jackson; JPA `@Entity` types demoted to `adapter.out.persistence`; web DTOs confined to `adapter.in.web`. Three models, never shared. | F3,F4 | L |
+| **M6** | **MapStruct** for every mapping (domain ↔ entity, DTO ↔ command/result ↔ domain). Add the annotation processor to the build (`org.mapstruct:mapstruct` + `mapstruct-processor`, `componentModel = "spring"`); ban hand-written converters. | F3,F4 | M |
+| **M7** | Add **domain exceptions** thrown by domain/application; one `@RestControllerAdvice` maps them to RFC 9457 `problem+json` (centralising ADR-0009). Remove `ResponseStatusException` from all logic. | F5 | M |
+| **M8** | Put `@Transactional` on **write** application-service methods; `@Transactional(readOnly = true)` on queries/aggregations (packet, usage, export). | F6 | S |
+| **M9** | **Context integration**: each core context exposes `application.port.published` read/lookup ports; downstream contexts consume them through an **anti-corruption adapter** that maps into their own domain. Refactor `usage`, session packet, `statblock`↔`campaign`, and export accordingly. | F7 | L |
+| **M10** | Move **export** into the Interchange context: an application service composing published ports, returning **export DTOs** (stop serialising JPA entities; stop injecting 18 repos). | F4 | M |
+| **M11** | Introduce `Clock` and `IdGenerator` ports; inject them so aggregate creation is deterministic and unit-testable (remove `Instant.now()`/`UUID.randomUUID()` from the domain). | F3,F8 | S |
+| **M12** | Rebalance tests: **unit-test domain + application services** against mocked out-ports (no Spring/DB); Testcontainers ITs for persistence adapters; `@WebMvcTest` for web adapters. Invert the pyramid. | F8 | M |
+| **M13** | Add **ArchUnit** fitness functions: dependency rule, domain framework-free, web-has-no-persistence, no-HTTP-in-core, and **no cross-context references except `application.port.published`**. | F1,F7 | S |
 
-Legend: S ≈ hours, M ≈ 1–2 days, L ≈ several days (per feature, incrementally).
+Legend: S ≈ hours, M ≈ 1–2 days, L ≈ several days (per context, incrementally).
 
 ---
 
 ## 5. Migration strategy (incremental strangler — no big bang)
 
 The refactor must keep all 33 tests green at every step and ship one bounded context
-at a time.
+at a time. Full purity is the target, but it is reached incrementally, not big-bang.
 
-1. **Foundations (M1, M5, M6, M9, M12).** Land the package conventions, the
-   `@RestControllerAdvice` + domain-exception base, `Clock`/`IdGenerator`, and the
-   ArchUnit rules (initially scoped to migrated packages). One PR/ADR.
-2. **Pilot one feature end-to-end** — recommend **`statblock`** (self-contained, has
-   real aggregation logic in F1/F7) *or* **`wiki`** (richest domain: slug + revision
-   + sanitize). Introduce ports, application service, thin controller, persistence
-   adapter, unit tests. This becomes the reference implementation.
-3. **Publish cross-feature ports** needed by the pilot (e.g. `statblock` needs a
-   `campaign` beat-reference lookup) and flip the consumer to the port (M7).
-4. **Roll out feature by feature**, simplest first (calendar, whiteboard, timeline)
-   at Level A, richer ones (campaign/beats, wiki, sheet) at Level A + selective
-   Level B.
-5. **Refactor the orchestrators last** (`usage`, session packet, export) onto the
-   now-published ports (M7, M8).
-6. **Tighten ArchUnit** to cover the whole codebase once all features are migrated;
-   delete the last `ResponseStatusException` from logic.
+0. **Context map (M0).** Agree the bounded contexts and relationships (§3.1) — this
+   is the design gate everything else depends on. One ADR.
+1. **Foundations (M1, M6, M7, M8, M11, M13).** Land the package/module conventions,
+   the MapStruct build setup, the `@RestControllerAdvice` + domain-exception base,
+   `Clock`/`IdGenerator`, and the ArchUnit rules (scoped to migrated contexts first).
+2. **Pilot one bounded context end-to-end** — recommend **CharactersAndRules** (has
+   the real aggregation logic in F1/F7 via statblock) *or* **Worldbuilding** (richest
+   domain: articles with slug/revision/sanitize). Build all three models, ports,
+   application services, thin controllers, MapStruct mappers, and **domain unit
+   tests**. This is the reference implementation others copy.
+3. **Publish the context's ports** and stand up the **anti-corruption adapters** its
+   downstream contexts need (e.g. Campaign→CharactersAndRules statblock lookup) (M9).
+4. **Roll out context by context**, simplest first (Media, Identity), then the other
+   core contexts — **each at full purity** (no Level split; every context gets its own
+   domain model + MapStruct mappers).
+5. **Build the Interchange context last** (usage, session packet, export) purely on
+   the now-published ports (M9, M10).
+6. **Tighten ArchUnit** to the whole codebase once all contexts are migrated; delete
+   the last `ResponseStatusException` and the last shared entity.
 
-Each feature is one PR with its own ADR entry; the OpenAPI contract and external
-behaviour stay unchanged (this is an internal refactor — contract-first still
-holds).
+Each context is one PR (or a short series) with its own ADR entry; the OpenAPI
+contract and external behaviour stay unchanged (internal refactor — contract-first
+still holds).
 
 ---
 
 ## 6. Risks, trade-offs, non-goals
 
-- **Over-engineering a single-user app.** Mitigate with the Level A/Level B split
-  (§3): ports + application layer everywhere, hand-mapped domain models only where
-  invariants justify it. Don't create empty rings for anaemic CRUD.
-- **Boilerplate / mapping cost.** Real. Offset by MapStruct or terse hand mappers,
-  and by the payoff in F8 (fast unit tests) and F7 (enforceable boundaries).
+- **"Over-engineering a single-user app" is an accepted, deliberate cost.** Full
+  purity is a *requirement*, not something to trim: the app's single-user status is
+  not guaranteed to persist (multi-user/multi-tenant is a plausible future), and a
+  pristine core is the maintainability baseline this project targets regardless.
+  We therefore build the full ring set + a distinct domain model **for every
+  context**, including anaemic CRUD ones — no shortcuts.
+- **Boilerplate / mapping cost.** Real and accepted. Contained by **MapStruct**
+  (compile-time, zero hand-written converters) and repaid by F8 (fast framework-free
+  unit tests) and F7/F9 (enforceable boundaries, small classes). The cost is
+  mechanical, not intellectual.
 - **Churn vs feature work.** Strangler approach means the app keeps working and
-  shipping throughout; no frozen "big refactor" branch.
+  shipping throughout; no frozen "big refactor" branch. Full purity is reached
+  context-by-context.
 - **Non-goals:** no change to the REST contract, DB schema, or Flyway history; no
   switch away from Spring Boot/JPA/Postgres; no microservices — this is a
-  *modular monolith* with clean internal boundaries.
+  *modular monolith* whose modules are **bounded contexts** with clean internal
+  boundaries (a shape that *could* be split into services later precisely because the
+  contexts don't share models).
 
 ---
 
 ## 7. Definition of done (measurable)
 
+- Every bounded context has **three distinct models** — a pure-Java **domain model**,
+  JPA **entities** (in `adapter.out.persistence` only), and web **DTOs** (in
+  `adapter.in.web` only). No type is shared across the three. (today: 20 entities double as the domain model)
+- **All** inter-model mapping is generated by **MapStruct**; zero hand-written
+  converters and zero entities/DTOs crossing a ring boundary.
 - Controllers inject **0** repositories (only inbound ports). (today: 24/30 inject repos)
-- **0** `ResponseStatusException` outside the web adapter; all domain errors flow
-  through domain exceptions + the central problem+json advice. (today: 26 controllers)
+- **0** `ResponseStatusException` / `HttpStatus` in `domain` or `application`; all
+  domain errors flow through domain exceptions + the central problem+json advice. (today: 26 controllers)
+- The **domain** ring has **0** imports of Spring, JPA, Jackson, or another context. (enforced by ArchUnit)
 - Every write use case is `@Transactional`. (today: 1 in the codebase)
 - Export serialises **export DTOs**, not JPA entities; the export orchestrator
-  depends on ports, not 18 repositories.
-- No feature imports another feature's `domain`/`adapter`/repository — only its
-  published `application.port`. (enforced by ArchUnit)
-- Test mix inverts toward unit tests for business logic; ITs cover adapters. (today: 28 IT / 5 unit)
+  depends on published ports, not 18 repositories.
+- No context imports another context's `domain`/`adapter`/repository — only its
+  `application.port.published`, via an anti-corruption adapter. (enforced by ArchUnit)
+- Test mix inverts toward unit tests for domain/application logic; ITs cover adapters. (today: 28 IT / 5 unit)
 
 ---
 
 ## 8. Suggested ADRs to accompany the work
 
-- **ADR — Hexagonal layering within features** (supersedes/extends ADR-0001’s
-  “organised by feature”): defines the domain/application/adapter rings and the
-  dependency rule; names `media/MediaStorage` as the existing exemplar.
+- **ADR — Bounded contexts & context map** (supersedes/extends ADR-0001’s
+  “organised by feature”): names the contexts (§3.1), their aggregates, and their
+  upstream/downstream relationships.
+- **ADR — Hexagonal layering per bounded context**: defines the domain/application/
+  adapter rings and the dependency rule; names `media/MediaStorage` as the existing
+  exemplar.
+- **ADR — Separate domain model + MapStruct mapping**: three models per context
+  (domain / entity / DTO); all mapping via MapStruct (`componentModel = "spring"`),
+  no hand-written converters.
 - **ADR — Domain error model & problem+json mapping** (implements ADR-0009 via a
   central `@RestControllerAdvice`; forbids `ResponseStatusException` in logic).
 - **ADR — Transaction policy** (application services own boundaries; read-only for
   queries).
-- **ADR — Cross-context communication via published ports** (no foreign
-  repositories/entities; export/usage/packet depend on ports).
-- **ADR — Architecture fitness functions with ArchUnit**.
+- **ADR — Cross-context communication via published ports + anti-corruption layer**
+  (no foreign repositories/entities/domain types; export/usage/packet depend on ports).
+- **ADR — Architecture fitness functions with ArchUnit** (incl. no cross-context
+  references except `application.port.published`).
 
 ---
 
@@ -293,3 +388,5 @@ find ../../../../test -name '*Test.java' | wc -l                     # 5
 # existing port/adapter exemplar
 ls media/MediaStorage.java media/LocalMediaStorage.java
 ```
+
+[MapStruct]: https://mapstruct.org/

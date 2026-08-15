@@ -17,13 +17,14 @@ the principles port to any stack).
 
 ---
 
-## 1. The five non-negotiables
+## 1. The six non-negotiables
 
 These are binary. A change either satisfies them or the build is red.
 
 1. **Dependency Rule.** Dependencies point inward only:
    `adapter → application → domain`. `domain` and `application` import **no**
-   framework (no Spring MVC, Hibernate, Jackson) and **no** other feature's internals.
+   framework (no Spring MVC, Hibernate, Jackson) and **no** other bounded context's
+   internals.
 2. **No persistence in the web layer.** A controller may inject **inbound ports
    only** — never a repository, `EntityManager`, or JPA entity.
 3. **Errors are domain outcomes.** Business rules throw **domain exceptions**;
@@ -32,35 +33,59 @@ These are binary. A change either satisfies them or the build is red.
 4. **Transactions live in the application layer.** Every write use case is
    `@Transactional`; queries are `@Transactional(readOnly = true)`. Adapters and
    controllers never open transactions.
-5. **Boundaries are typed.** Web DTOs never enter the domain; domain/JPA entities
-   never leave the application layer. Cross-feature calls go through a **published
-   port**, never a foreign repository or entity.
+5. **Three models per context, mapped by MapStruct.** Each bounded context has its
+   own pure-Java **domain model** (shared across its aggregates), a JPA **entity**
+   model (persistence adapter only), and a **web DTO** model (web adapter only). All
+   mapping is MapStruct-generated; no type is shared across the three and none crosses
+   a ring. **No CRUD exemption** — every context, however simple, has all three.
+6. **Contexts integrate through published ports only.** A context depends on another
+   only via its `application.port.published` interfaces, behind an anti-corruption
+   adapter — never a foreign repository, entity, or domain type.
 
 ---
 
-## 2. Standard package skeleton (package-by-feature + rings)
+## 2. Standard package skeleton (package-by-**bounded-context** + rings)
+
+The unit of modelling is the **bounded context (domain)**, not the technical
+feature. Start every project with an explicit **context map** (which contexts
+exist, who is upstream/downstream); each context is a top-level module with the
+rings inside and its **own domain model** shared across that context's aggregates.
 
 ```
-<root>.<feature>
-├── domain/                 # entities, value objects, domain services, domain exceptions
+<root>.<boundedcontext>
+├── domain/                 # ONE pure-Java domain model for the context (no Spring/JPA/Jackson)
+│   ├── <aggregateA>/       # aggregate root, value objects, invariants, domain services
+│   ├── <aggregateB>/
+│   └── shared/             # cross-aggregate value objects + domain exceptions
 ├── application/
 │   ├── port/in/            # use-case interfaces + Command/Result records
-│   ├── port/out/           # repository/gateway interfaces the app needs
+│   ├── port/out/           # repository/gateway interfaces (speak DOMAIN types)
+│   ├── port/published/     # ports this context exposes to OTHER contexts
 │   └── service/            # use-case implementations (@Transactional, orchestration)
 └── adapter/
-    ├── in/web/             # controllers (thin) + request/response DTOs + mappers
-    └── out/persistence/    # JPA entities + Spring Data repos + port implementations + mappers
+    ├── in/web/             # controllers (thin) + request/response DTOs + MapStruct web mapper
+    ├── out/persistence/    # JPA entities + Spring Data repos + port impls + MapStruct mapper
+    └── out/context/        # anti-corruption adapters implementing this context's out-ports
 ```
+
+**Three distinct models, mapped only by MapStruct** (`componentModel = "spring"`):
+1. **Domain** — pure Java aggregates/value objects; the only place business rules
+   live. No framework annotations; IDs/timestamps from injected `IdGenerator`/`Clock`.
+2. **Persistence** — JPA `@Entity` in `adapter/out/persistence` only.
+3. **Web** — request/response DTOs in `adapter/in/web` only (plus Command/Result on
+   in-ports). No hand-written converters; no entity or DTO ever crosses a ring.
 
 Rules of thumb:
 - **One inbound port = one use case** (`CreateArticleUseCase`), not a fat "service"
   interface.
 - Outbound ports are named for intent, not tech (`ArticleRepositoryPort`,
   `MediaStoragePort`, `Clock`) — so the tech can change without touching the core.
-- **Cross-context**: expose a minimal published port per feature (e.g.
-  `ArticleLookupPort`) in `application/port` and let other features depend on that.
-- Anaemic CRUD features may keep a single application service and skip a separate
-  domain model — but they still keep the rings and ports.
+- **Cross-context**: expose a minimal `application/port/published` port per context;
+  downstream contexts consume it through an anti-corruption adapter that maps the
+  read-model into their own domain. Never import another context's `domain`,
+  `adapter`, or repositories.
+- **No CRUD exemption.** Even anaemic CRUD contexts get the full ring set and their
+  own domain model — purity is uniform, so the codebase has exactly one shape.
 
 ---
 
@@ -92,9 +117,15 @@ class ArchitectureTest {
   @ArchTest static final ArchRule noHttpStatusInCore = noClasses().that().resideInAnyPackage("..domain..", "..application..")
       .should().dependOnClassesThat().haveNameMatching(".*ResponseStatusException|.*HttpStatus");
 
-  @ArchTest static final ArchRule featuresDontReachIntoEachOther = slices().matching("com.example.(*)..")
-      .should().notDependOnEachOther()  // relax to allow ..application.port.. only, per project
-      .ignoreDependency(alwaysTrue(), resideInAPackage("..application.port.."));
+  // Bounded contexts may only touch each other through ..application.port.published..
+  @ArchTest static final ArchRule contextsDontReachIntoEachOther = slices().matching("com.example.(*)..")
+      .should().notDependOnEachOther()
+      .ignoreDependency(alwaysTrue(), resideInAPackage("..application.port.published.."));
+
+  @ArchTest static final ArchRule noHandWrittenMappers = noClasses().that().resideOutsideOfPackage("..generated..")
+      .and().haveSimpleNameEndingWith("Mapper")
+      .should().notBeAnnotatedWith(org.mapstruct.Mapper.class)  // Mapper types must be MapStruct @Mapper
+      .allowEmptyShould(true);
 
   @ArchTest static final ArchRule writeServicesAreTransactional = methods().that()
       .areDeclaredInClassesThat().resideInAPackage("..application.service..")
@@ -112,16 +143,19 @@ Adjust package roots and the transactional predicate per project; keep the inten
 
 A change is not done until:
 
-- [ ] New behaviour lives in an **application service** behind an **inbound port**;
-      the controller only maps DTO ↔ command/result.
-- [ ] Persistence is reached through an **outbound port**; no repository/entity in
-      web or domain.
+- [ ] Behaviour lives in the **domain model**, invoked by an **application service**
+      behind an **inbound port**; the controller only maps DTO ↔ command/result.
+- [ ] The change touches exactly one bounded context's **own domain model**; the
+      **entity** and **DTO** models stay in their adapters. All mapping is MapStruct.
+- [ ] Persistence is reached through an **outbound port** that speaks domain types;
+      no repository/entity in web or domain.
 - [ ] Domain errors are **domain exceptions**; no `ResponseStatusException` in
       logic; problem+json comes from the central advice.
 - [ ] Write path is `@Transactional`; queries are read-only.
-- [ ] **Unit tests** cover the use case with mocked out-ports; an **adapter/IT**
-      covers persistence & web. (Unit-first — see §5.)
-- [ ] Cross-feature access uses a **published port**, not a foreign repo/entity.
+- [ ] **Unit tests** cover the domain + use case with mocked out-ports; an
+      **adapter/IT** covers persistence & web. (Unit-first — see §5.)
+- [ ] Cross-context access uses a **published port** + anti-corruption adapter, not a
+      foreign repo/entity/domain type.
 - [ ] ArchUnit suite green; contract (OpenAPI) updated if the API changed; ADR added
       if a decision/scope changed.
 
@@ -162,17 +196,22 @@ Wire these into the pipeline so "green build" *means* "architecturally sound":
 
 ## 7. Day-1 checklist for a new project
 
-1. Create the ring packages (§2) and a `package-info.java` documenting each ring.
-2. Drop in the ArchUnit suite (§3) **before** the first feature — it starts green
-   and stays green.
-3. Add the central `@RestControllerAdvice` + `DomainException` hierarchy and the
+1. **Draw the context map first** — list the bounded contexts, their aggregates, and
+   upstream/downstream relationships; record it in an ADR. This decides package roots.
+2. Create the per-context ring packages (§2) and a `package-info.java` per ring.
+3. Add **MapStruct** to the build (`mapstruct` + `mapstruct-processor`,
+   `componentModel = "spring"`); forbid hand-written `*Mapper`s (§3).
+4. Drop in the ArchUnit suite (§3) **before** the first feature — it starts green and
+   stays green (incl. the no-cross-context rule).
+5. Add the central `@RestControllerAdvice` + `DomainException` hierarchy and the
    problem+json mapping.
-4. Add `Clock` and `IdGenerator` ports; forbid `Instant.now()`/`UUID.randomUUID()`
+6. Add `Clock` and `IdGenerator` ports; forbid `Instant.now()`/`UUID.randomUUID()`
    inside domain via a banned-import rule.
-5. Scaffold **one** vertical slice (one use case, in-port, service, out-port,
-   persistence adapter, unit test) as the copy-me reference.
-6. Add the PR template with the §4 Definition of Done.
-7. Turn on the CI gates (§6). Only now start feature work.
+7. Scaffold **one** vertical slice in one context (domain aggregate, in-port, service,
+   out-port, persistence adapter + entity + MapStruct mappers, unit test) as the
+   copy-me reference — with its own domain model.
+8. Add the PR template with the §4 Definition of Done.
+9. Turn on the CI gates (§6). Only now start feature work.
 
 ---
 
@@ -182,10 +221,12 @@ Wire these into the pipeline so "green build" *means* "architecturally sound":
 | --- | --- | --- |
 | Controller → repository | `grep -rl Repository --include=*Controller.java` | Controller → inbound port → service → out-port |
 | HTTP status in logic | `grep -rl ResponseStatusException` in `domain`/`application` | Domain exception + central advice |
-| Entity as API/serialization model | entity type referenced in `adapter.in.web` or export | Explicit DTO + mapper |
+| Entity used as domain model | `@Entity` referenced in `domain`/`application` | Separate pure-Java domain model + MapStruct |
+| Entity/DTO as API/serialization model | entity or DTO type referenced across a ring | Three models; MapStruct between them |
+| Hand-written mapper | `*Mapper` class not annotated `@Mapper` | MapStruct `@Mapper(componentModel="spring")` |
 | God orchestrator | class with many injected repos / high fan-in | Application service composing published ports |
 | No transaction boundary | `grep -rln @Transactional` ≈ 0 | `@Transactional` on write use cases |
-| Feature reaching into feature | ArchUnit `slices().notDependOnEachOther` | Depend on the other feature's published port |
+| Context reaching into context | ArchUnit `slices().notDependOnEachOther` | Depend on the other context's published port + ACL |
 
 ---
 
