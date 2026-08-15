@@ -14,6 +14,9 @@ public interface ArcBeatRepository extends JpaRepository<ArcBeat, UUID> {
 
     Optional<ArcBeat> findByIdAndArcId(UUID id, UUID arcId);
 
+    /** Beats scheduled into a session, in play order. */
+    List<ArcBeat> findBySessionIdOrderByPositionAscCreatedAtAsc(UUID sessionId);
+
     /** Beats that link the given article (via the beat_articles collection). */
     @Query("SELECT b FROM ArcBeat b JOIN b.articleIds a WHERE a = :articleId")
     List<ArcBeat> findByLinkedArticleId(@Param("articleId") UUID articleId);
