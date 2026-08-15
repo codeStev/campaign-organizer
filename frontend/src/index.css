@@ -1101,6 +1101,17 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+/* Band that separates the beats from the referenced articles in a packet. */
+.print-divider {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 3px double #333;
+}
+
+.print-divider h1 {
+  margin-bottom: 0;
+}
+
 .print-beats {
   padding-left: 1.4rem;
 }
@@ -1207,6 +1218,13 @@ button:disabled {
   .print-article,
   .print-map-section {
     break-before: page;
+  }
+  /* The divider heads a fresh page; its first article stays with it. */
+  .print-divider {
+    break-before: page;
+  }
+  .print-divider + .print-article {
+    break-before: avoid;
   }
   .print-cover,
   .print-contents {

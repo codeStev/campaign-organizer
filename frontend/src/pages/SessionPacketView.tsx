@@ -99,6 +99,13 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </ol>
             </section>
 
+            {packet.articles.length > 0 && (
+              <div className="print-divider">
+                <h1>Referenced material</h1>
+                <p className="print-kicker">articles linked from this session's beats</p>
+              </div>
+            )}
+
             {packet.articles.map((a) => (
               <article key={a.id} className="print-article">
                 <h1>{a.title}</h1>
