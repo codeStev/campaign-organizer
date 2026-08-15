@@ -31,6 +31,12 @@ public class ArcBeat {
     @Column(name = "article_id")
     private List<UUID> articleIds = new ArrayList<>();
 
+    /** Statblocks this beat uses (goblin spearman, boss…); stored in beat_statblocks (ADR-0043). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "beat_statblocks", joinColumns = @JoinColumn(name = "beat_id"))
+    @Column(name = "statblock_id")
+    private List<UUID> statblockIds = new ArrayList<>();
+
     @Column(name = "session_id")
     private UUID sessionId;
 
@@ -56,10 +62,11 @@ public class ArcBeat {
         // for JPA
     }
 
-    public ArcBeat(UUID arcId, List<UUID> articleIds, UUID sessionId, String title, String body,
-                   boolean done, int position) {
+    public ArcBeat(UUID arcId, List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId,
+                   String title, String body, boolean done, int position) {
         this.arcId = arcId;
         this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
+        this.statblockIds = statblockIds == null ? new ArrayList<>() : new ArrayList<>(statblockIds);
         this.sessionId = sessionId;
         this.title = title;
         this.body = body;
@@ -82,9 +89,10 @@ public class ArcBeat {
         updatedAt = Instant.now();
     }
 
-    public void update(List<UUID> articleIds, UUID sessionId, String title, String body,
-                       boolean done, int position) {
+    public void update(List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId, String title,
+                       String body, boolean done, int position) {
         this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
+        this.statblockIds = statblockIds == null ? new ArrayList<>() : new ArrayList<>(statblockIds);
         this.sessionId = sessionId;
         this.title = title;
         this.body = body;
@@ -102,6 +110,10 @@ public class ArcBeat {
 
     public List<UUID> getArticleIds() {
         return articleIds;
+    }
+
+    public List<UUID> getStatblockIds() {
+        return statblockIds;
     }
 
     public UUID getSessionId() {

@@ -24,4 +24,12 @@ public interface ArcBeatRepository extends JpaRepository<ArcBeat, UUID> {
     /** Distinct article ids linked by any beat in the given arcs. */
     @Query("SELECT DISTINCT a FROM ArcBeat b JOIN b.articleIds a WHERE b.arcId IN :arcIds")
     List<UUID> findLinkedArticleIdsByArcIds(@Param("arcIds") Collection<UUID> arcIds);
+
+    /** Distinct statblock ids linked by any beat in the given arcs (ADR-0043). */
+    @Query("SELECT DISTINCT s FROM ArcBeat b JOIN b.statblockIds s WHERE b.arcId IN :arcIds")
+    List<UUID> findLinkedStatblockIdsByArcIds(@Param("arcIds") Collection<UUID> arcIds);
+
+    /** Distinct statblock ids linked by any beat in a specific session. */
+    @Query("SELECT DISTINCT s FROM ArcBeat b JOIN b.statblockIds s WHERE b.sessionId = :sessionId")
+    List<UUID> findLinkedStatblockIdsBySessionId(@Param("sessionId") UUID sessionId);
 }

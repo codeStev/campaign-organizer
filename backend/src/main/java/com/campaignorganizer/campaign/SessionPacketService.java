@@ -4,11 +4,13 @@ import com.campaignorganizer.campaign.SessionDtos.SessionResponse;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketArticle;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.campaign.SessionPacketDtos.SessionPacketResponse;
+import com.campaignorganizer.statblock.Statblock;
 import com.campaignorganizer.statblock.StatblockDtos.StatblockResponse;
 import com.campaignorganizer.statblock.StatblockRepository;
 import com.campaignorganizer.wiki.Article;
 import com.campaignorganizer.wiki.ArticleRepository;
 import com.campaignorganizer.wiki.AutoLinker;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -69,12 +71,20 @@ public class SessionPacketService {
                         arcTitles.get(b.getArcId()), List.copyOf(b.getArticleIds())))
                 .toList();
 
-        List<StatblockResponse> campaignStatblocks =
-                statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)
-                        .stream().map(StatblockResponse::from).toList();
+        // Statblocks referenced by this session's beats first, then campaign-scoped extras.
+        Map<UUID, Statblock> sbById = new LinkedHashMap<>();
+        sessionBeats.stream().flatMap(b -> b.getStatblockIds().stream()).forEach(id -> {
+            if (!sbById.containsKey(id)) {
+                statblocks.findByIdAndWorldId(id, worldId).ifPresent(s -> sbById.put(id, s));
+            }
+        });
+        statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)
+                .forEach(s -> sbById.putIfAbsent(s.getId(), s));
+        List<StatblockResponse> packetStatblocks =
+                sbById.values().stream().map(StatblockResponse::from).toList();
 
         return new SessionPacketResponse(SessionResponse.from(session), campaign.getName(),
-                packetBeats, packetArticles, campaignStatblocks);
+                packetBeats, packetArticles, packetStatblocks);
     }
 
     private PacketArticle toPacketArticle(Article a) {

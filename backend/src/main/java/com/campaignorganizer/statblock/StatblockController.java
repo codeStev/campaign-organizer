@@ -1,5 +1,8 @@
 package com.campaignorganizer.statblock;
 
+import com.campaignorganizer.campaign.Arc;
+import com.campaignorganizer.campaign.ArcBeatRepository;
+import com.campaignorganizer.campaign.ArcRepository;
 import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.statblock.StatblockDtos.StatblockRequest;
 import com.campaignorganizer.statblock.StatblockDtos.StatblockResponse;
@@ -7,7 +10,10 @@ import com.campaignorganizer.wiki.ArticleRepository;
 import com.campaignorganizer.world.WorldRepository;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,13 +37,18 @@ public class StatblockController {
     private final ArticleRepository articles;
     private final CampaignRepository campaigns;
     private final WorldRepository worlds;
+    private final ArcRepository arcs;
+    private final ArcBeatRepository beats;
 
     public StatblockController(StatblockRepository statblocks, ArticleRepository articles,
-                              CampaignRepository campaigns, WorldRepository worlds) {
+                              CampaignRepository campaigns, WorldRepository worlds,
+                              ArcRepository arcs, ArcBeatRepository beats) {
         this.statblocks = statblocks;
         this.articles = articles;
         this.campaigns = campaigns;
         this.worlds = worlds;
+        this.arcs = arcs;
+        this.beats = beats;
     }
 
     @GetMapping
@@ -46,8 +57,32 @@ public class StatblockController {
         requireWorld(worldId);
         List<Statblock> result = campaignId == null
                 ? statblocks.findByWorldIdOrderByCreatedAtDesc(worldId)
-                : statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId);
+                : statblocksForCampaign(worldId, campaignId);
         return result.stream().map(StatblockResponse::from).toList();
+    }
+
+    /**
+     * Statblocks relevant to a campaign (ADR-0043): those explicitly scoped to it,
+     * plus any (even shared) statblock referenced by one of the campaign's beats.
+     */
+    private List<Statblock> statblocksForCampaign(UUID worldId, UUID campaignId) {
+        Map<UUID, Statblock> byId = new LinkedHashMap<>();
+        statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)
+                .forEach(s -> byId.put(s.getId(), s));
+
+        List<UUID> arcIds = arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(campaignId)
+                .stream().map(Arc::getId).toList();
+        if (!arcIds.isEmpty()) {
+            List<UUID> refIds = beats.findLinkedStatblockIdsByArcIds(arcIds);
+            if (!refIds.isEmpty()) {
+                statblocks.findAllById(refIds).forEach(s -> {
+                    if (s.getWorldId().equals(worldId)) {
+                        byId.putIfAbsent(s.getId(), s);
+                    }
+                });
+            }
+        }
+        return new ArrayList<>(byId.values());
     }
 
     @GetMapping("/{statblockId}")

@@ -2,6 +2,7 @@ package com.campaignorganizer.campaign;
 
 import com.campaignorganizer.campaign.BeatDtos.BeatRequest;
 import com.campaignorganizer.campaign.BeatDtos.BeatResponse;
+import com.campaignorganizer.statblock.StatblockRepository;
 import com.campaignorganizer.wiki.ArticleRepository;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -29,14 +30,17 @@ public class BeatController {
     private final CampaignRepository campaigns;
     private final SessionRepository sessions;
     private final ArticleRepository articles;
+    private final StatblockRepository statblocks;
 
     public BeatController(ArcBeatRepository beats, ArcRepository arcs, CampaignRepository campaigns,
-                          SessionRepository sessions, ArticleRepository articles) {
+                          SessionRepository sessions, ArticleRepository articles,
+                          StatblockRepository statblocks) {
         this.beats = beats;
         this.arcs = arcs;
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.articles = articles;
+        this.statblocks = statblocks;
     }
 
     @GetMapping
@@ -54,7 +58,8 @@ public class BeatController {
         requireArc(worldId, campaignId, arcId);
         validateLinks(worldId, campaignId, request);
         int position = request.position() == null ? 0 : request.position();
-        ArcBeat saved = beats.save(new ArcBeat(arcId, request.articleIdsOrEmpty(), request.sessionId(),
+        ArcBeat saved = beats.save(new ArcBeat(arcId, request.articleIdsOrEmpty(),
+                request.statblockIdsOrEmpty(), request.sessionId(),
                 request.title(), request.body(), request.doneOrDefault(), position));
         return ResponseEntity
                 .created(URI.create("/api/worlds/" + worldId + "/campaigns/" + campaignId
@@ -70,8 +75,8 @@ public class BeatController {
         validateLinks(worldId, campaignId, request);
         ArcBeat beat = beats.findByIdAndArcId(beatId, arcId).orElseThrow(this::beatNotFound);
         int position = request.position() == null ? beat.getPosition() : request.position();
-        beat.update(request.articleIdsOrEmpty(), request.sessionId(), request.title(), request.body(),
-                request.doneOrDefault(), position);
+        beat.update(request.articleIdsOrEmpty(), request.statblockIdsOrEmpty(), request.sessionId(),
+                request.title(), request.body(), request.doneOrDefault(), position);
         return BeatResponse.from(beats.save(beat));
     }
 
@@ -95,6 +100,11 @@ public class BeatController {
         for (UUID articleId : request.articleIdsOrEmpty()) {
             if (!articles.existsByIdAndWorldId(articleId, worldId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
+            }
+        }
+        for (UUID statblockId : request.statblockIdsOrEmpty()) {
+            if (statblocks.findByIdAndWorldId(statblockId, worldId).isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statblock not found in this world");
             }
         }
         if (request.sessionId() != null

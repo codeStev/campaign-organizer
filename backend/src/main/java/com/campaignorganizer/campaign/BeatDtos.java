@@ -16,6 +16,7 @@ public final class BeatDtos {
             @Size(max = 20000) String body,
             Boolean done,
             List<UUID> articleIds,
+            List<UUID> statblockIds,
             UUID sessionId,
             Integer position) {
 
@@ -26,6 +27,10 @@ public final class BeatDtos {
         public List<UUID> articleIdsOrEmpty() {
             return articleIds == null ? List.of() : articleIds.stream().distinct().toList();
         }
+
+        public List<UUID> statblockIdsOrEmpty() {
+            return statblockIds == null ? List.of() : statblockIds.stream().distinct().toList();
+        }
     }
 
     public record BeatResponse(
@@ -35,6 +40,7 @@ public final class BeatDtos {
             String body,
             boolean done,
             List<UUID> articleIds,
+            List<UUID> statblockIds,
             UUID sessionId,
             int position,
             Instant createdAt,
@@ -42,8 +48,8 @@ public final class BeatDtos {
 
         public static BeatResponse from(ArcBeat b) {
             return new BeatResponse(b.getId(), b.getArcId(), b.getTitle(), b.getBody(), b.isDone(),
-                    List.copyOf(b.getArticleIds()), b.getSessionId(), b.getPosition(),
-                    b.getCreatedAt(), b.getUpdatedAt());
+                    List.copyOf(b.getArticleIds()), List.copyOf(b.getStatblockIds()),
+                    b.getSessionId(), b.getPosition(), b.getCreatedAt(), b.getUpdatedAt());
         }
     }
 }
