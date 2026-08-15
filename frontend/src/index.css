@@ -1145,6 +1145,58 @@ button:disabled {
   margin: 0;
 }
 
+/* Statblock cut-out cards */
+.card-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.5rem;
+  align-content: start;
+}
+
+.stat-card {
+  break-inside: avoid;
+  border: 1px dashed #999;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+}
+
+.stat-card-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.35rem;
+}
+
+.stat-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.05rem 0.6rem;
+  margin: 0 0 0.35rem;
+}
+
+.stat-card-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  border-bottom: 1px dotted #ccc;
+}
+
+.stat-card-stat dt {
+  font-weight: 600;
+}
+
+.stat-card-stat dd {
+  margin: 0;
+  text-align: right;
+}
+
+.stat-card-notes {
+  margin: 0;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
 @media print {
   /* Hide the app entirely; the print overlay is portalled to <body>. */
   #root {

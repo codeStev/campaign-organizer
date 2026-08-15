@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { statblocksApi, Statblock, Campaign } from '../api/client';
+import { StatblockCardsView } from './StatblockCardsView';
 
 interface Props {
   worldId: string;
@@ -33,6 +34,7 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [filterCampaign, setFilterCampaign] = useState('');
+  const [cardsOpen, setCardsOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -108,6 +110,15 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
               </option>
             ))}
           </select>
+        )}
+        {list.length > 0 && (
+          <button
+            className="link-button"
+            onClick={() => setCardsOpen(true)}
+            title="Print these statblocks as cut-out cards"
+          >
+            🖨 Print cards
+          </button>
         )}
         <ul className="article-list">
           {list.map((sb) => (
@@ -193,6 +204,14 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
           )}
         </div>
       </div>
+
+      {cardsOpen && (
+        <StatblockCardsView
+          statblocks={list}
+          title={filterCampaign ? campaigns.find((c) => c.id === filterCampaign)?.name ?? '' : 'All statblocks'}
+          onClose={() => setCardsOpen(false)}
+        />
+      )}
     </div>
   );
 }
