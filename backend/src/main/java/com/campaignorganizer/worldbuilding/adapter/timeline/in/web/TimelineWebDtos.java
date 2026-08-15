@@ -1,13 +1,13 @@
-package com.campaignorganizer.timeline;
+package com.campaignorganizer.worldbuilding.adapter.timeline.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class TimelineDtos {
+public final class TimelineWebDtos {
 
-    private TimelineDtos() {
+    private TimelineWebDtos() {
     }
 
     public record TimelineRequest(
@@ -24,10 +24,5 @@ public final class TimelineDtos {
             UUID calendarId,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static TimelineResponse from(Timeline t) {
-            return new TimelineResponse(t.getId(), t.getWorldId(), t.getName(),
-                    t.getDescription(), t.getCalendarId(), t.getCreatedAt(), t.getUpdatedAt());
-        }
     }
 }

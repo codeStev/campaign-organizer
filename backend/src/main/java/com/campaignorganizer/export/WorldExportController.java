@@ -12,8 +12,8 @@ import com.campaignorganizer.worldbuilding.application.relationship.port.publish
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.sheet.SheetTemplateRepository;
 import com.campaignorganizer.statblock.StatblockRepository;
-import com.campaignorganizer.timeline.TimelineRepository;
-import com.campaignorganizer.timeline.TimelineEventRepository;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
 import com.campaignorganizer.wiki.ArticleRepository;
 import com.campaignorganizer.wiki.CategoryRepository;
@@ -52,8 +52,8 @@ public class WorldExportController {
     private final ArticleRepository articles;
     private final WorldMapRepository maps;
     private final MapPinRepository pins;
-    private final TimelineRepository timelines;
-    private final TimelineEventRepository events;
+    private final TimelineLookupPort timelines;
+    private final TimelineEventQueryPort events;
     private final CalendarQueryPort calendars;
     private final RelationshipQueryPort relationships;
     private final CampaignRepository campaigns;
@@ -67,7 +67,7 @@ public class WorldExportController {
 
     public WorldExportController(WorldRepository worlds, CategoryRepository categories,
                                 ArticleRepository articles, WorldMapRepository maps, MapPinRepository pins,
-                                TimelineRepository timelines, TimelineEventRepository events,
+                                TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignRepository campaigns,
                                 SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
@@ -111,9 +111,9 @@ public class WorldExportController {
         bundle.put("maps", worldMaps);
         bundle.put("mapPins", allPins);
 
-        var worldTimelines = timelines.findByWorldIdOrderByCreatedAtDesc(worldId);
+        var worldTimelines = timelines.findByWorld(worldId);
         List<Object> allEvents = new ArrayList<>();
-        worldTimelines.forEach(t -> allEvents.addAll(events.findOrdered(t.getId())));
+        worldTimelines.forEach(t -> allEvents.addAll(events.findByTimeline(t.id())));
         bundle.put("timelines", worldTimelines);
         bundle.put("timelineEvents", allEvents);
 

@@ -13,9 +13,9 @@ import com.campaignorganizer.sheet.CharacterSheet;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.statblock.Statblock;
 import com.campaignorganizer.statblock.StatblockRepository;
-import com.campaignorganizer.timeline.Timeline;
-import com.campaignorganizer.timeline.TimelineRepository;
-import com.campaignorganizer.timeline.TimelineEventRepository;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineView;
 import com.campaignorganizer.usage.UsageDtos.Usage;
 import com.campaignorganizer.usage.UsageDtos.UsageResponse;
 import com.campaignorganizer.wiki.Article;
@@ -41,15 +41,15 @@ public class UsageService {
     private final CampaignRepository campaigns;
     private final MapPinRepository pins;
     private final WorldMapRepository maps;
-    private final TimelineEventRepository events;
-    private final TimelineRepository timelines;
+    private final TimelineEventQueryPort events;
+    private final TimelineLookupPort timelines;
     private final RelationshipQueryPort relationships;
     private final CharacterSheetRepository sheets;
     private final StatblockRepository statblocks;
 
     public UsageService(ArticleRepository articles, ArcBeatRepository beats, ArcRepository arcs,
                         CampaignRepository campaigns, MapPinRepository pins, WorldMapRepository maps,
-                        TimelineEventRepository events, TimelineRepository timelines,
+                        TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetRepository sheets,
                         StatblockRepository statblocks) {
         this.articles = articles;
@@ -84,9 +84,9 @@ public class UsageService {
             out.add(new Usage("MAP_PIN", "Map pin on " + mapName + label, null, null, null));
         });
 
-        events.findByArticleId(articleId).forEach(e -> {
-            String tl = timelines.findById(e.getTimelineId()).map(Timeline::getName).orElse("timeline");
-            out.add(new Usage("TIMELINE_EVENT", "Timeline event: " + e.getTitle() + " (" + tl + ")",
+        events.findByArticle(articleId).forEach(e -> {
+            String tl = timelines.findById(e.timelineId()).map(TimelineView::name).orElse("timeline");
+            out.add(new Usage("TIMELINE_EVENT", "Timeline event: " + e.title() + " (" + tl + ")",
                     null, null, null));
         });
 

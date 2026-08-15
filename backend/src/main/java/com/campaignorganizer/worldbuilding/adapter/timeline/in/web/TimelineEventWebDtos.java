@@ -1,4 +1,4 @@
-package com.campaignorganizer.timeline;
+package com.campaignorganizer.worldbuilding.adapter.timeline.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -7,9 +7,9 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class TimelineEventDtos {
+public final class TimelineEventWebDtos {
 
-    private TimelineEventDtos() {
+    private TimelineEventWebDtos() {
     }
 
     public record TimelineEventRequest(
@@ -32,11 +32,5 @@ public final class TimelineEventDtos {
             Integer day,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static TimelineEventResponse from(TimelineEvent e) {
-            return new TimelineEventResponse(e.getId(), e.getTimelineId(), e.getArticleId(),
-                    e.getTitle(), e.getDescription(), e.getYear(), e.getMonth(), e.getDay(),
-                    e.getCreatedAt(), e.getUpdatedAt());
-        }
     }
 }
