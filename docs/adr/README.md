@@ -49,6 +49,7 @@ the old one.
 | [0040](0040-revision-diff.md) | Diff article revisions | Accepted |
 | [0041](0041-statblock-card-selection.md) | Select specific statblocks to print | Accepted |
 | [0042](0042-github-style-diff.md) | GitHub-style unified revision diff | Accepted |
+| [0043](0043-beat-statblocks.md) | Reference statblocks from beats | Accepted |
 
 ## Template
 

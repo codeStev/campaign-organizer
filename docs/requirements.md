@@ -103,6 +103,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **FR-32 Revision diff.** Compare any two article versions (or a version against
   current) in the History panel as a GitHub-style unified line diff (red/green
   rows with per-word highlighting). (ADR-0040, ADR-0042; refines FR-21.)
+- **FR-33 Beat statblock references.** Attach statblocks to a beat directly (no
+  article needed). A statblock referenced by a campaign's beats is treated as
+  relevant to that campaign — its statblock list and session packets include such
+  shared statblocks. (ADR-0043; refines FR-14, FR-18.)
 
 ---
 
@@ -143,5 +147,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 3 | GM campaign manager | FR-12 … FR-14 (FR-15 dropped) |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
-| 6 | Prep & print (paper-first workflow) | FR-25 … FR-32 |
+| 6 | Prep & print (paper-first workflow) | FR-25 … FR-33 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
