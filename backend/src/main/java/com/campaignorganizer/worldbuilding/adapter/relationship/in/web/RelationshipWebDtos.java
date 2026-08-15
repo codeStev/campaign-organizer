@@ -1,13 +1,14 @@
-package com.campaignorganizer.relationship;
+package com.campaignorganizer.worldbuilding.adapter.relationship.in.web;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class RelationshipDtos {
+/** Web request/response models for relationships. */
+public final class RelationshipWebDtos {
 
-    private RelationshipDtos() {
+    private RelationshipWebDtos() {
     }
 
     public record RelationshipRequest(
@@ -30,10 +31,5 @@ public final class RelationshipDtos {
             boolean directed,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static RelationshipResponse from(Relationship r) {
-            return new RelationshipResponse(r.getId(), r.getWorldId(), r.getFromArticleId(),
-                    r.getToArticleId(), r.getLabel(), r.isDirected(), r.getCreatedAt(), r.getUpdatedAt());
-        }
     }
 }

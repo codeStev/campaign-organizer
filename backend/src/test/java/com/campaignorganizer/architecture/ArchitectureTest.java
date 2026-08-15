@@ -38,12 +38,12 @@ class ArchitectureTest {
                     "jakarta.servlet..")
             .allowEmptyShould(true);
 
-    /** The web adapter never reaches into persistence. */
+    /** The web adapter never reaches into persistence. (Aggregate-namespaced, e.g. adapter.<agg>.in.web.) */
     @ArchTest
     static final ArchRule webHasNoPersistence = noClasses()
-            .that().resideInAPackage("..adapter.in.web..")
+            .that().resideInAPackage("..in.web..")
             .should().dependOnClassesThat().resideInAnyPackage(
-                    "..adapter.out.persistence..",
+                    "..out.persistence..",
                     "org.springframework.data..",
                     "jakarta.persistence..")
             .allowEmptyShould(true);

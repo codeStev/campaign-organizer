@@ -9,7 +9,7 @@ import com.campaignorganizer.campaign.SessionRepository;
 import com.campaignorganizer.map.MapPinRepository;
 import com.campaignorganizer.map.WorldMap;
 import com.campaignorganizer.map.WorldMapRepository;
-import com.campaignorganizer.relationship.RelationshipRepository;
+import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.sheet.SheetTemplateRepository;
 import com.campaignorganizer.statblock.StatblockRepository;
@@ -57,7 +57,7 @@ public class WorldExportController {
     private final TimelineEventRepository events;
     private final CalendarRepository calendars;
     private final CalendarMonthRepository calendarMonths;
-    private final RelationshipRepository relationships;
+    private final RelationshipQueryPort relationships;
     private final CampaignRepository campaigns;
     private final SessionRepository sessions;
     private final ArcRepository arcs;
@@ -71,7 +71,7 @@ public class WorldExportController {
                                 ArticleRepository articles, WorldMapRepository maps, MapPinRepository pins,
                                 TimelineRepository timelines, TimelineEventRepository events,
                                 CalendarRepository calendars, CalendarMonthRepository calendarMonths,
-                                RelationshipRepository relationships, CampaignRepository campaigns,
+                                RelationshipQueryPort relationships, CampaignRepository campaigns,
                                 SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
                                 SheetTemplateRepository sheetTemplates,
                                 CharacterSheetRepository characterSheets, StatblockRepository statblocks,
@@ -126,7 +126,7 @@ public class WorldExportController {
         bundle.put("calendars", worldCalendars);
         bundle.put("calendarMonths", allMonths);
 
-        bundle.put("relationships", relationships.findByWorldIdOrderByCreatedAtAsc(worldId));
+        bundle.put("relationships", relationships.findByWorld(worldId));
 
         var worldCampaigns = campaigns.findByWorldIdOrderByCreatedAtDesc(worldId);
         List<Object> allSessions = new ArrayList<>();

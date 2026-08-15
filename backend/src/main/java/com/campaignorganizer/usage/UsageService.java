@@ -7,8 +7,8 @@ import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.map.MapPinRepository;
 import com.campaignorganizer.map.WorldMap;
 import com.campaignorganizer.map.WorldMapRepository;
-import com.campaignorganizer.relationship.Relationship;
-import com.campaignorganizer.relationship.RelationshipRepository;
+import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
+import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipView;
 import com.campaignorganizer.sheet.CharacterSheet;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.statblock.Statblock;
@@ -43,14 +43,14 @@ public class UsageService {
     private final WorldMapRepository maps;
     private final TimelineEventRepository events;
     private final TimelineRepository timelines;
-    private final RelationshipRepository relationships;
+    private final RelationshipQueryPort relationships;
     private final CharacterSheetRepository sheets;
     private final StatblockRepository statblocks;
 
     public UsageService(ArticleRepository articles, ArcBeatRepository beats, ArcRepository arcs,
                         CampaignRepository campaigns, MapPinRepository pins, WorldMapRepository maps,
                         TimelineEventRepository events, TimelineRepository timelines,
-                        RelationshipRepository relationships, CharacterSheetRepository sheets,
+                        RelationshipQueryPort relationships, CharacterSheetRepository sheets,
                         StatblockRepository statblocks) {
         this.articles = articles;
         this.beats = beats;
@@ -90,10 +90,10 @@ public class UsageService {
                     null, null, null));
         });
 
-        for (Relationship r : relationships.findTouchingArticle(worldId, articleId)) {
-            UUID other = r.getFromArticleId().equals(articleId) ? r.getToArticleId() : r.getFromArticleId();
+        for (RelationshipView r : relationships.findTouchingArticle(worldId, articleId)) {
+            UUID other = r.fromArticleId().equals(articleId) ? r.toArticleId() : r.fromArticleId();
             String otherTitle = articles.findById(other).map(Article::getTitle).orElse("article");
-            String label = r.getLabel() != null && !r.getLabel().isBlank() ? r.getLabel() : "related to";
+            String label = r.label() != null && !r.label().isBlank() ? r.label() : "related to";
             out.add(new Usage("RELATIONSHIP", label + " " + otherTitle, other, null, null));
         }
 
