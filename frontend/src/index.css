@@ -1219,6 +1219,27 @@ button:disabled {
   margin: 0;
 }
 
+/* Statblock print selection */
+.statblock-print-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.statblock-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.statblock-row .article-link {
+  flex: 1;
+}
+
+.statblock-check {
+  flex: 0 0 auto;
+}
+
 /* Statblock cut-out cards */
 .card-sheet {
   display: grid;

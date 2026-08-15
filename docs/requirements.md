@@ -92,7 +92,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   (ADR-0035)
 - **FR-28 Session prep packet.** One-click printable packet for a session: its
   scheduled beats, the articles they reference, and campaign statblocks. (ADR-0036)
-- **FR-29 Statblock cards.** Print statblocks as cut-out reference cards. (ADR-0037)
+- **FR-29 Statblock cards.** Print statblocks as cut-out reference cards; tick
+  specific statblocks to print a chosen subset, or print the whole filtered list.
+  (ADR-0037, ADR-0041)
 - **FR-30 Print in a separate tab.** Print views open in their own browser tab so
   the app view is never hijacked. (ADR-0038)
 - **FR-31 Image embedding.** Embed images in articles via the toolbar, paste, or

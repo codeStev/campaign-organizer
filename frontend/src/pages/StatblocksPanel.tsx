@@ -35,6 +35,20 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [filterCampaign, setFilterCampaign] = useState('');
   const [cardsOpen, setCardsOpen] = useState(false);
+  // Ids ticked for printing; empty = print the whole (filtered) list.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Only count/print selections that are actually in the current list.
+  const toPrint = selected.size ? list.filter((s) => selected.has(s.id)) : list;
 
   const refresh = useCallback(async () => {
     try {
@@ -112,17 +126,35 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
           </select>
         )}
         {list.length > 0 && (
-          <button
-            className="link-button"
-            onClick={() => setCardsOpen(true)}
-            title="Print these statblocks as cut-out cards"
-          >
-            🖨 Print cards
-          </button>
+          <div className="statblock-print-bar">
+            <button
+              className="link-button"
+              onClick={() => setCardsOpen(true)}
+              title={
+                selected.size
+                  ? 'Print the ticked statblocks as cut-out cards'
+                  : 'Print all listed statblocks as cut-out cards'
+              }
+            >
+              🖨 Print {selected.size ? `${selected.size} card${selected.size > 1 ? 's' : ''}` : 'cards'}
+            </button>
+            {selected.size > 0 && (
+              <button className="link-button" onClick={() => setSelected(new Set())}>
+                Clear
+              </button>
+            )}
+          </div>
         )}
         <ul className="article-list">
           {list.map((sb) => (
-            <li key={sb.id}>
+            <li key={sb.id} className="statblock-row">
+              <input
+                type="checkbox"
+                className="statblock-check"
+                checked={selected.has(sb.id)}
+                onChange={() => toggleSelected(sb.id)}
+                title="Select for printing"
+              />
               <button
                 className={sb.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => edit(sb)}
@@ -207,8 +239,14 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
 
       {cardsOpen && (
         <StatblockCardsView
-          statblocks={list}
-          title={filterCampaign ? campaigns.find((c) => c.id === filterCampaign)?.name ?? '' : 'All statblocks'}
+          statblocks={toPrint}
+          title={
+            selected.size
+              ? `${toPrint.length} selected`
+              : filterCampaign
+                ? campaigns.find((c) => c.id === filterCampaign)?.name ?? ''
+                : 'All statblocks'
+          }
           onClose={() => setCardsOpen(false)}
         />
       )}

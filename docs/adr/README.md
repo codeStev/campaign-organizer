@@ -47,6 +47,7 @@ the old one.
 | [0038](0038-print-in-new-tab.md) | Print views open in a separate tab | Accepted |
 | [0039](0039-article-image-embedding.md) | Article image embedding — paste, drop, resize, cap | Accepted |
 | [0040](0040-revision-diff.md) | Diff article revisions | Accepted |
+| [0041](0041-statblock-card-selection.md) | Select specific statblocks to print | Accepted |
 
 ## Template
 
