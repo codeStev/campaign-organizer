@@ -977,16 +977,10 @@ button:disabled {
 }
 
 /* Revision diff */
-.diff-picks {
-  display: inline-flex;
-  gap: 0.5rem;
-  margin-right: 0.5rem;
-}
-
-.diff-picks label {
+.diff-pick {
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
+  margin-right: 0.5rem;
   cursor: pointer;
 }
 

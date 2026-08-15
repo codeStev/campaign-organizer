@@ -88,9 +88,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [typeFilter, setTypeFilter] = useState<Set<ArticleTemplate>>(new Set());
   // Revision history for the open article (null = panel hidden).
   const [revisions, setRevisions] = useState<ArticleRevision[] | null>(null);
-  // Two versions selected for diffing ('current' or a revision id; null = none).
-  const [diffA, setDiffA] = useState<string | null>(null);
-  const [diffB, setDiffB] = useState<string | null>(null);
+  // Up to two versions selected for diffing ('current' or a revision id).
+  const [diffPick, setDiffPick] = useState<string[]>([]);
   // Campaigns in this world, for the "used in campaign" filter and usage tags.
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   // Narrow the article list to entries referenced by this campaign ('' = all).
@@ -195,8 +194,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setPreviewHtml(article.bodyHtml ?? '');
       setMode('read');
       setRevisions(null);
-      setDiffA(null);
-      setDiffB(null);
+      setDiffPick([]);
       setUsages(null);
     } catch (err) {
       handleError(err);
@@ -220,8 +218,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   async function toggleHistory() {
     if (revisions !== null) {
       setRevisions(null);
-      setDiffA(null);
-      setDiffB(null);
+      setDiffPick([]);
       return;
     }
     if (!draft.id) return;
@@ -242,6 +239,28 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       ? { label: new Date(r.createdAt).toLocaleString(), title: r.title, body: r.body ?? '' }
       : null;
   }
+
+  /** Recency of a version key; 'current' is newest. Used to order the diff. */
+  function versionTime(key: string): number {
+    if (key === 'current') return Infinity;
+    const r = revisions?.find((rev) => rev.id === key);
+    return r ? new Date(r.createdAt).getTime() : 0;
+  }
+
+  // Toggle a version into the (max two) diff selection.
+  function toggleDiffPick(id: string) {
+    setDiffPick((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 2) return [prev[1], id]; // keep most-recent pick + new one
+      return [...prev, id];
+    });
+  }
+
+  // The two picks ordered older→newer, so newer always renders as "+".
+  const diffPair =
+    diffPick.length === 2
+      ? [...diffPick].sort((x, y) => versionTime(x) - versionTime(y))
+      : null;
 
   async function restoreRevision(revisionId: string) {
     if (!draft.id) return;
@@ -650,7 +669,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   {revisions.length > 0 && (
                     <>
                       <p className="muted hint">
-                        Pick two versions (− older, + newer) to compare.
+                        Tick two versions to compare — the newer one is always the “+” side.
                       </p>
                       <ul className="revision-list">
                         {[{ id: 'current', label: 'Current version' }, ...revisions.map((r) => ({
@@ -658,26 +677,13 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                           label: new Date(r.createdAt).toLocaleString(),
                         }))].map((v) => (
                           <li key={v.id} className="revision-item">
-                            <span className="diff-picks">
-                              <label title="Compare from (older)">
-                                <input
-                                  type="radio"
-                                  name="diffA"
-                                  checked={diffA === v.id}
-                                  onChange={() => setDiffA(v.id)}
-                                />
-                                −
-                              </label>
-                              <label title="Compare to (newer)">
-                                <input
-                                  type="radio"
-                                  name="diffB"
-                                  checked={diffB === v.id}
-                                  onChange={() => setDiffB(v.id)}
-                                />
-                                +
-                              </label>
-                            </span>
+                            <label className="diff-pick" title="Select for comparison">
+                              <input
+                                type="checkbox"
+                                checked={diffPick.includes(v.id)}
+                                onChange={() => toggleDiffPick(v.id)}
+                              />
+                            </label>
                             <span className="muted">{v.label}</span>
                             {v.id !== 'current' && (
                               <button className="link-button" onClick={() => restoreRevision(v.id)}>
@@ -687,11 +693,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                           </li>
                         ))}
                       </ul>
-                      {diffA && diffB && diffA !== diffB && versionFor(diffA) && versionFor(diffB) && (
-                        <RevisionDiff a={versionFor(diffA)!} b={versionFor(diffB)!} />
-                      )}
-                      {diffA && diffB && diffA === diffB && (
-                        <p className="muted">Select two different versions to compare.</p>
+                      {diffPair && versionFor(diffPair[0]) && versionFor(diffPair[1]) && (
+                        <RevisionDiff a={versionFor(diffPair[0])!} b={versionFor(diffPair[1])!} />
                       )}
                     </>
                   )}
