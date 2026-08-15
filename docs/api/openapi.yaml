@@ -1000,6 +1000,27 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/packet:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [campaigns]
+      summary: Everything needed to run a session, aggregated for print
+      operationId: getSessionPacket
+      responses:
+        '200':
+          description: The session prep packet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionPacket'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /dice/roll:
     post:
       tags: [dice]
@@ -2633,6 +2654,63 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    PacketBeat:
+      type: object
+      required: [id, title, done, articleIds]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: [string, "null"]
+        done:
+          type: boolean
+        arcTitle:
+          type: [string, "null"]
+        articleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    PacketArticle:
+      type: object
+      required: [id, title, template]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        template:
+          type: string
+        bodyHtml:
+          type: [string, "null"]
+
+    SessionPacket:
+      type: object
+      required: [session, campaignName, beats, articles, statblocks]
+      description: Everything needed to run one session, aggregated for print.
+      properties:
+        session:
+          $ref: '#/components/schemas/Session'
+        campaignName:
+          type: string
+        beats:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketBeat'
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketArticle'
+        statblocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Statblock'
 
     LoginRequest:
       type: object
