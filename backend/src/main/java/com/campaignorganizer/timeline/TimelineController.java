@@ -1,6 +1,6 @@
 package com.campaignorganizer.timeline;
 
-import com.campaignorganizer.calendar.CalendarRepository;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.timeline.TimelineDtos.TimelineRequest;
 import com.campaignorganizer.timeline.TimelineDtos.TimelineResponse;
 import com.campaignorganizer.world.WorldRepository;
@@ -27,10 +27,10 @@ public class TimelineController {
 
     private final TimelineRepository timelines;
     private final WorldRepository worlds;
-    private final CalendarRepository calendars;
+    private final CalendarQueryPort calendars;
 
     public TimelineController(TimelineRepository timelines, WorldRepository worlds,
-                              CalendarRepository calendars) {
+                              CalendarQueryPort calendars) {
         this.timelines = timelines;
         this.worlds = worlds;
         this.calendars = calendars;
@@ -83,7 +83,7 @@ public class TimelineController {
     }
 
     private void validateCalendar(UUID worldId, UUID calendarId) {
-        if (calendarId != null && !calendars.existsByIdAndWorldId(calendarId, worldId)) {
+        if (calendarId != null && !calendars.existsInWorld(calendarId, worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Calendar not found in this world");
         }
     }

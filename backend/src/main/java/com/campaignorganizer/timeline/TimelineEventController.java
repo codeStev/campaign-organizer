@@ -1,7 +1,7 @@
 package com.campaignorganizer.timeline;
 
-import com.campaignorganizer.calendar.CalendarMonth;
-import com.campaignorganizer.calendar.CalendarMonthRepository;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarMonthView;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.timeline.TimelineEventDtos.TimelineEventRequest;
 import com.campaignorganizer.timeline.TimelineEventDtos.TimelineEventResponse;
 import com.campaignorganizer.wiki.ArticleRepository;
@@ -29,14 +29,14 @@ public class TimelineEventController {
     private final TimelineEventRepository events;
     private final TimelineRepository timelines;
     private final ArticleRepository articles;
-    private final CalendarMonthRepository calendarMonths;
+    private final CalendarQueryPort calendars;
 
     public TimelineEventController(TimelineEventRepository events, TimelineRepository timelines,
-                                   ArticleRepository articles, CalendarMonthRepository calendarMonths) {
+                                   ArticleRepository articles, CalendarQueryPort calendars) {
         this.events = events;
         this.timelines = timelines;
         this.articles = articles;
-        this.calendarMonths = calendarMonths;
+        this.calendars = calendars;
     }
 
     @GetMapping
@@ -102,7 +102,7 @@ public class TimelineEventController {
         if (timeline.getCalendarId() == null || month == null) {
             return;
         }
-        List<CalendarMonth> months = calendarMonths.findByCalendarIdOrderByPositionAsc(timeline.getCalendarId());
+        List<CalendarMonthView> months = calendars.monthsOf(timeline.getCalendarId());
         if (months.isEmpty()) {
             return;
         }
@@ -111,7 +111,7 @@ public class TimelineEventController {
                     "Month is out of range for the timeline's calendar");
         }
         if (day != null) {
-            int length = months.get(month - 1).getDays();
+            int length = months.get(month - 1).days();
             if (day < 1 || day > length) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Day is out of range for that month");

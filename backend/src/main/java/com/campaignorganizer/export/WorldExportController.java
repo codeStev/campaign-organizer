@@ -1,7 +1,6 @@
 package com.campaignorganizer.export;
 
-import com.campaignorganizer.calendar.CalendarMonthRepository;
-import com.campaignorganizer.calendar.CalendarRepository;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.ArcBeatRepository;
 import com.campaignorganizer.campaign.ArcRepository;
 import com.campaignorganizer.campaign.CampaignRepository;
@@ -55,8 +54,7 @@ public class WorldExportController {
     private final MapPinRepository pins;
     private final TimelineRepository timelines;
     private final TimelineEventRepository events;
-    private final CalendarRepository calendars;
-    private final CalendarMonthRepository calendarMonths;
+    private final CalendarQueryPort calendars;
     private final RelationshipQueryPort relationships;
     private final CampaignRepository campaigns;
     private final SessionRepository sessions;
@@ -70,7 +68,7 @@ public class WorldExportController {
     public WorldExportController(WorldRepository worlds, CategoryRepository categories,
                                 ArticleRepository articles, WorldMapRepository maps, MapPinRepository pins,
                                 TimelineRepository timelines, TimelineEventRepository events,
-                                CalendarRepository calendars, CalendarMonthRepository calendarMonths,
+                                CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignRepository campaigns,
                                 SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
                                 SheetTemplateRepository sheetTemplates,
@@ -84,7 +82,6 @@ public class WorldExportController {
         this.timelines = timelines;
         this.events = events;
         this.calendars = calendars;
-        this.calendarMonths = calendarMonths;
         this.relationships = relationships;
         this.campaigns = campaigns;
         this.sessions = sessions;
@@ -120,11 +117,8 @@ public class WorldExportController {
         bundle.put("timelines", worldTimelines);
         bundle.put("timelineEvents", allEvents);
 
-        var worldCalendars = calendars.findByWorldIdOrderByCreatedAtDesc(worldId);
-        List<Object> allMonths = new ArrayList<>();
-        worldCalendars.forEach(c -> allMonths.addAll(calendarMonths.findByCalendarIdOrderByPositionAsc(c.getId())));
-        bundle.put("calendars", worldCalendars);
-        bundle.put("calendarMonths", allMonths);
+        // Calendars now carry their months inline (via the worldbuilding query port).
+        bundle.put("calendars", calendars.findByWorld(worldId));
 
         bundle.put("relationships", relationships.findByWorld(worldId));
 

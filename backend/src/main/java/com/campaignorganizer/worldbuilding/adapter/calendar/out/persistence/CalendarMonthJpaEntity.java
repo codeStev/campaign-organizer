@@ -1,15 +1,15 @@
-package com.campaignorganizer.calendar;
+package com.campaignorganizer.worldbuilding.adapter.calendar.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
+/** Persistence model for a calendar month (maps the {@code calendar_months} table). */
 @Entity
 @Table(name = "calendar_months")
-public class CalendarMonth {
+public class CalendarMonthJpaEntity {
 
     @Id
     private UUID id;
@@ -26,41 +26,47 @@ public class CalendarMonth {
     @Column(nullable = false)
     private int days;
 
-    protected CalendarMonth() {
+    protected CalendarMonthJpaEntity() {
         // for JPA
-    }
-
-    public CalendarMonth(UUID calendarId, int position, String name, int days) {
-        this.calendarId = calendarId;
-        this.position = position;
-        this.name = name;
-        this.days = days;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getCalendarId() {
         return calendarId;
+    }
+
+    public void setCalendarId(UUID calendarId) {
+        this.calendarId = calendarId;
     }
 
     public int getPosition() {
         return position;
     }
 
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
     public String getName() {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public int getDays() {
         return days;
+    }
+
+    public void setDays(int days) {
+        this.days = days;
     }
 }
