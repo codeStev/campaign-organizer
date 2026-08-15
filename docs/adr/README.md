@@ -50,6 +50,7 @@ the old one.
 | [0041](0041-statblock-card-selection.md) | Select specific statblocks to print | Accepted |
 | [0042](0042-github-style-diff.md) | GitHub-style unified revision diff | Accepted |
 | [0043](0043-beat-statblocks.md) | Reference statblocks from beats | Accepted |
+| [0044](0044-map-pin-ux.md) | Map pin UX — inline editing and layer colours | Accepted |
 
 ## Template
 

@@ -84,6 +84,31 @@ class MapPinControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void updatePersistsArticleLink() throws Exception {
+        setup();
+        String articleId = createArticle();
+        String pinId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/maps/{m}/pins", worldId, mapId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\":0.2,\"y\":0.3}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        // Link an article via update…
+        mockMvc.perform(put("/api/worlds/{w}/maps/{m}/pins/{p}", worldId, mapId, pinId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\":0.2,\"y\":0.3,\"articleId\":\"" + articleId + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.articleId").value(articleId));
+
+        // …and confirm it survives a re-fetch.
+        mockMvc.perform(get("/api/worlds/{w}/maps/{m}/pins", worldId, mapId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].articleId").value(articleId));
+    }
+
+    @Test
     void rejectsOutOfRangeCoordinates() throws Exception {
         setup();
         mockMvc.perform(post("/api/worlds/{w}/maps/{m}/pins", worldId, mapId)

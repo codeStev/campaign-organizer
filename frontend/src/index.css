@@ -361,6 +361,27 @@ button:disabled {
   gap: 0.4rem;
 }
 
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.layer-color {
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid #2c2838;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.pin-panel {
+  gap: 0.5rem;
+}
+
 .pin-panel label {
   display: flex;
   flex-direction: column;

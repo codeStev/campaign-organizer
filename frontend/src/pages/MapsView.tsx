@@ -17,11 +17,27 @@ interface Props {
   onAuthExpired: () => void;
 }
 
+const DEFAULT_PIN_COLOR = '#6d54c9';
+
+// Distinct, stable palette; a layer maps to one entry by name hash.
+const PALETTE = [
+  '#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4',
+  '#42a5f5', '#f032e6', '#8bc34a', '#ff8f00', '#009688',
+  '#9a6324', '#e91e63', '#808000', '#00838f', '#5c6bc0',
+];
+
+function autoColor(layer: string): string {
+  let hash = 0;
+  for (let i = 0; i < layer.length; i++) hash = (hash * 31 + layer.charCodeAt(i)) >>> 0;
+  return PALETTE[hash % PALETTE.length];
+}
+
 export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const maps = useMemo(() => mapsApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const colorKey = `mapLayerColors:${worldId}`;
 
   const [list, setList] = useState<WorldMap[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +46,14 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+  // Per-layer colour overrides, persisted locally (auto colour used otherwise).
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`mapLayerColors:${worldId}`) || '{}');
+    } catch {
+      return {};
+    }
+  });
   const [error, setError] = useState<string | null>(null);
 
   const handleError = useCallback(
@@ -79,27 +103,27 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     }
   }
 
+  // Clicking the map drops a pin immediately; label/layer/article are edited after.
   async function addPin(x: number, y: number) {
     if (!selected) return;
-    const label = window.prompt('Pin label (optional)') ?? undefined;
-    const layer = window.prompt('Layer (optional, e.g. cities)') ?? undefined;
     try {
-      await pinsApi(worldId, selected.id).create({ x, y, label, layer });
+      const created = await pinsApi(worldId, selected.id).create({ x, y });
       await loadPins(selected.id);
+      setSelectedPinId(created.id);
     } catch (err) {
       handleError(err);
     }
   }
 
-  async function linkArticle(pin: MapPin, articleId: string | null) {
+  async function savePin(pin: MapPin, fields: { label: string; layer: string; articleId: string }) {
     if (!selected) return;
     try {
       await pinsApi(worldId, selected.id).update(pin.id, {
         x: pin.x,
         y: pin.y,
-        label: pin.label,
-        layer: pin.layer,
-        articleId,
+        label: fields.label || null,
+        layer: fields.layer || null,
+        articleId: fields.articleId || null,
       });
       await loadPins(selected.id);
     } catch (err) {
@@ -138,6 +162,28 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const visiblePins = pins.filter((p) => !p.layer || !hiddenLayers.has(p.layer));
   const selectedPin = pins.find((p) => p.id === selectedPinId) ?? null;
 
+  const colorForLayer = useCallback(
+    (layer: string) => colorOverrides[layer] ?? autoColor(layer),
+    [colorOverrides],
+  );
+  const colorByLayer = useMemo(() => {
+    const map: Record<string, string> = {};
+    layers.forEach((l) => (map[l] = colorForLayer(l)));
+    return map;
+  }, [layers, colorForLayer]);
+
+  function setLayerColor(layer: string, color: string) {
+    setColorOverrides((prev) => {
+      const next = { ...prev, [layer]: color };
+      try {
+        localStorage.setItem(colorKey, JSON.stringify(next));
+      } catch {
+        // Non-fatal: colours just won't persist across reloads.
+      }
+      return next;
+    });
+  }
+
   function toggleLayer(layer: string) {
     setHiddenLayers((prev) => {
       const next = new Set(prev);
@@ -170,15 +216,25 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
         {layers.length > 0 && (
           <div className="layer-toggles">
             <strong className="muted">Layers</strong>
+            <p className="muted hint">Colour codes the pins; untick to hide a layer.</p>
             {layers.map((layer) => (
-              <label key={layer} className="layer-toggle">
+              <div key={layer} className="layer-row">
                 <input
-                  type="checkbox"
-                  checked={!hiddenLayers.has(layer)}
-                  onChange={() => toggleLayer(layer)}
+                  type="color"
+                  className="layer-color"
+                  value={colorForLayer(layer)}
+                  onChange={(e) => setLayerColor(layer, e.target.value)}
+                  title={`Colour for ${layer}`}
                 />
-                {layer}
-              </label>
+                <label className="layer-toggle">
+                  <input
+                    type="checkbox"
+                    checked={!hiddenLayers.has(layer)}
+                    onChange={() => toggleLayer(layer)}
+                  />
+                  {layer}
+                </label>
+              </div>
             ))}
           </div>
         )}
@@ -200,6 +256,8 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 imageUrl={selected.imageUrl}
                 pins={visiblePins}
                 selectedPinId={selectedPinId}
+                colorByLayer={colorByLayer}
+                defaultColor={DEFAULT_PIN_COLOR}
                 onMapClick={addPin}
                 onPinClick={setSelectedPinId}
               />
@@ -208,34 +266,85 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
             )}
 
             {selectedPin && (
-              <div className="card pin-panel">
-                <strong>{selectedPin.label || 'Pin'}</strong>
-                <label>
-                  Linked article
-                  <select
-                    value={selectedPin.articleId ?? ''}
-                    onChange={(e) => linkArticle(selectedPin, e.target.value || null)}
-                  >
-                    <option value="">— none —</option>
-                    {articles.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="editor-actions">
-                  {selectedPin.articleId && (
-                    <button onClick={() => onOpenArticle(selectedPin.articleId!)}>Open article</button>
-                  )}
-                  <button className="link-button danger" onClick={() => deletePin(selectedPin)}>
-                    Delete pin
-                  </button>
-                </div>
-              </div>
+              <PinEditor
+                key={selectedPin.id}
+                pin={selectedPin}
+                articles={articles}
+                layers={layers}
+                onSave={(fields) => savePin(selectedPin, fields)}
+                onOpen={onOpenArticle}
+                onDelete={() => deletePin(selectedPin)}
+              />
             )}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+interface PinEditorProps {
+  pin: MapPin;
+  articles: ArticleSummary[];
+  layers: string[];
+  onSave: (fields: { label: string; layer: string; articleId: string }) => void;
+  onOpen: (articleId: string) => void;
+  onDelete: () => void;
+}
+
+/** Inline editor for a selected pin (label, layer, linked article). */
+function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEditorProps) {
+  const [label, setLabel] = useState(pin.label ?? '');
+  const [layer, setLayer] = useState(pin.layer ?? '');
+  const [articleId, setArticleId] = useState(pin.articleId ?? '');
+
+  const dirty =
+    label !== (pin.label ?? '') || layer !== (pin.layer ?? '') || articleId !== (pin.articleId ?? '');
+
+  return (
+    <div className="card pin-panel">
+      <strong>{pin.label || 'Pin'}</strong>
+      <label>
+        Label
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Old Keep" />
+      </label>
+      <label>
+        Layer
+        <input
+          value={layer}
+          list="pin-layer-options"
+          onChange={(e) => setLayer(e.target.value)}
+          placeholder="e.g. cities"
+        />
+        <datalist id="pin-layer-options">
+          {layers.map((l) => (
+            <option key={l} value={l} />
+          ))}
+        </datalist>
+      </label>
+      <label>
+        Linked article
+        <select value={articleId} onChange={(e) => setArticleId(e.target.value)}>
+          <option value="">— none —</option>
+          {articles.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="editor-actions">
+        <button onClick={() => onSave({ label, layer, articleId })} disabled={!dirty}>
+          Save pin
+        </button>
+        {pin.articleId && (
+          <button className="link-button" onClick={() => onOpen(pin.articleId!)}>
+            Open article
+          </button>
+        )}
+        <button className="link-button danger" onClick={onDelete}>
+          Delete pin
+        </button>
       </div>
     </div>
   );

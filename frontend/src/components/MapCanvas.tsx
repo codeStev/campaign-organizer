@@ -7,6 +7,9 @@ interface Props {
   imageUrl: string;
   pins: MapPin[];
   selectedPinId?: string | null;
+  /** Fill colour per layer name; pins without a layer use defaultColor. */
+  colorByLayer?: Record<string, string>;
+  defaultColor?: string;
   onMapClick: (x: number, y: number) => void;
   onPinClick: (pinId: string) => void;
 }
@@ -15,7 +18,15 @@ interface Props {
  * Renders a non-geographic image map with Leaflet (CRS.Simple) and pins placed
  * by fractional coordinates (ADR-0018). Leaflet is driven imperatively.
  */
-export function MapCanvas({ imageUrl, pins, selectedPinId, onMapClick, onPinClick }: Props) {
+export function MapCanvas({
+  imageUrl,
+  pins,
+  selectedPinId,
+  colorByLayer = {},
+  defaultColor = '#6d54c9',
+  onMapClick,
+  onPinClick,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
@@ -75,11 +86,14 @@ export function MapCanvas({ imageUrl, pins, selectedPinId, onMapClick, onPinClic
       if (!markers || !d) return false;
       markers.clearLayers();
       pins.forEach((pin) => {
+        const selected = pin.id === selectedPinId;
+        const fill = pin.layer ? colorByLayer[pin.layer] ?? defaultColor : defaultColor;
         const marker = L.circleMarker([d.h * (1 - pin.y), d.w * pin.x], {
-          radius: pin.id === selectedPinId ? 9 : 6,
-          color: '#14121a',
-          weight: 2,
-          fillColor: pin.id === selectedPinId ? '#d9a441' : '#6d54c9',
+          radius: selected ? 9 : 6,
+          // Selected pins get a bright ring so the layer colour still shows as fill.
+          color: selected ? '#ffffff' : '#14121a',
+          weight: selected ? 3 : 2,
+          fillColor: fill,
           fillOpacity: 1,
         });
         if (pin.label) marker.bindTooltip(pin.label);
@@ -94,7 +108,7 @@ export function MapCanvas({ imageUrl, pins, selectedPinId, onMapClick, onPinClic
       if (draw()) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
-  }, [pins, selectedPinId]);
+  }, [pins, selectedPinId, colorByLayer, defaultColor]);
 
   return <div ref={containerRef} className="map-canvas" />;
 }
