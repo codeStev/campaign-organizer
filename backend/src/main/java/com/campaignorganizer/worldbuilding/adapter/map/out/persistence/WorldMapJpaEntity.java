@@ -1,18 +1,16 @@
-package com.campaignorganizer.map;
+package com.campaignorganizer.worldbuilding.adapter.map.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A map image within a world. Named {@code WorldMap} to avoid clashing with {@link java.util.Map}. */
+/** Persistence model for a map (maps the {@code maps} table). */
 @Entity
 @Table(name = "maps")
-public class WorldMap {
+public class WorldMapJpaEntity {
 
     @Id
     private UUID id;
@@ -32,57 +30,54 @@ public class WorldMap {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected WorldMap() {
-        // for JPA
-    }
-
-    public WorldMap(UUID worldId, String name, UUID mediaId) {
-        this.worldId = worldId;
-        this.name = name;
-        this.mediaId = mediaId;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void update(String name, UUID mediaId) {
-        this.name = name;
-        this.mediaId = mediaId;
+    protected WorldMapJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public void setWorldId(UUID worldId) {
+        this.worldId = worldId;
     }
 
     public String getName() {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public UUID getMediaId() {
         return mediaId;
+    }
+
+    public void setMediaId(UUID mediaId) {
+        this.mediaId = mediaId;
     }
 
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

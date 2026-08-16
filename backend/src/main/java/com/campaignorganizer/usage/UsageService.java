@@ -4,9 +4,9 @@ import com.campaignorganizer.campaign.ArcBeatRepository;
 import com.campaignorganizer.campaign.ArcRepository;
 import com.campaignorganizer.campaign.Campaign;
 import com.campaignorganizer.campaign.CampaignRepository;
-import com.campaignorganizer.map.MapPinRepository;
-import com.campaignorganizer.map.WorldMap;
-import com.campaignorganizer.map.WorldMapRepository;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipView;
 import com.campaignorganizer.sheet.CharacterSheet;
@@ -39,8 +39,8 @@ public class UsageService {
     private final ArcBeatRepository beats;
     private final ArcRepository arcs;
     private final CampaignRepository campaigns;
-    private final MapPinRepository pins;
-    private final WorldMapRepository maps;
+    private final MapPinQueryPort pins;
+    private final MapQueryPort maps;
     private final TimelineEventQueryPort events;
     private final TimelineLookupPort timelines;
     private final RelationshipQueryPort relationships;
@@ -48,7 +48,7 @@ public class UsageService {
     private final StatblockRepository statblocks;
 
     public UsageService(ArticleRepository articles, ArcBeatRepository beats, ArcRepository arcs,
-                        CampaignRepository campaigns, MapPinRepository pins, WorldMapRepository maps,
+                        CampaignRepository campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetRepository sheets,
                         StatblockRepository statblocks) {
@@ -78,9 +78,9 @@ public class UsageService {
                     null, campaignId, campaignName(campaignId)));
         });
 
-        pins.findByArticleId(articleId).forEach(p -> {
-            String mapName = maps.findById(p.getMapId()).map(WorldMap::getName).orElse("map");
-            String label = p.getLabel() != null ? " — " + p.getLabel() : "";
+        pins.findByArticle(articleId).forEach(p -> {
+            String mapName = maps.findById(p.mapId()).map(MapView::name).orElse("map");
+            String label = p.label() != null ? " — " + p.label() : "";
             out.add(new Usage("MAP_PIN", "Map pin on " + mapName + label, null, null, null));
         });
 

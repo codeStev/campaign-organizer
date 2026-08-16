@@ -1,4 +1,4 @@
-package com.campaignorganizer.map;
+package com.campaignorganizer.worldbuilding.adapter.map.in.web;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -7,9 +7,9 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class MapPinDtos {
+public final class MapPinWebDtos {
 
-    private MapPinDtos() {
+    private MapPinWebDtos() {
     }
 
     public record MapPinRequest(
@@ -30,11 +30,5 @@ public final class MapPinDtos {
             double y,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static MapPinResponse from(MapPin pin) {
-            return new MapPinResponse(pin.getId(), pin.getMapId(), pin.getArticleId(),
-                    pin.getLabel(), pin.getLayer(), pin.getX(), pin.getY(),
-                    pin.getCreatedAt(), pin.getUpdatedAt());
-        }
     }
 }

@@ -5,9 +5,9 @@ import com.campaignorganizer.campaign.ArcBeatRepository;
 import com.campaignorganizer.campaign.ArcRepository;
 import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.campaign.SessionRepository;
-import com.campaignorganizer.map.MapPinRepository;
-import com.campaignorganizer.map.WorldMap;
-import com.campaignorganizer.map.WorldMapRepository;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.sheet.SheetTemplateRepository;
@@ -50,8 +50,8 @@ public class WorldExportController {
     private final WorldRepository worlds;
     private final CategoryRepository categories;
     private final ArticleRepository articles;
-    private final WorldMapRepository maps;
-    private final MapPinRepository pins;
+    private final MapQueryPort maps;
+    private final MapPinQueryPort pins;
     private final TimelineLookupPort timelines;
     private final TimelineEventQueryPort events;
     private final CalendarQueryPort calendars;
@@ -66,7 +66,7 @@ public class WorldExportController {
     private final WhiteboardJpaRepository whiteboards;
 
     public WorldExportController(WorldRepository worlds, CategoryRepository categories,
-                                ArticleRepository articles, WorldMapRepository maps, MapPinRepository pins,
+                                ArticleRepository articles, MapQueryPort maps, MapPinQueryPort pins,
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignRepository campaigns,
@@ -106,8 +106,8 @@ public class WorldExportController {
         bundle.put("articles", articles.findByWorldIdOrderByCreatedAtDesc(worldId));
 
         List<Object> allPins = new ArrayList<>();
-        List<WorldMap> worldMaps = maps.findByWorldIdOrderByCreatedAtDesc(worldId);
-        worldMaps.forEach(m -> allPins.addAll(pins.findByMapIdOrderByCreatedAtAsc(m.getId())));
+        List<MapView> worldMaps = maps.findByWorld(worldId);
+        worldMaps.forEach(m -> allPins.addAll(pins.findByMap(m.id())));
         bundle.put("maps", worldMaps);
         bundle.put("mapPins", allPins);
 

@@ -1,17 +1,16 @@
-package com.campaignorganizer.map;
+package com.campaignorganizer.worldbuilding.adapter.map.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Persistence model for a map pin (maps the {@code map_pins} table). */
 @Entity
 @Table(name = "map_pins")
-public class MapPin {
+public class MapPinJpaEntity {
 
     @Id
     private UUID id;
@@ -40,75 +39,78 @@ public class MapPin {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected MapPin() {
-        // for JPA
-    }
-
-    public MapPin(UUID mapId, UUID articleId, String label, String layer, double x, double y) {
-        this.mapId = mapId;
-        this.articleId = articleId;
-        this.label = label;
-        this.layer = layer;
-        this.x = x;
-        this.y = y;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void update(UUID articleId, String label, String layer, double x, double y) {
-        this.articleId = articleId;
-        this.label = label;
-        this.layer = layer;
-        this.x = x;
-        this.y = y;
+    protected MapPinJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getMapId() {
         return mapId;
+    }
+
+    public void setMapId(UUID mapId) {
+        this.mapId = mapId;
     }
 
     public UUID getArticleId() {
         return articleId;
     }
 
+    public void setArticleId(UUID articleId) {
+        this.articleId = articleId;
+    }
+
     public String getLabel() {
         return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
     }
 
     public String getLayer() {
         return layer;
     }
 
+    public void setLayer(String layer) {
+        this.layer = layer;
+    }
+
     public double getX() {
         return x;
+    }
+
+    public void setX(double x) {
+        this.x = x;
     }
 
     public double getY() {
         return y;
     }
 
+    public void setY(double y) {
+        this.y = y;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

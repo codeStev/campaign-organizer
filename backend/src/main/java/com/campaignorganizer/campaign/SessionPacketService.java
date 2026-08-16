@@ -6,10 +6,10 @@ import com.campaignorganizer.campaign.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketMap;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketPin;
 import com.campaignorganizer.campaign.SessionPacketDtos.SessionPacketResponse;
-import com.campaignorganizer.map.MapPin;
-import com.campaignorganizer.map.MapPinRepository;
-import com.campaignorganizer.map.WorldMap;
-import com.campaignorganizer.map.WorldMapRepository;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.statblock.Statblock;
 import com.campaignorganizer.statblock.StatblockDtos.StatblockResponse;
 import com.campaignorganizer.statblock.StatblockRepository;
@@ -36,14 +36,14 @@ public class SessionPacketService {
     private final ArcBeatRepository beats;
     private final ArticleRepository articles;
     private final StatblockRepository statblocks;
-    private final WorldMapRepository maps;
-    private final MapPinRepository pins;
+    private final MapQueryPort maps;
+    private final MapPinQueryPort pins;
     private final AutoLinker autoLinker;
 
     public SessionPacketService(CampaignRepository campaigns, SessionRepository sessions,
                                 ArcRepository arcs, ArcBeatRepository beats,
                                 ArticleRepository articles, StatblockRepository statblocks,
-                                WorldMapRepository maps, MapPinRepository pins,
+                                MapQueryPort maps, MapPinQueryPort pins,
                                 AutoLinker autoLinker) {
         this.campaigns = campaigns;
         this.sessions = sessions;
@@ -96,9 +96,9 @@ public class SessionPacketService {
 
         // Maps reachable from the session: any map with a pin linking a beat article.
         LinkedHashSet<UUID> mapIds = new LinkedHashSet<>();
-        articleIds.forEach(artId -> pins.findByArticleId(artId).forEach(p -> mapIds.add(p.getMapId())));
+        articleIds.forEach(artId -> pins.findByArticle(artId).forEach(p -> mapIds.add(p.mapId())));
         List<PacketMap> packetMaps = mapIds.stream()
-                .map(id -> maps.findByIdAndWorldId(id, worldId).orElse(null))
+                .map(id -> maps.findByIdInWorld(id, worldId).orElse(null))
                 .filter(m -> m != null)
                 .map(this::toPacketMap)
                 .toList();
@@ -107,21 +107,21 @@ public class SessionPacketService {
                 packetBeats, packetArticles, packetMaps, packetStatblocks);
     }
 
-    private PacketMap toPacketMap(WorldMap map) {
-        String imageUrl = map.getMediaId() == null ? null : "/api/media/" + map.getMediaId() + "/content";
-        List<PacketPin> packetPins = pins.findByMapIdOrderByCreatedAtAsc(map.getId()).stream()
+    private PacketMap toPacketMap(MapView map) {
+        String imageUrl = map.mediaId() == null ? null : "/api/media/" + map.mediaId() + "/content";
+        List<PacketPin> packetPins = pins.findByMap(map.id()).stream()
                 .map(this::toPacketPin)
                 .toList();
-        return new PacketMap(map.getId(), map.getName(), imageUrl, packetPins);
+        return new PacketMap(map.id(), map.name(), imageUrl, packetPins);
     }
 
     /** Resolve a pin's label: its own, else the linked article's title. */
-    private PacketPin toPacketPin(MapPin pin) {
-        String label = pin.getLabel();
-        if ((label == null || label.isBlank()) && pin.getArticleId() != null) {
-            label = articles.findById(pin.getArticleId()).map(Article::getTitle).orElse(null);
+    private PacketPin toPacketPin(MapPinView pin) {
+        String label = pin.label();
+        if ((label == null || label.isBlank()) && pin.articleId() != null) {
+            label = articles.findById(pin.articleId()).map(Article::getTitle).orElse(null);
         }
-        return new PacketPin(pin.getX(), pin.getY(), label);
+        return new PacketPin(pin.x(), pin.y(), label);
     }
 
     private PacketArticle toPacketArticle(Article a) {
