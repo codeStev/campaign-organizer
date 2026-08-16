@@ -19,3 +19,6 @@ data/
 *.iml
 .vscode/
 .DS_Store
+
+# Local-only Docker Compose overrides (per-machine ports, etc.)
+docker-compose.override.yml
