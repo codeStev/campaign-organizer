@@ -3,6 +3,7 @@ package com.campaignorganizer.wiki;
 import com.campaignorganizer.wiki.ArticleDtos.ArticleRequest;
 import com.campaignorganizer.wiki.ArticleDtos.ArticleResponse;
 import com.campaignorganizer.wiki.ArticleDtos.ArticleSummaryResponse;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.world.WorldRepository;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -27,14 +28,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class ArticleController {
 
     private final ArticleRepository articles;
-    private final CategoryRepository categories;
+    private final CategoryQueryPort categories;
     private final WorldRepository worlds;
     private final AutoLinker autoLinker;
     private final HtmlSanitizer htmlSanitizer;
     private final ArticleRevisionRepository revisions;
     private final com.campaignorganizer.usage.UsageService usageService;
 
-    public ArticleController(ArticleRepository articles, CategoryRepository categories,
+    public ArticleController(ArticleRepository articles, CategoryQueryPort categories,
                              WorldRepository worlds, AutoLinker autoLinker, HtmlSanitizer htmlSanitizer,
                              ArticleRevisionRepository revisions,
                              com.campaignorganizer.usage.UsageService usageService) {
@@ -126,7 +127,7 @@ public class ArticleController {
     }
 
     private void validateCategory(UUID worldId, UUID categoryId) {
-        if (categoryId != null && !categories.existsByIdAndWorldId(categoryId, worldId)) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found in this world");
         }
     }

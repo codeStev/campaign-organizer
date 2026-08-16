@@ -16,7 +16,7 @@ import com.campaignorganizer.worldbuilding.application.timeline.port.published.T
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
 import com.campaignorganizer.wiki.ArticleRepository;
-import com.campaignorganizer.wiki.CategoryRepository;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.world.World;
 import com.campaignorganizer.world.WorldRepository;
 import java.time.Instant;
@@ -48,7 +48,7 @@ public class WorldExportController {
     static final int EXPORT_VERSION = 1;
 
     private final WorldRepository worlds;
-    private final CategoryRepository categories;
+    private final CategoryQueryPort categories;
     private final ArticleRepository articles;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
@@ -65,7 +65,7 @@ public class WorldExportController {
     private final StatblockQueryPort statblocks;
     private final WhiteboardJpaRepository whiteboards;
 
-    public WorldExportController(WorldRepository worlds, CategoryRepository categories,
+    public WorldExportController(WorldRepository worlds, CategoryQueryPort categories,
                                 ArticleRepository articles, MapQueryPort maps, MapPinQueryPort pins,
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
@@ -102,7 +102,7 @@ public class WorldExportController {
         bundle.put("exportVersion", EXPORT_VERSION);
         bundle.put("exportedAt", Instant.now().toString());
         bundle.put("world", world);
-        bundle.put("categories", categories.findByWorldIdOrderByNameAsc(worldId));
+        bundle.put("categories", categories.findByWorld(worldId));
         bundle.put("articles", articles.findByWorldIdOrderByCreatedAtDesc(worldId));
 
         List<Object> allPins = new ArrayList<>();

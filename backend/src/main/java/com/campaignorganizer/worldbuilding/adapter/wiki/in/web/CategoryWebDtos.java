@@ -1,13 +1,13 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.adapter.wiki.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class CategoryDtos {
+public final class CategoryWebDtos {
 
-    private CategoryDtos() {
+    private CategoryWebDtos() {
     }
 
     public record CategoryRequest(
@@ -22,10 +22,5 @@ public final class CategoryDtos {
             String name,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static CategoryResponse from(Category c) {
-            return new CategoryResponse(c.getId(), c.getWorldId(), c.getParentId(),
-                    c.getName(), c.getCreatedAt(), c.getUpdatedAt());
-        }
     }
 }
