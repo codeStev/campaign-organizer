@@ -10,9 +10,8 @@ import com.campaignorganizer.worldbuilding.application.map.port.published.MapPin
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
-import com.campaignorganizer.statblock.Statblock;
-import com.campaignorganizer.statblock.StatblockDtos.StatblockResponse;
-import com.campaignorganizer.statblock.StatblockRepository;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.wiki.Article;
 import com.campaignorganizer.wiki.ArticleRepository;
 import com.campaignorganizer.wiki.AutoLinker;
@@ -35,14 +34,14 @@ public class SessionPacketService {
     private final ArcRepository arcs;
     private final ArcBeatRepository beats;
     private final ArticleRepository articles;
-    private final StatblockRepository statblocks;
+    private final StatblockQueryPort statblocks;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
     private final AutoLinker autoLinker;
 
     public SessionPacketService(CampaignRepository campaigns, SessionRepository sessions,
                                 ArcRepository arcs, ArcBeatRepository beats,
-                                ArticleRepository articles, StatblockRepository statblocks,
+                                ArticleRepository articles, StatblockQueryPort statblocks,
                                 MapQueryPort maps, MapPinQueryPort pins,
                                 AutoLinker autoLinker) {
         this.campaigns = campaigns;
@@ -83,16 +82,15 @@ public class SessionPacketService {
                 .toList();
 
         // Statblocks referenced by this session's beats first, then campaign-scoped extras.
-        Map<UUID, Statblock> sbById = new LinkedHashMap<>();
+        Map<UUID, StatblockView> sbById = new LinkedHashMap<>();
         sessionBeats.stream().flatMap(b -> b.getStatblockIds().stream()).forEach(id -> {
             if (!sbById.containsKey(id)) {
-                statblocks.findByIdAndWorldId(id, worldId).ifPresent(s -> sbById.put(id, s));
+                statblocks.findByIdInWorld(id, worldId).ifPresent(s -> sbById.put(id, s));
             }
         });
-        statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)
-                .forEach(s -> sbById.putIfAbsent(s.getId(), s));
-        List<StatblockResponse> packetStatblocks =
-                sbById.values().stream().map(StatblockResponse::from).toList();
+        statblocks.findByWorldAndCampaign(worldId, campaignId)
+                .forEach(s -> sbById.putIfAbsent(s.id(), s));
+        List<StatblockView> packetStatblocks = List.copyOf(sbById.values());
 
         // Maps reachable from the session: any map with a pin linking a beat article.
         LinkedHashSet<UUID> mapIds = new LinkedHashSet<>();

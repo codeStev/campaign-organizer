@@ -11,8 +11,8 @@ import com.campaignorganizer.worldbuilding.application.relationship.port.publish
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipView;
 import com.campaignorganizer.sheet.CharacterSheet;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
-import com.campaignorganizer.statblock.Statblock;
-import com.campaignorganizer.statblock.StatblockRepository;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineView;
@@ -45,13 +45,13 @@ public class UsageService {
     private final TimelineLookupPort timelines;
     private final RelationshipQueryPort relationships;
     private final CharacterSheetRepository sheets;
-    private final StatblockRepository statblocks;
+    private final StatblockQueryPort statblocks;
 
     public UsageService(ArticleRepository articles, ArcBeatRepository beats, ArcRepository arcs,
                         CampaignRepository campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetRepository sheets,
-                        StatblockRepository statblocks) {
+                        StatblockQueryPort statblocks) {
         this.articles = articles;
         this.beats = beats;
         this.arcs = arcs;
@@ -101,9 +101,9 @@ public class UsageService {
                 out.add(new Usage("CHARACTER_SHEET", "Character sheet: " + s.getName(),
                         null, s.getCampaignId(), campaignName(s.getCampaignId()))));
 
-        statblocks.findByWorldIdAndArticleId(worldId, articleId).forEach(s ->
-                out.add(new Usage("STATBLOCK", "Statblock: " + s.getName(),
-                        null, s.getCampaignId(), campaignName(s.getCampaignId()))));
+        statblocks.findByWorldAndArticle(worldId, articleId).forEach(s ->
+                out.add(new Usage("STATBLOCK", "Statblock: " + s.name(),
+                        null, s.campaignId(), campaignName(s.campaignId()))));
 
         // Wiki-link backlinks: other articles whose body [[links]] to this one.
         String slug = article.getSlug().toLowerCase(Locale.ROOT);
@@ -135,9 +135,9 @@ public class UsageService {
                 ids.add(s.getArticleId());
             }
         }
-        for (Statblock s : statblocks.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)) {
-            if (s.getArticleId() != null) {
-                ids.add(s.getArticleId());
+        for (StatblockView s : statblocks.findByWorldAndCampaign(worldId, campaignId)) {
+            if (s.articleId() != null) {
+                ids.add(s.articleId());
             }
         }
         return ids;

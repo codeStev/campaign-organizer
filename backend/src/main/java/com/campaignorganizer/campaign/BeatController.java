@@ -2,7 +2,7 @@ package com.campaignorganizer.campaign;
 
 import com.campaignorganizer.campaign.BeatDtos.BeatRequest;
 import com.campaignorganizer.campaign.BeatDtos.BeatResponse;
-import com.campaignorganizer.statblock.StatblockRepository;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.wiki.ArticleRepository;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -30,11 +30,11 @@ public class BeatController {
     private final CampaignRepository campaigns;
     private final SessionRepository sessions;
     private final ArticleRepository articles;
-    private final StatblockRepository statblocks;
+    private final StatblockQueryPort statblocks;
 
     public BeatController(ArcBeatRepository beats, ArcRepository arcs, CampaignRepository campaigns,
                           SessionRepository sessions, ArticleRepository articles,
-                          StatblockRepository statblocks) {
+                          StatblockQueryPort statblocks) {
         this.beats = beats;
         this.arcs = arcs;
         this.campaigns = campaigns;
@@ -103,7 +103,7 @@ public class BeatController {
             }
         }
         for (UUID statblockId : request.statblockIdsOrEmpty()) {
-            if (statblocks.findByIdAndWorldId(statblockId, worldId).isEmpty()) {
+            if (!statblocks.existsInWorld(statblockId, worldId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statblock not found in this world");
             }
         }

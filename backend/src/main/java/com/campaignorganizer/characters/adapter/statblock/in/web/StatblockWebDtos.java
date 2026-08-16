@@ -1,4 +1,4 @@
-package com.campaignorganizer.statblock;
+package com.campaignorganizer.characters.adapter.statblock.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-public final class StatblockDtos {
+public final class StatblockWebDtos {
 
-    private StatblockDtos() {
+    private StatblockWebDtos() {
     }
 
     public record StatblockRequest(
@@ -29,10 +29,5 @@ public final class StatblockDtos {
             String notes,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static StatblockResponse from(Statblock s) {
-            return new StatblockResponse(s.getId(), s.getWorldId(), s.getArticleId(), s.getCampaignId(),
-                    s.getName(), s.getStats(), s.getNotes(), s.getCreatedAt(), s.getUpdatedAt());
-        }
     }
 }

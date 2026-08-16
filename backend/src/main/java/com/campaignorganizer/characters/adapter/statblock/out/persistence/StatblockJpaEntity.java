@@ -1,10 +1,8 @@
-package com.campaignorganizer.statblock;
+package com.campaignorganizer.characters.adapter.statblock.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.HashMap;
@@ -13,9 +11,10 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+/** Persistence model for a statblock (maps the {@code statblocks} table). */
 @Entity
 @Table(name = "statblocks")
-public class Statblock {
+public class StatblockJpaEntity {
 
     @Id
     private UUID id;
@@ -26,7 +25,6 @@ public class Statblock {
     @Column(name = "article_id")
     private UUID articleId;
 
-    /** Optional campaign this statblock belongs to; null = shared (ADR-0032). */
     @Column(name = "campaign_id")
     private UUID campaignId;
 
@@ -46,76 +44,78 @@ public class Statblock {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected Statblock() {
-        // for JPA
-    }
-
-    public Statblock(UUID worldId, UUID articleId, UUID campaignId, String name,
-                     Map<String, Object> stats, String notes) {
-        this.worldId = worldId;
-        this.articleId = articleId;
-        this.campaignId = campaignId;
-        this.name = name;
-        this.stats = stats == null ? new HashMap<>() : stats;
-        this.notes = notes;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void update(UUID articleId, UUID campaignId, String name, Map<String, Object> stats, String notes) {
-        this.articleId = articleId;
-        this.campaignId = campaignId;
-        this.name = name;
-        this.stats = stats == null ? new HashMap<>() : stats;
-        this.notes = notes;
+    protected StatblockJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public void setWorldId(UUID worldId) {
+        this.worldId = worldId;
     }
 
     public UUID getArticleId() {
         return articleId;
     }
 
+    public void setArticleId(UUID articleId) {
+        this.articleId = articleId;
+    }
+
     public UUID getCampaignId() {
         return campaignId;
+    }
+
+    public void setCampaignId(UUID campaignId) {
+        this.campaignId = campaignId;
     }
 
     public String getName() {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public Map<String, Object> getStats() {
         return stats;
+    }
+
+    public void setStats(Map<String, Object> stats) {
+        this.stats = stats == null ? new HashMap<>() : stats;
     }
 
     public String getNotes() {
         return notes;
     }
 
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

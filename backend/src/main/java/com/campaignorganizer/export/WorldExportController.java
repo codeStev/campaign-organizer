@@ -11,7 +11,7 @@ import com.campaignorganizer.worldbuilding.application.map.port.published.MapVie
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.sheet.SheetTemplateRepository;
-import com.campaignorganizer.statblock.StatblockRepository;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
@@ -62,7 +62,7 @@ public class WorldExportController {
     private final ArcBeatRepository beats;
     private final SheetTemplateRepository sheetTemplates;
     private final CharacterSheetRepository characterSheets;
-    private final StatblockRepository statblocks;
+    private final StatblockQueryPort statblocks;
     private final WhiteboardJpaRepository whiteboards;
 
     public WorldExportController(WorldRepository worlds, CategoryRepository categories,
@@ -72,7 +72,7 @@ public class WorldExportController {
                                 RelationshipQueryPort relationships, CampaignRepository campaigns,
                                 SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
                                 SheetTemplateRepository sheetTemplates,
-                                CharacterSheetRepository characterSheets, StatblockRepository statblocks,
+                                CharacterSheetRepository characterSheets, StatblockQueryPort statblocks,
                                 WhiteboardJpaRepository whiteboards) {
         this.worlds = worlds;
         this.categories = categories;
@@ -140,7 +140,7 @@ public class WorldExportController {
 
         bundle.put("sheetTemplates", sheetTemplates.findByWorldIdOrderByCreatedAtDesc(worldId));
         bundle.put("characterSheets", characterSheets.findByWorldIdOrderByCreatedAtDesc(worldId));
-        bundle.put("statblocks", statblocks.findByWorldIdOrderByCreatedAtDesc(worldId));
+        bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorldIdOrderByCreatedAtDesc(worldId));
 
         String filename = "world-" + slug(world.getName()) + ".json";
