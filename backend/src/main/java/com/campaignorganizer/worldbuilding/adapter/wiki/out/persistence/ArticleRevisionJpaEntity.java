@@ -1,19 +1,19 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.adapter.wiki.out.persistence;
 
+import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** An immutable snapshot of an article's content at a point in time (ADR-0026). */
+/** Persistence model for an article revision (maps the {@code article_revisions} table). */
 @Entity
 @Table(name = "article_revisions")
-public class ArticleRevision {
+public class ArticleRevisionJpaEntity {
 
     @Id
     private UUID id;
@@ -37,57 +37,62 @@ public class ArticleRevision {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    protected ArticleRevision() {
-        // for JPA
-    }
-
-    private ArticleRevision(UUID articleId, String title, String slug, ArticleTemplate template, String body) {
-        this.articleId = articleId;
-        this.title = title;
-        this.slug = slug;
-        this.template = template;
-        this.body = body;
-    }
-
-    /** Capture the current content of an article as a revision. */
-    public static ArticleRevision of(Article article) {
-        return new ArticleRevision(article.getId(), article.getTitle(), article.getSlug(),
-                article.getTemplate(), article.getBody());
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        createdAt = Instant.now();
+    protected ArticleRevisionJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getArticleId() {
         return articleId;
+    }
+
+    public void setArticleId(UUID articleId) {
+        this.articleId = articleId;
     }
 
     public String getTitle() {
         return title;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public String getSlug() {
         return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public ArticleTemplate getTemplate() {
         return template;
     }
 
+    public void setTemplate(ArticleTemplate template) {
+        this.template = template;
+    }
+
     public String getBody() {
         return body;
     }
 
+    public void setBody(String body) {
+        this.body = body;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

@@ -15,7 +15,7 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
-import com.campaignorganizer.wiki.ArticleRepository;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.world.World;
 import com.campaignorganizer.world.WorldRepository;
@@ -49,7 +49,7 @@ public class WorldExportController {
 
     private final WorldRepository worlds;
     private final CategoryQueryPort categories;
-    private final ArticleRepository articles;
+    private final ArticleQueryPort articles;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
     private final TimelineLookupPort timelines;
@@ -66,7 +66,7 @@ public class WorldExportController {
     private final WhiteboardJpaRepository whiteboards;
 
     public WorldExportController(WorldRepository worlds, CategoryQueryPort categories,
-                                ArticleRepository articles, MapQueryPort maps, MapPinQueryPort pins,
+                                ArticleQueryPort articles, MapQueryPort maps, MapPinQueryPort pins,
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignRepository campaigns,
@@ -103,7 +103,7 @@ public class WorldExportController {
         bundle.put("exportedAt", Instant.now().toString());
         bundle.put("world", world);
         bundle.put("categories", categories.findByWorld(worldId));
-        bundle.put("articles", articles.findByWorldIdOrderByCreatedAtDesc(worldId));
+        bundle.put("articles", articles.findByWorld(worldId));
 
         List<Object> allPins = new ArrayList<>();
         List<MapView> worldMaps = maps.findByWorld(worldId);

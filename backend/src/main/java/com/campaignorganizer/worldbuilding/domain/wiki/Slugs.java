@@ -1,4 +1,4 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.domain.wiki;
 
 import java.text.Normalizer;
 import java.util.Locale;

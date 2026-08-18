@@ -18,9 +18,9 @@ import com.campaignorganizer.worldbuilding.application.timeline.port.published.T
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineView;
 import com.campaignorganizer.usage.UsageDtos.Usage;
 import com.campaignorganizer.usage.UsageDtos.UsageResponse;
-import com.campaignorganizer.wiki.Article;
-import com.campaignorganizer.wiki.ArticleRepository;
-import com.campaignorganizer.wiki.AutoLinker;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -35,7 +35,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class UsageService {
 
-    private final ArticleRepository articles;
+    private final ArticleQueryPort articles;
+    private final ArticleRenderPort articleRenderer;
     private final ArcBeatRepository beats;
     private final ArcRepository arcs;
     private final CampaignRepository campaigns;
@@ -47,12 +48,14 @@ public class UsageService {
     private final CharacterSheetRepository sheets;
     private final StatblockQueryPort statblocks;
 
-    public UsageService(ArticleRepository articles, ArcBeatRepository beats, ArcRepository arcs,
+    public UsageService(ArticleQueryPort articles, ArticleRenderPort articleRenderer,
+                        ArcBeatRepository beats, ArcRepository arcs,
                         CampaignRepository campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetRepository sheets,
                         StatblockQueryPort statblocks) {
         this.articles = articles;
+        this.articleRenderer = articleRenderer;
         this.beats = beats;
         this.arcs = arcs;
         this.campaigns = campaigns;
@@ -66,7 +69,7 @@ public class UsageService {
     }
 
     public UsageResponse articleUsages(UUID worldId, UUID articleId) {
-        Article article = articles.findByIdAndWorldId(articleId, worldId)
+        ArticleView article = articles.findByIdInWorld(articleId, worldId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
         List<Usage> out = new ArrayList<>();
 
@@ -92,7 +95,7 @@ public class UsageService {
 
         for (RelationshipView r : relationships.findTouchingArticle(worldId, articleId)) {
             UUID other = r.fromArticleId().equals(articleId) ? r.toArticleId() : r.fromArticleId();
-            String otherTitle = articles.findById(other).map(Article::getTitle).orElse("article");
+            String otherTitle = articles.findById(other).map(ArticleView::title).orElse("article");
             String label = r.label() != null && !r.label().isBlank() ? r.label() : "related to";
             out.add(new Usage("RELATIONSHIP", label + " " + otherTitle, other, null, null));
         }
@@ -106,16 +109,16 @@ public class UsageService {
                         null, s.campaignId(), campaignName(s.campaignId()))));
 
         // Wiki-link backlinks: other articles whose body [[links]] to this one.
-        String slug = article.getSlug().toLowerCase(Locale.ROOT);
-        String title = article.getTitle().toLowerCase(Locale.ROOT);
-        for (Article other : articles.findByWorldIdOrderByCreatedAtDesc(worldId)) {
-            if (other.getId().equals(articleId)) {
+        String slug = article.slug().toLowerCase(Locale.ROOT);
+        String title = article.title().toLowerCase(Locale.ROOT);
+        for (ArticleView other : articles.findByWorld(worldId)) {
+            if (other.id().equals(articleId)) {
                 continue;
             }
-            Set<String> targets = AutoLinker.linkTargets(other.getBody());
+            Set<String> targets = articleRenderer.linkTargets(other.body());
             if (targets.contains(slug) || targets.contains(title)) {
-                out.add(new Usage("ARTICLE_LINK", "Linked from " + other.getTitle(),
-                        other.getId(), null, null));
+                out.add(new Usage("ARTICLE_LINK", "Linked from " + other.title(),
+                        other.id(), null, null));
             }
         }
 

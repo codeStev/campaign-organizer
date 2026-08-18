@@ -3,7 +3,7 @@ package com.campaignorganizer.sheet;
 import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetRequest;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetResponse;
-import com.campaignorganizer.wiki.ArticleRepository;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.world.WorldRepository;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -29,12 +29,12 @@ public class CharacterSheetController {
 
     private final CharacterSheetRepository sheets;
     private final SheetTemplateRepository templates;
-    private final ArticleRepository articles;
+    private final ArticleQueryPort articles;
     private final CampaignRepository campaigns;
     private final WorldRepository worlds;
 
     public CharacterSheetController(CharacterSheetRepository sheets, SheetTemplateRepository templates,
-                                    ArticleRepository articles, CampaignRepository campaigns,
+                                    ArticleQueryPort articles, CampaignRepository campaigns,
                                     WorldRepository worlds) {
         this.sheets = sheets;
         this.templates = templates;
@@ -101,7 +101,7 @@ public class CharacterSheetController {
         if (!templates.existsByIdAndWorldId(request.templateId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Template not found in this world");
         }
-        if (request.articleId() != null && !articles.existsByIdAndWorldId(request.articleId(), worldId)) {
+        if (request.articleId() != null && !articles.existsInWorld(request.articleId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
         }
         if (request.campaignId() != null && !campaigns.existsByIdAndWorldId(request.campaignId(), worldId)) {

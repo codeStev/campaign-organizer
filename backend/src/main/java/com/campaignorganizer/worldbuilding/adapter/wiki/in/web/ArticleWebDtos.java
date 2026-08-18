@@ -1,13 +1,14 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.adapter.wiki.in.web;
 
+import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class ArticleDtos {
+public final class ArticleWebDtos {
 
-    private ArticleDtos() {
+    private ArticleWebDtos() {
     }
 
     public record ArticleRequest(
@@ -28,11 +29,6 @@ public final class ArticleDtos {
             ArticleTemplate template,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static ArticleSummaryResponse from(Article a) {
-            return new ArticleSummaryResponse(a.getId(), a.getWorldId(), a.getCategoryId(),
-                    a.getTitle(), a.getSlug(), a.getTemplate(), a.getCreatedAt(), a.getUpdatedAt());
-        }
     }
 
     /** Detail view: raw body plus the auto-linked rendering (ADR-0014). */
@@ -47,11 +43,15 @@ public final class ArticleDtos {
             String bodyHtml,
             Instant createdAt,
             Instant updatedAt) {
+    }
 
-        public static ArticleResponse from(Article a, String bodyHtml) {
-            return new ArticleResponse(a.getId(), a.getWorldId(), a.getCategoryId(),
-                    a.getTitle(), a.getSlug(), a.getTemplate(), a.getBody(), bodyHtml,
-                    a.getCreatedAt(), a.getUpdatedAt());
-        }
+    public record RevisionResponse(
+            UUID id,
+            UUID articleId,
+            String title,
+            String slug,
+            ArticleTemplate template,
+            String body,
+            Instant createdAt) {
     }
 }

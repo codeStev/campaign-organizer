@@ -1,4 +1,4 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.adapter.wiki.out.persistence;
 
 import java.util.List;
 import java.util.Optional;
@@ -7,23 +7,24 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ArticleRepository extends JpaRepository<Article, UUID> {
+public interface ArticleJpaRepository extends JpaRepository<ArticleJpaEntity, UUID> {
 
-    List<Article> findByWorldIdOrderByCreatedAtDesc(UUID worldId);
+    List<ArticleJpaEntity> findByWorldIdOrderByCreatedAtDesc(UUID worldId);
 
-    List<Article> findByWorldIdAndCategoryIdOrderByCreatedAtDesc(UUID worldId, UUID categoryId);
+    List<ArticleJpaEntity> findByWorldIdAndCategoryIdOrderByCreatedAtDesc(UUID worldId, UUID categoryId);
 
-    Optional<Article> findByIdAndWorldId(UUID id, UUID worldId);
+    Optional<ArticleJpaEntity> findByIdAndWorldId(UUID id, UUID worldId);
 
     boolean existsByWorldIdAndSlug(UUID worldId, String slug);
 
     boolean existsByIdAndWorldId(UUID id, UUID worldId);
 
     /** Lightweight id/slug/title projection used for auto-link resolution (ADR-0014). */
-    @Query("SELECT a.id AS id, a.slug AS slug, a.title AS title FROM Article a WHERE a.worldId = :worldId")
-    List<ArticleRef> findRefsByWorldId(@Param("worldId") UUID worldId);
+    @Query("SELECT a.id AS id, a.slug AS slug, a.title AS title FROM ArticleJpaEntity a "
+            + "WHERE a.worldId = :worldId")
+    List<ArticleRefProjection> findRefsByWorldId(@Param("worldId") UUID worldId);
 
-    interface ArticleRef {
+    interface ArticleRefProjection {
         UUID getId();
 
         String getSlug();
@@ -50,5 +51,5 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
               similarity(a.title, :q) DESC,
               a.updated_at DESC
             """, nativeQuery = true)
-    List<Article> search(@Param("worldId") UUID worldId, @Param("q") String q);
+    List<ArticleJpaEntity> search(@Param("worldId") UUID worldId, @Param("q") String q);
 }

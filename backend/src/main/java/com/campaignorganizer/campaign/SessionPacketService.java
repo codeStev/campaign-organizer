@@ -12,9 +12,9 @@ import com.campaignorganizer.worldbuilding.application.map.port.published.MapQue
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
-import com.campaignorganizer.wiki.Article;
-import com.campaignorganizer.wiki.ArticleRepository;
-import com.campaignorganizer.wiki.AutoLinker;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,26 +33,25 @@ public class SessionPacketService {
     private final SessionRepository sessions;
     private final ArcRepository arcs;
     private final ArcBeatRepository beats;
-    private final ArticleRepository articles;
+    private final ArticleQueryPort articles;
+    private final ArticleRenderPort articleRenderer;
     private final StatblockQueryPort statblocks;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
-    private final AutoLinker autoLinker;
 
     public SessionPacketService(CampaignRepository campaigns, SessionRepository sessions,
                                 ArcRepository arcs, ArcBeatRepository beats,
-                                ArticleRepository articles, StatblockQueryPort statblocks,
-                                MapQueryPort maps, MapPinQueryPort pins,
-                                AutoLinker autoLinker) {
+                                ArticleQueryPort articles, ArticleRenderPort articleRenderer,
+                                StatblockQueryPort statblocks, MapQueryPort maps, MapPinQueryPort pins) {
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.arcs = arcs;
         this.beats = beats;
         this.articles = articles;
+        this.articleRenderer = articleRenderer;
         this.statblocks = statblocks;
         this.maps = maps;
         this.pins = pins;
-        this.autoLinker = autoLinker;
     }
 
     public SessionPacketResponse packet(UUID worldId, UUID campaignId, UUID sessionId) {
@@ -71,7 +70,7 @@ public class SessionPacketService {
                 .flatMap(b -> b.getArticleIds().stream())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         List<PacketArticle> packetArticles = articleIds.stream()
-                .map(id -> articles.findByIdAndWorldId(id, worldId).orElse(null))
+                .map(id -> articles.findByIdInWorld(id, worldId).orElse(null))
                 .filter(a -> a != null)
                 .map(this::toPacketArticle)
                 .toList();
@@ -117,13 +116,13 @@ public class SessionPacketService {
     private PacketPin toPacketPin(MapPinView pin) {
         String label = pin.label();
         if ((label == null || label.isBlank()) && pin.articleId() != null) {
-            label = articles.findById(pin.articleId()).map(Article::getTitle).orElse(null);
+            label = articles.findById(pin.articleId()).map(ArticleView::title).orElse(null);
         }
         return new PacketPin(pin.x(), pin.y(), label);
     }
 
-    private PacketArticle toPacketArticle(Article a) {
-        return new PacketArticle(a.getId(), a.getTitle(), a.getTemplate().name(),
-                autoLinker.render(a.getWorldId(), a.getBody()));
+    private PacketArticle toPacketArticle(ArticleView a) {
+        return new PacketArticle(a.id(), a.title(), a.template(),
+                articleRenderer.renderBody(a.worldId(), a.body()));
     }
 }

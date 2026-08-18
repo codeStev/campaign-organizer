@@ -1,4 +1,4 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.domain.wiki;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

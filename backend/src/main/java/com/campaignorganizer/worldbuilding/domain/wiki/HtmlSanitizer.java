@@ -1,9 +1,8 @@
-package com.campaignorganizer.wiki;
+package com.campaignorganizer.worldbuilding.domain.wiki;
 
 import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
-import org.springframework.stereotype.Component;
 
 /**
  * Sanitizes article body HTML on write to prevent stored XSS (follow-up to
@@ -11,11 +10,10 @@ import org.springframework.stereotype.Component;
  * (blocks, formatting, links, images) plus images served from our own media
  * endpoint; strips scripts, event handlers, and unknown elements.
  *
- * <p>Note: `[[wiki-links]]` in the body are plain text, not HTML, so they pass
- * through untouched and are resolved later by {@link AutoLinker}.
+ * <p>Note: {@code [[wiki-links]]} in the body are plain text, not HTML, so they
+ * pass through untouched and are resolved later by {@link WikiLinker}.
  */
-@Component
-public class HtmlSanitizer {
+public final class HtmlSanitizer {
 
     private static final PolicyFactory POLICY = Sanitizers.FORMATTING
             .and(Sanitizers.BLOCKS)

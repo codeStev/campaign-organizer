@@ -3,7 +3,7 @@ package com.campaignorganizer.campaign;
 import com.campaignorganizer.campaign.BeatDtos.BeatRequest;
 import com.campaignorganizer.campaign.BeatDtos.BeatResponse;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
-import com.campaignorganizer.wiki.ArticleRepository;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -29,11 +29,11 @@ public class BeatController {
     private final ArcRepository arcs;
     private final CampaignRepository campaigns;
     private final SessionRepository sessions;
-    private final ArticleRepository articles;
+    private final ArticleQueryPort articles;
     private final StatblockQueryPort statblocks;
 
     public BeatController(ArcBeatRepository beats, ArcRepository arcs, CampaignRepository campaigns,
-                          SessionRepository sessions, ArticleRepository articles,
+                          SessionRepository sessions, ArticleQueryPort articles,
                           StatblockQueryPort statblocks) {
         this.beats = beats;
         this.arcs = arcs;
@@ -98,7 +98,7 @@ public class BeatController {
 
     private void validateLinks(UUID worldId, UUID campaignId, BeatRequest request) {
         for (UUID articleId : request.articleIdsOrEmpty()) {
-            if (!articles.existsByIdAndWorldId(articleId, worldId)) {
+            if (!articles.existsInWorld(articleId, worldId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
             }
         }
