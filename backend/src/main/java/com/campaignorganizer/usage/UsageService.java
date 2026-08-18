@@ -1,7 +1,8 @@
 package com.campaignorganizer.usage;
 
-import com.campaignorganizer.campaign.ArcBeatRepository;
-import com.campaignorganizer.campaign.ArcRepository;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
@@ -37,8 +38,8 @@ public class UsageService {
 
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
-    private final ArcBeatRepository beats;
-    private final ArcRepository arcs;
+    private final ArcBeatQueryPort beats;
+    private final ArcQueryPort arcs;
     private final CampaignQueryPort campaigns;
     private final MapPinQueryPort pins;
     private final MapQueryPort maps;
@@ -49,7 +50,7 @@ public class UsageService {
     private final StatblockQueryPort statblocks;
 
     public UsageService(ArticleQueryPort articles, ArticleRenderPort articleRenderer,
-                        ArcBeatRepository beats, ArcRepository arcs,
+                        ArcBeatQueryPort beats, ArcQueryPort arcs,
                         CampaignQueryPort campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetRepository sheets,
@@ -73,11 +74,11 @@ public class UsageService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
         List<Usage> out = new ArrayList<>();
 
-        beats.findByLinkedArticleId(articleId).forEach(b -> {
-            var arc = arcs.findById(b.getArcId()).orElse(null);
-            UUID campaignId = arc == null ? null : arc.getCampaignId();
+        beats.findByLinkedArticle(articleId).forEach(b -> {
+            ArcView arc = arcs.findById(b.arcId()).orElse(null);
+            UUID campaignId = arc == null ? null : arc.campaignId();
             out.add(new Usage("BEAT",
-                    "Beat: " + b.getTitle() + (arc != null ? " — " + arc.getTitle() : ""),
+                    "Beat: " + b.title() + (arc != null ? " — " + arc.title() : ""),
                     null, campaignId, campaignName(campaignId)));
         });
 
@@ -128,11 +129,8 @@ public class UsageService {
     /** Article ids referenced by a campaign's play content (beats, sheets, statblocks). */
     public Set<UUID> articleIdsUsedInCampaign(UUID worldId, UUID campaignId) {
         Set<UUID> ids = new HashSet<>();
-        List<UUID> arcIds = arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(campaignId)
-                .stream().map(a -> a.getId()).toList();
-        if (!arcIds.isEmpty()) {
-            ids.addAll(beats.findLinkedArticleIdsByArcIds(arcIds));
-        }
+        List<UUID> arcIds = arcs.findByCampaign(campaignId).stream().map(ArcView::id).toList();
+        ids.addAll(beats.linkedArticleIdsByArcs(arcIds));
         for (CharacterSheet s : sheets.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)) {
             if (s.getArticleId() != null) {
                 ids.add(s.getArticleId());

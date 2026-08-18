@@ -1,4 +1,4 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.adapter.arc.out.persistence;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -7,17 +7,16 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/** Persistence model for a story beat (maps the {@code arc_beats} table and its link tables). */
 @Entity
 @Table(name = "arc_beats")
-public class ArcBeat {
+public class ArcBeatJpaEntity {
 
     @Id
     private UUID id;
@@ -58,89 +57,94 @@ public class ArcBeat {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected ArcBeat() {
-        // for JPA
-    }
-
-    public ArcBeat(UUID arcId, List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId,
-                   String title, String body, boolean done, int position) {
-        this.arcId = arcId;
-        this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
-        this.statblockIds = statblockIds == null ? new ArrayList<>() : new ArrayList<>(statblockIds);
-        this.sessionId = sessionId;
-        this.title = title;
-        this.body = body;
-        this.done = done;
-        this.position = position;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void update(List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId, String title,
-                       String body, boolean done, int position) {
-        this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
-        this.statblockIds = statblockIds == null ? new ArrayList<>() : new ArrayList<>(statblockIds);
-        this.sessionId = sessionId;
-        this.title = title;
-        this.body = body;
-        this.done = done;
-        this.position = position;
+    protected ArcBeatJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getArcId() {
         return arcId;
+    }
+
+    public void setArcId(UUID arcId) {
+        this.arcId = arcId;
     }
 
     public List<UUID> getArticleIds() {
         return articleIds;
     }
 
+    public void setArticleIds(List<UUID> articleIds) {
+        this.articleIds = articleIds == null ? new ArrayList<>() : articleIds;
+    }
+
     public List<UUID> getStatblockIds() {
         return statblockIds;
+    }
+
+    public void setStatblockIds(List<UUID> statblockIds) {
+        this.statblockIds = statblockIds == null ? new ArrayList<>() : statblockIds;
     }
 
     public UUID getSessionId() {
         return sessionId;
     }
 
+    public void setSessionId(UUID sessionId) {
+        this.sessionId = sessionId;
+    }
+
     public String getTitle() {
         return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getBody() {
         return body;
     }
 
+    public void setBody(String body) {
+        this.body = body;
+    }
+
     public boolean isDone() {
         return done;
+    }
+
+    public void setDone(boolean done) {
+        this.done = done;
     }
 
     public int getPosition() {
         return position;
     }
 
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

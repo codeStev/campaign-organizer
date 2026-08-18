@@ -1,8 +1,9 @@
 package com.campaignorganizer.export;
 
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
-import com.campaignorganizer.campaign.ArcBeatRepository;
-import com.campaignorganizer.campaign.ArcRepository;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
@@ -58,8 +59,8 @@ public class WorldExportController {
     private final RelationshipQueryPort relationships;
     private final CampaignQueryPort campaigns;
     private final SessionQueryPort sessions;
-    private final ArcRepository arcs;
-    private final ArcBeatRepository beats;
+    private final ArcQueryPort arcs;
+    private final ArcBeatQueryPort beats;
     private final SheetTemplateRepository sheetTemplates;
     private final CharacterSheetRepository characterSheets;
     private final StatblockQueryPort statblocks;
@@ -70,7 +71,7 @@ public class WorldExportController {
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignQueryPort campaigns,
-                                SessionQueryPort sessions, ArcRepository arcs, ArcBeatRepository beats,
+                                SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 SheetTemplateRepository sheetTemplates,
                                 CharacterSheetRepository characterSheets, StatblockQueryPort statblocks,
                                 WhiteboardJpaRepository whiteboards) {
@@ -128,9 +129,9 @@ public class WorldExportController {
         List<Object> allBeats = new ArrayList<>();
         worldCampaigns.forEach(c -> {
             allSessions.addAll(sessions.findOrdered(c.id()));
-            arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(c.id()).forEach(a -> {
+            arcs.findByCampaign(c.id()).forEach(a -> {
                 allArcs.add(a);
-                allBeats.addAll(beats.findByArcIdOrderByPositionAscCreatedAtAsc(a.getId()));
+                allBeats.addAll(beats.findByArc(a.id()));
             });
         });
         bundle.put("campaigns", worldCampaigns);

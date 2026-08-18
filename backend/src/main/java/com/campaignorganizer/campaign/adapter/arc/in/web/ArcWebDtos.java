@@ -1,13 +1,14 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.adapter.arc.in.web;
 
+import com.campaignorganizer.campaign.domain.arc.ArcStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class ArcDtos {
+public final class ArcWebDtos {
 
-    private ArcDtos() {
+    private ArcWebDtos() {
     }
 
     public record ArcRequest(
@@ -26,10 +27,5 @@ public final class ArcDtos {
             int position,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static ArcResponse from(Arc a) {
-            return new ArcResponse(a.getId(), a.getCampaignId(), a.getTitle(), a.getDescription(),
-                    a.getStatus(), a.getPosition(), a.getCreatedAt(), a.getUpdatedAt());
-        }
     }
 }

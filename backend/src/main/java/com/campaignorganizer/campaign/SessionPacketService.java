@@ -5,6 +5,10 @@ import com.campaignorganizer.campaign.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketMap;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketPin;
 import com.campaignorganizer.campaign.SessionPacketDtos.SessionPacketResponse;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
@@ -34,8 +38,8 @@ public class SessionPacketService {
 
     private final CampaignQueryPort campaigns;
     private final SessionQueryPort sessions;
-    private final ArcRepository arcs;
-    private final ArcBeatRepository beats;
+    private final ArcQueryPort arcs;
+    private final ArcBeatQueryPort beats;
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
     private final StatblockQueryPort statblocks;
@@ -43,7 +47,7 @@ public class SessionPacketService {
     private final MapPinQueryPort pins;
 
     public SessionPacketService(CampaignQueryPort campaigns, SessionQueryPort sessions,
-                                ArcRepository arcs, ArcBeatRepository beats,
+                                ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                                 StatblockQueryPort statblocks, MapQueryPort maps, MapPinQueryPort pins) {
         this.campaigns = campaigns;
@@ -63,14 +67,14 @@ public class SessionPacketService {
         SessionView session = sessions.findByIdInCampaign(sessionId, campaignId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
 
-        List<ArcBeat> sessionBeats = beats.findBySessionIdOrderByPositionAscCreatedAtAsc(sessionId);
+        List<ArcBeatView> sessionBeats = beats.findBySession(sessionId);
 
-        Map<UUID, String> arcTitles = arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(campaignId)
-                .stream().collect(Collectors.toMap(Arc::getId, Arc::getTitle));
+        Map<UUID, String> arcTitles = arcs.findByCampaign(campaignId)
+                .stream().collect(Collectors.toMap(ArcView::id, ArcView::title));
 
         // Articles referenced by the session's beats, first-seen order preserved.
         LinkedHashSet<UUID> articleIds = sessionBeats.stream()
-                .flatMap(b -> b.getArticleIds().stream())
+                .flatMap(b -> b.articleIds().stream())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         List<PacketArticle> packetArticles = articleIds.stream()
                 .map(id -> articles.findByIdInWorld(id, worldId).orElse(null))
@@ -79,13 +83,13 @@ public class SessionPacketService {
                 .toList();
 
         List<PacketBeat> packetBeats = sessionBeats.stream()
-                .map(b -> new PacketBeat(b.getId(), b.getTitle(), b.getBody(), b.isDone(),
-                        arcTitles.get(b.getArcId()), List.copyOf(b.getArticleIds())))
+                .map(b -> new PacketBeat(b.id(), b.title(), b.body(), b.done(),
+                        arcTitles.get(b.arcId()), List.copyOf(b.articleIds())))
                 .toList();
 
         // Statblocks referenced by this session's beats first, then campaign-scoped extras.
         Map<UUID, StatblockView> sbById = new LinkedHashMap<>();
-        sessionBeats.stream().flatMap(b -> b.getStatblockIds().stream()).forEach(id -> {
+        sessionBeats.stream().flatMap(b -> b.statblockIds().stream()).forEach(id -> {
             if (!sbById.containsKey(id)) {
                 statblocks.findByIdInWorld(id, worldId).ifPresent(s -> sbById.put(id, s));
             }

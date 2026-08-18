@@ -1,4 +1,4 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.adapter.arc.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public final class BeatDtos {
+public final class BeatWebDtos {
 
-    private BeatDtos() {
+    private BeatWebDtos() {
     }
 
     public record BeatRequest(
@@ -45,11 +45,5 @@ public final class BeatDtos {
             int position,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static BeatResponse from(ArcBeat b) {
-            return new BeatResponse(b.getId(), b.getArcId(), b.getTitle(), b.getBody(), b.isDone(),
-                    List.copyOf(b.getArticleIds()), List.copyOf(b.getStatblockIds()),
-                    b.getSessionId(), b.getPosition(), b.getCreatedAt(), b.getUpdatedAt());
-        }
     }
 }

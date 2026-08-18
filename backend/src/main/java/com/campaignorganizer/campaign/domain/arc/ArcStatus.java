@@ -1,4 +1,4 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.domain.arc;
 
 /** Lifecycle of a story arc. */
 public enum ArcStatus {
