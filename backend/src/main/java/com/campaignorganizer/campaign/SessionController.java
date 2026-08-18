@@ -2,6 +2,7 @@ package com.campaignorganizer.campaign;
 
 import com.campaignorganizer.campaign.SessionDtos.SessionRequest;
 import com.campaignorganizer.campaign.SessionDtos.SessionResponse;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -24,9 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class SessionController {
 
     private final SessionRepository sessions;
-    private final CampaignRepository campaigns;
+    private final CampaignQueryPort campaigns;
 
-    public SessionController(SessionRepository sessions, CampaignRepository campaigns) {
+    public SessionController(SessionRepository sessions, CampaignQueryPort campaigns) {
         this.sessions = sessions;
         this.campaigns = campaigns;
     }
@@ -74,7 +75,7 @@ public class SessionController {
     }
 
     private void requireCampaign(UUID worldId, UUID campaignId) {
-        if (!campaigns.existsByIdAndWorldId(campaignId, worldId)) {
+        if (!campaigns.existsInWorld(campaignId, worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found");
         }
     }

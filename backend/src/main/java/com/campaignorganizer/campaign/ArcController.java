@@ -2,6 +2,7 @@ package com.campaignorganizer.campaign;
 
 import com.campaignorganizer.campaign.ArcDtos.ArcRequest;
 import com.campaignorganizer.campaign.ArcDtos.ArcResponse;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -24,9 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class ArcController {
 
     private final ArcRepository arcs;
-    private final CampaignRepository campaigns;
+    private final CampaignQueryPort campaigns;
 
-    public ArcController(ArcRepository arcs, CampaignRepository campaigns) {
+    public ArcController(ArcRepository arcs, CampaignQueryPort campaigns) {
         this.arcs = arcs;
         this.campaigns = campaigns;
     }
@@ -73,7 +74,7 @@ public class ArcController {
     }
 
     private void requireCampaign(UUID worldId, UUID campaignId) {
-        if (!campaigns.existsByIdAndWorldId(campaignId, worldId)) {
+        if (!campaigns.existsInWorld(campaignId, worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found");
         }
     }

@@ -1,13 +1,13 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.adapter.campaign.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class CampaignDtos {
+public final class CampaignWebDtos {
 
-    private CampaignDtos() {
+    private CampaignWebDtos() {
     }
 
     public record CampaignRequest(
@@ -24,10 +24,5 @@ public final class CampaignDtos {
             String notes,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static CampaignResponse from(Campaign c) {
-            return new CampaignResponse(c.getId(), c.getWorldId(), c.getName(),
-                    c.getDescription(), c.getNotes(), c.getCreatedAt(), c.getUpdatedAt());
-        }
     }
 }

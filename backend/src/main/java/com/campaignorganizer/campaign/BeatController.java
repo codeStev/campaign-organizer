@@ -4,6 +4,7 @@ import com.campaignorganizer.campaign.BeatDtos.BeatRequest;
 import com.campaignorganizer.campaign.BeatDtos.BeatResponse;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -27,12 +28,12 @@ public class BeatController {
 
     private final ArcBeatRepository beats;
     private final ArcRepository arcs;
-    private final CampaignRepository campaigns;
+    private final CampaignQueryPort campaigns;
     private final SessionRepository sessions;
     private final ArticleQueryPort articles;
     private final StatblockQueryPort statblocks;
 
-    public BeatController(ArcBeatRepository beats, ArcRepository arcs, CampaignRepository campaigns,
+    public BeatController(ArcBeatRepository beats, ArcRepository arcs, CampaignQueryPort campaigns,
                           SessionRepository sessions, ArticleQueryPort articles,
                           StatblockQueryPort statblocks) {
         this.beats = beats;
@@ -90,7 +91,7 @@ public class BeatController {
     }
 
     private void requireArc(UUID worldId, UUID campaignId, UUID arcId) {
-        if (!campaigns.existsByIdAndWorldId(campaignId, worldId)
+        if (!campaigns.existsInWorld(campaignId, worldId)
                 || !arcs.existsByIdAndCampaignId(arcId, campaignId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Arc not found");
         }

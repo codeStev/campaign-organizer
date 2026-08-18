@@ -3,8 +3,8 @@ package com.campaignorganizer.export;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.ArcBeatRepository;
 import com.campaignorganizer.campaign.ArcRepository;
-import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.campaign.SessionRepository;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
@@ -56,7 +56,7 @@ public class WorldExportController {
     private final TimelineEventQueryPort events;
     private final CalendarQueryPort calendars;
     private final RelationshipQueryPort relationships;
-    private final CampaignRepository campaigns;
+    private final CampaignQueryPort campaigns;
     private final SessionRepository sessions;
     private final ArcRepository arcs;
     private final ArcBeatRepository beats;
@@ -69,7 +69,7 @@ public class WorldExportController {
                                 ArticleQueryPort articles, MapQueryPort maps, MapPinQueryPort pins,
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
-                                RelationshipQueryPort relationships, CampaignRepository campaigns,
+                                RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                                 SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
                                 SheetTemplateRepository sheetTemplates,
                                 CharacterSheetRepository characterSheets, StatblockQueryPort statblocks,
@@ -122,13 +122,13 @@ public class WorldExportController {
 
         bundle.put("relationships", relationships.findByWorld(worldId));
 
-        var worldCampaigns = campaigns.findByWorldIdOrderByCreatedAtDesc(worldId);
+        var worldCampaigns = campaigns.findByWorld(worldId);
         List<Object> allSessions = new ArrayList<>();
         List<Object> allArcs = new ArrayList<>();
         List<Object> allBeats = new ArrayList<>();
         worldCampaigns.forEach(c -> {
-            allSessions.addAll(sessions.findOrdered(c.getId()));
-            arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(c.getId()).forEach(a -> {
+            allSessions.addAll(sessions.findOrdered(c.id()));
+            arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(c.id()).forEach(a -> {
                 allArcs.add(a);
                 allBeats.addAll(beats.findByArcIdOrderByPositionAscCreatedAtAsc(a.getId()));
             });

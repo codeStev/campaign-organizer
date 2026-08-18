@@ -6,6 +6,8 @@ import com.campaignorganizer.campaign.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketMap;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketPin;
 import com.campaignorganizer.campaign.SessionPacketDtos.SessionPacketResponse;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
@@ -29,7 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class SessionPacketService {
 
-    private final CampaignRepository campaigns;
+    private final CampaignQueryPort campaigns;
     private final SessionRepository sessions;
     private final ArcRepository arcs;
     private final ArcBeatRepository beats;
@@ -39,7 +41,7 @@ public class SessionPacketService {
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
 
-    public SessionPacketService(CampaignRepository campaigns, SessionRepository sessions,
+    public SessionPacketService(CampaignQueryPort campaigns, SessionRepository sessions,
                                 ArcRepository arcs, ArcBeatRepository beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                                 StatblockQueryPort statblocks, MapQueryPort maps, MapPinQueryPort pins) {
@@ -55,7 +57,7 @@ public class SessionPacketService {
     }
 
     public SessionPacketResponse packet(UUID worldId, UUID campaignId, UUID sessionId) {
-        Campaign campaign = campaigns.findByIdAndWorldId(campaignId, worldId)
+        CampaignView campaign = campaigns.findByIdInWorld(campaignId, worldId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found"));
         Session session = sessions.findByIdAndCampaignId(sessionId, campaignId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
@@ -100,7 +102,7 @@ public class SessionPacketService {
                 .map(this::toPacketMap)
                 .toList();
 
-        return new SessionPacketResponse(SessionResponse.from(session), campaign.getName(),
+        return new SessionPacketResponse(SessionResponse.from(session), campaign.name(),
                 packetBeats, packetArticles, packetMaps, packetStatblocks);
     }
 

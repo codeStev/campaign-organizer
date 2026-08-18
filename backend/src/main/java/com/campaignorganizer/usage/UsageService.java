@@ -2,8 +2,8 @@ package com.campaignorganizer.usage;
 
 import com.campaignorganizer.campaign.ArcBeatRepository;
 import com.campaignorganizer.campaign.ArcRepository;
-import com.campaignorganizer.campaign.Campaign;
-import com.campaignorganizer.campaign.CampaignRepository;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
@@ -39,7 +39,7 @@ public class UsageService {
     private final ArticleRenderPort articleRenderer;
     private final ArcBeatRepository beats;
     private final ArcRepository arcs;
-    private final CampaignRepository campaigns;
+    private final CampaignQueryPort campaigns;
     private final MapPinQueryPort pins;
     private final MapQueryPort maps;
     private final TimelineEventQueryPort events;
@@ -50,7 +50,7 @@ public class UsageService {
 
     public UsageService(ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                         ArcBeatRepository beats, ArcRepository arcs,
-                        CampaignRepository campaigns, MapPinQueryPort pins, MapQueryPort maps,
+                        CampaignQueryPort campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetRepository sheets,
                         StatblockQueryPort statblocks) {
@@ -148,6 +148,6 @@ public class UsageService {
 
     private String campaignName(UUID campaignId) {
         return campaignId == null ? null
-                : campaigns.findById(campaignId).map(Campaign::getName).orElse(null);
+                : campaigns.findById(campaignId).map(CampaignView::name).orElse(null);
     }
 }
