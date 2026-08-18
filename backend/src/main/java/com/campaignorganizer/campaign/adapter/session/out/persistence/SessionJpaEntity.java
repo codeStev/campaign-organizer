@@ -1,18 +1,17 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.adapter.session.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/** Persistence model for a session (maps the {@code sessions} table). */
 @Entity
 @Table(name = "sessions")
-public class Session {
+public class SessionJpaEntity {
 
     @Id
     private UUID id;
@@ -41,76 +40,78 @@ public class Session {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected Session() {
-        // for JPA
-    }
-
-    public Session(UUID campaignId, String title, Integer sessionNumber, LocalDate date,
-                   String summary, String notes) {
-        this.campaignId = campaignId;
-        this.title = title;
-        this.sessionNumber = sessionNumber;
-        this.date = date;
-        this.summary = summary;
-        this.notes = notes;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void update(String title, Integer sessionNumber, LocalDate date, String summary, String notes) {
-        this.title = title;
-        this.sessionNumber = sessionNumber;
-        this.date = date;
-        this.summary = summary;
-        this.notes = notes;
+    protected SessionJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getCampaignId() {
         return campaignId;
+    }
+
+    public void setCampaignId(UUID campaignId) {
+        this.campaignId = campaignId;
     }
 
     public String getTitle() {
         return title;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public Integer getSessionNumber() {
         return sessionNumber;
+    }
+
+    public void setSessionNumber(Integer sessionNumber) {
+        this.sessionNumber = sessionNumber;
     }
 
     public LocalDate getDate() {
         return date;
     }
 
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
     public String getSummary() {
         return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 
     public String getNotes() {
         return notes;
     }
 
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

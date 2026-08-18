@@ -3,7 +3,7 @@ package com.campaignorganizer.export;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.ArcBeatRepository;
 import com.campaignorganizer.campaign.ArcRepository;
-import com.campaignorganizer.campaign.SessionRepository;
+import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
@@ -57,7 +57,7 @@ public class WorldExportController {
     private final CalendarQueryPort calendars;
     private final RelationshipQueryPort relationships;
     private final CampaignQueryPort campaigns;
-    private final SessionRepository sessions;
+    private final SessionQueryPort sessions;
     private final ArcRepository arcs;
     private final ArcBeatRepository beats;
     private final SheetTemplateRepository sheetTemplates;
@@ -70,7 +70,7 @@ public class WorldExportController {
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignQueryPort campaigns,
-                                SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
+                                SessionQueryPort sessions, ArcRepository arcs, ArcBeatRepository beats,
                                 SheetTemplateRepository sheetTemplates,
                                 CharacterSheetRepository characterSheets, StatblockQueryPort statblocks,
                                 WhiteboardJpaRepository whiteboards) {

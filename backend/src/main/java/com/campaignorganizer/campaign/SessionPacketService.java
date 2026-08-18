@@ -1,6 +1,5 @@
 package com.campaignorganizer.campaign;
 
-import com.campaignorganizer.campaign.SessionDtos.SessionResponse;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketArticle;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.campaign.SessionPacketDtos.PacketMap;
@@ -8,6 +7,8 @@ import com.campaignorganizer.campaign.SessionPacketDtos.PacketPin;
 import com.campaignorganizer.campaign.SessionPacketDtos.SessionPacketResponse;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
@@ -32,7 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class SessionPacketService {
 
     private final CampaignQueryPort campaigns;
-    private final SessionRepository sessions;
+    private final SessionQueryPort sessions;
     private final ArcRepository arcs;
     private final ArcBeatRepository beats;
     private final ArticleQueryPort articles;
@@ -41,7 +42,7 @@ public class SessionPacketService {
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
 
-    public SessionPacketService(CampaignQueryPort campaigns, SessionRepository sessions,
+    public SessionPacketService(CampaignQueryPort campaigns, SessionQueryPort sessions,
                                 ArcRepository arcs, ArcBeatRepository beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                                 StatblockQueryPort statblocks, MapQueryPort maps, MapPinQueryPort pins) {
@@ -59,7 +60,7 @@ public class SessionPacketService {
     public SessionPacketResponse packet(UUID worldId, UUID campaignId, UUID sessionId) {
         CampaignView campaign = campaigns.findByIdInWorld(campaignId, worldId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found"));
-        Session session = sessions.findByIdAndCampaignId(sessionId, campaignId)
+        SessionView session = sessions.findByIdInCampaign(sessionId, campaignId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
 
         List<ArcBeat> sessionBeats = beats.findBySessionIdOrderByPositionAscCreatedAtAsc(sessionId);
@@ -102,7 +103,7 @@ public class SessionPacketService {
                 .map(this::toPacketMap)
                 .toList();
 
-        return new SessionPacketResponse(SessionResponse.from(session), campaign.name(),
+        return new SessionPacketResponse(session, campaign.name(),
                 packetBeats, packetArticles, packetMaps, packetStatblocks);
     }
 

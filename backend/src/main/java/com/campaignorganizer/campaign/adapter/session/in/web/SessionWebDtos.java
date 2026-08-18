@@ -1,4 +1,4 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.campaign.adapter.session.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public final class SessionDtos {
+public final class SessionWebDtos {
 
-    private SessionDtos() {
+    private SessionWebDtos() {
     }
 
     public record SessionRequest(
@@ -29,11 +29,5 @@ public final class SessionDtos {
             String notes,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static SessionResponse from(Session s) {
-            return new SessionResponse(s.getId(), s.getCampaignId(), s.getTitle(),
-                    s.getSessionNumber(), s.getDate(), s.getSummary(), s.getNotes(),
-                    s.getCreatedAt(), s.getUpdatedAt());
-        }
     }
 }

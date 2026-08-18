@@ -5,6 +5,7 @@ import com.campaignorganizer.campaign.BeatDtos.BeatResponse;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -29,12 +30,12 @@ public class BeatController {
     private final ArcBeatRepository beats;
     private final ArcRepository arcs;
     private final CampaignQueryPort campaigns;
-    private final SessionRepository sessions;
+    private final SessionQueryPort sessions;
     private final ArticleQueryPort articles;
     private final StatblockQueryPort statblocks;
 
     public BeatController(ArcBeatRepository beats, ArcRepository arcs, CampaignQueryPort campaigns,
-                          SessionRepository sessions, ArticleQueryPort articles,
+                          SessionQueryPort sessions, ArticleQueryPort articles,
                           StatblockQueryPort statblocks) {
         this.beats = beats;
         this.arcs = arcs;
@@ -109,7 +110,7 @@ public class BeatController {
             }
         }
         if (request.sessionId() != null
-                && sessions.findByIdAndCampaignId(request.sessionId(), campaignId).isEmpty()) {
+                && !sessions.existsInCampaign(request.sessionId(), campaignId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session not found in this campaign");
         }
     }

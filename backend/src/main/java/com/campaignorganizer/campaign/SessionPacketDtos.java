@@ -1,6 +1,6 @@
 package com.campaignorganizer.campaign;
 
-import com.campaignorganizer.campaign.SessionDtos.SessionResponse;
+import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import java.util.List;
 import java.util.UUID;
@@ -40,7 +40,7 @@ public final class SessionPacketDtos {
             List<PacketPin> pins) {}
 
     public record SessionPacketResponse(
-            SessionResponse session,
+            SessionView session,
             String campaignName,
             List<PacketBeat> beats,
             List<PacketArticle> articles,
