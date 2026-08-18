@@ -1,10 +1,10 @@
 package com.campaignorganizer.sheet;
 
-import com.campaignorganizer.campaign.CampaignRepository;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetRequest;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetResponse;
-import com.campaignorganizer.wiki.ArticleRepository;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -29,13 +29,13 @@ public class CharacterSheetController {
 
     private final CharacterSheetRepository sheets;
     private final SheetTemplateRepository templates;
-    private final ArticleRepository articles;
-    private final CampaignRepository campaigns;
-    private final WorldRepository worlds;
+    private final ArticleQueryPort articles;
+    private final CampaignQueryPort campaigns;
+    private final WorldQueryPort worlds;
 
     public CharacterSheetController(CharacterSheetRepository sheets, SheetTemplateRepository templates,
-                                    ArticleRepository articles, CampaignRepository campaigns,
-                                    WorldRepository worlds) {
+                                    ArticleQueryPort articles, CampaignQueryPort campaigns,
+                                    WorldQueryPort worlds) {
         this.sheets = sheets;
         this.templates = templates;
         this.articles = articles;
@@ -92,7 +92,7 @@ public class CharacterSheetController {
     }
 
     private void requireWorld(UUID worldId) {
-        if (!worlds.existsById(worldId)) {
+        if (!worlds.exists(worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found");
         }
     }
@@ -101,10 +101,10 @@ public class CharacterSheetController {
         if (!templates.existsByIdAndWorldId(request.templateId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Template not found in this world");
         }
-        if (request.articleId() != null && !articles.existsByIdAndWorldId(request.articleId(), worldId)) {
+        if (request.articleId() != null && !articles.existsInWorld(request.articleId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Article not found in this world");
         }
-        if (request.campaignId() != null && !campaigns.existsByIdAndWorldId(request.campaignId(), worldId)) {
+        if (request.campaignId() != null && !campaigns.existsInWorld(request.campaignId(), worldId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Campaign not found in this world");
         }
     }

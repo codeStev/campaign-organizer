@@ -1,25 +1,25 @@
 package com.campaignorganizer.export;
 
-import com.campaignorganizer.calendar.CalendarMonthRepository;
-import com.campaignorganizer.calendar.CalendarRepository;
-import com.campaignorganizer.campaign.ArcBeatRepository;
-import com.campaignorganizer.campaign.ArcRepository;
-import com.campaignorganizer.campaign.CampaignRepository;
-import com.campaignorganizer.campaign.SessionRepository;
-import com.campaignorganizer.map.MapPinRepository;
-import com.campaignorganizer.map.WorldMap;
-import com.campaignorganizer.map.WorldMapRepository;
-import com.campaignorganizer.relationship.RelationshipRepository;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
+import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
+import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.sheet.CharacterSheetRepository;
 import com.campaignorganizer.sheet.SheetTemplateRepository;
-import com.campaignorganizer.statblock.StatblockRepository;
-import com.campaignorganizer.timeline.TimelineRepository;
-import com.campaignorganizer.timeline.TimelineEventRepository;
-import com.campaignorganizer.whiteboard.WhiteboardRepository;
-import com.campaignorganizer.wiki.ArticleRepository;
-import com.campaignorganizer.wiki.CategoryRepository;
-import com.campaignorganizer.world.World;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
+import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -48,34 +48,33 @@ public class WorldExportController {
 
     static final int EXPORT_VERSION = 1;
 
-    private final WorldRepository worlds;
-    private final CategoryRepository categories;
-    private final ArticleRepository articles;
-    private final WorldMapRepository maps;
-    private final MapPinRepository pins;
-    private final TimelineRepository timelines;
-    private final TimelineEventRepository events;
-    private final CalendarRepository calendars;
-    private final CalendarMonthRepository calendarMonths;
-    private final RelationshipRepository relationships;
-    private final CampaignRepository campaigns;
-    private final SessionRepository sessions;
-    private final ArcRepository arcs;
-    private final ArcBeatRepository beats;
+    private final WorldQueryPort worlds;
+    private final CategoryQueryPort categories;
+    private final ArticleQueryPort articles;
+    private final MapQueryPort maps;
+    private final MapPinQueryPort pins;
+    private final TimelineLookupPort timelines;
+    private final TimelineEventQueryPort events;
+    private final CalendarQueryPort calendars;
+    private final RelationshipQueryPort relationships;
+    private final CampaignQueryPort campaigns;
+    private final SessionQueryPort sessions;
+    private final ArcQueryPort arcs;
+    private final ArcBeatQueryPort beats;
     private final SheetTemplateRepository sheetTemplates;
     private final CharacterSheetRepository characterSheets;
-    private final StatblockRepository statblocks;
-    private final WhiteboardRepository whiteboards;
+    private final StatblockQueryPort statblocks;
+    private final WhiteboardJpaRepository whiteboards;
 
-    public WorldExportController(WorldRepository worlds, CategoryRepository categories,
-                                ArticleRepository articles, WorldMapRepository maps, MapPinRepository pins,
-                                TimelineRepository timelines, TimelineEventRepository events,
-                                CalendarRepository calendars, CalendarMonthRepository calendarMonths,
-                                RelationshipRepository relationships, CampaignRepository campaigns,
-                                SessionRepository sessions, ArcRepository arcs, ArcBeatRepository beats,
+    public WorldExportController(WorldQueryPort worlds, CategoryQueryPort categories,
+                                ArticleQueryPort articles, MapQueryPort maps, MapPinQueryPort pins,
+                                TimelineLookupPort timelines, TimelineEventQueryPort events,
+                                CalendarQueryPort calendars,
+                                RelationshipQueryPort relationships, CampaignQueryPort campaigns,
+                                SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 SheetTemplateRepository sheetTemplates,
-                                CharacterSheetRepository characterSheets, StatblockRepository statblocks,
-                                WhiteboardRepository whiteboards) {
+                                CharacterSheetRepository characterSheets, StatblockQueryPort statblocks,
+                                WhiteboardJpaRepository whiteboards) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -84,7 +83,6 @@ public class WorldExportController {
         this.timelines = timelines;
         this.events = events;
         this.calendars = calendars;
-        this.calendarMonths = calendarMonths;
         this.relationships = relationships;
         this.campaigns = campaigns;
         this.sessions = sessions;
@@ -98,45 +96,42 @@ public class WorldExportController {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> export(@PathVariable UUID worldId) {
-        World world = worlds.findById(worldId)
+        WorldView world = worlds.findById(worldId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found"));
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", EXPORT_VERSION);
         bundle.put("exportedAt", Instant.now().toString());
         bundle.put("world", world);
-        bundle.put("categories", categories.findByWorldIdOrderByNameAsc(worldId));
-        bundle.put("articles", articles.findByWorldIdOrderByCreatedAtDesc(worldId));
+        bundle.put("categories", categories.findByWorld(worldId));
+        bundle.put("articles", articles.findByWorld(worldId));
 
         List<Object> allPins = new ArrayList<>();
-        List<WorldMap> worldMaps = maps.findByWorldIdOrderByCreatedAtDesc(worldId);
-        worldMaps.forEach(m -> allPins.addAll(pins.findByMapIdOrderByCreatedAtAsc(m.getId())));
+        List<MapView> worldMaps = maps.findByWorld(worldId);
+        worldMaps.forEach(m -> allPins.addAll(pins.findByMap(m.id())));
         bundle.put("maps", worldMaps);
         bundle.put("mapPins", allPins);
 
-        var worldTimelines = timelines.findByWorldIdOrderByCreatedAtDesc(worldId);
+        var worldTimelines = timelines.findByWorld(worldId);
         List<Object> allEvents = new ArrayList<>();
-        worldTimelines.forEach(t -> allEvents.addAll(events.findOrdered(t.getId())));
+        worldTimelines.forEach(t -> allEvents.addAll(events.findByTimeline(t.id())));
         bundle.put("timelines", worldTimelines);
         bundle.put("timelineEvents", allEvents);
 
-        var worldCalendars = calendars.findByWorldIdOrderByCreatedAtDesc(worldId);
-        List<Object> allMonths = new ArrayList<>();
-        worldCalendars.forEach(c -> allMonths.addAll(calendarMonths.findByCalendarIdOrderByPositionAsc(c.getId())));
-        bundle.put("calendars", worldCalendars);
-        bundle.put("calendarMonths", allMonths);
+        // Calendars now carry their months inline (via the worldbuilding query port).
+        bundle.put("calendars", calendars.findByWorld(worldId));
 
-        bundle.put("relationships", relationships.findByWorldIdOrderByCreatedAtAsc(worldId));
+        bundle.put("relationships", relationships.findByWorld(worldId));
 
-        var worldCampaigns = campaigns.findByWorldIdOrderByCreatedAtDesc(worldId);
+        var worldCampaigns = campaigns.findByWorld(worldId);
         List<Object> allSessions = new ArrayList<>();
         List<Object> allArcs = new ArrayList<>();
         List<Object> allBeats = new ArrayList<>();
         worldCampaigns.forEach(c -> {
-            allSessions.addAll(sessions.findOrdered(c.getId()));
-            arcs.findByCampaignIdOrderByPositionAscCreatedAtAsc(c.getId()).forEach(a -> {
+            allSessions.addAll(sessions.findOrdered(c.id()));
+            arcs.findByCampaign(c.id()).forEach(a -> {
                 allArcs.add(a);
-                allBeats.addAll(beats.findByArcIdOrderByPositionAscCreatedAtAsc(a.getId()));
+                allBeats.addAll(beats.findByArc(a.id()));
             });
         });
         bundle.put("campaigns", worldCampaigns);
@@ -146,10 +141,10 @@ public class WorldExportController {
 
         bundle.put("sheetTemplates", sheetTemplates.findByWorldIdOrderByCreatedAtDesc(worldId));
         bundle.put("characterSheets", characterSheets.findByWorldIdOrderByCreatedAtDesc(worldId));
-        bundle.put("statblocks", statblocks.findByWorldIdOrderByCreatedAtDesc(worldId));
+        bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorldIdOrderByCreatedAtDesc(worldId));
 
-        String filename = "world-" + slug(world.getName()) + ".json";
+        String filename = "world-" + slug(world.name()) + ".json";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(filename).build().toString())
