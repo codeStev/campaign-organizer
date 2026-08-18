@@ -2,7 +2,7 @@ package com.campaignorganizer.campaign;
 
 import com.campaignorganizer.campaign.CampaignDtos.CampaignRequest;
 import com.campaignorganizer.campaign.CampaignDtos.CampaignResponse;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -25,9 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class CampaignController {
 
     private final CampaignRepository campaigns;
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
 
-    public CampaignController(CampaignRepository campaigns, WorldRepository worlds) {
+    public CampaignController(CampaignRepository campaigns, WorldQueryPort worlds) {
         this.campaigns = campaigns;
         this.worlds = worlds;
     }
@@ -76,7 +76,7 @@ public class CampaignController {
     }
 
     private void requireWorld(UUID worldId) {
-        if (!worlds.existsById(worldId)) {
+        if (!worlds.exists(worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found");
         }
     }

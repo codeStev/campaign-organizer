@@ -1,7 +1,7 @@
 package com.campaignorganizer.media.adapter.out.context;
 
 import com.campaignorganizer.media.application.port.out.WorldExistsPort;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -12,14 +12,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class MediaWorldExistsAdapter implements WorldExistsPort {
 
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
 
-    public MediaWorldExistsAdapter(WorldRepository worlds) {
+    public MediaWorldExistsAdapter(WorldQueryPort worlds) {
         this.worlds = worlds;
     }
 
     @Override
     public boolean exists(UUID worldId) {
-        return worlds.existsById(worldId);
+        return worlds.exists(worldId);
     }
 }

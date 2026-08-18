@@ -1,7 +1,7 @@
 package com.campaignorganizer.whiteboard.adapter.out.persistence;
 
 import com.campaignorganizer.whiteboard.application.port.out.WorldExistsPort;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -13,14 +13,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class WhiteboardWorldExistsAdapter implements WorldExistsPort {
 
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
 
-    public WhiteboardWorldExistsAdapter(WorldRepository worlds) {
+    public WhiteboardWorldExistsAdapter(WorldQueryPort worlds) {
         this.worlds = worlds;
     }
 
     @Override
     public boolean exists(UUID worldId) {
-        return worlds.existsById(worldId);
+        return worlds.exists(worldId);
     }
 }

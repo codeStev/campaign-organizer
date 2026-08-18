@@ -1,5 +1,6 @@
-package com.campaignorganizer.world;
+package com.campaignorganizer.worldbuilding.adapter.world.in.web;
 
+import com.campaignorganizer.worldbuilding.domain.world.LayerStyle;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -7,9 +8,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /** Request/response payloads for the worlds resource (mirrors docs/api/openapi.yaml). */
-public final class WorldDtos {
+public final class WorldWebDtos {
 
-    private WorldDtos() {
+    private WorldWebDtos() {
     }
 
     public record WorldRequest(
@@ -24,15 +25,5 @@ public final class WorldDtos {
             Map<String, LayerStyle> layerStyles,
             Instant createdAt,
             Instant updatedAt) {
-
-        public static WorldResponse from(World world) {
-            return new WorldResponse(
-                    world.getId(),
-                    world.getName(),
-                    world.getDescription(),
-                    world.getLayerStyles(),
-                    world.getCreatedAt(),
-                    world.getUpdatedAt());
-        }
     }
 }

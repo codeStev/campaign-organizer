@@ -4,7 +4,7 @@ import com.campaignorganizer.campaign.CampaignRepository;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetRequest;
 import com.campaignorganizer.sheet.CharacterSheetDtos.CharacterSheetResponse;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -31,11 +31,11 @@ public class CharacterSheetController {
     private final SheetTemplateRepository templates;
     private final ArticleQueryPort articles;
     private final CampaignRepository campaigns;
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
 
     public CharacterSheetController(CharacterSheetRepository sheets, SheetTemplateRepository templates,
                                     ArticleQueryPort articles, CampaignRepository campaigns,
-                                    WorldRepository worlds) {
+                                    WorldQueryPort worlds) {
         this.sheets = sheets;
         this.templates = templates;
         this.articles = articles;
@@ -92,7 +92,7 @@ public class CharacterSheetController {
     }
 
     private void requireWorld(UUID worldId) {
-        if (!worlds.existsById(worldId)) {
+        if (!worlds.exists(worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found");
         }
     }

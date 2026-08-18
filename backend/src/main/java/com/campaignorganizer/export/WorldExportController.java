@@ -17,8 +17,8 @@ import com.campaignorganizer.worldbuilding.application.timeline.port.published.T
 import com.campaignorganizer.whiteboard.adapter.out.persistence.WhiteboardJpaRepository;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
-import com.campaignorganizer.world.World;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -47,7 +47,7 @@ public class WorldExportController {
 
     static final int EXPORT_VERSION = 1;
 
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
     private final CategoryQueryPort categories;
     private final ArticleQueryPort articles;
     private final MapQueryPort maps;
@@ -65,7 +65,7 @@ public class WorldExportController {
     private final StatblockQueryPort statblocks;
     private final WhiteboardJpaRepository whiteboards;
 
-    public WorldExportController(WorldRepository worlds, CategoryQueryPort categories,
+    public WorldExportController(WorldQueryPort worlds, CategoryQueryPort categories,
                                 ArticleQueryPort articles, MapQueryPort maps, MapPinQueryPort pins,
                                 TimelineLookupPort timelines, TimelineEventQueryPort events,
                                 CalendarQueryPort calendars,
@@ -95,7 +95,7 @@ public class WorldExportController {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> export(@PathVariable UUID worldId) {
-        World world = worlds.findById(worldId)
+        WorldView world = worlds.findById(worldId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found"));
 
         Map<String, Object> bundle = new LinkedHashMap<>();
@@ -143,7 +143,7 @@ public class WorldExportController {
         bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorldIdOrderByCreatedAtDesc(worldId));
 
-        String filename = "world-" + slug(world.getName()) + ".json";
+        String filename = "world-" + slug(world.name()) + ".json";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(filename).build().toString())

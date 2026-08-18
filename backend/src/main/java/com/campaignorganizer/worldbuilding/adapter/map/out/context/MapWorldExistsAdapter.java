@@ -1,6 +1,6 @@
 package com.campaignorganizer.worldbuilding.adapter.map.out.context;
 
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.out.WorldExistsPort;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -9,14 +9,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class MapWorldExistsAdapter implements WorldExistsPort {
 
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
 
-    public MapWorldExistsAdapter(WorldRepository worlds) {
+    public MapWorldExistsAdapter(WorldQueryPort worlds) {
         this.worlds = worlds;
     }
 
     @Override
     public boolean exists(UUID worldId) {
-        return worlds.existsById(worldId);
+        return worlds.exists(worldId);
     }
 }

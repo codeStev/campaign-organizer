@@ -2,7 +2,7 @@ package com.campaignorganizer.sheet;
 
 import com.campaignorganizer.sheet.SheetTemplateDtos.SheetTemplateRequest;
 import com.campaignorganizer.sheet.SheetTemplateDtos.SheetTemplateResponse;
-import com.campaignorganizer.world.WorldRepository;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -25,9 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class SheetTemplateController {
 
     private final SheetTemplateRepository templates;
-    private final WorldRepository worlds;
+    private final WorldQueryPort worlds;
 
-    public SheetTemplateController(SheetTemplateRepository templates, WorldRepository worlds) {
+    public SheetTemplateController(SheetTemplateRepository templates, WorldQueryPort worlds) {
         this.templates = templates;
         this.worlds = worlds;
     }
@@ -76,7 +76,7 @@ public class SheetTemplateController {
     }
 
     private void requireWorld(UUID worldId) {
-        if (!worlds.existsById(worldId)) {
+        if (!worlds.exists(worldId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "World not found");
         }
     }

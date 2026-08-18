@@ -1,10 +1,9 @@
-package com.campaignorganizer.world;
+package com.campaignorganizer.worldbuilding.adapter.world.out.persistence;
 
+import com.campaignorganizer.worldbuilding.domain.world.LayerStyle;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.HashMap;
@@ -13,9 +12,10 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+/** Persistence model for a world (maps the {@code worlds} table). */
 @Entity
 @Table(name = "worlds")
-public class World {
+public class WorldJpaEntity {
 
     @Id
     private UUID id;
@@ -37,45 +37,31 @@ public class World {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected World() {
-        // for JPA
-    }
-
-    public World(String name, String description) {
-        this.name = name;
-        this.description = description;
-    }
-
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void update(String name, String description) {
-        this.name = name;
-        this.description = description;
+    protected WorldJpaEntity() {
     }
 
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public String getName() {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getDescription() {
         return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Map<String, LayerStyle> getLayerStyles() {
@@ -90,7 +76,15 @@ public class World {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }
