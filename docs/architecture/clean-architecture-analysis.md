@@ -1,8 +1,9 @@
 # Clean Architecture & Ports-and-Adapters Analysis
 
-- Status: Analysis / proposal (no code changed on this branch)
+- Status: **Complete** — all measures M0–M13 landed; see the completion note
+  before §7 for what changed and what remains a documented exception.
 - Branch: `refactor/hexagonal-architecture`
-- Date: 2026-08-15
+- Date: 2026-08-15 (analysis) / 2026-08-19 (migration completed)
 - Scope: backend (`backend/src/main/java/com/campaignorganizer`)
 
 This document reviews the current backend against Clean Code and Clean/Hexagonal
@@ -326,6 +327,19 @@ still holds).
   contexts don't share models).
 
 ---
+
+## 6.1 Completion note (2026-08-19)
+
+The full incremental strangler migration (§5, measures M0–M13) is complete. Every
+bounded context from the M0 context map (`worldbuilding`, `campaign`, `characters`,
+`media`, `whiteboard`, `interchange`) is fully in the domain/application/adapter
+ring structure; no aggregate remains on the legacy web→persistence shape. Every
+item in §7's Definition of Done is satisfied, including the ArchUnit rule that
+forbids cross-context references outside `application.port.published`
+(`contextsOnlyUsePublishedPorts`, added last). `auth` (single stateless login
+endpoint, ADR-0006) keeps one `ResponseStatusException` — it's generic
+identity infra, not a bounded context, and `spring.mvc.problemdetails.enabled`
+already renders it as problem+json per ADR-0009.
 
 ## 7. Definition of done (measurable)
 
