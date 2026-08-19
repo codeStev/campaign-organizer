@@ -23,17 +23,23 @@ World Anvil. Not multi-tenant, no community features.
 - **Tests:** unit + Testcontainers integration; run in CI. — ADR-0011
 - **Schema:** Flyway migrations; Hibernate `ddl-auto: validate`. — ADR-0012
 
-## Architecture (in migration)
-The backend is being refactored to a **hexagonal, bounded-context modular monolith**.
-Two documents govern this and are **binding** for any agent touching backend code:
+## Architecture (hexagonal, bounded-context modular monolith)
+The backend is a **hexagonal, bounded-context modular monolith**; the M0–M13
+migration to this shape is complete (2026-08-19). Two documents govern it and are
+**binding** for any agent touching backend code:
 - [`docs/architecture/architecture-harness.md`](docs/architecture/architecture-harness.md)
   — the universal, non-negotiable rule set (rings, three models + MapStruct,
-  published-port integration, mandatory self-audit). Follow it exactly for **new or
-  migrated** backend code.
+  published-port integration, mandatory self-audit). Follow it exactly for **all**
+  backend code.
 - [`docs/architecture/clean-architecture-analysis.md`](docs/architecture/clean-architecture-analysis.md)
-  — this project's context map, findings, and incremental migration plan (M0–M13).
-Legacy code predates the harness; migrate feature-by-context per the plan, keeping
-tests green. Do not add new logic to a controller — put it behind a use-case port.
+  — this project's context map, findings, and the completed migration plan (M0–M13).
+Bounded contexts: `worldbuilding`, `campaign`, `characters`, `media`, `whiteboard`,
+`interchange` (export/usage/packet orchestration). Each has a full domain/
+application/adapter ring; cross-context references go only through the target's
+`application.port.published` interfaces — an ArchUnit fitness function
+(`contextsOnlyUsePublishedPorts`) enforces this in CI. `auth`/`config`/`security`/
+`shared` are generic cross-cutting infra, not bounded contexts. Do not add new logic
+to a controller — put it behind a use-case port.
 
 ## Conventions
 - **API changes start in the contract.** Edit `docs/api/openapi.yaml` first, then
@@ -43,10 +49,13 @@ tests green. Do not add new logic to a controller — put it behind a use-case p
   tables.
 - **Every significant decision gets an ADR.** Add a new numbered file; don't
   rewrite an accepted one — supersede it.
-- **Errors** are thrown as `ResponseStatusException` / validation errors so they
-  render as problem+json.
-- **Backend package root:** `com.campaignorganizer`, organized by feature
-  (`auth`, `world`, `security`, `config`).
+- **Errors** are thrown as domain exceptions (`shared.domain`: `NotFoundException`,
+  `ValidationException`, ...) and mapped centrally to problem+json by
+  `DomainExceptionAdvice`. `ResponseStatusException` is reserved for generic infra
+  outside the bounded contexts (e.g. `auth`'s login check).
+- **Backend package root:** `com.campaignorganizer`, organized by bounded context
+  (`worldbuilding`, `campaign`, `characters`, `media`, `whiteboard`, `interchange`),
+  plus generic infra (`auth`, `security`, `config`, `shared`).
 
 ## Build, test, run
 ```bash
@@ -61,7 +70,7 @@ cd frontend && npm install && npm run dev
 ```
 
 ## Git workflow
-- Local git repo (no remote yet).
+- GitHub remote: `git@github.com:codeStev/campaign-organizer.git` (`origin`).
 - **Commit granularly**, one logical change per commit.
 - **Commit subject line ≤ 50 characters**, imperative mood.
 - Keep unrelated changes in separate commits.
