@@ -3,10 +3,16 @@ package com.campaignorganizer.architecture;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.util.Set;
 
 /**
  * Architecture fitness functions (harness §3). Rules are keyed to the hexagonal ring
@@ -16,6 +22,10 @@ import com.tngtech.archunit.lang.ArchRule;
  */
 @AnalyzeClasses(packages = "com.campaignorganizer", importOptions = DoNotIncludeTests.class)
 class ArchitectureTest {
+
+    /** Top-level packages that are bounded contexts (ADR-0050); others are cross-cutting infra. */
+    private static final Set<String> CONTEXTS =
+            Set.of("worldbuilding", "campaign", "characters", "media", "whiteboard", "interchange");
 
     /** The domain ring is pure Java: no Spring, JPA, Jackson, or Hibernate. */
     @ArchTest
@@ -55,4 +65,50 @@ class ArchitectureTest {
             .and().areInterfaces()
             .should().beAnnotatedWith("org.mapstruct.Mapper")
             .allowEmptyShould(true);
+
+    /**
+     * A bounded context may reference another bounded context only through the
+     * target's {@code application.port.published} interfaces (ADR-0050): no
+     * foreign domain, adapter, or out-port/service reference. Generic
+     * cross-cutting infra (auth, config, security, shared) is exempt in both
+     * directions.
+     */
+    @ArchTest
+    static final ArchRule contextsOnlyUsePublishedPorts = noClasses()
+            .should(new ArchCondition<JavaClass>("depend on another bounded context outside its published ports") {
+                @Override
+                public void check(JavaClass clazz, ConditionEvents events) {
+                    String from = contextOf(clazz);
+                    if (from == null) {
+                        return;
+                    }
+                    for (Dependency dependency : clazz.getDirectDependenciesFromSelf()) {
+                        JavaClass target = dependency.getTargetClass();
+                        String to = contextOf(target);
+                        if (to == null || to.equals(from)) {
+                            continue;
+                        }
+                        if (target.getPackageName().contains(".application.port.published")) {
+                            continue;
+                        }
+                        events.add(SimpleConditionEvent.violated(dependency,
+                                dependency.getDescription() + " crosses from context '" + from
+                                        + "' into context '" + to + "' outside its published ports"));
+                    }
+                }
+            })
+            .allowEmptyShould(true);
+
+    /** The bounded context (top-level package segment) a class belongs to, or null if not one. */
+    private static String contextOf(JavaClass javaClass) {
+        String name = javaClass.getPackageName();
+        String prefix = "com.campaignorganizer.";
+        if (!name.startsWith(prefix)) {
+            return null;
+        }
+        String rest = name.substring(prefix.length());
+        int dot = rest.indexOf('.');
+        String segment = dot < 0 ? rest : rest.substring(0, dot);
+        return CONTEXTS.contains(segment) ? segment : null;
+    }
 }
