@@ -6,7 +6,7 @@ import com.campaignorganizer.whiteboard.adapter.in.web.WhiteboardWebDtos.Whitebo
 import com.campaignorganizer.whiteboard.adapter.in.web.WhiteboardWebDtos.WhiteboardResponse;
 import com.campaignorganizer.whiteboard.application.port.in.WhiteboardCommands.CreateWhiteboardCommand;
 import com.campaignorganizer.whiteboard.application.port.in.WhiteboardCommands.UpdateWhiteboardCommand;
-import com.campaignorganizer.whiteboard.application.port.in.WhiteboardView;
+import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.whiteboard.domain.Edge;
 import com.campaignorganizer.whiteboard.domain.Node;
 import java.util.List;

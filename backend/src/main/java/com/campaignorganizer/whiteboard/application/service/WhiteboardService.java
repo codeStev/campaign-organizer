@@ -9,9 +9,10 @@ import com.campaignorganizer.whiteboard.application.port.in.ListWhiteboardsUseCa
 import com.campaignorganizer.whiteboard.application.port.in.UpdateWhiteboardUseCase;
 import com.campaignorganizer.whiteboard.application.port.in.WhiteboardCommands.CreateWhiteboardCommand;
 import com.campaignorganizer.whiteboard.application.port.in.WhiteboardCommands.UpdateWhiteboardCommand;
-import com.campaignorganizer.whiteboard.application.port.in.WhiteboardView;
 import com.campaignorganizer.whiteboard.application.port.out.WhiteboardRepositoryPort;
 import com.campaignorganizer.whiteboard.application.port.out.WorldExistsPort;
+import com.campaignorganizer.whiteboard.application.port.published.WhiteboardQueryPort;
+import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.whiteboard.domain.Whiteboard;
 import java.time.Clock;
 import java.util.List;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WhiteboardService
         implements CreateWhiteboardUseCase, UpdateWhiteboardUseCase, DeleteWhiteboardUseCase,
-        GetWhiteboardUseCase, ListWhiteboardsUseCase {
+        GetWhiteboardUseCase, ListWhiteboardsUseCase, WhiteboardQueryPort {
 
     private final WhiteboardRepositoryPort whiteboards;
     private final WorldExistsPort worlds;
@@ -73,6 +74,14 @@ public class WhiteboardService
     @Transactional(readOnly = true)
     public List<WhiteboardView> list(UUID worldId) {
         requireWorld(worldId);
+        return findByWorld(worldId);
+    }
+
+    // --- published query port ---
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WhiteboardView> findByWorld(UUID worldId) {
         return whiteboards.findByWorld(worldId).stream().map(viewMapper::toView).toList();
     }
 

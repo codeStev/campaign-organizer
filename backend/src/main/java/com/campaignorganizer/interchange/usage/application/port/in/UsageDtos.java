@@ -1,4 +1,4 @@
-package com.campaignorganizer.usage;
+package com.campaignorganizer.interchange.usage.application.port.in;
 
 import java.util.List;
 import java.util.UUID;

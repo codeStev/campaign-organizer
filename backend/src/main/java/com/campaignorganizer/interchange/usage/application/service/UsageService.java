@@ -1,24 +1,27 @@
-package com.campaignorganizer.usage;
+package com.campaignorganizer.interchange.usage.application.service;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.interchange.usage.application.port.in.GetArticleUsagesUseCase;
+import com.campaignorganizer.interchange.usage.application.port.in.UsageDtos.Usage;
+import com.campaignorganizer.interchange.usage.application.port.in.UsageDtos.UsageResponse;
+import com.campaignorganizer.interchange.usage.application.port.published.UsageQueryPort;
+import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipView;
-import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
-import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
-import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
-import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineView;
-import com.campaignorganizer.usage.UsageDtos.Usage;
-import com.campaignorganizer.usage.UsageDtos.UsageResponse;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
@@ -28,13 +31,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
-/** Aggregates where an article is used, and which articles a campaign references (ADR-0033). */
+/**
+ * Aggregates where an article is used, and which articles a campaign references
+ * (ADR-0033). Composes the core contexts only through their published query
+ * ports (ADR-0050); holds no core domain rules of its own.
+ */
 @Service
-public class UsageService {
+public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
 
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
@@ -69,9 +75,11 @@ public class UsageService {
         this.statblocks = statblocks;
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public UsageResponse articleUsages(UUID worldId, UUID articleId) {
         ArticleView article = articles.findByIdInWorld(articleId, worldId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+                .orElseThrow(() -> new NotFoundException("Article not found"));
         List<Usage> out = new ArrayList<>();
 
         beats.findByLinkedArticle(articleId).forEach(b -> {
@@ -126,7 +134,10 @@ public class UsageService {
         return new UsageResponse(out);
     }
 
-    /** Article ids referenced by a campaign's play content (beats, sheets, statblocks). */
+    // --- published query port ---
+
+    @Override
+    @Transactional(readOnly = true)
     public Set<UUID> articleIdsUsedInCampaign(UUID worldId, UUID campaignId) {
         Set<UUID> ids = new HashSet<>();
         List<UUID> arcIds = arcs.findByCampaign(campaignId).stream().map(ArcView::id).toList();

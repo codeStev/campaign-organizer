@@ -1,6 +1,6 @@
 package com.campaignorganizer.whiteboard.application.service;
 
-import com.campaignorganizer.whiteboard.application.port.in.WhiteboardView;
+import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.whiteboard.domain.Whiteboard;
 import org.mapstruct.Mapper;
 

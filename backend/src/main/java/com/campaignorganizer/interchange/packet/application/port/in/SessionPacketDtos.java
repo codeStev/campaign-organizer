@@ -1,4 +1,4 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.interchange.packet.application.port.in;
 
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;

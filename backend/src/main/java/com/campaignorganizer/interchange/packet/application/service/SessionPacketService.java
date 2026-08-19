@@ -1,10 +1,5 @@
-package com.campaignorganizer.campaign;
+package com.campaignorganizer.interchange.packet.application.service;
 
-import com.campaignorganizer.campaign.SessionPacketDtos.PacketArticle;
-import com.campaignorganizer.campaign.SessionPacketDtos.PacketBeat;
-import com.campaignorganizer.campaign.SessionPacketDtos.PacketMap;
-import com.campaignorganizer.campaign.SessionPacketDtos.PacketPin;
-import com.campaignorganizer.campaign.SessionPacketDtos.SessionPacketResponse;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
@@ -13,12 +8,19 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketBeat;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketMap;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketPin;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.SessionPacketResponse;
+import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
-import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
-import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
@@ -28,13 +30,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
-/** Assembles everything needed to run one session onto a single printable packet (ADR-0036). */
+/**
+ * Assembles everything needed to run one session onto a single printable
+ * packet (ADR-0036). Composes the core contexts only through their published
+ * query ports (ADR-0050); holds no core domain rules of its own.
+ */
 @Service
-public class SessionPacketService {
+public class SessionPacketService implements BuildSessionPacketUseCase {
 
     private final CampaignQueryPort campaigns;
     private final SessionQueryPort sessions;
@@ -61,11 +66,13 @@ public class SessionPacketService {
         this.pins = pins;
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public SessionPacketResponse packet(UUID worldId, UUID campaignId, UUID sessionId) {
         CampaignView campaign = campaigns.findByIdInWorld(campaignId, worldId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found"));
+                .orElseThrow(() -> new NotFoundException("Campaign not found"));
         SessionView session = sessions.findByIdInCampaign(sessionId, campaignId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+                .orElseThrow(() -> new NotFoundException("Session not found"));
 
         List<ArcBeatView> sessionBeats = beats.findBySession(sessionId);
 

@@ -1,6 +1,7 @@
-package com.campaignorganizer.usage;
+package com.campaignorganizer.interchange.usage.adapter.in.web;
 
-import com.campaignorganizer.usage.UsageDtos.UsageResponse;
+import com.campaignorganizer.interchange.usage.application.port.in.GetArticleUsagesUseCase;
+import com.campaignorganizer.interchange.usage.application.port.in.UsageDtos.UsageResponse;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,9 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/worlds/{worldId}/articles/{articleId}/usages")
 public class UsageController {
 
-    private final UsageService usage;
+    private final GetArticleUsagesUseCase usage;
 
-    public UsageController(UsageService usage) {
+    public UsageController(GetArticleUsagesUseCase usage) {
         this.usage = usage;
     }
 
