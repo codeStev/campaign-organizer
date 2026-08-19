@@ -9,7 +9,7 @@ A **personal, single-user** worldbuilding + RPG campaign manager, inspired by
 World Anvil. Not multi-tenant, no community features.
 
 ## Major decisions (see ADRs)
-- **Backend:** Spring Boot 4 (Java 21). — ADR-0001
+- **Backend:** Spring Boot 4.1 (Java 25), JUnit 6. — ADR-0001, superseded by ADR-0051
 - **Frontend:** React 18 + TypeScript, Vite. — ADR-0002
 - **Datastore:** PostgreSQL; JSONB for flexible data later. — ADR-0003
 - **Deployment:** Docker multi-stage images + `docker-compose.yml`. — ADR-0004
