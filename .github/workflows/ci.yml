@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
           cache: maven
       # Unit + Testcontainers integration (ADR-0011); the runner's Docker daemon
       # backs Testcontainers. ArchUnit fitness functions run as part of verify.

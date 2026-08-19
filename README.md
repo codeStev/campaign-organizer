@@ -1,8 +1,8 @@
 # Campaign Organizer
 
 A personal, self-hosted worldbuilding and RPG campaign management app — a
-focused, single-user alternative to World Anvil. Backend is Spring Boot 4
-(Java 21), frontend is React + TypeScript, and the whole thing runs as Docker
+focused, single-user alternative to World Anvil. Backend is Spring Boot 4.1
+(Java 25), frontend is React + TypeScript, and the whole thing runs as Docker
 containers.
 
 > **Status:** Phase 0 (foundations). Authentication and the `worlds` resource
