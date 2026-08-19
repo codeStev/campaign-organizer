@@ -10,8 +10,8 @@ import com.campaignorganizer.worldbuilding.application.map.port.published.MapPin
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
-import com.campaignorganizer.sheet.CharacterSheetRepository;
-import com.campaignorganizer.sheet.SheetTemplateRepository;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
+import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
@@ -61,8 +61,8 @@ public class WorldExportController {
     private final SessionQueryPort sessions;
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
-    private final SheetTemplateRepository sheetTemplates;
-    private final CharacterSheetRepository characterSheets;
+    private final SheetTemplateQueryPort sheetTemplates;
+    private final CharacterSheetQueryPort characterSheets;
     private final StatblockQueryPort statblocks;
     private final WhiteboardJpaRepository whiteboards;
 
@@ -72,8 +72,8 @@ public class WorldExportController {
                                 CalendarQueryPort calendars,
                                 RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                                 SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
-                                SheetTemplateRepository sheetTemplates,
-                                CharacterSheetRepository characterSheets, StatblockQueryPort statblocks,
+                                SheetTemplateQueryPort sheetTemplates,
+                                CharacterSheetQueryPort characterSheets, StatblockQueryPort statblocks,
                                 WhiteboardJpaRepository whiteboards) {
         this.worlds = worlds;
         this.categories = categories;
@@ -139,8 +139,8 @@ public class WorldExportController {
         bundle.put("arcs", allArcs);
         bundle.put("beats", allBeats);
 
-        bundle.put("sheetTemplates", sheetTemplates.findByWorldIdOrderByCreatedAtDesc(worldId));
-        bundle.put("characterSheets", characterSheets.findByWorldIdOrderByCreatedAtDesc(worldId));
+        bundle.put("sheetTemplates", sheetTemplates.findByWorld(worldId));
+        bundle.put("characterSheets", characterSheets.findByWorld(worldId));
         bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorldIdOrderByCreatedAtDesc(worldId));
 

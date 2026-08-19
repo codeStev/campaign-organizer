@@ -10,8 +10,8 @@ import com.campaignorganizer.worldbuilding.application.map.port.published.MapQue
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipView;
-import com.campaignorganizer.sheet.CharacterSheet;
-import com.campaignorganizer.sheet.CharacterSheetRepository;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
@@ -46,14 +46,14 @@ public class UsageService {
     private final TimelineEventQueryPort events;
     private final TimelineLookupPort timelines;
     private final RelationshipQueryPort relationships;
-    private final CharacterSheetRepository sheets;
+    private final CharacterSheetQueryPort sheets;
     private final StatblockQueryPort statblocks;
 
     public UsageService(ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                         ArcBeatQueryPort beats, ArcQueryPort arcs,
                         CampaignQueryPort campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
-                        RelationshipQueryPort relationships, CharacterSheetRepository sheets,
+                        RelationshipQueryPort relationships, CharacterSheetQueryPort sheets,
                         StatblockQueryPort statblocks) {
         this.articles = articles;
         this.articleRenderer = articleRenderer;
@@ -101,9 +101,9 @@ public class UsageService {
             out.add(new Usage("RELATIONSHIP", label + " " + otherTitle, other, null, null));
         }
 
-        sheets.findByWorldIdAndArticleId(worldId, articleId).forEach(s ->
-                out.add(new Usage("CHARACTER_SHEET", "Character sheet: " + s.getName(),
-                        null, s.getCampaignId(), campaignName(s.getCampaignId()))));
+        sheets.findByWorldAndArticle(worldId, articleId).forEach(s ->
+                out.add(new Usage("CHARACTER_SHEET", "Character sheet: " + s.name(),
+                        null, s.campaignId(), campaignName(s.campaignId()))));
 
         statblocks.findByWorldAndArticle(worldId, articleId).forEach(s ->
                 out.add(new Usage("STATBLOCK", "Statblock: " + s.name(),
@@ -131,9 +131,9 @@ public class UsageService {
         Set<UUID> ids = new HashSet<>();
         List<UUID> arcIds = arcs.findByCampaign(campaignId).stream().map(ArcView::id).toList();
         ids.addAll(beats.linkedArticleIdsByArcs(arcIds));
-        for (CharacterSheet s : sheets.findByWorldIdAndCampaignIdOrderByCreatedAtDesc(worldId, campaignId)) {
-            if (s.getArticleId() != null) {
-                ids.add(s.getArticleId());
+        for (CharacterSheetView s : sheets.findByWorldAndCampaign(worldId, campaignId)) {
+            if (s.articleId() != null) {
+                ids.add(s.articleId());
             }
         }
         for (StatblockView s : statblocks.findByWorldAndCampaign(worldId, campaignId)) {
