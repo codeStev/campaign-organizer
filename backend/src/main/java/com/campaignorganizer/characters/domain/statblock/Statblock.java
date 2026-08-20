@@ -13,45 +13,48 @@ public final class Statblock {
     private final UUID worldId;
     private UUID articleId;
     private UUID campaignId;
+    private UUID templateId;
     private String name;
     private Map<String, Object> stats;
     private String notes;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Statblock(UUID id, UUID worldId, UUID articleId, UUID campaignId, String name,
+    private Statblock(UUID id, UUID worldId, UUID articleId, UUID campaignId, UUID templateId, String name,
                       Map<String, Object> stats, String notes, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(articleId, campaignId, name, stats, notes);
+        apply(articleId, campaignId, templateId, name, stats, notes);
     }
 
-    public static Statblock create(UUID id, UUID worldId, UUID articleId, UUID campaignId, String name,
-                                   Map<String, Object> stats, String notes, Instant now) {
-        return new Statblock(id, worldId, articleId, campaignId, name, stats, notes, now, now);
+    public static Statblock create(UUID id, UUID worldId, UUID articleId, UUID campaignId, UUID templateId,
+                                   String name, Map<String, Object> stats, String notes, Instant now) {
+        return new Statblock(id, worldId, articleId, campaignId, templateId, name, stats, notes, now, now);
     }
 
     public static Statblock reconstitute(UUID id, UUID worldId, UUID articleId, UUID campaignId,
-                                         String name, Map<String, Object> stats, String notes,
+                                         UUID templateId, String name, Map<String, Object> stats, String notes,
                                          Instant createdAt, Instant updatedAt) {
-        return new Statblock(id, worldId, articleId, campaignId, name, stats, notes, createdAt, updatedAt);
+        return new Statblock(id, worldId, articleId, campaignId, templateId, name, stats, notes, createdAt,
+                updatedAt);
     }
 
-    public void update(UUID articleId, UUID campaignId, String name, Map<String, Object> stats,
-                       String notes, Instant now) {
-        apply(articleId, campaignId, name, stats, notes);
+    public void update(UUID articleId, UUID campaignId, UUID templateId, String name,
+                       Map<String, Object> stats, String notes, Instant now) {
+        apply(articleId, campaignId, templateId, name, stats, notes);
         this.updatedAt = now;
     }
 
-    private void apply(UUID articleId, UUID campaignId, String name, Map<String, Object> stats,
-                       String notes) {
+    private void apply(UUID articleId, UUID campaignId, UUID templateId, String name,
+                       Map<String, Object> stats, String notes) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Statblock name must not be blank");
         }
         this.articleId = articleId;
         this.campaignId = campaignId;
+        this.templateId = templateId;
         this.name = name;
         this.stats = stats == null ? new HashMap<>() : stats;
         this.notes = notes;
@@ -71,6 +74,10 @@ public final class Statblock {
 
     public UUID getCampaignId() {
         return campaignId;
+    }
+
+    public UUID getTemplateId() {
+        return templateId;
     }
 
     public String getName() {

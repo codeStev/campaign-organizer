@@ -12,7 +12,10 @@ import com.campaignorganizer.characters.application.statblock.port.out.CampaignS
 import com.campaignorganizer.characters.application.statblock.port.out.StatblockRepositoryPort;
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
 import com.campaignorganizer.characters.domain.statblock.Statblock;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -20,6 +23,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +44,8 @@ class StatblockServiceTest {
     @Mock
     private CampaignExistsPort campaigns;
     @Mock
+    private FieldTemplateQueryPort templates;
+    @Mock
     private CampaignStatblockRefPort campaignRefs;
     @Mock
     private IdGenerator ids;
@@ -51,15 +57,21 @@ class StatblockServiceTest {
 
     private final UUID worldId = UUID.randomUUID();
     private final UUID campaignId = UUID.randomUUID();
+    private final UUID templateId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new StatblockService(statblocks, worlds, articles, campaigns, campaignRefs,
+        service = new StatblockService(statblocks, worlds, articles, campaigns, templates, campaignRefs,
                 viewMapper, ids, clock);
     }
 
     private Statblock statblock(UUID id, UUID campaign) {
-        return Statblock.create(id, worldId, null, campaign, "SB", null, null, clock.instant());
+        return Statblock.create(id, worldId, null, campaign, null, "SB", null, null, clock.instant());
+    }
+
+    private FieldTemplateView templateView(TemplateKind kind) {
+        return new FieldTemplateView(templateId, worldId, "Template", kind, null, List.of(),
+                Instant.now(), Instant.now());
     }
 
     @Test
@@ -67,7 +79,7 @@ class StatblockServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, "SB", null, null)))
+                worldId, null, null, null, "SB", null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -77,7 +89,28 @@ class StatblockServiceTest {
         when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, campaignId, "SB", null, null)))
+                worldId, null, campaignId, null, "SB", null, null)))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createRejectsForeignTemplate() {
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(templates.findByIdInWorld(templateId, worldId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
+                worldId, null, null, templateId, "SB", null, null)))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createRejectsCharacterTemplate() {
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(templates.findByIdInWorld(templateId, worldId))
+                .thenReturn(Optional.of(templateView(TemplateKind.CHARACTER)));
+
+        assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
+                worldId, null, null, templateId, "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 

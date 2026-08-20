@@ -142,4 +142,62 @@ class StatblockControllerIT extends AbstractIntegrationTest {
                         .content("{\"name\":\"X\",\"campaignId\":\"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isBadRequest());
     }
+
+    private String createFieldTemplate(String auth, String worldId, String kind) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"T\",\"kind\":\"" + kind + "\",\"sections\":[]}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void createsStatblockFromStatblockTemplate() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String templateId = createFieldTemplate(auth, worldId, "STATBLOCK");
+
+        mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin\",\"templateId\":\"" + templateId + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.templateId").value(templateId));
+    }
+
+    @Test
+    void rejectsCharacterTemplateOnStatblock() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String templateId = createFieldTemplate(auth, worldId, "CHARACTER");
+
+        mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin\",\"templateId\":\"" + templateId + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deletingTemplateNullsStatblockTemplateId() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String templateId = createFieldTemplate(auth, worldId, "STATBLOCK");
+
+        String id = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin\",\"templateId\":\"" + templateId + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(delete("/api/worlds/{w}/field-templates/{t}", worldId, templateId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/worlds/{w}/statblocks/{s}", worldId, id)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Goblin"))
+                .andExpect(jsonPath("$.templateId").doesNotExist());
+    }
 }

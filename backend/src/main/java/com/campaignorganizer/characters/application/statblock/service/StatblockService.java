@@ -14,7 +14,9 @@ import com.campaignorganizer.characters.application.statblock.port.out.Statblock
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.statblock.Statblock;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -37,6 +39,7 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     private final WorldExistsPort worlds;
     private final ArticleExistsPort articles;
     private final CampaignExistsPort campaigns;
+    private final FieldTemplateQueryPort templates;
     private final CampaignStatblockRefPort campaignRefs;
     private final StatblockViewMapper viewMapper;
     private final IdGenerator ids;
@@ -44,12 +47,13 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
 
     public StatblockService(StatblockRepositoryPort statblocks, WorldExistsPort worlds,
                             ArticleExistsPort articles, CampaignExistsPort campaigns,
-                            CampaignStatblockRefPort campaignRefs, StatblockViewMapper viewMapper,
-                            IdGenerator ids, Clock clock) {
+                            FieldTemplateQueryPort templates, CampaignStatblockRefPort campaignRefs,
+                            StatblockViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.statblocks = statblocks;
         this.worlds = worlds;
         this.articles = articles;
         this.campaigns = campaigns;
+        this.templates = templates;
         this.campaignRefs = campaignRefs;
         this.viewMapper = viewMapper;
         this.ids = ids;
@@ -60,9 +64,10 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public StatblockView create(CreateStatblockCommand command) {
         requireWorld(command.worldId());
-        validateLinks(command.worldId(), command.articleId(), command.campaignId());
+        validateLinks(command.worldId(), command.articleId(), command.campaignId(), command.templateId());
         Statblock created = Statblock.create(ids.newId(), command.worldId(), command.articleId(),
-                command.campaignId(), command.name(), command.stats(), command.notes(), clock.instant());
+                command.campaignId(), command.templateId(), command.name(), command.stats(), command.notes(),
+                clock.instant());
         return viewMapper.toView(statblocks.save(created));
     }
 
@@ -70,9 +75,9 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public StatblockView update(UpdateStatblockCommand command) {
         Statblock statblock = require(command.worldId(), command.statblockId());
-        validateLinks(command.worldId(), command.articleId(), command.campaignId());
-        statblock.update(command.articleId(), command.campaignId(), command.name(), command.stats(),
-                command.notes(), clock.instant());
+        validateLinks(command.worldId(), command.articleId(), command.campaignId(), command.templateId());
+        statblock.update(command.articleId(), command.campaignId(), command.templateId(), command.name(),
+                command.stats(), command.notes(), clock.instant());
         return viewMapper.toView(statblocks.save(statblock));
     }
 
@@ -162,12 +167,20 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
         }
     }
 
-    private void validateLinks(UUID worldId, UUID articleId, UUID campaignId) {
+    private void validateLinks(UUID worldId, UUID articleId, UUID campaignId, UUID templateId) {
         if (articleId != null && !articles.existsInWorld(articleId, worldId)) {
             throw new ValidationException("Article not found in this world");
         }
         if (campaignId != null && !campaigns.existsInWorld(campaignId, worldId)) {
             throw new ValidationException("Campaign not found in this world");
+        }
+        if (templateId != null) {
+            TemplateKind kind = templates.findByIdInWorld(templateId, worldId)
+                    .orElseThrow(() -> new ValidationException("Template not found in this world"))
+                    .kind();
+            if (kind != TemplateKind.STATBLOCK) {
+                throw new ValidationException("Template is not a statblock template");
+            }
         }
     }
 }

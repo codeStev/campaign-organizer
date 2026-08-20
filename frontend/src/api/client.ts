@@ -681,6 +681,7 @@ export interface Statblock {
   worldId: string;
   articleId?: string | null;
   campaignId?: string | null;
+  templateId?: string | null;
   name: string;
   stats: Record<string, unknown>;
   notes?: string | null;
@@ -692,6 +693,7 @@ export interface StatblockRequest {
   name: string;
   articleId?: string | null;
   campaignId?: string | null;
+  templateId?: string | null;
   stats?: Record<string, unknown>;
   notes?: string | null;
 }

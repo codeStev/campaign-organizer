@@ -28,6 +28,9 @@ public class StatblockJpaEntity {
     @Column(name = "campaign_id")
     private UUID campaignId;
 
+    @Column(name = "template_id")
+    private UUID templateId;
+
     @Column(nullable = false, length = 200)
     private String name;
 
@@ -77,6 +80,14 @@ public class StatblockJpaEntity {
 
     public void setCampaignId(UUID campaignId) {
         this.campaignId = campaignId;
+    }
+
+    public UUID getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(UUID templateId) {
+        this.templateId = templateId;
     }
 
     public String getName() {
