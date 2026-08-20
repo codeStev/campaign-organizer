@@ -1,4 +1,5 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   mapsApi,
   pinsApi,
@@ -37,6 +38,8 @@ function autoColor(layer: string): string {
 }
 
 export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
+  const navigate = useNavigate();
+  const { mapId: urlMapId } = useParams<{ mapId: string }>();
   const maps = useMemo(() => mapsApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
@@ -98,6 +101,13 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     await loadPins(map.id);
   }
 
+  // The URL is the source of truth for which map is open (ADR-0053).
+  useEffect(() => {
+    if (!urlMapId || urlMapId === selected?.id) return;
+    maps.get(urlMapId).then(selectMap).catch(handleError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlMapId]);
+
   async function handleNewMapFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -109,6 +119,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       const map = await maps.create({ name, mediaId: asset.id });
       setList(await maps.list());
       await selectMap(map);
+      navigate(`/worlds/${worldId}/maps/${map.id}`);
     } catch (err) {
       handleError(err);
     }
@@ -159,6 +170,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       if (selected?.id === map.id) {
         setSelected(null);
         setPins([]);
+        navigate(`/worlds/${worldId}/maps`);
       }
       setList(await maps.list());
     } catch (err) {
@@ -246,7 +258,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
             <li key={m.id}>
               <button
                 className={m.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => selectMap(m)}
+                onClick={() => navigate(`/worlds/${worldId}/maps/${m.id}`)}
               >
                 <span>{m.name}</span>
               </button>

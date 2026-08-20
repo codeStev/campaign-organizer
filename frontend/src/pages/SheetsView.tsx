@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import {
   fieldTemplatesApi,
   articlesApi,
@@ -19,13 +20,12 @@ interface Props {
   onAuthExpired: () => void;
 }
 
-type SubTab = 'characters' | 'statblocks' | 'templates';
+const SUBTABS = ['characters', 'statblocks', 'templates'] as const;
 
 export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const templatesApiRef = useMemo(() => fieldTemplatesApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const campaignApi = useMemo(() => campaignsApi(worldId), [worldId]);
-  const [sub, setSub] = useState<SubTab>('characters');
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
@@ -54,52 +54,54 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     campaignApi.list().then(setCampaigns).catch(onError);
   }, [loadTemplates, articleApi, campaignApi, onError]);
 
+  const charactersPane = (
+    <CharacterSheetsPanel
+      worldId={worldId}
+      templates={templates}
+      articles={articles}
+      campaigns={campaigns}
+      onOpenArticle={onOpenArticle}
+      onError={onError}
+    />
+  );
+  const statblocksPane = (
+    <StatblocksPanel worldId={worldId} templates={templates} campaigns={campaigns} onError={onError} />
+  );
+  const templatesPane = (
+    <FieldTemplatesPanel
+      worldId={worldId}
+      templates={templates}
+      loading={templatesLoading}
+      onChanged={loadTemplates}
+      onError={onError}
+    />
+  );
+
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         <DiceRollerWidget onAuthExpired={onAuthExpired} />
         <nav className="subtabs">
-          {(['characters', 'statblocks', 'templates'] as SubTab[]).map((t) => (
-            <button
-              key={t}
-              className={sub === t ? 'tab active' : 'tab'}
-              onClick={() => setSub(t)}
-            >
+          {SUBTABS.map((t) => (
+            <NavLink key={t} className={({ isActive }) => (isActive ? 'tab active' : 'tab')} to={t}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
+            </NavLink>
           ))}
         </nav>
       </aside>
 
       <div className="wiki-main">
         {error && <p className="error">{error}</p>}
-        {sub === 'characters' && (
-          <CharacterSheetsPanel
-            worldId={worldId}
-            templates={templates}
-            articles={articles}
-            campaigns={campaigns}
-            onOpenArticle={onOpenArticle}
-            onError={onError}
-          />
-        )}
-        {sub === 'statblocks' && (
-          <StatblocksPanel
-            worldId={worldId}
-            templates={templates}
-            campaigns={campaigns}
-            onError={onError}
-          />
-        )}
-        {sub === 'templates' && (
-          <FieldTemplatesPanel
-            worldId={worldId}
-            templates={templates}
-            loading={templatesLoading}
-            onChanged={loadTemplates}
-            onError={onError}
-          />
-        )}
+        <Routes>
+          <Route index element={<Navigate to="characters" replace />} />
+          <Route path="characters" element={charactersPane} />
+          <Route path="characters/:sheetId" element={charactersPane} />
+          <Route path="statblocks" element={statblocksPane} />
+          <Route path="statblocks/:statblockId" element={statblocksPane} />
+          <Route path="templates" element={templatesPane} />
+          <Route path="templates/:templateId" element={templatesPane} />
+          <Route path="*" element={<Navigate to="characters" replace />} />
+        </Routes>
       </div>
     </div>
   );

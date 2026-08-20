@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   campaignsApi,
   articlesApi,
@@ -18,6 +19,8 @@ interface Props {
 }
 
 export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
+  const navigate = useNavigate();
+  const { campaignId: urlCampaignId } = useParams<{ campaignId: string }>();
   const api = useMemo(() => campaignsApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const statblockApi = useMemo(() => statblocksApi(worldId), [worldId]);
@@ -60,6 +63,13 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     setNotesDirty(false);
   }
 
+  // The URL is the source of truth for which campaign is open (ADR-0053).
+  useEffect(() => {
+    if (!urlCampaignId || urlCampaignId === selected?.id) return;
+    api.get(urlCampaignId).then(select).catch(handleError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCampaignId]);
+
   async function createCampaign() {
     const name = window.prompt('Campaign name?');
     if (!name) return;
@@ -67,6 +77,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       const created = await api.create({ name });
       await refresh();
       select(created);
+      navigate(`/worlds/${worldId}/campaigns/${created.id}`);
     } catch (err) {
       handleError(err);
     }
@@ -91,7 +102,10 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   async function removeCampaign(campaign: Campaign) {
     try {
       await api.remove(campaign.id);
-      if (selected?.id === campaign.id) setSelected(null);
+      if (selected?.id === campaign.id) {
+        setSelected(null);
+        navigate(`/worlds/${worldId}/campaigns`);
+      }
       await refresh();
     } catch (err) {
       handleError(err);
@@ -107,7 +121,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
             <li key={c.id}>
               <button
                 className={c.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => select(c)}
+                onClick={() => navigate(`/worlds/${worldId}/campaigns/${c.id}`)}
               >
                 <span>{c.name}</span>
               </button>
