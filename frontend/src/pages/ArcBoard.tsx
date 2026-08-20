@@ -11,6 +11,8 @@ import {
   ArticleSummary,
   Statblock,
 } from '../api/client';
+import { MarkdownEditor } from '../components/MarkdownEditor';
+import { renderMarkdown } from '../lib/markdown';
 
 function sessionLabel(s: Session): string {
   const num = s.sessionNumber != null ? `#${s.sessionNumber} ` : '';
@@ -316,7 +318,12 @@ function ArcCard({
                   </button>
                 </div>
 
-                {editingId !== b.id && b.body && <p className="beat-body muted">{b.body}</p>}
+                {editingId !== b.id && b.body && (
+                  <div
+                    className="beat-body muted preview-body"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(b.body) }}
+                  />
+                )}
 
                 {editingId === b.id && (
                   <div className="beat-editor">
@@ -325,11 +332,7 @@ function ArcCard({
                       placeholder="Beat title"
                       onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                     />
-                    <textarea
-                      placeholder="Notes — e.g. 'a survivor begs the party for help'"
-                      value={draft.body}
-                      onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                    />
+                    <MarkdownEditor value={draft.body} onChange={(body) => setDraft({ ...draft, body })} />
                     {(draft.articleIds.length > 0 || draft.statblockIds.length > 0) && (
                       <div className="beat-article-chips">
                         {draft.articleIds.map((id) => (

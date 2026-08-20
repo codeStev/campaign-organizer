@@ -870,7 +870,6 @@ button:disabled {
 .beat-body {
   margin: 0;
   padding-left: 1.6rem;
-  white-space: pre-wrap;
   font-size: 0.85rem;
 }
 
@@ -1469,10 +1468,6 @@ button:disabled {
   border-radius: 3px;
 }
 
-.print-prewrap {
-  white-space: pre-wrap;
-}
-
 /* Band that separates the beats from the referenced articles in a packet. */
 .print-divider {
   margin-top: 1.5rem;
@@ -1595,7 +1590,6 @@ button:disabled {
 .stat-card-notes {
   margin: 0;
   font-size: 0.85rem;
-  white-space: pre-wrap;
 }
 
 @media print {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
+import { renderMarkdown } from '../lib/markdown';
 
 interface Props {
   worldId: string;
@@ -75,13 +76,19 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                 {s?.summary && (
                   <>
                     <p className="print-kicker">summary</p>
-                    <p>{s.summary}</p>
+                    <div
+                      className="preview-body"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }}
+                    />
                   </>
                 )}
                 {s?.notes && (
                   <>
                     <p className="print-kicker">gm notes</p>
-                    <p className="print-prewrap">{s.notes}</p>
+                    <div
+                      className="preview-body"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(s.notes) }}
+                    />
                   </>
                 )}
               </section>
@@ -99,7 +106,12 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                       {b.done ? '☑' : '☐'} {b.title}
                     </span>
                     {b.arcTitle && <span className="print-beat-arc"> — {b.arcTitle}</span>}
-                    {b.body && <p className="print-prewrap">{b.body}</p>}
+                    {b.body && (
+                      <div
+                        className="preview-body"
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(b.body) }}
+                      />
+                    )}
                   </li>
                 ))}
               </ol>
@@ -161,11 +173,23 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                       {orderedStatEntries(sb.stats, sb.templateId, templates).map((entry) => (
                         <div key={entry.key} className="print-stat">
                           <dt>{entry.label}</dt>
-                          <dd>{String(entry.value)}</dd>
+                          {entry.type === 'TEXTAREA' ? (
+                            <dd
+                              className="preview-body"
+                              dangerouslySetInnerHTML={{ __html: renderMarkdown(String(entry.value)) }}
+                            />
+                          ) : (
+                            <dd>{String(entry.value)}</dd>
+                          )}
                         </div>
                       ))}
                     </dl>
-                    {sb.notes && <p className="print-prewrap">{sb.notes}</p>}
+                    {sb.notes && (
+                      <div
+                        className="preview-body"
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(sb.notes) }}
+                      />
+                    )}
                   </div>
                 ))}
               </section>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { statblocksApi, Statblock, Campaign, FieldTemplate, FieldType } from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
 import { TemplateForm } from '../components/TemplateForm';
+import { MarkdownEditor } from '../components/MarkdownEditor';
 
 interface Props {
   worldId: string;
@@ -321,11 +322,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         >
           + Add stat
         </button>
-        <textarea
-          placeholder="Notes (abilities, tactics…)"
-          value={draft.notes}
-          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-        />
+        <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
         <div className="editor-actions">
           <button onClick={save} disabled={!draft.name}>
             {draft.id ? 'Save statblock' : 'Create statblock'}

@@ -1,4 +1,5 @@
 import { TemplateField, TemplateSection } from '../api/client';
+import { MarkdownEditor } from './MarkdownEditor';
 
 interface Props {
   sections: TemplateSection[];
@@ -34,9 +35,9 @@ export function TemplateForm({ sections, values, onChange }: Props) {
                 >
                   <span className="field-label">{field.label}</span>
                   {field.type === 'TEXTAREA' ? (
-                    <textarea
+                    <MarkdownEditor
                       value={(value as string) ?? ''}
-                      onChange={(e) => set(field.key, e.target.value)}
+                      onChange={(v) => set(field.key, v)}
                     />
                   ) : field.type === 'NUMBER' ? (
                     <input

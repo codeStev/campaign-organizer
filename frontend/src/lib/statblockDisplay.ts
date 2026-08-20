@@ -1,9 +1,10 @@
-import { FieldTemplate } from '../api/client';
+import { FieldTemplate, FieldType } from '../api/client';
 
 export interface StatEntry {
   key: string;
   label: string;
   value: unknown;
+  type?: FieldType;
 }
 
 /**
@@ -28,7 +29,7 @@ export function orderedStatEntries(
   for (const section of template.sections) {
     for (const field of section.fields) {
       if (Object.prototype.hasOwnProperty.call(values, field.key)) {
-        entries.push({ key: field.key, label: field.label, value: values[field.key] });
+        entries.push({ key: field.key, label: field.label, value: values[field.key], type: field.type });
         seen.add(field.key);
       }
     }
