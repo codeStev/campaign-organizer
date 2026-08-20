@@ -84,7 +84,12 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           />
         )}
         {sub === 'statblocks' && (
-          <StatblocksPanel worldId={worldId} campaigns={campaigns} onError={onError} />
+          <StatblocksPanel
+            worldId={worldId}
+            templates={templates}
+            campaigns={campaigns}
+            onError={onError}
+          />
         )}
         {sub === 'templates' && (
           <FieldTemplatesPanel
