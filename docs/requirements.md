@@ -127,6 +127,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   statblock keeps its prior stats visible and editable as "Other stats", and
   templated stats print in template order on statblock cards and session
   packets. (ADR-0052; refines FR-16, FR-18.)
+- **FR-35 Deep linking.** The URL reflects where you are — world, top-level
+  tab, Sheets sub-tab, and the single article/map/timeline/calendar/campaign/
+  character sheet/statblock/field template/whiteboard currently open — so
+  reloading, bookmarking, sharing a link, and browser back/forward all land
+  you back in the same place. (ADR-0053; refines FR-26.)
 
 ---
 
@@ -167,5 +172,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 3 | GM campaign manager | FR-12 … FR-14 (FR-15 dropped) |
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
-| 6 | Prep & print (paper-first workflow) | FR-25 … FR-34 |
+| 6 | Prep & print (paper-first workflow) | FR-25 … FR-35 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
