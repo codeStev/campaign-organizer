@@ -17,10 +17,10 @@ class StatblockTest {
 
     @Test
     void updateBumpsUpdatedAt() {
-        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, "Goblin",
+        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, "Goblin",
                 Map.of("hp", 7), "sneaky", T0);
         UUID article = UUID.randomUUID();
-        s.update(article, null, "Hobgoblin", Map.of("hp", 11), "tougher", T1);
+        s.update(article, null, null, "Hobgoblin", Map.of("hp", 11), "tougher", T1);
 
         assertThat(s.getName()).isEqualTo("Hobgoblin");
         assertThat(s.getArticleId()).isEqualTo(article);
@@ -31,14 +31,14 @@ class StatblockTest {
 
     @Test
     void nullStatsBecomeEmptyMap() {
-        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, "Goblin",
+        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, "Goblin",
                 null, null, T0);
         assertThat(s.getStats()).isEmpty();
     }
 
     @Test
     void rejectsBlankName() {
-        assertThatThrownBy(() -> Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
+        assertThatThrownBy(() -> Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null,
                 " ", null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }

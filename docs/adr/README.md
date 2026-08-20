@@ -58,6 +58,7 @@ the old one.
 | [0049](0049-persist-layer-styles.md) | Persist per-layer map styling on the world | Accepted |
 | [0050](0050-bounded-contexts-and-context-map.md) | Bounded contexts and context map | Accepted |
 | [0051](0051-java25-springboot41-junit6.md) | Java 25, Spring Boot 4.1, JUnit 6 (supersedes 0001 version line) | Accepted |
+| [0052](0052-shared-field-templates.md) | Shared field templates for sheets and statblocks (renames SheetTemplate) | Accepted |
 
 ## Template
 

@@ -13,8 +13,9 @@ import com.campaignorganizer.characters.application.sheet.port.out.CharacterShee
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
-import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.sheet.CharacterSheet;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -32,7 +33,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         CharacterSheetQueryPort {
 
     private final CharacterSheetRepositoryPort sheets;
-    private final SheetTemplateQueryPort templates;
+    private final FieldTemplateQueryPort templates;
     private final WorldExistsPort worlds;
     private final ArticleExistsPort articles;
     private final CampaignExistsPort campaigns;
@@ -40,7 +41,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     private final IdGenerator ids;
     private final Clock clock;
 
-    public CharacterSheetService(CharacterSheetRepositoryPort sheets, SheetTemplateQueryPort templates,
+    public CharacterSheetService(CharacterSheetRepositoryPort sheets, FieldTemplateQueryPort templates,
                                  WorldExistsPort worlds, ArticleExistsPort articles,
                                  CampaignExistsPort campaigns, CharacterSheetViewMapper viewMapper,
                                  IdGenerator ids, Clock clock) {
@@ -135,8 +136,11 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     }
 
     private void validateLinks(UUID worldId, UUID templateId, UUID articleId, UUID campaignId) {
-        if (!templates.existsInWorld(templateId, worldId)) {
-            throw new ValidationException("Template not found in this world");
+        TemplateKind kind = templates.findByIdInWorld(templateId, worldId)
+                .orElseThrow(() -> new ValidationException("Template not found in this world"))
+                .kind();
+        if (kind != TemplateKind.CHARACTER) {
+            throw new ValidationException("Template is not a character sheet template");
         }
         if (articleId != null && !articles.existsInWorld(articleId, worldId)) {
             throw new ValidationException("Article not found in this world");

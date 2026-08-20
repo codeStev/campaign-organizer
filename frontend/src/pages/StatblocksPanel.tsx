@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { statblocksApi, Statblock, Campaign } from '../api/client';
+import { statblocksApi, Statblock, Campaign, FieldTemplate, FieldType } from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
+import { TemplateForm } from '../components/TemplateForm';
 
 interface Props {
   worldId: string;
+  templates: FieldTemplate[];
   campaigns: Campaign[];
   onError: (err: unknown) => void;
 }
@@ -18,17 +20,45 @@ interface Draft {
   name: string;
   notes: string;
   campaignId: string;
+  templateId: string;
   rows: StatRow[];
 }
 
-const EMPTY: Draft = { id: null, name: '', notes: '', campaignId: '', rows: [{ key: '', value: '' }] };
+const EMPTY: Draft = {
+  id: null,
+  name: '',
+  notes: '',
+  campaignId: '',
+  templateId: '',
+  rows: [{ key: '', value: '' }],
+};
 
 function toRows(stats: Record<string, unknown>): StatRow[] {
   const rows = Object.entries(stats).map(([key, value]) => ({ key, value: String(value) }));
   return rows.length ? rows : [{ key: '', value: '' }];
 }
 
-export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
+/** Field types keyed by field key, for a template (empty map when none chosen). */
+function fieldTypesOf(template: FieldTemplate | null): Map<string, FieldType> {
+  const types = new Map<string, FieldType>();
+  if (!template) return types;
+  for (const section of template.sections) {
+    for (const field of section.fields) types.set(field.key, field.type);
+  }
+  return types;
+}
+
+/** Parses a row's string value into the type a template field expects. */
+function coerceRowValue(type: FieldType | undefined, raw: string): unknown {
+  if (type === 'NUMBER' || type === 'CIRCLES') {
+    const num = Number(raw);
+    return raw !== '' && !Number.isNaN(num) ? num : null;
+  }
+  if (type === 'BOOLEAN') return raw === 'true';
+  return raw;
+}
+
+export function StatblocksPanel({ worldId, templates, campaigns, onError }: Props) {
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Statblock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +67,26 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
   const [cardsOpen, setCardsOpen] = useState(false);
   // Ids ticked for printing; empty = print the whole (filtered) list.
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const statblockTemplates = templates.filter((t) => t.kind === 'STATBLOCK');
+  const template = statblockTemplates.find((t) => t.id === draft.templateId) ?? null;
+  const fieldTypes = fieldTypesOf(template);
+  const templateValues: Record<string, unknown> = {};
+  const otherRows: { row: StatRow; index: number }[] = [];
+  draft.rows.forEach((row, index) => {
+    if (fieldTypes.has(row.key)) templateValues[row.key] = coerceRowValue(fieldTypes.get(row.key), row.value);
+    else otherRows.push({ row, index });
+  });
+
+  function setTemplateValues(values: Record<string, unknown>) {
+    setDraft((d) => {
+      const byKey = new Map(d.rows.map((r) => [r.key, r]));
+      for (const [key, value] of Object.entries(values)) {
+        byKey.set(key, { key, value: value === null || value === undefined ? '' : String(value) });
+      }
+      return { ...d, rows: Array.from(byKey.values()) };
+    });
+  }
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -70,6 +120,7 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
       name: sb.name,
       notes: sb.notes ?? '',
       campaignId: sb.campaignId ?? '',
+      templateId: sb.templateId ?? '',
       rows: toRows(sb.stats),
     });
   }
@@ -77,12 +128,22 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
   async function save() {
     const stats: Record<string, unknown> = {};
     for (const r of draft.rows) {
-      if (r.key.trim()) {
+      const key = r.key.trim();
+      if (!key) continue;
+      if (fieldTypes.has(key)) {
+        stats[key] = coerceRowValue(fieldTypes.get(key), r.value);
+      } else {
         const num = Number(r.value);
-        stats[r.key.trim()] = r.value !== '' && !Number.isNaN(num) ? num : r.value;
+        stats[key] = r.value !== '' && !Number.isNaN(num) ? num : r.value;
       }
     }
-    const body = { name: draft.name, stats, notes: draft.notes || null, campaignId: draft.campaignId || null };
+    const body = {
+      name: draft.name,
+      stats,
+      notes: draft.notes || null,
+      campaignId: draft.campaignId || null,
+      templateId: draft.templateId || null,
+    };
     try {
       if (draft.id) await api.update(draft.id, body);
       else await api.create(body);
@@ -191,23 +252,42 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
             </select>
           </label>
         )}
-        <strong className="muted">Stats</strong>
-        {draft.rows.map((row, i) => (
-          <div key={i} className="month-row">
+        <label className="sheet-article">
+          <span className="muted">Template</span>
+          <select
+            value={draft.templateId}
+            onChange={(e) => setDraft({ ...draft, templateId: e.target.value })}
+          >
+            <option value="">None — free-form</option>
+            {statblockTemplates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {template && (
+          <TemplateForm sections={template.sections} values={templateValues} onChange={setTemplateValues} />
+        )}
+
+        <strong className="muted">{template ? 'Other stats' : 'Stats'}</strong>
+        {(template ? otherRows : draft.rows.map((row, index) => ({ row, index }))).map(({ row, index }) => (
+          <div key={index} className="month-row">
             <input
               placeholder="stat (AC)"
               value={row.key}
-              onChange={(e) => setRow(i, { key: e.target.value })}
+              onChange={(e) => setRow(index, { key: e.target.value })}
             />
             <input
               placeholder="value (15)"
               value={row.value}
-              onChange={(e) => setRow(i, { value: e.target.value })}
+              onChange={(e) => setRow(index, { value: e.target.value })}
             />
             <button
               type="button"
               className="link-button danger"
-              onClick={() => setDraft((d) => ({ ...d, rows: d.rows.filter((_, j) => j !== i) }))}
+              onClick={() => setDraft((d) => ({ ...d, rows: d.rows.filter((_, j) => j !== index) }))}
             >
               ✕
             </button>
@@ -240,6 +320,7 @@ export function StatblocksPanel({ worldId, campaigns, onError }: Props) {
       {cardsOpen && (
         <StatblockCardsView
           statblocks={toPrint}
+          templates={statblockTemplates}
           title={
             selected.size
               ? `${toPrint.length} selected`

@@ -187,7 +187,7 @@ export function categoriesApi(worldId: string) {
   };
 }
 
-export interface TemplateSection {
+export interface ArticleTemplateSection {
   heading: string;
   hint: string;
 }
@@ -195,7 +195,7 @@ export interface TemplateSection {
 export interface ArticleTemplateInfo {
   template: ArticleTemplate;
   label: string;
-  sections: TemplateSection[];
+  sections: ArticleTemplateSection[];
 }
 
 export const templatesApi = {
@@ -611,44 +611,49 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
 
 // ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
 
-export type SheetFieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'CIRCLES';
+export type TemplateKind = 'CHARACTER' | 'STATBLOCK';
+
+export type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'CIRCLES';
 
 export type FieldWidth = 'FULL' | 'HALF' | 'THIRD' | 'QUARTER';
 
-export interface SheetField {
+export interface TemplateField {
   key: string;
   label: string;
-  type: SheetFieldType;
+  type: FieldType;
   options?: string[] | null;
   width?: FieldWidth | null;
   count?: number | null;
 }
 
-export interface SheetSection {
+export interface TemplateSection {
   title: string;
-  fields: SheetField[];
+  fields: TemplateField[];
 }
 
-export interface SheetTemplate {
+export interface FieldTemplate {
   id: string;
   worldId: string;
   name: string;
+  kind: TemplateKind;
   system?: string | null;
-  sections: SheetSection[];
+  sections: TemplateSection[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface SheetTemplateRequest {
+export interface FieldTemplateRequest {
   name: string;
+  kind: TemplateKind;
   system?: string | null;
-  sections: SheetSection[];
+  sections: TemplateSection[];
 }
 
-export interface BuiltinSheetTemplate {
+export interface BuiltinFieldTemplate {
   name: string;
+  kind: TemplateKind;
   system?: string | null;
-  sections: SheetSection[];
+  sections: TemplateSection[];
 }
 
 export interface CharacterSheet {
@@ -676,6 +681,7 @@ export interface Statblock {
   worldId: string;
   articleId?: string | null;
   campaignId?: string | null;
+  templateId?: string | null;
   name: string;
   stats: Record<string, unknown>;
   notes?: string | null;
@@ -687,6 +693,7 @@ export interface StatblockRequest {
   name: string;
   articleId?: string | null;
   campaignId?: string | null;
+  templateId?: string | null;
   stats?: Record<string, unknown>;
   notes?: string | null;
 }
@@ -704,21 +711,22 @@ export interface DiceRollResult {
   breakdown: string;
 }
 
-export function sheetTemplatesApi(worldId: string) {
-  const base = `/worlds/${worldId}/sheet-templates`;
+export function fieldTemplatesApi(worldId: string) {
+  const base = `/worlds/${worldId}/field-templates`;
   return {
-    list: () => request<SheetTemplate[]>(base),
-    get: (id: string) => request<SheetTemplate>(`${base}/${id}`),
-    create: (body: SheetTemplateRequest) =>
-      request<SheetTemplate>(base, { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: string, body: SheetTemplateRequest) =>
-      request<SheetTemplate>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    list: (kind?: TemplateKind) => request<FieldTemplate[]>(kind ? `${base}?kind=${kind}` : base),
+    get: (id: string) => request<FieldTemplate>(`${base}/${id}`),
+    create: (body: FieldTemplateRequest) =>
+      request<FieldTemplate>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: FieldTemplateRequest) =>
+      request<FieldTemplate>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
-export const builtinSheetTemplatesApi = {
-  list: () => request<BuiltinSheetTemplate[]>('/sheet-templates/builtin'),
+export const builtinFieldTemplatesApi = {
+  list: (kind?: TemplateKind) =>
+    request<BuiltinFieldTemplate[]>(kind ? `/field-templates/builtin?kind=${kind}` : '/field-templates/builtin'),
 };
 
 export function characterSheetsApi(worldId: string) {

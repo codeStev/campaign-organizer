@@ -1084,11 +1084,18 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /sheet-templates/builtin:
+  /field-templates/builtin:
     get:
       tags: [sheets]
-      summary: List built-in starter sheet templates (reference data)
-      operationId: listBuiltinSheetTemplates
+      summary: List built-in starter field templates (reference data)
+      operationId: listBuiltinFieldTemplates
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: Filter to templates of one kind.
+          schema:
+            $ref: '#/components/schemas/TemplateKind'
       responses:
         '200':
           description: The built-in templates.
@@ -1097,47 +1104,54 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/BuiltinSheetTemplate'
+                  $ref: '#/components/schemas/BuiltinFieldTemplate'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /worlds/{worldId}/sheet-templates:
+  /worlds/{worldId}/field-templates:
     parameters:
       - $ref: '#/components/parameters/WorldId'
     get:
       tags: [sheets]
-      summary: List a world's sheet templates
-      operationId: listSheetTemplates
+      summary: List a world's field templates
+      operationId: listFieldTemplates
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: Filter to templates of one kind.
+          schema:
+            $ref: '#/components/schemas/TemplateKind'
       responses:
         '200':
-          description: Sheet templates in the world, newest first.
+          description: Field templates in the world, newest first.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SheetTemplate'
+                  $ref: '#/components/schemas/FieldTemplate'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
       tags: [sheets]
-      summary: Create a sheet template
-      operationId: createSheetTemplate
+      summary: Create a field template
+      operationId: createFieldTemplate
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SheetTemplateRequest'
+              $ref: '#/components/schemas/FieldTemplateRequest'
       responses:
         '201':
           description: Template created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SheetTemplate'
+                $ref: '#/components/schemas/FieldTemplate'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1145,42 +1159,42 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /worlds/{worldId}/sheet-templates/{templateId}:
+  /worlds/{worldId}/field-templates/{templateId}:
     parameters:
       - $ref: '#/components/parameters/WorldId'
-      - $ref: '#/components/parameters/SheetTemplateId'
+      - $ref: '#/components/parameters/FieldTemplateId'
     get:
       tags: [sheets]
-      summary: Get a sheet template
-      operationId: getSheetTemplate
+      summary: Get a field template
+      operationId: getFieldTemplate
       responses:
         '200':
           description: The template.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SheetTemplate'
+                $ref: '#/components/schemas/FieldTemplate'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
     put:
       tags: [sheets]
-      summary: Update a sheet template
-      operationId: updateSheetTemplate
+      summary: Update a field template
+      operationId: updateFieldTemplate
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SheetTemplateRequest'
+              $ref: '#/components/schemas/FieldTemplateRequest'
       responses:
         '200':
           description: Template updated.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SheetTemplate'
+                $ref: '#/components/schemas/FieldTemplate'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1189,8 +1203,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     delete:
       tags: [sheets]
-      summary: Delete a sheet template
-      operationId: deleteSheetTemplate
+      summary: Delete a field template
+      operationId: deleteFieldTemplate
       responses:
         '204':
           description: Template deleted.
@@ -1314,7 +1328,7 @@ paths:
                 description: >
                   Keyed collections (world, articles, categories, maps, mapPins,
                   timelines, timelineEvents, calendars, calendarMonths,
-                  relationships, campaigns, sessions, arcs, beats, sheetTemplates,
+                  relationships, campaigns, sessions, arcs, beats, fieldTemplates,
                   characterSheets, statblocks) plus exportVersion/exportedAt.
                 additionalProperties: true
         '401':
@@ -2083,11 +2097,11 @@ components:
       schema:
         type: string
         format: uuid
-    SheetTemplateId:
+    FieldTemplateId:
       name: templateId
       in: path
       required: true
-      description: Identifier of the sheet template.
+      description: Identifier of the field template.
       schema:
         type: string
         format: uuid
@@ -2223,21 +2237,28 @@ components:
           type: string
           description: Human-readable summary, e.g. "2d6 [4, 5] + 3 = 12".
 
-    SheetFieldType:
+    TemplateKind:
+      type: string
+      enum: [CHARACTER, STATBLOCK]
+      description: >
+        What a field template is for — a character sheet or a monster/NPC
+        statblock. Chosen at creation; drives which picker offers the template.
+
+    FieldType:
       type: string
       enum: [TEXT, TEXTAREA, NUMBER, BOOLEAN, SELECT, CIRCLES]
 
-    SheetField:
+    TemplateField:
       type: object
       required: [key, label, type]
       properties:
         key:
           type: string
-          description: Stable identifier used as the key in a sheet's values.
+          description: Stable identifier used as the key in an instance's values.
         label:
           type: string
         type:
-          $ref: '#/components/schemas/SheetFieldType'
+          $ref: '#/components/schemas/FieldType'
         options:
           type: [array, "null"]
           items:
@@ -2252,7 +2273,7 @@ components:
           minimum: 1
           description: Number of circles for a CIRCLES field.
 
-    SheetSection:
+    TemplateSection:
       type: object
       required: [title, fields]
       properties:
@@ -2261,27 +2282,29 @@ components:
         fields:
           type: array
           items:
-            $ref: '#/components/schemas/SheetField'
+            $ref: '#/components/schemas/TemplateField'
 
-    SheetTemplateRequest:
+    FieldTemplateRequest:
       type: object
-      required: [name]
+      required: [name, kind]
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 200
+        kind:
+          $ref: '#/components/schemas/TemplateKind'
         system:
           type: [string, "null"]
           maxLength: 100
         sections:
           type: array
           items:
-            $ref: '#/components/schemas/SheetSection'
+            $ref: '#/components/schemas/TemplateSection'
 
-    SheetTemplate:
+    FieldTemplate:
       type: object
-      required: [id, worldId, name, sections, createdAt, updatedAt]
+      required: [id, worldId, name, kind, sections, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2291,12 +2314,14 @@ components:
           format: uuid
         name:
           type: string
+        kind:
+          $ref: '#/components/schemas/TemplateKind'
         system:
           type: [string, "null"]
         sections:
           type: array
           items:
-            $ref: '#/components/schemas/SheetSection'
+            $ref: '#/components/schemas/TemplateSection'
         createdAt:
           type: string
           format: date-time
@@ -2304,18 +2329,20 @@ components:
           type: string
           format: date-time
 
-    BuiltinSheetTemplate:
+    BuiltinFieldTemplate:
       type: object
-      required: [name, sections]
+      required: [name, kind, sections]
       properties:
         name:
           type: string
+        kind:
+          $ref: '#/components/schemas/TemplateKind'
         system:
           type: [string, "null"]
         sections:
           type: array
           items:
-            $ref: '#/components/schemas/SheetSection'
+            $ref: '#/components/schemas/TemplateSection'
 
     WhiteboardNode:
       type: object
@@ -2406,6 +2433,12 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional campaign this statblock belongs to; null = shared.
+        templateId:
+          type: [string, "null"]
+          format: uuid
+          description: >
+            Optional field template (kind=STATBLOCK) driving a guided stats form;
+            null = freeform stats.
         stats:
           type: object
           additionalProperties: true
@@ -2428,6 +2461,9 @@ components:
           type: [string, "null"]
           format: uuid
         campaignId:
+          type: [string, "null"]
+          format: uuid
+        templateId:
           type: [string, "null"]
           format: uuid
         name:
@@ -2908,7 +2944,7 @@ components:
       description: The kind of article; drives structured prompts later.
       enum: [GENERIC, CHARACTER, LOCATION, ORGANIZATION, SPECIES, ITEM, EVENT]
 
-    TemplateSection:
+    ArticleTemplateSection:
       type: object
       required: [heading, hint]
       properties:
@@ -2928,7 +2964,7 @@ components:
         sections:
           type: array
           items:
-            $ref: '#/components/schemas/TemplateSection'
+            $ref: '#/components/schemas/ArticleTemplateSection'
 
     ArticleRequest:
       type: object

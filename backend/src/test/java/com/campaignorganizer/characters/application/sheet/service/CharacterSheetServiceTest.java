@@ -11,13 +11,17 @@ import com.campaignorganizer.characters.application.sheet.port.out.CampaignExist
 import com.campaignorganizer.characters.application.sheet.port.out.CharacterSheetRepositoryPort;
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
-import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +36,7 @@ class CharacterSheetServiceTest {
     @Mock
     private CharacterSheetRepositoryPort sheets;
     @Mock
-    private SheetTemplateQueryPort templates;
+    private FieldTemplateQueryPort templates;
     @Mock
     private WorldExistsPort worlds;
     @Mock
@@ -56,10 +60,16 @@ class CharacterSheetServiceTest {
                 ids, clock);
     }
 
+    private FieldTemplateView templateView(TemplateKind kind) {
+        return new FieldTemplateView(templateId, worldId, "Template", kind, null, List.of(),
+                Instant.now(), Instant.now());
+    }
+
     @Test
     void createSucceedsWithValidTemplate() {
         when(worlds.exists(worldId)).thenReturn(true);
-        when(templates.existsInWorld(templateId, worldId)).thenReturn(true);
+        when(templates.findByIdInWorld(templateId, worldId))
+                .thenReturn(Optional.of(templateView(TemplateKind.CHARACTER)));
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(sheets.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -81,7 +91,18 @@ class CharacterSheetServiceTest {
     @Test
     void createRejectsForeignTemplate() {
         when(worlds.exists(worldId)).thenReturn(true);
-        when(templates.existsInWorld(templateId, worldId)).thenReturn(false);
+        when(templates.findByIdInWorld(templateId, worldId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(new CreateCharacterSheetCommand(
+                worldId, templateId, null, null, "Aria", null)))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createRejectsStatblockTemplate() {
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(templates.findByIdInWorld(templateId, worldId))
+                .thenReturn(Optional.of(templateView(TemplateKind.STATBLOCK)));
 
         assertThatThrownBy(() -> service.create(new CreateCharacterSheetCommand(
                 worldId, templateId, null, null, "Aria", null)))

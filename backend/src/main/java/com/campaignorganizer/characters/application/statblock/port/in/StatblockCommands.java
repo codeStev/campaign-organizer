@@ -8,11 +8,12 @@ public final class StatblockCommands {
     private StatblockCommands() {
     }
 
-    public record CreateStatblockCommand(UUID worldId, UUID articleId, UUID campaignId, String name,
-                                         Map<String, Object> stats, String notes) {
+    public record CreateStatblockCommand(UUID worldId, UUID articleId, UUID campaignId, UUID templateId,
+                                         String name, Map<String, Object> stats, String notes) {
     }
 
     public record UpdateStatblockCommand(UUID worldId, UUID statblockId, UUID articleId, UUID campaignId,
-                                         String name, Map<String, Object> stats, String notes) {
+                                         UUID templateId, String name, Map<String, Object> stats,
+                                         String notes) {
     }
 }

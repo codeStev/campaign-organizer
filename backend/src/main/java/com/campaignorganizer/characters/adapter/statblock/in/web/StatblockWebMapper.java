@@ -15,12 +15,13 @@ public interface StatblockWebMapper {
 
     default CreateStatblockCommand toCreateCommand(UUID worldId, StatblockRequest request) {
         return new CreateStatblockCommand(worldId, request.articleId(), request.campaignId(),
-                request.name(), request.stats(), request.notes());
+                request.templateId(), request.name(), request.stats(), request.notes());
     }
 
     default UpdateStatblockCommand toUpdateCommand(UUID worldId, UUID statblockId,
                                                    StatblockRequest request) {
         return new UpdateStatblockCommand(worldId, statblockId, request.articleId(),
-                request.campaignId(), request.name(), request.stats(), request.notes());
+                request.campaignId(), request.templateId(), request.name(), request.stats(),
+                request.notes());
     }
 }

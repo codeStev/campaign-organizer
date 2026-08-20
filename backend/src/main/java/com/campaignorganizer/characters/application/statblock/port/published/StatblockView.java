@@ -10,6 +10,7 @@ public record StatblockView(
         UUID worldId,
         UUID articleId,
         UUID campaignId,
+        UUID templateId,
         String name,
         Map<String, Object> stats,
         String notes,

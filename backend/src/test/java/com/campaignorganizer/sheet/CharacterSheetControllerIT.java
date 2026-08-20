@@ -23,10 +23,10 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
     private void setup() throws Exception {
         auth = authHeader();
         worldId = createWorld(auth);
-        templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+        templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"D&D 5e\",\"system\":\"dnd5e\",\"sections\":["
+                        .content("{\"name\":\"D&D 5e\",\"kind\":\"CHARACTER\",\"system\":\"dnd5e\",\"sections\":["
                                 + "{\"title\":\"Core\",\"fields\":[{\"key\":\"level\",\"label\":\"Level\",\"type\":\"NUMBER\"}]}]}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
@@ -117,7 +117,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
                         .content("{\"name\":\"Doomed\",\"templateId\":\"" + templateId + "\"}"))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(delete("/api/worlds/{w}/sheet-templates/{t}", worldId, templateId)
+        mockMvc.perform(delete("/api/worlds/{w}/field-templates/{t}", worldId, templateId)
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isNoContent());
 

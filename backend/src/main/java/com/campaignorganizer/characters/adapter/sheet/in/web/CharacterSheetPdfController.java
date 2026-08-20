@@ -3,9 +3,9 @@ package com.campaignorganizer.characters.adapter.sheet.in.web;
 import com.campaignorganizer.characters.adapter.sheet.out.pdf.CharacterSheetPdfService;
 import com.campaignorganizer.characters.adapter.sheet.out.pdf.SheetPdfGenerator;
 import com.campaignorganizer.characters.application.sheet.port.in.GetCharacterSheetUseCase;
-import com.campaignorganizer.characters.application.sheet.port.in.GetSheetTemplateUseCase;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
-import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateView;
+import com.campaignorganizer.characters.application.template.port.in.GetFieldTemplateUseCase;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
 import java.util.UUID;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -21,12 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class CharacterSheetPdfController {
 
     private final GetCharacterSheetUseCase getSheetUseCase;
-    private final GetSheetTemplateUseCase getTemplateUseCase;
+    private final GetFieldTemplateUseCase getTemplateUseCase;
     private final CharacterSheetPdfService pdfService;
     private final SheetPdfGenerator pdfGenerator;
 
     public CharacterSheetPdfController(GetCharacterSheetUseCase getSheetUseCase,
-                                       GetSheetTemplateUseCase getTemplateUseCase,
+                                       GetFieldTemplateUseCase getTemplateUseCase,
                                        CharacterSheetPdfService pdfService, SheetPdfGenerator pdfGenerator) {
         this.getSheetUseCase = getSheetUseCase;
         this.getTemplateUseCase = getTemplateUseCase;
@@ -37,7 +37,7 @@ public class CharacterSheetPdfController {
     @GetMapping
     public ResponseEntity<byte[]> export(@PathVariable UUID worldId, @PathVariable UUID sheetId) {
         CharacterSheetView sheet = getSheetUseCase.get(worldId, sheetId);
-        SheetTemplateView template = getTemplateUseCase.get(worldId, sheet.templateId());
+        FieldTemplateView template = getTemplateUseCase.get(worldId, sheet.templateId());
 
         String system = template.system();
         // Use the polished bundled sheet when we have one; otherwise generate a

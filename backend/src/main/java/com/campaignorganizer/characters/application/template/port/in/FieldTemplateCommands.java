@@ -1,0 +1,20 @@
+package com.campaignorganizer.characters.application.template.port.in;
+
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateSection;
+import java.util.List;
+import java.util.UUID;
+
+public final class FieldTemplateCommands {
+
+    private FieldTemplateCommands() {
+    }
+
+    public record CreateFieldTemplateCommand(UUID worldId, String name, TemplateKind kind, String system,
+                                              List<TemplateSection> sections) {
+    }
+
+    public record UpdateFieldTemplateCommand(UUID worldId, UUID templateId, String name, String system,
+                                              List<TemplateSection> sections) {
+    }
+}
