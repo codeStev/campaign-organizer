@@ -96,6 +96,13 @@
             <version>3.0.3</version>
         </dependency>
 
+        <!-- Article body Markdown -> HTML rendering (ADR-0054). -->
+        <dependency>
+            <groupId>com.vladsch.flexmark</groupId>
+            <artifactId>flexmark-all</artifactId>
+            <version>0.64.8</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>

@@ -48,7 +48,7 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
     void aggregatesBeatsArticlesAndStatblocks() throws Exception {
         setup();
         String npc = create("/api/worlds/" + worldId + "/articles",
-                "{\"title\":\"Sildar\",\"body\":\"<p>A knight.</p>\"}");
+                "{\"title\":\"Sildar\",\"body\":\"A knight.\"}");
         String place = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Phandalin\"}");
         String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
                 "{\"title\":\"Session 1\",\"sessionNumber\":1}");

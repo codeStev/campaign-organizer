@@ -40,12 +40,14 @@ class ArticleControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"The Grand Bazaar\",\"template\":\"LOCATION\","
-                                + "\"body\":\"<p>A bustling market.</p>\"}"))
+                                + "\"body\":\"A bustling market.\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(jsonPath("$.slug").value("the-grand-bazaar"))
                 .andExpect(jsonPath("$.template").value("LOCATION"))
-                .andExpect(jsonPath("$.body").value("<p>A bustling market.</p>"))
+                .andExpect(jsonPath("$.body").value("A bustling market."))
+                .andExpect(jsonPath("$.bodyHtml").value(org.hamcrest.Matchers.containsString(
+                        "<p>A bustling market.</p>")))
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(created, "$.id");
 
@@ -71,8 +73,8 @@ class ArticleControllerIT extends AbstractIntegrationTest {
         String auth = authHeader();
         String worldId = createWorld(auth);
         createArticle(auth, worldId,
-                "{\"title\":\"Eldergrove\",\"body\":\"<p>An ancient whispering forest.</p>\"}");
-        createArticle(auth, worldId, "{\"title\":\"Ironhold\",\"body\":\"<p>A mountain fortress.</p>\"}");
+                "{\"title\":\"Eldergrove\",\"body\":\"An ancient whispering forest.\"}");
+        createArticle(auth, worldId, "{\"title\":\"Ironhold\",\"body\":\"A mountain fortress.\"}");
 
         mockMvc.perform(get("/api/worlds/{w}/articles", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
@@ -114,7 +116,7 @@ class ArticleControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(put("/api/worlds/{w}/articles/{a}", worldId, id)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"Final\",\"body\":\"<p>Done.</p>\"}"))
+                        .content("{\"title\":\"Final\",\"body\":\"Done.\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Final"))
                 .andExpect(jsonPath("$.slug").value("draft")); // slug stays stable
@@ -135,7 +137,7 @@ class ArticleControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"body\":\"<p>no title</p>\"}"))
+                        .content("{\"body\":\"no title\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -145,7 +147,7 @@ class ArticleControllerIT extends AbstractIntegrationTest {
         String worldId = createWorld(auth);
         // Body-only match created first (older), title match created second.
         createArticle(auth, worldId,
-                "{\"title\":\"Ironhold\",\"body\":\"<p>A deep forest lies to the north.</p>\"}");
+                "{\"title\":\"Ironhold\",\"body\":\"A deep forest lies to the north.\"}");
         createArticle(auth, worldId, "{\"title\":\"Forest Kingdom\"}");
 
         mockMvc.perform(get("/api/worlds/{w}/articles", worldId)
@@ -157,17 +159,18 @@ class ArticleControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void sanitizesScriptFromBodyOnWrite() throws Exception {
+    void sanitizesScriptFromBodyOnRender() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
 
         String created = createArticle(auth, worldId,
-                "{\"title\":\"XSS\",\"body\":\"<p>ok</p><script>alert('x')</script>\"}");
+                "{\"title\":\"XSS\",\"body\":\"ok\\n\\n<script>alert('x')</script>\"}");
         String rawBody = JsonPath.read(created, "$.body");
         String bodyHtml = JsonPath.read(created, "$.bodyHtml");
 
-        org.assertj.core.api.Assertions.assertThat(rawBody).contains("<p>ok</p>");
-        org.assertj.core.api.Assertions.assertThat(rawBody).doesNotContainIgnoringCase("script");
+        // Write-time sanitization is gone (ADR-0054) — the raw Markdown is stored as submitted.
+        org.assertj.core.api.Assertions.assertThat(rawBody).containsIgnoringCase("script");
+        // The rendered HTML — the only thing ever shown to a browser — is still sanitized.
         org.assertj.core.api.Assertions.assertThat(bodyHtml).doesNotContainIgnoringCase("script");
     }
 
@@ -178,18 +181,54 @@ class ArticleControllerIT extends AbstractIntegrationTest {
         String goblinId = JsonPath.read(createArticle(auth, worldId, "{\"title\":\"Goblin\"}"), "$.id");
 
         String body = "{\"title\":\"Bestiary\",\"body\":"
-                + "\"<p>See [[Goblin]], [[goblin|the goblins]] and [[Missing]].</p>\"}";
+                + "\"See [[Goblin]], [[goblin|the goblins]] and [[Missing]].\"}";
         String created = createArticle(auth, worldId, body);
 
         String bodyHtml = JsonPath.read(created, "$.bodyHtml");
         String rawBody = JsonPath.read(created, "$.body");
 
         org.assertj.core.api.Assertions.assertThat(bodyHtml)
-                .contains("<a class=\"wiki-link\" data-article-id=\"" + goblinId + "\" href=\"#\">Goblin</a>")
+                .contains("class=\"wiki-link\"")
+                .contains("data-article-id=\"" + goblinId + "\"")
+                .contains(">Goblin</a>")
                 .contains(">the goblins</a>")
-                .contains("<span class=\"broken-link\">Missing</span>");
+                .contains("class=\"broken-link\"")
+                .contains(">Missing</span>");
         // Raw body keeps the [[...]] tokens for editing.
         org.assertj.core.api.Assertions.assertThat(rawBody).contains("[[Goblin]]");
+    }
+
+    @Test
+    void imageWithWidthRendersRawHtmlThroughMarkdown() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = createArticle(auth, worldId,
+                "{\"title\":\"Portrait\",\"body\":"
+                        + "\"before\\n\\n<img src=\\\"/api/media/abc/content\\\" width=\\\"480\\\">\\n\\nafter\"}");
+        String bodyHtml = JsonPath.read(created, "$.bodyHtml");
+
+        org.assertj.core.api.Assertions.assertThat(bodyHtml)
+                .contains("src=\"/api/media/abc/content\"")
+                .contains("width=\"480\"");
+    }
+
+    @Test
+    void standardMarkdownFormattingRenders() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = createArticle(auth, worldId,
+                "{\"title\":\"Formatting\",\"body\":"
+                        + "\"# Heading\\n\\n**bold** and _italic_ and a list:\\n\\n- one\\n- two\"}");
+        String bodyHtml = JsonPath.read(created, "$.bodyHtml");
+
+        org.assertj.core.api.Assertions.assertThat(bodyHtml)
+                .contains("<h1>Heading</h1>")
+                .contains("<strong>bold</strong>")
+                .contains("<em>italic</em>")
+                .contains("<li>one</li>")
+                .contains("<li>two</li>");
     }
 
     private String createArticle(String auth, String worldId, String json) throws Exception {

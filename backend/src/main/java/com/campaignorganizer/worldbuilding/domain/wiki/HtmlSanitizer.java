@@ -5,13 +5,12 @@ import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
 
 /**
- * Sanitizes article body HTML on write to prevent stored XSS (follow-up to
- * ADR-0013 / ADR-0025). Allows the formatting the TipTap editor produces
- * (blocks, formatting, links, images) plus images served from our own media
- * endpoint; strips scripts, event handlers, and unknown elements.
- *
- * <p>Note: {@code [[wiki-links]]} in the body are plain text, not HTML, so they
- * pass through untouched and are resolved later by {@link WikiLinker}.
+ * Sanitizes an article's rendered HTML before display, the only place raw
+ * HTML ever reaches the browser (ADR-0054, superseding the write-time timing
+ * of ADR-0025). Allows the formatting a Markdown render produces (blocks,
+ * formatting, links, images) plus images served from our own media endpoint
+ * and any raw HTML an author embedded directly (e.g. a sized {@code <img>});
+ * strips scripts, event handlers, and unknown elements.
  */
 public final class HtmlSanitizer {
 
@@ -26,6 +25,14 @@ public final class HtmlSanitizer {
                     .allowAttributes("src").matching(HtmlSanitizer::isAllowedImageSrc).onElements("img")
                     // Persist an editor-chosen display width (px or %); nothing else.
                     .allowAttributes("width").matching(HtmlSanitizer::isAllowedWidth).onElements("img")
+                    .toFactory())
+            // Wiki-link anchors and broken-link markers WikiLinker injects (ADR-0014) —
+            // this now runs after link resolution (ADR-0054), so its own output must be
+            // explicitly allowed like any other HTML reaching this policy.
+            .and(new HtmlPolicyBuilder()
+                    .allowElements("a", "span")
+                    .allowAttributes("class").matching(HtmlSanitizer::isAllowedLinkClass).onElements("a", "span")
+                    .allowAttributes("data-article-id").matching(HtmlSanitizer::isUuid).onElements("a")
                     .toFactory());
 
     public String sanitize(String html) {
@@ -42,5 +49,13 @@ public final class HtmlSanitizer {
     /** A bare pixel width, e.g. "480". (Percent is not accepted by the images policy.) */
     private static boolean isAllowedWidth(String width) {
         return width.matches("\\d{1,4}");
+    }
+
+    private static boolean isAllowedLinkClass(String value) {
+        return "wiki-link".equals(value) || "broken-link".equals(value);
+    }
+
+    private static boolean isUuid(String value) {
+        return value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
     }
 }
