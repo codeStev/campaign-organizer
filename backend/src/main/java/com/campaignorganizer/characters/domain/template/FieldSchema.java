@@ -2,10 +2,16 @@ package com.campaignorganizer.characters.domain.template;
 
 import java.util.List;
 
-/** JSON-serializable definition of a sheet's fields (see ADR-0024). */
+/** JSON-serializable definition of a template's fields (see ADR-0024, ADR-0052). */
 public final class FieldSchema {
 
     private FieldSchema() {
+    }
+
+    /** What a field template is for; drives which picker offers it. See ADR-0052. */
+    public enum TemplateKind {
+        CHARACTER,
+        STATBLOCK
     }
 
     public enum FieldType {

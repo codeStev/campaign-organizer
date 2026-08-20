@@ -611,6 +611,8 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
 
 // ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
 
+export type TemplateKind = 'CHARACTER' | 'STATBLOCK';
+
 export type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'CIRCLES';
 
 export type FieldWidth = 'FULL' | 'HALF' | 'THIRD' | 'QUARTER';
@@ -633,6 +635,7 @@ export interface FieldTemplate {
   id: string;
   worldId: string;
   name: string;
+  kind: TemplateKind;
   system?: string | null;
   sections: TemplateSection[];
   createdAt: string;
@@ -641,12 +644,14 @@ export interface FieldTemplate {
 
 export interface FieldTemplateRequest {
   name: string;
+  kind: TemplateKind;
   system?: string | null;
   sections: TemplateSection[];
 }
 
 export interface BuiltinFieldTemplate {
   name: string;
+  kind: TemplateKind;
   system?: string | null;
   sections: TemplateSection[];
 }
@@ -707,7 +712,7 @@ export interface DiceRollResult {
 export function fieldTemplatesApi(worldId: string) {
   const base = `/worlds/${worldId}/field-templates`;
   return {
-    list: () => request<FieldTemplate[]>(base),
+    list: (kind?: TemplateKind) => request<FieldTemplate[]>(kind ? `${base}?kind=${kind}` : base),
     get: (id: string) => request<FieldTemplate>(`${base}/${id}`),
     create: (body: FieldTemplateRequest) =>
       request<FieldTemplate>(base, { method: 'POST', body: JSON.stringify(body) }),
@@ -718,7 +723,8 @@ export function fieldTemplatesApi(worldId: string) {
 }
 
 export const builtinFieldTemplatesApi = {
-  list: () => request<BuiltinFieldTemplate[]>('/field-templates/builtin'),
+  list: (kind?: TemplateKind) =>
+    request<BuiltinFieldTemplate[]>(kind ? `/field-templates/builtin?kind=${kind}` : '/field-templates/builtin'),
 };
 
 export function characterSheetsApi(worldId: string) {

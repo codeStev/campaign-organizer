@@ -3,6 +3,7 @@ package com.campaignorganizer.characters.domain.sheet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldTemplate;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Instant;
@@ -20,7 +21,7 @@ class SheetTest {
     @Test
     void templateUpdateBumpsUpdatedAt() {
         FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic",
-                "generic", List.of(), T0);
+                TemplateKind.CHARACTER, "generic", List.of(), T0);
         t.update("Generic v2", "generic", List.of(), T1);
 
         assertThat(t.getName()).isEqualTo("Generic v2");
@@ -30,15 +31,23 @@ class SheetTest {
 
     @Test
     void templateNullSectionsBecomeEmptyList() {
-        FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic", null,
-                null, T0);
+        FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic",
+                TemplateKind.CHARACTER, null, null, T0);
         assertThat(t.getSections()).isEmpty();
     }
 
     @Test
     void templateRejectsBlankName() {
         assertThatThrownBy(() ->
-                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), " ", null, null, T0))
+                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), " ", TemplateKind.CHARACTER, null,
+                        null, T0))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void templateRejectsNullKind() {
+        assertThatThrownBy(() ->
+                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic", null, null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 

@@ -149,6 +149,7 @@ export function TemplateBuilder({ initial, onSave, onCancel }: Props) {
   function save() {
     const body: FieldTemplateRequest = {
       name,
+      kind: initial?.kind ?? 'CHARACTER',
       system: system || null,
       sections: sections.map((sec) => {
         const used = new Set<string>();

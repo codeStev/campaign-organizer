@@ -1,5 +1,6 @@
 package com.campaignorganizer.characters.application.template.port.published;
 
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateSection;
 import java.time.Instant;
 import java.util.List;
@@ -10,6 +11,7 @@ public record FieldTemplateView(
         UUID id,
         UUID worldId,
         String name,
+        TemplateKind kind,
         String system,
         List<TemplateSection> sections,
         Instant createdAt,

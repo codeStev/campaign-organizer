@@ -11,6 +11,7 @@ import com.campaignorganizer.characters.application.template.port.out.FieldTempl
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldTemplate;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
@@ -47,7 +48,7 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     public FieldTemplateView create(CreateFieldTemplateCommand command) {
         requireWorld(command.worldId());
         FieldTemplate created = FieldTemplate.create(ids.newId(), command.worldId(), command.name(),
-                command.system(), command.sections(), clock.instant());
+                command.kind(), command.system(), command.sections(), clock.instant());
         return viewMapper.toView(templates.save(created));
     }
 
@@ -73,9 +74,9 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
 
     @Override
     @Transactional(readOnly = true)
-    public List<FieldTemplateView> list(UUID worldId) {
+    public List<FieldTemplateView> list(UUID worldId, TemplateKind kind) {
         requireWorld(worldId);
-        return findByWorld(worldId);
+        return kind == null ? findByWorld(worldId) : findByWorldAndKind(worldId, kind);
     }
 
     // --- published query port ---
@@ -84,6 +85,12 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional(readOnly = true)
     public List<FieldTemplateView> findByWorld(UUID worldId) {
         return templates.findByWorld(worldId).stream().map(viewMapper::toView).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FieldTemplateView> findByWorldAndKind(UUID worldId, TemplateKind kind) {
+        return templates.findByWorldAndKind(worldId, kind).stream().map(viewMapper::toView).toList();
     }
 
     @Override

@@ -14,7 +14,7 @@ public interface FieldTemplateWebMapper {
     FieldTemplateResponse toResponse(FieldTemplateView view);
 
     default CreateFieldTemplateCommand toCreateCommand(UUID worldId, FieldTemplateRequest request) {
-        return new CreateFieldTemplateCommand(worldId, request.name(), request.system(),
+        return new CreateFieldTemplateCommand(worldId, request.name(), request.kind(), request.system(),
                 request.sections());
     }
 

@@ -32,7 +32,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     const b = builtins.find((x) => x.name === choice);
     if (!b) return;
     try {
-      await api.create({ name: b.name, system: b.system, sections: b.sections });
+      await api.create({ name: b.name, kind: b.kind, system: b.system, sections: b.sections });
       setChoice('');
       onChanged();
     } catch (err) {

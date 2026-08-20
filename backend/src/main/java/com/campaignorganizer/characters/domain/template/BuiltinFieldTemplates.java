@@ -2,16 +2,18 @@ package com.campaignorganizer.characters.domain.template;
 
 import com.campaignorganizer.characters.domain.template.FieldSchema.FieldType;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateField;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateSection;
 import java.util.List;
 
 /**
- * Code-defined starter field templates (FR-17, ADR-0024). The user copies one
- * into a world to get going; they are reference data, not stored rows.
+ * Code-defined starter field templates (FR-17, FR-34, ADR-0024, ADR-0052). The
+ * user copies one into a world to get going; they are reference data, not
+ * stored rows.
  */
 public final class BuiltinFieldTemplates {
 
-    public record BuiltinTemplate(String name, String system, List<TemplateSection> sections) {
+    public record BuiltinTemplate(String name, TemplateKind kind, String system, List<TemplateSection> sections) {
     }
 
     private BuiltinFieldTemplates() {
@@ -22,7 +24,7 @@ public final class BuiltinFieldTemplates {
     }
 
     private static BuiltinTemplate generic() {
-        return new BuiltinTemplate("Generic Character", "generic", List.of(
+        return new BuiltinTemplate("Generic Character", TemplateKind.CHARACTER, "generic", List.of(
                 new TemplateSection("Overview", List.of(
                         field("concept", "Concept", FieldType.TEXT),
                         field("description", "Description", FieldType.TEXTAREA))),
@@ -32,7 +34,7 @@ public final class BuiltinFieldTemplates {
     }
 
     private static BuiltinTemplate dnd5e() {
-        return new BuiltinTemplate("D&D 5e", "dnd5e", List.of(
+        return new BuiltinTemplate("D&D 5e", TemplateKind.CHARACTER, "dnd5e", List.of(
                 new TemplateSection("Core", List.of(
                         field("class", "Class", FieldType.TEXT),
                         field("race", "Race", FieldType.TEXT),

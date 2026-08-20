@@ -1,8 +1,11 @@
 package com.campaignorganizer.characters.adapter.template.out.persistence;
 
+import com.campaignorganizer.characters.domain.template.FieldSchema;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateSection;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -14,7 +17,7 @@ import org.hibernate.type.SqlTypes;
 
 /** Persistence model for a field template (maps the {@code field_templates} table). */
 @Entity
-@Table(name = "sheet_templates")
+@Table(name = "field_templates")
 public class FieldTemplateJpaEntity {
 
     @Id
@@ -25,6 +28,10 @@ public class FieldTemplateJpaEntity {
 
     @Column(nullable = false, length = 200)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FieldSchema.TemplateKind kind;
 
     @Column(length = 100)
     private String system;
@@ -64,6 +71,14 @@ public class FieldTemplateJpaEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public FieldSchema.TemplateKind getKind() {
+        return kind;
+    }
+
+    public void setKind(FieldSchema.TemplateKind kind) {
+        this.kind = kind;
     }
 
     public String getSystem() {

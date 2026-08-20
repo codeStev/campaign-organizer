@@ -1,6 +1,7 @@
 package com.campaignorganizer.characters.adapter.template.out.persistence;
 
 import com.campaignorganizer.characters.application.template.port.out.FieldTemplateRepositoryPort;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldTemplate;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +23,12 @@ public class FieldTemplatePersistenceAdapter implements FieldTemplateRepositoryP
     @Override
     public List<FieldTemplate> findByWorld(UUID worldId) {
         return repository.findByWorldIdOrderByCreatedAtDesc(worldId).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public List<FieldTemplate> findByWorldAndKind(UUID worldId, TemplateKind kind) {
+        return repository.findByWorldIdAndKindOrderByCreatedAtDesc(worldId, kind).stream()
+                .map(mapper::toDomain).toList();
     }
 
     @Override

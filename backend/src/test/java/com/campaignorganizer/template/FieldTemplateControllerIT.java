@@ -16,7 +16,7 @@ import org.springframework.http.MediaType;
 class FieldTemplateControllerIT extends AbstractIntegrationTest {
 
     private static final String DND = """
-            {"name":"D&D 5e","system":"dnd5e","sections":[
+            {"name":"D&D 5e","kind":"CHARACTER","system":"dnd5e","sections":[
               {"title":"Core","fields":[
                 {"key":"class","label":"Class","type":"TEXT"},
                 {"key":"level","label":"Level","type":"NUMBER"},
@@ -68,7 +68,7 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
         String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Homebrew\",\"sections\":[{\"title\":\"Core\",\"fields\":["
+                        .content("{\"name\":\"Homebrew\",\"kind\":\"CHARACTER\",\"sections\":[{\"title\":\"Core\",\"fields\":["
                                 + "{\"key\":\"str\",\"label\":\"STR\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
                                 + "{\"key\":\"dex\",\"label\":\"DEX\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
                                 + "{\"key\":\"wounds\",\"label\":\"Wounds\",\"type\":\"CIRCLES\",\"count\":5}]}]}"))
@@ -95,7 +95,7 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Legacy\",\"sections\":[{\"title\":\"S\",\"fields\":["
+                        .content("{\"name\":\"Legacy\",\"kind\":\"CHARACTER\",\"sections\":[{\"title\":\"S\",\"fields\":["
                                 + "{\"key\":\"a\",\"label\":\"A\",\"type\":\"TEXT\"}]}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.sections[0].fields[0].key").value("a"));
@@ -108,7 +108,40 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"system\":\"x\",\"sections\":[]}"))
+                        .content("{\"kind\":\"CHARACTER\",\"system\":\"x\",\"sections\":[]}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsTemplateWithoutKind() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"No kind\",\"sections\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void filtersByKind() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"A Character Template\",\"kind\":\"CHARACTER\",\"sections\":[]}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"A Statblock Template\",\"kind\":\"STATBLOCK\",\"sections\":[]}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/worlds/{w}/field-templates?kind=STATBLOCK", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].kind").value("STATBLOCK"));
     }
 }

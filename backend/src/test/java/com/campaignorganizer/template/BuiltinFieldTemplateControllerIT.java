@@ -25,4 +25,17 @@ class BuiltinFieldTemplateControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$[?(@.system == 'dnd5e')].sections[1].fields[0].key")
                         .value(Matchers.hasItem("str")));
     }
+
+    @Test
+    void filtersByKind() throws Exception {
+        mockMvc.perform(get("/api/field-templates/builtin?kind=CHARACTER")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.system == 'dnd5e')].name").value(Matchers.hasItem("D&D 5e")));
+
+        mockMvc.perform(get("/api/field-templates/builtin?kind=STATBLOCK")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.system == 'dnd5e')]").doesNotExist());
+    }
 }

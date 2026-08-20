@@ -25,7 +25,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"T\",\"system\":\"" + system + "\",\"sections\":[]}"))
+                        .content("{\"name\":\"T\",\"kind\":\"CHARACTER\",\"system\":\"" + system + "\",\"sections\":[]}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
 
@@ -83,7 +83,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Homebrew\",\"system\":\"custom\",\"sections\":["
+                        .content("{\"name\":\"Homebrew\",\"kind\":\"CHARACTER\",\"system\":\"custom\",\"sections\":["
                                 + "{\"title\":\"Core\",\"fields\":["
                                 + "{\"key\":\"grit\",\"label\":\"Grit\",\"type\":\"NUMBER\"},"
                                 + "{\"key\":\"alive\",\"label\":\"Alive\",\"type\":\"BOOLEAN\"}]}]}"))
@@ -112,7 +112,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Trackers\",\"system\":\"custom\",\"sections\":["
+                        .content("{\"name\":\"Trackers\",\"kind\":\"CHARACTER\",\"system\":\"custom\",\"sections\":["
                                 + "{\"title\":\"State\",\"fields\":["
                                 + "{\"key\":\"str\",\"label\":\"STR\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
                                 + "{\"key\":\"dex\",\"label\":\"DEX\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"

@@ -7,6 +7,7 @@ import com.campaignorganizer.characters.application.template.port.in.DeleteField
 import com.campaignorganizer.characters.application.template.port.in.GetFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.ListFieldTemplatesUseCase;
 import com.campaignorganizer.characters.application.template.port.in.UpdateFieldTemplateUseCase;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -48,8 +50,9 @@ public class FieldTemplateController {
     }
 
     @GetMapping
-    public List<FieldTemplateResponse> list(@PathVariable UUID worldId) {
-        return listUseCase.list(worldId).stream().map(mapper::toResponse).toList();
+    public List<FieldTemplateResponse> list(@PathVariable UUID worldId,
+                                            @RequestParam(required = false) TemplateKind kind) {
+        return listUseCase.list(worldId, kind).stream().map(mapper::toResponse).toList();
     }
 
     @GetMapping("/{templateId}")

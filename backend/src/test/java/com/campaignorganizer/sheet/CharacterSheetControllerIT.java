@@ -26,7 +26,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"D&D 5e\",\"system\":\"dnd5e\",\"sections\":["
+                        .content("{\"name\":\"D&D 5e\",\"kind\":\"CHARACTER\",\"system\":\"dnd5e\",\"sections\":["
                                 + "{\"title\":\"Core\",\"fields\":[{\"key\":\"level\",\"label\":\"Level\",\"type\":\"NUMBER\"}]}]}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
