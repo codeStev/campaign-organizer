@@ -31,11 +31,23 @@ class BuiltinFieldTemplateControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/field-templates/builtin?kind=CHARACTER")
                         .header(HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.system == 'dnd5e')].name").value(Matchers.hasItem("D&D 5e")));
+                .andExpect(jsonPath("$[*].name").value(Matchers.hasItem("D&D 5e")))
+                .andExpect(jsonPath("$[*].name").value(Matchers.not(Matchers.hasItem("D&D 5e Monster"))));
 
         mockMvc.perform(get("/api/field-templates/builtin?kind=STATBLOCK")
                         .header(HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.system == 'dnd5e')]").doesNotExist());
+                .andExpect(jsonPath("$[*].name").value(Matchers.hasItem("D&D 5e Monster")))
+                .andExpect(jsonPath("$[*].name").value(Matchers.not(Matchers.hasItem("D&D 5e"))));
+    }
+
+    @Test
+    void monsterStarterHasLegendaryResistanceCircles() throws Exception {
+        mockMvc.perform(get("/api/field-templates/builtin").header(HttpHeaders.AUTHORIZATION, authHeader()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name == 'D&D 5e Monster')].sections[3].fields[2].type")
+                        .value(Matchers.hasItem("CIRCLES")))
+                .andExpect(jsonPath("$[?(@.name == 'D&D 5e Monster')].sections[3].fields[2].count")
+                        .value(Matchers.hasItem(3)));
     }
 }

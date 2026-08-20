@@ -20,7 +20,7 @@ public final class BuiltinFieldTemplates {
     }
 
     public static List<BuiltinTemplate> all() {
-        return List.of(generic(), dnd5e());
+        return List.of(generic(), dnd5e(), dnd5eMonster());
     }
 
     private static BuiltinTemplate generic() {
@@ -57,11 +57,47 @@ public final class BuiltinFieldTemplates {
                         field("equipment", "Equipment", FieldType.TEXTAREA)))));
     }
 
+    private static BuiltinTemplate dnd5eMonster() {
+        return new BuiltinTemplate("D&D 5e Monster", TemplateKind.STATBLOCK, "dnd5e", List.of(
+                new TemplateSection("Overview", List.of(
+                        field("type", "Type & Alignment", FieldType.TEXT),
+                        fieldW("cr", "Challenge Rating", FieldType.TEXT, "QUARTER"),
+                        fieldW("pb", "Proficiency Bonus", FieldType.NUMBER, "QUARTER"))),
+                new TemplateSection("Defenses", List.of(
+                        fieldW("ac", "Armor Class", FieldType.NUMBER, "THIRD"),
+                        fieldW("hp", "Hit Points", FieldType.NUMBER, "THIRD"),
+                        fieldW("speed", "Speed", FieldType.TEXT, "THIRD"))),
+                new TemplateSection("Ability Scores", List.of(
+                        fieldW("str", "STR", FieldType.NUMBER, "QUARTER"),
+                        fieldW("dex", "DEX", FieldType.NUMBER, "QUARTER"),
+                        fieldW("con", "CON", FieldType.NUMBER, "QUARTER"),
+                        fieldW("int", "INT", FieldType.NUMBER, "QUARTER"),
+                        fieldW("wis", "WIS", FieldType.NUMBER, "QUARTER"),
+                        fieldW("cha", "CHA", FieldType.NUMBER, "QUARTER"))),
+                new TemplateSection("Senses & Languages", List.of(
+                        fieldW("senses", "Senses", FieldType.TEXT, "HALF"),
+                        fieldW("languages", "Languages", FieldType.TEXT, "HALF"),
+                        circles("legendary_resistances", "Legendary Resistances", 3))),
+                new TemplateSection("Traits & Actions", List.of(
+                        field("traits", "Traits", FieldType.TEXTAREA),
+                        field("actions", "Actions", FieldType.TEXTAREA),
+                        field("reactions", "Reactions", FieldType.TEXTAREA),
+                        field("legendary_actions", "Legendary Actions", FieldType.TEXTAREA)))));
+    }
+
     private static TemplateField field(String key, String label, FieldType type) {
         return new TemplateField(key, label, type, null, null, null);
     }
 
+    private static TemplateField fieldW(String key, String label, FieldType type, String width) {
+        return new TemplateField(key, label, type, null, width, null);
+    }
+
     private static TemplateField select(String key, String label, List<String> options) {
         return new TemplateField(key, label, FieldType.SELECT, options, null, null);
+    }
+
+    private static TemplateField circles(String key, String label, int count) {
+        return new TemplateField(key, label, FieldType.CIRCLES, null, null, count);
     }
 }
