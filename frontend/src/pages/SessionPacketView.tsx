@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
-import { sessionsApi, SessionPacket } from '../api/client';
+import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate } from '../api/client';
+import { orderedStatEntries } from '../lib/statblockDisplay';
 
 interface Props {
   worldId: string;
@@ -18,6 +19,7 @@ interface Props {
  */
 export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onError }: Props) {
   const [packet, setPacket] = useState<SessionPacket | null>(null);
+  const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +29,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
       .then((p) => active && setPacket(p))
       .catch(onError)
       .finally(() => active && setLoading(false));
+    fieldTemplatesApi(worldId)
+      .list('STATBLOCK')
+      .then((t) => active && setTemplates(t))
+      .catch(onError);
     return () => {
       active = false;
     };
@@ -152,10 +158,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                   <div key={sb.id} className="print-statblock">
                     <h2>{sb.name}</h2>
                     <dl className="print-stats">
-                      {Object.entries(sb.stats ?? {}).map(([k, v]) => (
-                        <div key={k} className="print-stat">
-                          <dt>{k}</dt>
-                          <dd>{String(v)}</dd>
+                      {orderedStatEntries(sb.stats, sb.templateId, templates).map((entry) => (
+                        <div key={entry.key} className="print-stat">
+                          <dt>{entry.label}</dt>
+                          <dd>{String(entry.value)}</dd>
                         </div>
                       ))}
                     </dl>

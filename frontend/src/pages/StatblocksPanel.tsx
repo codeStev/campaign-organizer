@@ -320,6 +320,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       {cardsOpen && (
         <StatblockCardsView
           statblocks={toPrint}
+          templates={statblockTemplates}
           title={
             selected.size
               ? `${toPrint.length} selected`
