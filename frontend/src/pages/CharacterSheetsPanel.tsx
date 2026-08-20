@@ -56,17 +56,18 @@ export function CharacterSheetsPanel({
     void refresh();
   }, [refresh]);
 
-  const template = templates.find((t) => t.id === draft?.templateId) ?? null;
+  const characterTemplates = templates.filter((t) => t.kind === 'CHARACTER');
+  const template = characterTemplates.find((t) => t.id === draft?.templateId) ?? null;
 
   function newSheet() {
-    if (templates.length === 0) {
-      onError(new Error('Create a template first (Templates tab).'));
+    if (characterTemplates.length === 0) {
+      onError(new Error('Create a character sheet template first (Templates tab).'));
       return;
     }
     setDraft({
       id: null,
       name: '',
-      templateId: templates[0].id,
+      templateId: characterTemplates[0].id,
       articleId: '',
       campaignId: filterCampaign, // default new sheets to the active campaign
       values: {},
@@ -179,7 +180,7 @@ export function CharacterSheetsPanel({
                 onChange={(e) => setDraft({ ...draft, templateId: e.target.value })}
                 disabled={draft.id != null}
               >
-                {templates.map((t) => (
+                {characterTemplates.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>

@@ -5,6 +5,7 @@ import {
   FieldTemplate,
   FieldTemplateRequest,
   BuiltinFieldTemplate,
+  TemplateKind,
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 
@@ -16,9 +17,16 @@ interface Props {
   onError: (err: unknown) => void;
 }
 
+const KIND_LABEL: Record<TemplateKind, string> = {
+  CHARACTER: 'Character sheet',
+  STATBLOCK: 'Statblock',
+};
+
 export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, onError }: Props) {
   const api = fieldTemplatesApi(worldId);
   const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
+  // What kind of template a new one (starter or built-from-scratch) will be.
+  const [newKind, setNewKind] = useState<TemplateKind>('CHARACTER');
   const [choice, setChoice] = useState('');
   // Which template is open in the builder: an existing one, 'new', or null.
   const [editing, setEditing] = useState<FieldTemplate | null>(null);
@@ -28,8 +36,10 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     builtinFieldTemplatesApi.list().then(setBuiltins).catch(onError);
   }, [onError]);
 
+  const buildersForKind = builtins.filter((b) => b.kind === newKind);
+
   async function addFromBuiltin() {
-    const b = builtins.find((x) => x.name === choice);
+    const b = buildersForKind.find((x) => x.name === choice);
     if (!b) return;
     try {
       await api.create({ name: b.name, kind: b.kind, system: b.system, sections: b.sections });
@@ -53,7 +63,11 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
   }
 
   async function remove(t: FieldTemplate) {
-    if (!window.confirm(`Delete "${t.name}"? Character sheets using it will be removed too.`)) return;
+    const consequence =
+      t.kind === 'CHARACTER'
+        ? 'Character sheets using it will be removed too.'
+        : 'Statblocks using it will fall back to freeform stats.';
+    if (!window.confirm(`Delete "${t.name}"? ${consequence}`)) return;
     try {
       await api.remove(t.id);
       onChanged();
@@ -66,6 +80,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     return (
       <TemplateBuilder
         initial={editing}
+        kind={editing?.kind ?? newKind}
         onSave={saveTemplate}
         onCancel={() => {
           setBuilding(false);
@@ -77,11 +92,24 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
 
   return (
     <div className="card">
-      <h3>Sheet templates</h3>
+      <h3>Field templates</h3>
       <div className="editor-actions">
+        <label className="muted">
+          What are you building?{' '}
+          <select
+            value={newKind}
+            onChange={(e) => {
+              setNewKind(e.target.value as TemplateKind);
+              setChoice('');
+            }}
+          >
+            <option value="CHARACTER">Character sheet</option>
+            <option value="STATBLOCK">Statblock</option>
+          </select>
+        </label>
         <select value={choice} onChange={(e) => setChoice(e.target.value)}>
           <option value="">Starter system…</option>
-          {builtins.map((b) => (
+          {buildersForKind.map((b) => (
             <option key={b.name} value={b.name}>
               {b.name}
             </option>
@@ -112,7 +140,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             >
               <strong>{t.name}</strong>{' '}
               <small className="muted">
-                {t.system ?? 'custom'} · {t.sections.length} sections
+                {KIND_LABEL[t.kind]} · {t.system ?? 'custom'} · {t.sections.length} sections
               </small>
             </button>
             <button className="link-button danger" onClick={() => remove(t)}>

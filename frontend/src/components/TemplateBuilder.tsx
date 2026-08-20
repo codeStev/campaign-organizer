@@ -4,10 +4,12 @@ import {
   FieldTemplateRequest,
   FieldType,
   FieldWidth,
+  TemplateKind,
 } from '../api/client';
 
 interface Props {
   initial: FieldTemplate | null;
+  kind: TemplateKind;
   onSave: (body: FieldTemplateRequest) => void;
   onCancel: () => void;
 }
@@ -78,7 +80,7 @@ function toDrafts(t: FieldTemplate | null): SectionDraft[] {
   }));
 }
 
-export function TemplateBuilder({ initial, onSave, onCancel }: Props) {
+export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [system, setSystem] = useState(initial?.system ?? '');
   const [sections, setSections] = useState<SectionDraft[]>(toDrafts(initial));
@@ -149,7 +151,7 @@ export function TemplateBuilder({ initial, onSave, onCancel }: Props) {
   function save() {
     const body: FieldTemplateRequest = {
       name,
-      kind: initial?.kind ?? 'CHARACTER',
+      kind,
       system: system || null,
       sections: sections.map((sec) => {
         const used = new Set<string>();
@@ -181,6 +183,7 @@ export function TemplateBuilder({ initial, onSave, onCancel }: Props) {
       <div className="builder-head">
         <input className="title-input" placeholder="Template name" value={name} onChange={(e) => setName(e.target.value)} />
         <input placeholder="system (e.g. homebrew)" value={system} onChange={(e) => setSystem(e.target.value)} />
+        <small className="muted">{kind === 'CHARACTER' ? 'Character sheet' : 'Statblock'} template</small>
       </div>
 
       <div className="palette">
