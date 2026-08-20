@@ -16,7 +16,7 @@ import {
   mediaApi,
   ApiError,
 } from '../api/client';
-import { RichTextEditor } from '../components/RichTextEditor';
+import { MarkdownEditor } from '../components/MarkdownEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
 import { PrintView } from './PrintView';
@@ -28,13 +28,13 @@ import { CampaignsView } from './CampaignsView';
 import { SheetsView } from './SheetsView';
 import { WhiteboardsView } from './WhiteboardsView';
 
-/** True when the HTML has no meaningful text content. */
-function isEmptyHtml(html: string): boolean {
-  return html.replace(/<[^>]*>/g, '').trim().length === 0;
+/** True when the Markdown has no meaningful text content. */
+function isEmptyMarkdown(markdown: string): boolean {
+  return !markdown || !markdown.trim().length;
 }
 
-function outlineHtml(info: ArticleTemplateInfo): string {
-  return info.sections.map((s) => `<h2>${s.heading}</h2><p></p>`).join('');
+function outlineMarkdown(info: ArticleTemplateInfo): string {
+  return info.sections.map((s) => `## ${s.heading}\n\n`).join('');
 }
 
 interface Props {
@@ -183,9 +183,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   function selectTemplate(template: ArticleTemplate) {
     setDraft((current) => {
       const next = { ...current, template };
-      if (isEmptyHtml(current.body)) {
+      if (isEmptyMarkdown(current.body)) {
         const info = templates.find((t) => t.template === template);
-        if (info) next.body = outlineHtml(info);
+        if (info) next.body = outlineMarkdown(info);
       }
       return next;
     });
@@ -493,7 +493,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     </option>
                   ))}
                 </select>
-                <RichTextEditor
+                <MarkdownEditor
                   value={draft.body}
                   onChange={(body) => setDraft({ ...draft, body })}
                   onUploadImage={async (file) => (await media.upload(file)).url}

@@ -11,10 +11,8 @@
     "gen:api": "openapi-typescript ../docs/api/openapi.yaml -o src/api/schema.ts"
   },
   "dependencies": {
-    "@tiptap/extension-image": "^2.10.0",
-    "@tiptap/pm": "^2.10.0",
-    "@tiptap/react": "^2.10.0",
-    "@tiptap/starter-kit": "^2.10.0",
+    "@milkdown/kit": "^7.22.1",
+    "@milkdown/react": "^7.22.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.31.0",
     "react": "^18.3.1",

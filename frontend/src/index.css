@@ -317,6 +317,92 @@ button:disabled {
   outline-offset: 2px;
 }
 
+/* Markdown formatting (ADR-0054): shared between the live editor and every
+   read-only rendering of the same content (article preview, print, packets,
+   cards). Milkdown ships no theme, so headings/lists/quotes/code/tables need
+   explicit styling or "live preview" just looks like a plain textarea. */
+.editor-content .ProseMirror h1,
+.editor-content .ProseMirror h2,
+.editor-content .ProseMirror h3,
+.preview-body h1,
+.preview-body h2,
+.preview-body h3 {
+  line-height: 1.25;
+  margin: 1.2em 0 0.5em;
+}
+
+.editor-content .ProseMirror h1,
+.preview-body h1 {
+  font-size: 1.6rem;
+}
+
+.editor-content .ProseMirror h2,
+.preview-body h2 {
+  font-size: 1.3rem;
+}
+
+.editor-content .ProseMirror h3,
+.preview-body h3 {
+  font-size: 1.1rem;
+}
+
+.editor-content .ProseMirror ul,
+.editor-content .ProseMirror ol,
+.preview-body ul,
+.preview-body ol {
+  padding-left: 1.4rem;
+}
+
+.editor-content .ProseMirror blockquote,
+.preview-body blockquote {
+  margin: 0.5em 0;
+  padding: 0.25rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  color: #b8b3c9;
+}
+
+.editor-content .ProseMirror code,
+.preview-body code {
+  background: #14121a;
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.9em;
+}
+
+.editor-content .ProseMirror pre,
+.preview-body pre {
+  background: #14121a;
+  border: 1px solid #3a3550;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  overflow-x: auto;
+}
+
+.editor-content .ProseMirror pre code,
+.preview-body pre code {
+  background: none;
+  padding: 0;
+}
+
+.editor-content .ProseMirror table,
+.preview-body table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+}
+
+.editor-content .ProseMirror th,
+.editor-content .ProseMirror td,
+.preview-body th,
+.preview-body td {
+  border: 1px solid #3a3550;
+  padding: 0.35rem 0.6rem;
+}
+
+.editor-content .ProseMirror th,
+.preview-body th {
+  background: #14121a;
+}
+
 .tab {
   background: #1d1a27;
   border: 1px solid #2c2838;
