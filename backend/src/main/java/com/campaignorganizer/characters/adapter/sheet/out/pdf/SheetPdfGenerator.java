@@ -1,8 +1,8 @@
 package com.campaignorganizer.characters.adapter.sheet.out.pdf;
 
-import com.campaignorganizer.characters.domain.sheet.SheetSchema.FieldType;
-import com.campaignorganizer.characters.domain.sheet.SheetSchema.SheetField;
-import com.campaignorganizer.characters.domain.sheet.SheetSchema.SheetSection;
+import com.campaignorganizer.characters.domain.template.FieldSchema.FieldType;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateField;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateSection;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -48,7 +48,7 @@ public class SheetPdfGenerator {
     private final PDFont font = new PDType1Font(FontName.HELVETICA);
     private final PDFont bold = new PDType1Font(FontName.HELVETICA_BOLD);
 
-    public byte[] generate(String title, List<SheetSection> sections, Map<String, Object> values) {
+    public byte[] generate(String title, List<TemplateSection> sections, Map<String, Object> values) {
         Map<String, Object> v = values == null ? Map.of() : values;
         try (PDDocument doc = new PDDocument()) {
             PDAcroForm form = new PDAcroForm(doc);
@@ -62,11 +62,11 @@ public class SheetPdfGenerator {
             layout.title(title == null ? "Character Sheet" : title);
             Set<String> usedKeys = new HashSet<>();
 
-            for (SheetSection section : sections == null ? List.<SheetSection>of() : sections) {
+            for (TemplateSection section : sections == null ? List.<TemplateSection>of() : sections) {
                 layout.heading(section.title());
-                List<SheetField> row = new ArrayList<>();
+                List<TemplateField> row = new ArrayList<>();
                 int usedCols = 0;
-                for (SheetField f : section.fields() == null ? List.<SheetField>of() : section.fields()) {
+                for (TemplateField f : section.fields() == null ? List.<TemplateField>of() : section.fields()) {
                     int span = spanOf(f.width());
                     if (usedCols + span > 12 && !row.isEmpty()) {
                         layout.row(row, v, usedKeys);
@@ -102,7 +102,7 @@ public class SheetPdfGenerator {
         };
     }
 
-    private static float widgetHeight(SheetField f) {
+    private static float widgetHeight(TemplateField f) {
         return f.type() == FieldType.TEXTAREA ? TEXTAREA_H : FIELD_H;
     }
 
@@ -157,10 +157,10 @@ public class SheetPdfGenerator {
             y -= 18;
         }
 
-        void row(List<SheetField> fields, Map<String, Object> values, Set<String> usedKeys) throws IOException {
+        void row(List<TemplateField> fields, Map<String, Object> values, Set<String> usedKeys) throws IOException {
             float labelBand = LABEL_SIZE + 3;
             float maxWidget = 0;
-            for (SheetField f : fields) {
+            for (TemplateField f : fields) {
                 maxWidget = Math.max(maxWidget, widgetHeight(f));
             }
             float rowHeight = labelBand + maxWidget;
@@ -170,7 +170,7 @@ public class SheetPdfGenerator {
             float rowTop = y;
             float content = contentWidth();
             int usedCols = 0;
-            for (SheetField f : fields) {
+            for (TemplateField f : fields) {
                 int span = spanOf(f.width());
                 float cellX = MARGIN + (usedCols / 12f) * content;
                 float cellW = (span / 12f) * content - COL_GAP;
@@ -184,7 +184,7 @@ public class SheetPdfGenerator {
             y = rowTop - rowHeight - ROW_GAP;
         }
 
-        private void renderWidget(SheetField f, String key, float x, float top, float w, Object value)
+        private void renderWidget(TemplateField f, String key, float x, float top, float w, Object value)
                 throws IOException {
             switch (f.type()) {
                 case BOOLEAN -> addCheckbox(key, new PDRectangle(x, top - FIELD_H, FIELD_H, FIELD_H),
@@ -261,7 +261,7 @@ public class SheetPdfGenerator {
         }
     }
 
-    private static int count(SheetField f) {
+    private static int count(TemplateField f) {
         return f.count() == null || f.count() < 1 ? 3 : Math.min(f.count(), 20);
     }
 

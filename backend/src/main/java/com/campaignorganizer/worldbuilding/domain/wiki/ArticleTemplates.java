@@ -8,10 +8,10 @@ import java.util.List;
  */
 public final class ArticleTemplates {
 
-    public record TemplateSection(String heading, String hint) {
+    public record ArticleTemplateSection(String heading, String hint) {
     }
 
-    public record ArticleTemplateInfo(ArticleTemplate template, String label, List<TemplateSection> sections) {
+    public record ArticleTemplateInfo(ArticleTemplate template, String label, List<ArticleTemplateSection> sections) {
     }
 
     private ArticleTemplates() {
@@ -56,12 +56,12 @@ public final class ArticleTemplates {
                         section("Participants", "Who was involved.")));
     }
 
-    private static ArticleTemplateInfo info(ArticleTemplate template, TemplateSection... sections) {
+    private static ArticleTemplateInfo info(ArticleTemplate template, ArticleTemplateSection... sections) {
         return new ArticleTemplateInfo(template, label(template), List.of(sections));
     }
 
-    private static TemplateSection section(String heading, String hint) {
-        return new TemplateSection(heading, hint);
+    private static ArticleTemplateSection section(String heading, String hint) {
+        return new ArticleTemplateSection(heading, hint);
     }
 
     private static String label(ArticleTemplate template) {

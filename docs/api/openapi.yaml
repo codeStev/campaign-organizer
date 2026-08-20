@@ -2944,7 +2944,7 @@ components:
       description: The kind of article; drives structured prompts later.
       enum: [GENERIC, CHARACTER, LOCATION, ORGANIZATION, SPECIES, ITEM, EVENT]
 
-    TemplateSection:
+    ArticleTemplateSection:
       type: object
       required: [heading, hint]
       properties:
@@ -2964,7 +2964,7 @@ components:
         sections:
           type: array
           items:
-            $ref: '#/components/schemas/TemplateSection'
+            $ref: '#/components/schemas/ArticleTemplateSection'
 
     ArticleRequest:
       type: object

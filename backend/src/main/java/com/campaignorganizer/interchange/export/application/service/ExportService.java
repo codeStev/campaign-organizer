@@ -6,7 +6,7 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPor
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
-import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
 import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
@@ -55,7 +55,7 @@ public class ExportService implements ExportWorldUseCase {
     private final SessionQueryPort sessions;
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
-    private final SheetTemplateQueryPort sheetTemplates;
+    private final FieldTemplateQueryPort fieldTemplates;
     private final CharacterSheetQueryPort characterSheets;
     private final StatblockQueryPort statblocks;
     private final WhiteboardQueryPort whiteboards;
@@ -65,7 +65,7 @@ public class ExportService implements ExportWorldUseCase {
                          TimelineEventQueryPort events, CalendarQueryPort calendars,
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                          SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
-                         SheetTemplateQueryPort sheetTemplates, CharacterSheetQueryPort characterSheets,
+                         FieldTemplateQueryPort fieldTemplates, CharacterSheetQueryPort characterSheets,
                          StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards) {
         this.worlds = worlds;
         this.categories = categories;
@@ -80,7 +80,7 @@ public class ExportService implements ExportWorldUseCase {
         this.sessions = sessions;
         this.arcs = arcs;
         this.beats = beats;
-        this.sheetTemplates = sheetTemplates;
+        this.fieldTemplates = fieldTemplates;
         this.characterSheets = characterSheets;
         this.statblocks = statblocks;
         this.whiteboards = whiteboards;
@@ -132,7 +132,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("arcs", allArcs);
         bundle.put("beats", allBeats);
 
-        bundle.put("sheetTemplates", sheetTemplates.findByWorld(worldId));
+        bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));
         bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorld(worldId));

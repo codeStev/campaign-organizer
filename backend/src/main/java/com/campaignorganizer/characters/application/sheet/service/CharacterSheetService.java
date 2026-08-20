@@ -13,7 +13,7 @@ import com.campaignorganizer.characters.application.sheet.port.out.CharacterShee
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
-import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.sheet.CharacterSheet;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
@@ -32,7 +32,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         CharacterSheetQueryPort {
 
     private final CharacterSheetRepositoryPort sheets;
-    private final SheetTemplateQueryPort templates;
+    private final FieldTemplateQueryPort templates;
     private final WorldExistsPort worlds;
     private final ArticleExistsPort articles;
     private final CampaignExistsPort campaigns;
@@ -40,7 +40,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     private final IdGenerator ids;
     private final Clock clock;
 
-    public CharacterSheetService(CharacterSheetRepositoryPort sheets, SheetTemplateQueryPort templates,
+    public CharacterSheetService(CharacterSheetRepositoryPort sheets, FieldTemplateQueryPort templates,
                                  WorldExistsPort worlds, ArticleExistsPort articles,
                                  CampaignExistsPort campaigns, CharacterSheetViewMapper viewMapper,
                                  IdGenerator ids, Clock clock) {

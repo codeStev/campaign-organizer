@@ -1,21 +1,21 @@
 import { DragEvent, useRef, useState } from 'react';
 import {
-  SheetTemplate,
-  SheetTemplateRequest,
-  SheetFieldType,
+  FieldTemplate,
+  FieldTemplateRequest,
+  FieldType,
   FieldWidth,
 } from '../api/client';
 
 interface Props {
-  initial: SheetTemplate | null;
-  onSave: (body: SheetTemplateRequest) => void;
+  initial: FieldTemplate | null;
+  onSave: (body: FieldTemplateRequest) => void;
   onCancel: () => void;
 }
 
 interface FieldDraft {
   key: string;
   label: string;
-  type: SheetFieldType;
+  type: FieldType;
   optionsText: string;
   width: FieldWidth;
   count: number;
@@ -26,7 +26,7 @@ interface SectionDraft {
   fields: FieldDraft[];
 }
 
-const PALETTE: { type: SheetFieldType; label: string }[] = [
+const PALETTE: { type: FieldType; label: string }[] = [
   { type: 'TEXT', label: 'Text' },
   { type: 'TEXTAREA', label: 'Text area' },
   { type: 'NUMBER', label: 'Number' },
@@ -44,13 +44,13 @@ const WIDTHS: { w: FieldWidth; label: string }[] = [
 
 const SPAN: Record<FieldWidth, number> = { FULL: 12, HALF: 6, THIRD: 4, QUARTER: 3 };
 
-type Drag = { kind: 'new'; type: SheetFieldType } | { kind: 'move'; si: number; fi: number };
+type Drag = { kind: 'new'; type: FieldType } | { kind: 'move'; si: number; fi: number };
 
-function defaultLabel(type: SheetFieldType): string {
+function defaultLabel(type: FieldType): string {
   return PALETTE.find((p) => p.type === type)?.label ?? 'Field';
 }
 
-function newField(type: SheetFieldType): FieldDraft {
+function newField(type: FieldType): FieldDraft {
   return { key: '', label: defaultLabel(type), type, optionsText: '', width: 'FULL', count: 3 };
 }
 
@@ -63,7 +63,7 @@ function slugKey(label: string, existing: Set<string>): string {
   return key;
 }
 
-function toDrafts(t: SheetTemplate | null): SectionDraft[] {
+function toDrafts(t: FieldTemplate | null): SectionDraft[] {
   if (!t) return [{ title: 'Section', fields: [] }];
   return t.sections.map((s) => ({
     title: s.title,
@@ -147,7 +147,7 @@ export function TemplateBuilder({ initial, onSave, onCancel }: Props) {
   }
 
   function save() {
-    const body: SheetTemplateRequest = {
+    const body: FieldTemplateRequest = {
       name,
       system: system || null,
       sections: sections.map((sec) => {

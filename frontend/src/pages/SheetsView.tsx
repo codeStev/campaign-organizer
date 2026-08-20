@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  sheetTemplatesApi,
+  fieldTemplatesApi,
   articlesApi,
   campaignsApi,
-  SheetTemplate,
+  FieldTemplate,
   ArticleSummary,
   Campaign,
   ApiError,
@@ -11,7 +11,7 @@ import {
 import { DiceRollerWidget } from '../components/DiceRollerWidget';
 import { CharacterSheetsPanel } from './CharacterSheetsPanel';
 import { StatblocksPanel } from './StatblocksPanel';
-import { SheetTemplatesPanel } from './SheetTemplatesPanel';
+import { FieldTemplatesPanel } from './FieldTemplatesPanel';
 
 interface Props {
   worldId: string;
@@ -22,11 +22,11 @@ interface Props {
 type SubTab = 'characters' | 'statblocks' | 'templates';
 
 export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
-  const templatesApiRef = useMemo(() => sheetTemplatesApi(worldId), [worldId]);
+  const templatesApiRef = useMemo(() => fieldTemplatesApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const campaignApi = useMemo(() => campaignsApi(worldId), [worldId]);
   const [sub, setSub] = useState<SubTab>('characters');
-  const [templates, setTemplates] = useState<SheetTemplate[]>([]);
+  const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -87,7 +87,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           <StatblocksPanel worldId={worldId} campaigns={campaigns} onError={onError} />
         )}
         {sub === 'templates' && (
-          <SheetTemplatesPanel
+          <FieldTemplatesPanel
             worldId={worldId}
             templates={templates}
             loading={templatesLoading}

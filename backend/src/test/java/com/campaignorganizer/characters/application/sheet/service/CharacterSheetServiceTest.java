@@ -11,7 +11,7 @@ import com.campaignorganizer.characters.application.sheet.port.out.CampaignExist
 import com.campaignorganizer.characters.application.sheet.port.out.CharacterSheetRepositoryPort;
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
-import com.campaignorganizer.characters.application.sheet.port.published.SheetTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -32,7 +32,7 @@ class CharacterSheetServiceTest {
     @Mock
     private CharacterSheetRepositoryPort sheets;
     @Mock
-    private SheetTemplateQueryPort templates;
+    private FieldTemplateQueryPort templates;
     @Mock
     private WorldExistsPort worlds;
     @Mock

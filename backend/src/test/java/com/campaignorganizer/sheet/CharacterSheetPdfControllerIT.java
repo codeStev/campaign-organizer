@@ -22,7 +22,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
     private String worldId;
 
     private String template(String system) throws Exception {
-        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"T\",\"system\":\"" + system + "\",\"sections\":[]}"))
@@ -80,7 +80,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         auth = authHeader();
         worldId = createWorld(auth);
         // A homebrew template with a custom field; no bundled system PDF exists.
-        String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+        String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Homebrew\",\"system\":\"custom\",\"sections\":["
@@ -109,7 +109,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
     void rendersCirclesAsCheckboxRowFilledToValue() throws Exception {
         auth = authHeader();
         worldId = createWorld(auth);
-        String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/sheet-templates", worldId)
+        String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Trackers\",\"system\":\"custom\",\"sections\":["

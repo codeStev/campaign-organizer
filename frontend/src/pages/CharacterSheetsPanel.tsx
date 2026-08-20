@@ -3,15 +3,15 @@ import {
   characterSheetsApi,
   exportCharacterSheetPdf,
   CharacterSheet,
-  SheetTemplate,
+  FieldTemplate,
   ArticleSummary,
   Campaign,
 } from '../api/client';
-import { SheetForm } from '../components/SheetForm';
+import { TemplateForm } from '../components/TemplateForm';
 
 interface Props {
   worldId: string;
-  templates: SheetTemplate[];
+  templates: FieldTemplate[];
   articles: ArticleSummary[];
   campaigns: Campaign[];
   onOpenArticle: (id: string) => void;
@@ -225,7 +225,7 @@ export function CharacterSheetsPanel({
             )}
 
             {template && (
-              <SheetForm
+              <TemplateForm
                 sections={template.sections}
                 values={draft.values}
                 onChange={(values) => setDraft({ ...draft, values })}
