@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   timelinesApi,
   eventsApi,
@@ -46,6 +47,8 @@ function formatDate(e: TimelineEvent, calendar: Calendar | null): string {
 }
 
 export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) {
+  const navigate = useNavigate();
+  const { timelineId: urlTimelineId } = useParams<{ timelineId: string }>();
   const api = useMemo(() => timelinesApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
 
@@ -85,6 +88,15 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     calendarApi.list().then(setCalendars).catch(handleError);
   }, [api, articleApi, calendarApi, handleError]);
 
+  // The URL is the source of truth for which timeline is open (ADR-0053). No
+  // GET-by-id endpoint exists, so resolve against the already-loaded list.
+  useEffect(() => {
+    if (!urlTimelineId || urlTimelineId === selected?.id) return;
+    const found = list.find((t) => t.id === urlTimelineId);
+    if (found) void selectTimeline(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTimelineId, list]);
+
   const activeCalendar = calendars.find((c) => c.id === selected?.calendarId) ?? null;
 
   async function setTimelineCalendar(calendarId: string | null) {
@@ -115,6 +127,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       const created = await api.create({ name });
       setList(await api.list());
       await selectTimeline(created);
+      navigate(`/worlds/${worldId}/timelines/${created.id}`);
     } catch (err) {
       handleError(err);
     }
@@ -126,6 +139,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       if (selected?.id === timeline.id) {
         setSelected(null);
         setEvents([]);
+        navigate(`/worlds/${worldId}/timelines`);
       }
       setList(await api.list());
     } catch (err) {
@@ -192,7 +206,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
             <li key={t.id}>
               <button
                 className={t.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => selectTimeline(t)}
+                onClick={() => navigate(`/worlds/${worldId}/timelines/${t.id}`)}
               >
                 <span>{t.name}</span>
               </button>

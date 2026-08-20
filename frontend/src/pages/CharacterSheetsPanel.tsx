@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   characterSheetsApi,
   exportCharacterSheetPdf,
@@ -35,6 +36,8 @@ export function CharacterSheetsPanel({
   onOpenArticle,
   onError,
 }: Props) {
+  const navigate = useNavigate();
+  const { sheetId: urlSheetId } = useParams<{ sheetId: string }>();
   const api = useMemo(() => characterSheetsApi(worldId), [worldId]);
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,26 +75,38 @@ export function CharacterSheetsPanel({
       campaignId: filterCampaign, // default new sheets to the active campaign
       values: {},
     });
+    navigate(`/worlds/${worldId}/sheets/characters`);
   }
 
-  async function open(id: string) {
-    try {
-      const sheet = await api.get(id);
-      setDraft({
-        id: sheet.id,
-        name: sheet.name,
-        templateId: sheet.templateId,
-        articleId: sheet.articleId ?? '',
-        campaignId: sheet.campaignId ?? '',
-        values: sheet.values ?? {},
-      });
-    } catch (err) {
-      onError(err);
-    }
-  }
+  const open = useCallback(
+    async (id: string) => {
+      try {
+        const sheet = await api.get(id);
+        setDraft({
+          id: sheet.id,
+          name: sheet.name,
+          templateId: sheet.templateId,
+          articleId: sheet.articleId ?? '',
+          campaignId: sheet.campaignId ?? '',
+          values: sheet.values ?? {},
+        });
+      } catch (err) {
+        onError(err);
+      }
+    },
+    [api, onError],
+  );
+
+  // The URL is the source of truth for which sheet is open (ADR-0053).
+  useEffect(() => {
+    if (!urlSheetId || urlSheetId === draft?.id) return;
+    void open(urlSheetId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSheetId]);
 
   async function save() {
     if (!draft) return;
+    const wasNew = !draft.id;
     const body = {
       name: draft.name,
       templateId: draft.templateId,
@@ -102,6 +117,7 @@ export function CharacterSheetsPanel({
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       setDraft({ ...draft, id: saved.id });
+      if (wasNew) navigate(`/worlds/${worldId}/sheets/characters/${saved.id}`);
       await refresh();
     } catch (err) {
       onError(err);
@@ -113,6 +129,7 @@ export function CharacterSheetsPanel({
     try {
       await api.remove(draft.id);
       setDraft(null);
+      navigate(`/worlds/${worldId}/sheets/characters`);
       await refresh();
     } catch (err) {
       onError(err);
@@ -151,7 +168,7 @@ export function CharacterSheetsPanel({
             <li key={s.id}>
               <button
                 className={s.id === draft?.id ? 'article-link active' : 'article-link'}
-                onClick={() => open(s.id)}
+                onClick={() => navigate(`/worlds/${worldId}/sheets/characters/${s.id}`)}
               >
                 <span>{s.name}</span>
               </button>

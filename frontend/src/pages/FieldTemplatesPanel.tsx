@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   fieldTemplatesApi,
   builtinFieldTemplatesApi,
@@ -23,6 +24,8 @@ const KIND_LABEL: Record<TemplateKind, string> = {
 };
 
 export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, onError }: Props) {
+  const navigate = useNavigate();
+  const { templateId: urlTemplateId } = useParams<{ templateId: string }>();
   const api = fieldTemplatesApi(worldId);
   const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
   // What kind of template a new one (starter or built-from-scratch) will be.
@@ -35,6 +38,18 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
   useEffect(() => {
     builtinFieldTemplatesApi.list().then(setBuiltins).catch(onError);
   }, [onError]);
+
+  // The URL is the source of truth for which template is open in the builder
+  // (ADR-0053); "Build new" has no id and stays purely local state.
+  useEffect(() => {
+    if (!urlTemplateId || urlTemplateId === editing?.id) return;
+    const found = templates.find((t) => t.id === urlTemplateId);
+    if (found) {
+      setEditing(found);
+      setBuilding(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTemplateId, templates]);
 
   const buildersForKind = builtins.filter((b) => b.kind === newKind);
 
@@ -56,6 +71,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       else await api.create(body);
       setBuilding(false);
       setEditing(null);
+      navigate(`/worlds/${worldId}/sheets/templates`);
       onChanged();
     } catch (err) {
       onError(err);
@@ -85,6 +101,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
         onCancel={() => {
           setBuilding(false);
           setEditing(null);
+          navigate(`/worlds/${worldId}/sheets/templates`);
         }}
       />
     );
@@ -133,10 +150,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
           <li key={t.id} className="rel-row">
             <button
               className="link-button template-open"
-              onClick={() => {
-                setEditing(t);
-                setBuilding(true);
-              }}
+              onClick={() => navigate(`/worlds/${worldId}/sheets/templates/${t.id}`)}
             >
               <strong>{t.name}</strong>{' '}
               <small className="muted">

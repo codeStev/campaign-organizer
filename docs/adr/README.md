@@ -59,6 +59,7 @@ the old one.
 | [0050](0050-bounded-contexts-and-context-map.md) | Bounded contexts and context map | Accepted |
 | [0051](0051-java25-springboot41-junit6.md) | Java 25, Spring Boot 4.1, JUnit 6 (supersedes 0001 version line) | Accepted |
 | [0052](0052-shared-field-templates.md) | Shared field templates for sheets and statblocks (renames SheetTemplate) | Accepted |
+| [0053](0053-deep-linking.md) | Deep linking via client-side routing (react-router-dom) | Accepted |
 
 ## Template
 

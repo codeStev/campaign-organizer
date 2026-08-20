@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { statblocksApi, Statblock, Campaign, FieldTemplate, FieldType } from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
 import { TemplateForm } from '../components/TemplateForm';
@@ -59,6 +60,8 @@ function coerceRowValue(type: FieldType | undefined, raw: string): unknown {
 }
 
 export function StatblocksPanel({ worldId, templates, campaigns, onError }: Props) {
+  const navigate = useNavigate();
+  const { statblockId: urlStatblockId } = useParams<{ statblockId: string }>();
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Statblock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,6 +128,13 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
     });
   }
 
+  // The URL is the source of truth for which statblock is open (ADR-0053).
+  useEffect(() => {
+    if (!urlStatblockId || urlStatblockId === draft.id) return;
+    api.get(urlStatblockId).then(edit).catch(onError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlStatblockId]);
+
   async function save() {
     const stats: Record<string, unknown> = {};
     for (const r of draft.rows) {
@@ -148,6 +158,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       if (draft.id) await api.update(draft.id, body);
       else await api.create(body);
       setDraft({ ...EMPTY, campaignId: filterCampaign });
+      navigate(`/worlds/${worldId}/sheets/statblocks`);
       await refresh();
     } catch (err) {
       onError(err);
@@ -157,7 +168,10 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   async function remove(sb: Statblock) {
     try {
       await api.remove(sb.id);
-      if (draft.id === sb.id) setDraft(EMPTY);
+      if (draft.id === sb.id) {
+        setDraft(EMPTY);
+        navigate(`/worlds/${worldId}/sheets/statblocks`);
+      }
       await refresh();
     } catch (err) {
       onError(err);
@@ -171,7 +185,14 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   return (
     <div className="sheets-panel">
       <div className="sheets-list-col">
-        <button onClick={() => setDraft({ ...EMPTY, campaignId: filterCampaign })}>+ New statblock</button>
+        <button
+          onClick={() => {
+            setDraft({ ...EMPTY, campaignId: filterCampaign });
+            navigate(`/worlds/${worldId}/sheets/statblocks`);
+          }}
+        >
+          + New statblock
+        </button>
         {campaigns.length > 0 && (
           <select
             value={filterCampaign}
@@ -218,7 +239,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
               />
               <button
                 className={sb.id === draft.id ? 'article-link active' : 'article-link'}
-                onClick={() => edit(sb)}
+                onClick={() => navigate(`/worlds/${worldId}/sheets/statblocks/${sb.id}`)}
               >
                 <span>{sb.name}</span>
               </button>

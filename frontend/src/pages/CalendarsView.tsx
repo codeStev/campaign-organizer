@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
 
 interface Props {
@@ -21,6 +22,8 @@ const EMPTY_DRAFT: Draft = {
 };
 
 export function CalendarsView({ worldId, onAuthExpired }: Props) {
+  const navigate = useNavigate();
+  const { calendarId: urlCalendarId } = useParams<{ calendarId: string }>();
   const api = useMemo(() => calendarsApi(worldId), [worldId]);
   const [list, setList] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +61,15 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
     });
   }
 
+  // The URL is the source of truth for which calendar is open (ADR-0053). No
+  // GET-by-id endpoint exists, so resolve against the already-loaded list.
+  useEffect(() => {
+    if (!urlCalendarId || urlCalendarId === draft.id) return;
+    const found = list.find((c) => c.id === urlCalendarId);
+    if (found) edit(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCalendarId, list]);
+
   function setMonth(index: number, patch: Partial<CalendarMonthInput>) {
     setDraft((d) => ({
       ...d,
@@ -82,6 +94,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       if (draft.id) await api.update(draft.id, body);
       else await api.create(body);
       setDraft(EMPTY_DRAFT);
+      navigate(`/worlds/${worldId}/calendars`);
       await refresh();
     } catch (err) {
       handleError(err);
@@ -91,7 +104,10 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
   async function remove(calendar: Calendar) {
     try {
       await api.remove(calendar.id);
-      if (draft.id === calendar.id) setDraft(EMPTY_DRAFT);
+      if (draft.id === calendar.id) {
+        setDraft(EMPTY_DRAFT);
+        navigate(`/worlds/${worldId}/calendars`);
+      }
       await refresh();
     } catch (err) {
       handleError(err);
@@ -101,13 +117,20 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <button onClick={() => setDraft(EMPTY_DRAFT)}>+ New calendar</button>
+        <button
+          onClick={() => {
+            setDraft(EMPTY_DRAFT);
+            navigate(`/worlds/${worldId}/calendars`);
+          }}
+        >
+          + New calendar
+        </button>
         <ul className="article-list">
           {list.map((c) => (
             <li key={c.id}>
               <button
                 className={c.id === draft.id ? 'article-link active' : 'article-link'}
-                onClick={() => edit(c)}
+                onClick={() => navigate(`/worlds/${worldId}/calendars/${c.id}`)}
               >
                 <span>{c.name}</span>
                 <small className="muted">{c.months.length} months</small>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   whiteboardsApi,
   Whiteboard,
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
+  const navigate = useNavigate();
+  const { whiteboardId: urlWhiteboardId } = useParams<{ whiteboardId: string }>();
   const api = useMemo(() => whiteboardsApi(worldId), [worldId]);
   const [list, setList] = useState<Whiteboard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +55,13 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
     setDirty(false);
   }
 
+  // The URL is the source of truth for which whiteboard is open (ADR-0053).
+  useEffect(() => {
+    if (!urlWhiteboardId || urlWhiteboardId === selected?.id) return;
+    api.get(urlWhiteboardId).then(select).catch(handleError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlWhiteboardId]);
+
   async function createBoard() {
     const name = window.prompt('Whiteboard name?');
     if (!name) return;
@@ -59,6 +69,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       const created = await api.create({ name, nodes: [], edges: [] });
       await refresh();
       select(created);
+      navigate(`/worlds/${worldId}/whiteboards/${created.id}`);
     } catch (err) {
       handleError(err);
     }
@@ -79,7 +90,10 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
   async function removeBoard(board: Whiteboard) {
     try {
       await api.remove(board.id);
-      if (selected?.id === board.id) setSelected(null);
+      if (selected?.id === board.id) {
+        setSelected(null);
+        navigate(`/worlds/${worldId}/whiteboards`);
+      }
       await refresh();
     } catch (err) {
       handleError(err);
@@ -101,7 +115,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
             <li key={b.id}>
               <button
                 className={b.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => select(b)}
+                onClick={() => navigate(`/worlds/${worldId}/whiteboards/${b.id}`)}
               >
                 <span>{b.name}</span>
               </button>

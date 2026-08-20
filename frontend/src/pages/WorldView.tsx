@@ -1,4 +1,5 @@
 import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   articlesApi,
   articleRevisionsApi,
@@ -62,6 +63,7 @@ type Tab =
   | 'sheets'
   | 'whiteboards';
 
+/** Route path segments, in nav order. */
 const TABS: { key: Tab; label: string }[] = [
   { key: 'articles', label: 'Articles' },
   { key: 'maps', label: 'Maps' },
@@ -76,12 +78,19 @@ const TABS: { key: Tab; label: string }[] = [
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
   const api = articlesApi(worldId);
   const media = mediaApi(worldId);
+  const navigate = useNavigate();
+  // WorldView declares its own nested <Routes> below, so it's an ancestor of
+  // wherever "articles/:articleId" matches — useParams() can't see that param
+  // from here (only a genuine route-element descendant can). Read it from the
+  // URL directly instead; useLocation() works from any depth.
+  const location = useLocation();
+  const articleIdMatch = location.pathname.match(/\/articles\/([^/]+)$/);
+  const articleId = articleIdMatch ? articleIdMatch[1] : undefined;
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [previewHtml, setPreviewHtml] = useState('');
   const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
-  const [tab, setTab] = useState<Tab>('articles');
   // Article panel mode: read (rendered, clickable links) vs edit (TipTap form).
   const [mode, setMode] = useState<'read' | 'edit'>('read');
   // Active article-type filters; empty set means no filtering (show all).
@@ -182,23 +191,39 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     });
   }
 
-  async function openArticle(id: string) {
-    try {
-      const article = await api.get(id);
-      setDraft({
-        id: article.id,
-        title: article.title,
-        template: article.template,
-        body: article.body ?? '',
-      });
-      setPreviewHtml(article.bodyHtml ?? '');
-      setMode('read');
-      setRevisions(null);
-      setDiffPick([]);
-      setUsages(null);
-    } catch (err) {
-      handleError(err);
-    }
+  const loadArticle = useCallback(
+    async (id: string) => {
+      try {
+        const article = await api.get(id);
+        setDraft({
+          id: article.id,
+          title: article.title,
+          template: article.template,
+          body: article.body ?? '',
+        });
+        setPreviewHtml(article.bodyHtml ?? '');
+        setMode('read');
+        setRevisions(null);
+        setDiffPick([]);
+        setUsages(null);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, handleError],
+  );
+
+  // The URL is the source of truth for which article is open (ADR-0053): clicking an
+  // article navigates, and this effect does the actual load — including on a direct
+  // deep link, a page reload, or browser back/forward.
+  useEffect(() => {
+    if (!articleId || articleId === draft.id) return;
+    void loadArticle(articleId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleId]);
+
+  function openArticle(id: string) {
+    navigate(`/worlds/${worldId}/articles/${id}`);
   }
 
   async function toggleUsages() {
@@ -281,8 +306,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   }
 
   function openFromMap(id: string) {
-    setTab('articles');
-    void openArticle(id);
+    openArticle(id);
   }
 
   const openPalette = useCallback(async () => {
@@ -313,7 +337,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       label: `Go to ${t.label}`,
       group: 'Navigate',
       keywords: t.key,
-      run: () => setTab(t.key),
+      run: () => navigate(`/worlds/${worldId}/${t.key}`),
     }));
     const articleCmds: Command[] = paletteArticles.map((a) => ({
       id: `article:${a.id}`,
@@ -338,6 +362,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const wasNew = !draft.id;
     const payload = { title: draft.title, template: draft.template, body: draft.body };
     try {
       const saved = draft.id
@@ -346,6 +371,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setDraft({ id: saved.id, title: saved.title, template: saved.template, body: saved.body ?? '' });
       setPreviewHtml(saved.bodyHtml ?? '');
       setMode('read');
+      if (wasNew) navigate(`/worlds/${worldId}/articles/${saved.id}`);
       await refresh(query, campaignFilter);
     } catch (err) {
       handleError(err);
@@ -358,6 +384,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       await api.remove(draft.id);
       setDraft(EMPTY_DRAFT);
       setPreviewHtml('');
+      navigate(`/worlds/${worldId}/articles`);
       await refresh(query, campaignFilter);
     } catch (err) {
       handleError(err);
@@ -372,113 +399,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     }
   }
 
-  return (
-    <section className="world-view">
-      <CommandPalette
-        open={paletteOpen}
-        commands={commands}
-        onClose={() => setPaletteOpen(false)}
-      />
-      {printOpen && (
-        <PrintView
-          worldId={worldId}
-          worldName={worldName}
-          campaigns={campaigns}
-          onClose={() => setPrintOpen(false)}
-          onError={handleError}
-        />
-      )}
-      <div className="world-view-bar">
-        <button className="link-button" onClick={onBack}>
-          ← Worlds
-        </button>
-        <h2>{worldName}</h2>
-        <button
-          className="link-button palette-btn"
-          onClick={() => void openPalette()}
-          title="Jump to anything (Ctrl/⌘-K)"
-        >
-          ⌘K Jump…
-        </button>
-        <button
-          className="link-button print-btn"
-          onClick={() => setPrintOpen(true)}
-          title="Print or save as PDF"
-        >
-          🖨 Print
-        </button>
-        <button className="link-button export-btn" onClick={handleExport} title="Download world as JSON">
-          ⭳ Export
-        </button>
-        <nav className="tabs">
-          <button
-            className={tab === 'articles' ? 'tab active' : 'tab'}
-            onClick={() => setTab('articles')}
-          >
-            Articles
-          </button>
-          <button
-            className={tab === 'maps' ? 'tab active' : 'tab'}
-            onClick={() => setTab('maps')}
-          >
-            Maps
-          </button>
-          <button
-            className={tab === 'timelines' ? 'tab active' : 'tab'}
-            onClick={() => setTab('timelines')}
-          >
-            Timelines
-          </button>
-          <button
-            className={tab === 'calendars' ? 'tab active' : 'tab'}
-            onClick={() => setTab('calendars')}
-          >
-            Calendars
-          </button>
-          <button
-            className={tab === 'relationships' ? 'tab active' : 'tab'}
-            onClick={() => setTab('relationships')}
-          >
-            Relationships
-          </button>
-          <button
-            className={tab === 'campaigns' ? 'tab active' : 'tab'}
-            onClick={() => setTab('campaigns')}
-          >
-            Campaigns
-          </button>
-          <button
-            className={tab === 'sheets' ? 'tab active' : 'tab'}
-            onClick={() => setTab('sheets')}
-          >
-            Sheets
-          </button>
-          <button
-            className={tab === 'whiteboards' ? 'tab active' : 'tab'}
-            onClick={() => setTab('whiteboards')}
-          >
-            Whiteboards
-          </button>
-        </nav>
-      </div>
-
-      {error && <p className="error">{error}</p>}
-
-      {tab === 'maps' ? (
-        <MapsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
-      ) : tab === 'timelines' ? (
-        <TimelinesView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
-      ) : tab === 'calendars' ? (
-        <CalendarsView worldId={worldId} onAuthExpired={onAuthExpired} />
-      ) : tab === 'relationships' ? (
-        <RelationshipsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
-      ) : tab === 'campaigns' ? (
-        <CampaignsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
-      ) : tab === 'sheets' ? (
-        <SheetsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
-      ) : tab === 'whiteboards' ? (
-        <WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />
-      ) : (
+  const articlesPane = (
       <div className="wiki-layout">
         <aside className="wiki-sidebar">
           <input
@@ -492,6 +413,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
               setDraft(EMPTY_DRAFT);
               setPreviewHtml('');
               setMode('edit');
+              navigate(`/worlds/${worldId}/articles`);
             }}
           >
             + New article
@@ -713,7 +635,95 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           )}
         </div>
       </div>
+  );
+
+  const mapsPane = <MapsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />;
+  const timelinesPane = (
+    <TimelinesView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
+  );
+  const calendarsPane = <CalendarsView worldId={worldId} onAuthExpired={onAuthExpired} />;
+  const campaignsPane = (
+    <CampaignsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
+  );
+  const whiteboardsPane = <WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />;
+
+  return (
+    <section className="world-view">
+      <CommandPalette
+        open={paletteOpen}
+        commands={commands}
+        onClose={() => setPaletteOpen(false)}
+      />
+      {printOpen && (
+        <PrintView
+          worldId={worldId}
+          worldName={worldName}
+          campaigns={campaigns}
+          onClose={() => setPrintOpen(false)}
+          onError={handleError}
+        />
       )}
+      <div className="world-view-bar">
+        <button className="link-button" onClick={onBack}>
+          ← Worlds
+        </button>
+        <h2>{worldName}</h2>
+        <button
+          className="link-button palette-btn"
+          onClick={() => void openPalette()}
+          title="Jump to anything (Ctrl/⌘-K)"
+        >
+          ⌘K Jump…
+        </button>
+        <button
+          className="link-button print-btn"
+          onClick={() => setPrintOpen(true)}
+          title="Print or save as PDF"
+        >
+          🖨 Print
+        </button>
+        <button className="link-button export-btn" onClick={handleExport} title="Download world as JSON">
+          ⭳ Export
+        </button>
+        <nav className="tabs">
+          {TABS.map((t) => (
+            <NavLink
+              key={t.key}
+              className={({ isActive }) => (isActive ? 'tab active' : 'tab')}
+              to={t.key === 'articles' && articleId ? `articles/${articleId}` : t.key}
+            >
+              {t.label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
+      {error && <p className="error">{error}</p>}
+
+      <Routes>
+        <Route index element={<Navigate to="articles" replace />} />
+        <Route path="articles" element={articlesPane} />
+        <Route path="articles/:articleId" element={articlesPane} />
+        <Route path="maps" element={mapsPane} />
+        <Route path="maps/:mapId" element={mapsPane} />
+        <Route path="timelines" element={timelinesPane} />
+        <Route path="timelines/:timelineId" element={timelinesPane} />
+        <Route path="calendars" element={calendarsPane} />
+        <Route path="calendars/:calendarId" element={calendarsPane} />
+        <Route
+          path="relationships"
+          element={<RelationshipsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />}
+        />
+        <Route path="campaigns" element={campaignsPane} />
+        <Route path="campaigns/:campaignId" element={campaignsPane} />
+        <Route
+          path="sheets/*"
+          element={<SheetsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />}
+        />
+        <Route path="whiteboards" element={whiteboardsPane} />
+        <Route path="whiteboards/:whiteboardId" element={whiteboardsPane} />
+        <Route path="*" element={<Navigate to="articles" replace />} />
+      </Routes>
     </section>
   );
 }

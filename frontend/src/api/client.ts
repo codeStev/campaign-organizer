@@ -748,6 +748,7 @@ export function statblocksApi(worldId: string) {
   return {
     list: (campaignId?: string) =>
       request<Statblock[]>(campaignId ? `${base}?campaignId=${campaignId}` : base),
+    get: (id: string) => request<Statblock>(`${base}/${id}`),
     create: (body: StatblockRequest) =>
       request<Statblock>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: StatblockRequest) =>
