@@ -14,6 +14,7 @@ scripts/node_modules/
 
 # Local runtime data
 data/
+backups/
 
 # IDE / OS
 .idea/
