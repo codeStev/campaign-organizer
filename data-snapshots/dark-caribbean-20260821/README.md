@@ -5,8 +5,10 @@ Markdown-editor migration (ADR-0054) landed on `master`. Kept on its own
 branch (`backup/dark-caribbean-20260821`) so it never lands on `master` or
 mixes into feature history — this branch exists only to hold this snapshot.
 
-- `database.dump` — full `pg_dump` of the `campaign_organizer` database,
-  custom format (`-Fc`).
+- `database.sql` — full `pg_dump` of the `campaign_organizer` database,
+  **plain SQL format** (`-Fp`) — restores anywhere via plain `psql`, no
+  `pg_restore`/archive-version compatibility concerns (see ADR-0055, which
+  found and documents a real incompatibility with the custom format).
 - `media/` — every file from the app's media volume (`APP_MEDIA_DIR`),
   flat by media id (matches the `media` table's stored filenames).
 
@@ -16,18 +18,17 @@ mixes into feature history — this branch exists only to hold this snapshot.
    e.g. from a checkout of this repo: `cp .env.example .env && docker compose
    up -d db` and wait for it to report healthy (`docker compose ps`).
 
-2. **Restore the database.** From the repo root, with this branch checked
-   out (or after copying `database.dump` next to your compose file):
+2. **Restore the database**, against a freshly created, empty database (a
+   just-started `docker compose up -d db` on an empty volume already is
+   one). From the repo root, with this branch checked out:
    ```bash
-   docker cp data-snapshots/dark-caribbean-20260821/database.dump \
-     campaign_organizer-db-1:/tmp/restore.dump
+   docker cp data-snapshots/dark-caribbean-20260821/database.sql \
+     campaign_organizer-db-1:/tmp/restore.sql
    docker exec campaign_organizer-db-1 \
-     pg_restore -U app -d campaign_organizer --clean --if-exists \
-     /tmp/restore.dump
+     psql -U app -d campaign_organizer -f /tmp/restore.sql
    ```
-   `--clean --if-exists` drops existing objects first, so this is safe to
-   run against a freshly created, empty database — it will error harmlessly
-   on the "doesn't exist yet" drops the first time, which is expected.
+   Verified end-to-end (restored into a scratch Postgres, row counts
+   checked) before this snapshot was pushed.
 
 3. **Restore the media files.** Start the backend once so its media
    directory/volume exists, then copy the files in:
