@@ -1,7 +1,8 @@
 # Private Docker registry, run on a tailnet node (e.g. the deploy server itself).
 # Only bound to localhost: reachability from the rest of the tailnet comes from
-# `tailscale serve` proxying HTTPS to this container, not from a published port
-# on the host's real network interfaces. See README.md in this directory.
+# Caddy (already configured separately, ADR-0058) proxying HTTPS to this
+# container, not from a published port on the host's real network interfaces.
+# See README.md in this directory.
 services:
   registry:
     image: registry:2
