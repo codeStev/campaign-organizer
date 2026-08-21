@@ -136,6 +136,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   character sheet/statblock/field template/whiteboard currently open — so
   reloading, bookmarking, sharing a link, and browser back/forward all land
   you back in the same place. (ADR-0053; refines FR-26.)
+- **FR-36 Instance backup.** One-click download of a full instance backup
+  (a `pg_dump` of the whole database plus every media file) as a single ZIP;
+  restore is a documented manual procedure, not a UI feature. (ADR-0055)
 
 ---
 
@@ -177,4 +180,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 4 | Character sheets & dice | FR-16 … FR-19 |
 | 5 | Polish | FR-20 … FR-22 |
 | 6 | Prep & print (paper-first workflow) | FR-25 … FR-35 |
+| 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |

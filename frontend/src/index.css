@@ -262,6 +262,13 @@ button:disabled {
   gap: 1rem;
 }
 
+.worlds-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .wiki-main {
   display: flex;
   flex-direction: column;

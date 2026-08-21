@@ -808,6 +808,33 @@ export async function exportWorld(worldId: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/** Downloads a full instance backup (database + media) as a ZIP (ADR-0055). */
+export async function downloadBackup(): Promise<void> {
+  const token = getToken();
+  const response = await fetch('/api/backup', {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (response.status === 401) {
+    clearToken();
+    throw new ApiError(401, 'Not authenticated');
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeProblemDetail(response));
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : 'campaign-organizer-backup.zip';
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ---- Whiteboards (mirrors docs/api/openapi.yaml) ----
 
 export interface WhiteboardNode {

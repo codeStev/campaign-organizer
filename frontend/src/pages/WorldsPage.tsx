@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { worldsApi, World, ApiError } from '../api/client';
+import { worldsApi, downloadBackup, World, ApiError } from '../api/client';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -12,6 +12,7 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backingUp, setBackingUp] = useState(false);
 
   useEffect(() => {
     void refresh();
@@ -58,6 +59,17 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
     setError(err instanceof Error ? err.message : 'Something went wrong');
   }
 
+  async function handleBackup() {
+    setBackingUp(true);
+    try {
+      await downloadBackup();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBackingUp(false);
+    }
+  }
+
   return (
     <section>
       <form className="card" onSubmit={handleCreate}>
@@ -77,7 +89,12 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
 
       {error && <p className="error">{error}</p>}
 
-      <h2>Worlds</h2>
+      <div className="worlds-head">
+        <h2>Worlds</h2>
+        <button className="link-button" onClick={handleBackup} disabled={backingUp} title="Download a full backup (database + media)">
+          {backingUp ? 'Backing up…' : '⬇ Backup'}
+        </button>
+      </div>
       {loading ? (
         <p>Loading…</p>
       ) : worlds.length === 0 ? (
