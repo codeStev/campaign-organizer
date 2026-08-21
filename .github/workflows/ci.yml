@@ -28,9 +28,10 @@ jobs:
           cache: gradle
       # Unit + Testcontainers integration (ADR-0011); the runner's Docker daemon
       # backs Testcontainers. ArchUnit fitness functions run as part of check.
+      # Invoked from the repo root: the Gradle wrapper lives there (multi-module
+      # build, ADR-0056), with the backend as the :backend subproject.
       - name: Build and test
-        working-directory: backend
-        run: ./gradlew --no-daemon --build-cache check
+        run: ./gradlew --no-daemon --build-cache :backend:check
 
   frontend:
     name: Frontend (contract + typecheck + build)
