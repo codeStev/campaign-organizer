@@ -90,8 +90,8 @@ paths:
       responses:
         '200':
           description: >
-            A ZIP containing database.dump (a pg_dump custom-format dump of the
-            whole database) and media/<path> for every file under the media
+            A ZIP containing database.sql (a plain-SQL pg_dump of the whole
+            database) and media/<path> for every file under the media
             volume. See ADR-0055 for the restore procedure; this endpoint only
             produces the backup, it does not restore one.
           content:

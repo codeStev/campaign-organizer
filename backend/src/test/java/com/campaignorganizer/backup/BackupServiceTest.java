@@ -58,8 +58,8 @@ class BackupServiceTest {
         service().writeBackup(out);
         Map<String, byte[]> entries = readZip(out.toByteArray());
 
-        assertThat(entries).containsKey("database.dump");
-        assertThat(entries.get("database.dump")).isEqualTo(FAKE_DUMP);
+        assertThat(entries).containsKey("database.sql");
+        assertThat(entries.get("database.sql")).isEqualTo(FAKE_DUMP);
         assertThat(entries).containsKey("media/cover.png");
         assertThat(new String(entries.get("media/cover.png"), StandardCharsets.UTF_8)).isEqualTo("image-bytes");
         assertThat(entries).containsKey("media/sub/map.jpg");
@@ -73,7 +73,7 @@ class BackupServiceTest {
         service().writeBackup(out);
         Map<String, byte[]> entries = readZip(out.toByteArray());
 
-        assertThat(entries).containsOnlyKeys("database.dump");
+        assertThat(entries).containsOnlyKeys("database.sql");
     }
 
     @Test

@@ -1,4 +1,4 @@
-# ADR-0055: One-click instance backup (ZIP of pg_dump + media)
+# ADR-0055: One-click instance backup (ZIP of a plain-SQL pg_dump + media)
 
 - Status: Accepted
 - Date: 2026-08-21
@@ -17,11 +17,23 @@ app up again elsewhere.
 
 ## Decision
 **One new endpoint, `GET /api/backup`, streams a ZIP containing:**
-- `database.dump` — a real `pg_dump` of the whole database, custom format
-  (`-Fc`): compressed, and restorable with `pg_restore` (supports selective
-  and parallel restore, more forgiving across minor Postgres version drift
-  than a raw SQL dump).
+- `database.sql` — a real `pg_dump` of the whole database, **plain SQL
+  format** (`-Fp`), restorable anywhere via plain `psql`.
 - `media/<relative path>` — every file under `APP_MEDIA_DIR`, recursively.
+
+Plain SQL, not `pg_dump`'s custom format (`-Fc`), despite custom format's
+usual advantages (compression, selective/parallel restore): custom-format
+archives carry their own internal archive-format version, independent of the
+Postgres wire-protocol/SQL compatibility between client and server. Verified
+directly — a `pg_dump -Fc` produced by the v18 client this image ends up
+installing (see below) failed to restore into the project's own
+`postgres:16-alpine` with `pg_restore: error: unsupported version (1.16) in
+file header`, even though that same v18 client dumped *from* the v16 server
+without issue. Plain SQL has no such archive-versioning layer — a dump taken
+today restores via `psql` on essentially any Postgres, on any deployment
+target, without caring which `pg_dump`/`pg_restore` versions are involved.
+For a whole-database, one-shot backup/restore (not selective restore of one
+table), plain SQL's simplicity is a strict win here.
 
 **Scope: backup only, not restore.** Restoring onto a new deployment is a
 one-time, deliberate operation, documented below as a manual CLI procedure —
@@ -79,8 +91,17 @@ are visible in `docker compose logs backend` (exit code + stderr logged).
 ## Restore procedure (manual, documented — not built)
 1. Unzip the backup: `unzip campaign-organizer-backup-<ts>.zip -d restore/`.
 2. Bring up a fresh stack (`docker compose up -d db`), then:
-   `docker exec -i <db-container> pg_restore -U app -d campaign_organizer
-   --clean --if-exists < restore/database.dump`.
+   ```bash
+   docker cp restore/database.sql <db-container>:/tmp/restore.sql
+   docker exec <db-container> psql -U app -d campaign_organizer -f /tmp/restore.sql
+   ```
+   Run this against a freshly created, empty database (a just-started
+   `docker compose up -d db` on an empty volume already is one). One
+   harmless error is expected and safe to ignore: `unrecognized
+   configuration parameter "transaction_timeout"` — a preamble `SET` for a
+   session parameter that only exists on newer Postgres than the target
+   server; it doesn't affect any data or schema statement (verified by row
+   count after restore).
 3. Copy `restore/media/*` into the new deployment's `media-data` volume
    (e.g. `docker cp restore/media/. <backend-container>:/data/media/`).
 4. Start the backend/frontend and verify.
@@ -97,6 +118,9 @@ are visible in `docker compose logs backend` (exit code + stderr logged).
   later.
 
 ## Alternatives considered
+- **`pg_dump`'s custom format (`-Fc`)**: initial choice, reverted after
+  actually testing a restore — see Decision. Real, verified incompatibility,
+  not a theoretical one.
 - **Extend `WorldExportController`** to include media and wrap multiple
   worlds: rejected — that endpoint's JSON bundle format has no way to carry
   binary fidelity or non-world data (auth config aside, which is

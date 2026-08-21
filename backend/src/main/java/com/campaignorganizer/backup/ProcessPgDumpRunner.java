@@ -42,8 +42,14 @@ public class ProcessPgDumpRunner implements PgDumpRunner {
 
     @Override
     public InputStream dump() throws IOException {
+        // Plain SQL (-Fp), not custom format: pg_dump's custom-format archive has its
+        // own internal version that a same-or-newer *server* connection doesn't help
+        // with — an older pg_restore (e.g. bundled with postgres:16-alpine) can fail
+        // to read an archive written by a newer pg_dump (verified: v18 dump -> v16
+        // pg_restore fails "unsupported version in file header"). Plain SQL has no
+        // such archive-format versioning; it restores anywhere via `psql` (ADR-0055).
         ProcessBuilder builder = new ProcessBuilder(
-                "pg_dump", "-h", host, "-p", port, "-U", username, "-d", database, "-Fc");
+                "pg_dump", "-h", host, "-p", port, "-U", username, "-d", database, "-Fp");
         builder.environment().put("PGPASSWORD", password);
         Process process = builder.start();
         process.getOutputStream().close();

@@ -35,7 +35,7 @@ public class BackupService {
     }
 
     private void writeDatabaseDump(ZipOutputStream zip) throws IOException {
-        zip.putNextEntry(new ZipEntry("database.dump"));
+        zip.putNextEntry(new ZipEntry("database.sql"));
         try (InputStream dump = pgDumpRunner.dump()) {
             dump.transferTo(zip);
         }
