@@ -25,12 +25,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-          cache: maven
+          cache: gradle
       # Unit + Testcontainers integration (ADR-0011); the runner's Docker daemon
-      # backs Testcontainers. ArchUnit fitness functions run as part of verify.
+      # backs Testcontainers. ArchUnit fitness functions run as part of check.
       - name: Build and test
         working-directory: backend
-        run: mvn -B --no-transfer-progress verify
+        run: ./gradlew --no-daemon --build-cache check
 
   frontend:
     name: Frontend (contract + typecheck + build)
