@@ -48,11 +48,14 @@ real Postgres or `pg_dump` binary needed for the automated suite. Host/port/
 database are parsed from `spring.datasource.url`; the password comes from
 `spring.datasource.password` via `PGPASSWORD`.
 
-**`backend/Dockerfile`'s runtime stage gains `postgresql-client-16`**
+**`backend/Dockerfile`'s runtime stage gains `postgresql-client`**
 (`eclipse-temurin:25-jre` ships no Postgres client tools today), installed
-from the official PGDG apt repository and pinned to major version 16 to
-match `docker-compose.yml`'s `postgres:16-alpine` — an unpinned or
-mismatched client risks failing to dump a newer server.
+from the base image's own Ubuntu repos — no third-party apt repo needed.
+`pg_dump` only needs to be the same version or newer than the server it's
+dumping (docker-compose.yml's `postgres:16-alpine`); the base image's default
+package (verified: Ubuntu 26.04 ships `postgresql-client-18`) already
+satisfies that, confirmed by actually dumping the real running server with
+it before committing to this approach.
 
 **No automated integration test shells a real `pg_dump`.** The Maven build
 environment (`maven:3.9-eclipse-temurin-25`, used locally via Docker per this
@@ -86,7 +89,7 @@ are visible in `docker compose logs backend` (exit code + stderr logged).
 - Gives the owner a genuine, restorable, one-click way to get all instance
   data (not just one world, and including binaries) off the current
   environment before picking a deployment target.
-- Runtime Docker image grows slightly (adds `postgresql-client-16`); build
+- Runtime Docker image grows slightly (adds `postgresql-client`); build
   time increases marginally for the extra apt install.
 - A large media library means a slow, non-resumable single download; no
   incremental/scheduled backup is provided — acceptable for the stated need
