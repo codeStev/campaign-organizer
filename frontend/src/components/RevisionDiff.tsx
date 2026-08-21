@@ -11,24 +11,33 @@ interface Props {
 
 type Seg = { type: 'same' | 'add' | 'del'; text: string };
 
-/** A short, stable marker for an image so its presence (and changes) show in the diff. */
-function imageMarker(tag: string): string {
-  const alt = /alt="([^"]*)"/i.exec(tag)?.[1];
-  const src = /src="([^"]*)"/i.exec(tag)?.[1] ?? '';
-  // Our media URLs are /api/media/{id}/content — the id is the stable identifier.
+/** Our media URLs are /api/media/{id}/content — the id is the stable identifier. */
+function imageLabel(alt: string | undefined, src: string): string {
   const id = /\/api\/media\/([^/]+)\/content/.exec(src)?.[1];
-  const label = alt || id || src || 'image';
-  return `\n🖼 [image: ${label}]\n`;
+  return alt || id || src || 'image';
 }
 
-/** HTML → readable plain text, preserving block boundaries and image markers. */
-function textFromHtml(html: string): string {
-  const withBreaks = (html || '')
-    .replace(/<img\b[^>]*>/gi, imageMarker)
-    .replace(/<\/(p|h1|h2|h3|h4|li|div|blockquote|tr)>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n');
-  const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
-  return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trimEnd();
+/** A short, stable marker for a raw-HTML sized image (still valid in Markdown source). */
+function imageMarkerFromHtml(tag: string): string {
+  const alt = /alt="([^"]*)"/i.exec(tag)?.[1];
+  const src = /src="([^"]*)"/i.exec(tag)?.[1] ?? '';
+  return `\n🖼 [image: ${imageLabel(alt, src)}]\n`;
+}
+
+/**
+ * Markdown -> readable plain text, preserving image markers (ADR-0054). No
+ * HTML-tag stripping here — the body is Markdown now, and running it through
+ * DOMParser (as the old HTML-diffing version did) would mis-parse a literal
+ * "<"/">" in ordinary prose (e.g. "AC < 15") as a tag and drop it.
+ */
+function textFromMarkdown(markdown: string): string {
+  return (markdown || '')
+    .replace(/<img\b[^>]*>/gi, imageMarkerFromHtml)
+    .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (_match, alt: string, src: string) =>
+      `\n🖼 [image: ${imageLabel(alt, src)}]\n`,
+    )
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 }
 
 /** Generic LCS diff over an array of items; returns ops in order. */
@@ -174,7 +183,7 @@ function SegText({ segs }: { segs: Seg[] }) {
 }
 
 export function RevisionDiff({ a, b }: Props) {
-  const rows = buildRows(textFromHtml(a.body), textFromHtml(b.body));
+  const rows = buildRows(textFromMarkdown(a.body), textFromMarkdown(b.body));
   const unchanged = rows.every((r) => r.type === 'same');
 
   return (

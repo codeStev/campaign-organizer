@@ -2446,6 +2446,7 @@ components:
         notes:
           type: [string, "null"]
           maxLength: 20000
+          description: Freeform notes (Markdown, see ADR-0054).
 
     Statblock:
       type: object
@@ -2473,6 +2474,7 @@ components:
           additionalProperties: true
         notes:
           type: [string, "null"]
+          description: Freeform notes (Markdown, see ADR-0054).
         createdAt:
           type: string
           format: date-time
@@ -2592,6 +2594,7 @@ components:
         body:
           type: [string, "null"]
           maxLength: 20000
+          description: Beat notes (Markdown, see ADR-0054).
         done:
           type: boolean
           default: false
@@ -2628,6 +2631,7 @@ components:
           type: string
         body:
           type: [string, "null"]
+          description: Beat notes (Markdown, see ADR-0054).
         done:
           type: boolean
         articleIds:
@@ -2666,7 +2670,7 @@ components:
         notes:
           type: [string, "null"]
           maxLength: 20000
-          description: Free-text GM notes for the campaign.
+          description: Free-text GM notes for the campaign (Markdown, see ADR-0054).
 
     Campaign:
       type: object
@@ -2684,6 +2688,7 @@ components:
           type: [string, "null"]
         notes:
           type: [string, "null"]
+          description: Free-text GM notes for the campaign (Markdown, see ADR-0054).
         createdAt:
           type: string
           format: date-time
@@ -2709,10 +2714,11 @@ components:
         summary:
           type: [string, "null"]
           maxLength: 20000
+          description: Session summary (Markdown, see ADR-0054).
         notes:
           type: [string, "null"]
           maxLength: 20000
-          description: Private GM notes for the session.
+          description: Private GM notes for the session (Markdown, see ADR-0054).
 
     Session:
       type: object
@@ -2733,8 +2739,10 @@ components:
           format: date
         summary:
           type: [string, "null"]
+          description: Session summary (Markdown, see ADR-0054).
         notes:
           type: [string, "null"]
+          description: Private GM notes for the session (Markdown, see ADR-0054).
         createdAt:
           type: string
           format: date-time
@@ -2753,6 +2761,7 @@ components:
           type: string
         body:
           type: [string, "null"]
+          description: Beat notes (Markdown, see ADR-0054).
         done:
           type: boolean
         arcTitle:
@@ -2987,7 +2996,7 @@ components:
           format: uuid
         body:
           type: string
-          description: Article body as HTML (see ADR-0013).
+          description: Article body as Markdown (see ADR-0054).
 
     ArticleSummary:
       type: object
@@ -3023,13 +3032,16 @@ components:
           properties:
             body:
               type: [string, "null"]
-              description: Raw article body as HTML, including `[[target]]` wiki-links.
+              description: >
+                Raw article body as Markdown, including `[[target]]`
+                wiki-links (see ADR-0054).
             bodyHtml:
               type: [string, "null"]
               readOnly: true
               description: >
-                Rendered body with wiki-links resolved to anchors (see
-                ADR-0014). Read-only; derived from `body`.
+                Rendered body: Markdown converted to HTML (see ADR-0054),
+                then wiki-links resolved to anchors (see ADR-0014).
+                Read-only; derived from `body`.
 
     Usage:
       type: object
@@ -3077,6 +3089,7 @@ components:
           $ref: '#/components/schemas/ArticleTemplate'
         body:
           type: [string, "null"]
+          description: Snapshotted article body as Markdown (see ADR-0054).
         createdAt:
           type: string
           format: date-time

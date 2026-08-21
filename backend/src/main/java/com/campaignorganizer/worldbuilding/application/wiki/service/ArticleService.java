@@ -23,7 +23,6 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.published.Artic
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.worldbuilding.domain.wiki.Article;
 import com.campaignorganizer.worldbuilding.domain.wiki.ArticleRevision;
-import com.campaignorganizer.worldbuilding.domain.wiki.HtmlSanitizer;
 import com.campaignorganizer.worldbuilding.domain.wiki.Slugs;
 import java.time.Clock;
 import java.util.List;
@@ -45,7 +44,6 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     private final ArticleViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
-    private final HtmlSanitizer sanitizer = new HtmlSanitizer();
 
     public ArticleService(ArticleRepositoryPort articles, ArticleRevisionRepositoryPort revisions,
                           CategoryQueryPort categories, WorldExistsPort worlds,
@@ -66,7 +64,7 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
         validateCategory(command.worldId(), command.categoryId());
         String slug = resolveSlugForCreate(command.worldId(), command.slug(), command.title());
         Article created = Article.create(ids.newId(), command.worldId(), command.categoryId(),
-                command.title(), slug, command.template(), sanitizer.sanitize(command.body()),
+                command.title(), slug, command.template(), command.body(),
                 clock.instant());
         return viewMapper.toView(articles.save(created));
     }
@@ -80,7 +78,7 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
         revisions.save(ArticleRevision.snapshot(ids.newId(), article, clock.instant()));
         String slug = resolveSlugForUpdate(command.worldId(), command.slug(), article);
         article.update(command.categoryId(), command.title(), slug, command.template(),
-                sanitizer.sanitize(command.body()), clock.instant());
+                command.body(), clock.instant());
         return viewMapper.toView(articles.save(article));
     }
 

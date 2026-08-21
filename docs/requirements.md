@@ -23,8 +23,8 @@ non-functional). Each maps to a roadmap phase.
   worlds. A world is the top-level container every other object belongs to.
 
 ### Wiki (Phase 1)
-- **FR-3 Articles.** Create rich-text articles within a world, organized by
-  category/hierarchy.
+- **FR-3 Articles.** Create Markdown articles (live-preview editor) within a
+  world, organized by category/hierarchy. (ADR-0054)
 - **FR-4 Templates.** Article templates (Character, Location, Organization,
   Species, Item, etc.) provide structured prompts.
 - **FR-5 Auto-linking.** Mentions of other articles are automatically turned
@@ -49,9 +49,12 @@ non-functional). Each maps to a roadmap phase.
   characters and organizations.
 
 ### Gamemaster tools (Phase 3)
-- **FR-12 Campaigns.** Group sessions and notes under a campaign tied to a world.
-- **FR-13 Sessions.** Record sessions with notes and links to NPCs/locations.
-- **FR-14 Story arcs.** Track arcs/beats so plot threads are not lost.
+- **FR-12 Campaigns.** Group sessions and notes (Markdown, ADR-0054) under a
+  campaign tied to a world.
+- **FR-13 Sessions.** Record sessions with a summary, private GM notes
+  (Markdown, ADR-0054), and links to NPCs/locations.
+- **FR-14 Story arcs.** Track arcs/beats (Markdown notes, ADR-0054) so plot
+  threads are not lost.
 - **FR-15 GM-only content.** ~~Mark articles/sections as hidden ("GM-only") to
   toggle spoilers at the table.~~ **Dropped (2026-08-12):** the app is
   single-user and players never access it, so there is no audience to hide
@@ -59,7 +62,8 @@ non-functional). Each maps to a roadmap phase.
 
 ### Character sheets & dice (Phase 4)
 - **FR-16 Sheet engine.** Schema-driven character sheets supporting multiple
-  game systems without hardcoding each.
+  game systems without hardcoding each; long-text fields render as Markdown
+  (ADR-0054).
 - **FR-17 Starter systems.** Ship 2–3 systems (e.g. D&D 5e, Pathfinder, generic).
 - **FR-18 Statblocks.** Reusable NPC/monster statblocks; a statblock can
   optionally be driven by a statblock field template (FR-34) instead of

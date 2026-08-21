@@ -10,9 +10,11 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/src/api/schema.ts
+scripts/node_modules/
 
 # Local runtime data
 data/
+backups/
 
 # IDE / OS
 .idea/

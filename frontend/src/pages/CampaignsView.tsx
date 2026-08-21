@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { SessionLog } from './SessionLog';
 import { ArcBoard } from './ArcBoard';
+import { MarkdownEditor } from '../components/MarkdownEditor';
 
 interface Props {
   worldId: string;
@@ -147,15 +148,15 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
 
             <section className="card">
               <h3>GM notes</h3>
-              <textarea
-                className="gm-notes"
-                value={notes}
-                onChange={(e) => {
-                  setNotes(e.target.value);
-                  setNotesDirty(true);
-                }}
-                placeholder="Private notes for this campaign…"
-              />
+              <div className="gm-notes">
+                <MarkdownEditor
+                  value={notes}
+                  onChange={(value) => {
+                    setNotes(value);
+                    setNotesDirty(true);
+                  }}
+                />
+              </div>
               <div className="editor-actions">
                 <button onClick={saveNotes} disabled={!notesDirty}>
                   Save notes

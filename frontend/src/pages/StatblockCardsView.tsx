@@ -1,6 +1,7 @@
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Statblock, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
+import { renderMarkdown } from '../lib/markdown';
 
 interface Props {
   statblocks: Statblock[];
@@ -41,12 +42,24 @@ export function StatblockCardsView({ statblocks, templates, title, onClose }: Pr
                   {stats.map((entry) => (
                     <div key={entry.key} className="stat-card-stat">
                       <dt>{entry.label}</dt>
-                      <dd>{String(entry.value)}</dd>
+                      {entry.type === 'TEXTAREA' ? (
+                        <dd
+                          className="preview-body"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(String(entry.value)) }}
+                        />
+                      ) : (
+                        <dd>{String(entry.value)}</dd>
+                      )}
                     </div>
                   ))}
                 </dl>
               )}
-              {sb.notes && <p className="stat-card-notes">{sb.notes}</p>}
+              {sb.notes && (
+                <div
+                  className="stat-card-notes preview-body"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(sb.notes) }}
+                />
+              )}
             </div>
           );
         })}

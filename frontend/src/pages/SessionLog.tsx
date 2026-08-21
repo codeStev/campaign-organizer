@@ -1,6 +1,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { sessionsApi, Session } from '../api/client';
 import { SessionPacketView } from './SessionPacketView';
+import { MarkdownEditor } from '../components/MarkdownEditor';
+import { renderMarkdown } from '../lib/markdown';
 
 interface Props {
   worldId: string;
@@ -14,9 +16,10 @@ interface Draft {
   sessionNumber: string;
   date: string;
   summary: string;
+  notes: string;
 }
 
-const EMPTY: Draft = { id: null, title: '', sessionNumber: '', date: '', summary: '' };
+const EMPTY: Draft = { id: null, title: '', sessionNumber: '', date: '', summary: '', notes: '' };
 
 export function SessionLog({ worldId, campaignId, onError }: Props) {
   const api = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
@@ -47,6 +50,7 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
       sessionNumber: draft.sessionNumber ? Number(draft.sessionNumber) : null,
       date: draft.date || null,
       summary: draft.summary || null,
+      notes: draft.notes || null,
     };
     try {
       if (draft.id) await api.update(draft.id, body);
@@ -75,6 +79,7 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
       sessionNumber: s.sessionNumber != null ? String(s.sessionNumber) : '',
       date: s.date ?? '',
       summary: s.summary ?? '',
+      notes: s.notes ?? '',
     });
   }
 
@@ -102,11 +107,11 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
             required
           />
         </div>
-        <textarea
-          placeholder="Summary (optional)"
-          value={draft.summary}
-          onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
-        />
+        <MarkdownEditor value={draft.summary} onChange={(summary) => setDraft({ ...draft, summary })} />
+        <label className="sheet-article">
+          <span className="muted">GM notes (private)</span>
+          <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
+        </label>
         <div className="editor-actions">
           <button type="submit" disabled={!draft.title}>
             {draft.id ? 'Save session' : 'Add session'}
@@ -128,7 +133,12 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
             </div>
             <div className="session-body">
               <strong>{s.title}</strong>
-              {s.summary && <p className="muted">{s.summary}</p>}
+              {s.summary && (
+                <div
+                  className="muted preview-body"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }}
+                />
+              )}
               <div className="editor-actions">
                 <button className="link-button" onClick={() => edit(s)}>
                   Edit

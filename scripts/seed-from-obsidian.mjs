@@ -1,5 +1,7 @@
 // One-off seeder: imports an Obsidian vault into a Campaign Organizer world.
 // Preserves [[wiki-links]] (incl. [[Target|alias]]) so the app's auto-linker resolves them.
+// TODO(ADR-0054): article bodies are now stored as Markdown, not HTML — this
+// script's toHtml() conversion runs the wrong direction for re-seeding.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
