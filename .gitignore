@@ -2,8 +2,8 @@
 .env
 
 # Java / Gradle
-backend/build/
-backend/.gradle/
+build/
+.gradle/
 *.class
 
 # Node / Vite
