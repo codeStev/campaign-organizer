@@ -10,6 +10,7 @@ World Anvil. Not multi-tenant, no community features.
 
 ## Major decisions (see ADRs)
 - **Backend:** Spring Boot 4.1 (Java 25), JUnit 6. — ADR-0001, superseded by ADR-0051
+- **Backend build tool:** Gradle (Kotlin DSL), wrapper-pinned. — ADR-0056
 - **Frontend:** React 18 + TypeScript, Vite. — ADR-0002
 - **Datastore:** PostgreSQL; JSONB for flexible data later. — ADR-0003
 - **Deployment:** Docker multi-stage images + `docker-compose.yml`. — ADR-0004
@@ -62,8 +63,8 @@ to a controller — put it behind a use-case port.
 # Whole stack
 cp .env.example .env && docker compose up --build
 
-# Backend
-cd backend && mvn test             # unit + integration (needs Docker)
+# Backend (Gradle wrapper lives at repo root; backend is the :backend subproject)
+./gradlew :backend:check           # unit + integration (needs Docker)
 
 # Frontend
 cd frontend && npm install && npm run dev

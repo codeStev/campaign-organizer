@@ -1,13 +1,17 @@
 # syntax=docker/dockerfile:1
 
 # ---- Build stage ----
-FROM maven:3.9-eclipse-temurin-25 AS build
+# Build context is the repo root (see docker-compose.yml) so the root Gradle
+# wrapper/multi-module build can see the :backend subproject.
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 # Cache dependencies first.
-COPY pom.xml .
-RUN mvn -q -B dependency:go-offline
-COPY src ./src
-RUN mvn -q -B clean package -DskipTests
+COPY gradlew settings.gradle.kts ./
+COPY gradle ./gradle
+COPY backend/build.gradle.kts backend/build.gradle.kts
+RUN ./gradlew --no-daemon :backend:dependencies
+COPY backend/src backend/src
+RUN ./gradlew --no-daemon clean :backend:bootJar -x :backend:test -x :backend:integrationTest
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:25-jre
@@ -24,7 +28,7 @@ RUN apt-get update \
 RUN useradd --system --uid 1001 spring \
     && mkdir -p /data/media \
     && chown -R spring:spring /data
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/backend/build/libs/*.jar app.jar
 USER spring
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
