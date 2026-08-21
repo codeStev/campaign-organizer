@@ -62,7 +62,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     // Architecture fitness functions (dependency rule, ring isolation).
-    testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
+    testImplementation("com.tngtech.archunit:archunit-junit6:$archunitVersion")
 }
 
 jacoco {
