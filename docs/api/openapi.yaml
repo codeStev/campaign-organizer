@@ -54,6 +54,8 @@ tags:
     description: Export a world as a JSON bundle.
   - name: whiteboards
     description: Free-form plotting whiteboards (nodes and connections).
+  - name: backup
+    description: Instance-wide backup (database + media).
 
 paths:
   /auth/login:
@@ -79,6 +81,26 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '400':
           $ref: '#/components/responses/BadRequest'
+
+  /backup:
+    get:
+      tags: [backup]
+      summary: Download a full instance backup (database + media) as a ZIP (FR-36)
+      operationId: downloadBackup
+      responses:
+        '200':
+          description: >
+            A ZIP containing database.dump (a pg_dump custom-format dump of the
+            whole database) and media/<path> for every file under the media
+            volume. See ADR-0055 for the restore procedure; this endpoint only
+            produces the backup, it does not restore one.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /worlds:
     get:

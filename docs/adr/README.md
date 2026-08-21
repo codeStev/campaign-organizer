@@ -61,6 +61,7 @@ the old one.
 | [0052](0052-shared-field-templates.md) | Shared field templates for sheets and statblocks (renames SheetTemplate) | Accepted |
 | [0053](0053-deep-linking.md) | Deep linking via client-side routing (react-router-dom) | Accepted |
 | [0054](0054-article-body-markdown.md) | Article body stored as Markdown, live-preview editor (supersedes ADR-0013 body format, ADR-0025 sanitization timing) | Accepted |
+| [0055](0055-instance-backup.md) | One-click instance backup (ZIP of pg_dump + media) | Accepted |
 
 ## Template
 
