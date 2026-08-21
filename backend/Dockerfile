@@ -1,13 +1,14 @@
 # syntax=docker/dockerfile:1
 
 # ---- Build stage ----
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 # Cache dependencies first.
-COPY pom.xml .
-RUN mvn -q -B dependency:go-offline
+COPY gradlew build.gradle.kts settings.gradle.kts ./
+COPY gradle ./gradle
+RUN ./gradlew --no-daemon dependencies
 COPY src ./src
-RUN mvn -q -B clean package -DskipTests
+RUN ./gradlew --no-daemon clean bootJar -x test -x integrationTest
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:25-jre
@@ -24,7 +25,7 @@ RUN apt-get update \
 RUN useradd --system --uid 1001 spring \
     && mkdir -p /data/media \
     && chown -R spring:spring /data
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/build/libs/*.jar app.jar
 USER spring
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
