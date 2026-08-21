@@ -10,15 +10,26 @@ Gradle was requested directly, independent of any framework/version change.
 
 ## Decision
 Replace Maven with **Gradle 9.7.1**, invoked exclusively through the wrapper
-(`./gradlew`, checked into `backend/gradle/wrapper/` and `backend/gradlew*`) so no
-locally installed Gradle version is required. Build scripts use the **Kotlin DSL**
-(`build.gradle.kts`, `settings.gradle.kts`).
+(`./gradlew`, checked into `gradle/wrapper/` and `gradlew*` at the **repo root**)
+so no locally installed Gradle version is required. Build scripts use the
+**Kotlin DSL** (`build.gradle.kts`, `settings.gradle.kts`).
+
+The build is a **root-level multi-module Gradle build**: `settings.gradle.kts` at
+the repo root declares `include("backend")`, and `backend/build.gradle.kts` is
+the `:backend` subproject's build script. This gives the repo one Gradle entry
+point (`./gradlew :backend:<task>` from the root) instead of a build tool nested
+inside `backend/`, matching the repo's existing monorepo shape (ADR-0010) without
+folding the frontend's separate npm/Vite build (ADR-0002) into Gradle — there is
+no Java/JVM code on the frontend side for Gradle to build, and CI already treats
+frontend and backend as independent jobs.
 
 - `org.springframework.boot` (4.1.0) + `io.spring.dependency-management` (1.1.7)
   plugins replace the `spring-boot-starter-parent` BOM and
   `spring-boot-maven-plugin`; all dependency coordinates and pinned versions
-  (jjwt, MapStruct, ArchUnit, PDFBox, flexmark, springdoc) carry over unchanged
-  from `pom.xml`.
+  (jjwt, MapStruct, PDFBox, flexmark, springdoc) carry over unchanged from
+  `pom.xml`. ArchUnit switches from the `archunit-junit5` artifact to
+  `archunit-junit6` (same 1.5.0 version) since the project runs JUnit 6 per
+  ADR-0051.
 - The Java toolchain is set to language version 25 (`java.toolchain.languageVersion`),
   matching `java.version` in the old POM. The `org.gradle.toolchains.foojay-resolver-convention`
   plugin is applied in `settings.gradle.kts` so a matching JDK auto-provisions on
@@ -35,9 +46,15 @@ locally installed Gradle version is required. Build scripts use the **Kotlin DSL
   and failsafe.
 - `backend/Dockerfile`'s build stage moves from `maven:3.9-eclipse-temurin-25` to
   `eclipse-temurin:25-jdk` + the Gradle wrapper (dependency-layer caching via a
-  `./gradlew dependencies` warm-up, then `./gradlew bootJar`); the runtime stage
-  is unchanged. CI's backend job runs `./gradlew check` instead of `mvn verify`
-  and switches `actions/setup-java`'s cache from `maven` to `gradle`.
+  `./gradlew :backend:dependencies` warm-up, then `./gradlew :backend:bootJar`);
+  the runtime stage is unchanged. Because the wrapper now lives at the repo root,
+  the backend image's Docker build context moves from `./backend` to `.` (repo
+  root) in `docker-compose.yml`, with `dockerfile: backend/Dockerfile`; a new
+  root `.dockerignore` replaces `backend/.dockerignore` (Docker only reads a
+  `.dockerignore` at the build context root) and excludes `frontend/node_modules`,
+  `.git`, and Gradle/build output from that wider context. CI's backend job runs
+  `./gradlew :backend:check` instead of `mvn verify` and switches
+  `actions/setup-java`'s cache from `maven` to `gradle`.
 - `pom.xml` is deleted; there is no dual-build-tool transition period.
 
 ## Consequences
@@ -65,6 +82,18 @@ locally installed Gradle version is required. Build scripts use the **Kotlin DSL
 - **Keep Maven, add Gradle alongside:** rejected — running two build tools for one
   module is pure maintenance overhead with no benefit once the migration is
   verified.
+- **Wrap the frontend as a Gradle module too** (e.g. via a Node/Gradle plugin so
+  `./gradlew build` also drives `npm ci`/`npm run build`): rejected — the
+  frontend isn't JVM code, gains nothing from Gradle's dependency/toolchain
+  machinery, and CI already builds it as an independent job with its own
+  npm-native caching; routing it through Gradle would just add an indirection
+  layer over the same `npm` commands.
+- **Keep the Gradle wrapper nested in `backend/`** (single-module, no root
+  `settings.gradle.kts`): simpler to set up, but leaves the repo without a
+  single build entry point and doesn't reflect that `backend/` is a project
+  root's subproject rather than a build root of its own — a root-level
+  multi-module layout (even with only one subproject today) makes room for
+  future JVM subprojects without another restructuring.
 - **JUnit tag-based unit/integration split** instead of task-level class-name
   filtering: would let both suites share one `test` task via
   `useJUnitPlatform { includeTags/excludeTags }`, but would require re-tagging

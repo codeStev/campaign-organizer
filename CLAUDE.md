@@ -63,8 +63,8 @@ to a controller — put it behind a use-case port.
 # Whole stack
 cp .env.example .env && docker compose up --build
 
-# Backend
-cd backend && ./gradlew check      # unit + integration (needs Docker)
+# Backend (Gradle wrapper lives at repo root; backend is the :backend subproject)
+./gradlew :backend:check           # unit + integration (needs Docker)
 
 # Frontend
 cd frontend && npm install && npm run dev

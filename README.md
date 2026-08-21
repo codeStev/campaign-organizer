@@ -38,9 +38,8 @@ Sign in with the value of `APP_PASSWORD`.
 **Backend**
 
 ```bash
-cd backend
-./gradlew bootRun             # needs a local Postgres, or run `docker compose up db`
-./gradlew check               # unit + Testcontainers integration tests (needs Docker)
+./gradlew :backend:bootRun    # needs a local Postgres, or run `docker compose up db`
+./gradlew :backend:check      # unit + Testcontainers integration tests (needs Docker)
 ```
 
 **Frontend**

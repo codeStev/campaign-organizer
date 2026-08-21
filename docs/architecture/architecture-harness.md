@@ -70,7 +70,7 @@ grep -rlE "@Entity|@Table|@Column|org\.springframework|com\.fasterxml\.jackson" 
 # 4. Every mapper is a MapStruct @Mapper (no hand-written converters)
 #    -> inspect *Mapper.java for @Mapper; none should map by hand
 # 5. Architecture + build gates
-./gradlew check   # ArchUnit suite and all tests must be green
+./gradlew :backend:check   # ArchUnit suite and all tests must be green
 ```
 
 Any hit in 1–4, or a red gate in 5, means the change violates the harness and must
