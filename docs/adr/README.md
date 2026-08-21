@@ -64,6 +64,7 @@ the old one.
 | [0055](0055-instance-backup.md) | One-click instance backup (ZIP of pg_dump + media) | Accepted |
 | [0056](0056-gradle-build-tool.md) | Gradle build tool for the backend (replaces Maven) | Accepted |
 | [0057](0057-tailnet-private-registry.md) | Tailnet-private Docker registry for deployment images | Accepted |
+| [0058](0058-caddy-registry-tls.md) | Caddy fronts the registry's TLS (supersedes 0057's `tailscale serve` choice) | Accepted |
 
 ## Template
 
