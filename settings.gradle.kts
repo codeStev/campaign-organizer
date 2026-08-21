@@ -4,3 +4,5 @@ plugins {
 }
 
 rootProject.name = "campaign-organizer"
+
+include("backend")
