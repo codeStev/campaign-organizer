@@ -73,7 +73,6 @@ tasks.named<Test>("test") {
     useJUnitPlatform()
     // Unit tests only; *IT classes run under the integrationTest task below.
     exclude("**/*IT.class")
-    finalizedBy(tasks.named("jacocoTestReport"))
 }
 
 // Mirrors the Maven build's failsafe execution: *IT classes exercise the
@@ -86,15 +85,11 @@ val integrationTest = tasks.register<Test>("integrationTest") {
     include("**/*IT.class")
     useJUnitPlatform()
     shouldRunAfter(tasks.named("test"))
-    finalizedBy(tasks.named("jacocoTestReport"))
-}
-
-tasks.named("check") {
-    dependsOn(integrationTest)
 }
 
 // Coverage across unit and integration tests: the agent appends both runs to
-// one exec file, reported once both suites have run.
+// one exec file, reported once both suites have run. Only wired into `check`
+// (not `test`), so a plain `test` invocation stays unit-tests-only.
 tasks.named<JacocoReport>("jacocoTestReport") {
     dependsOn(tasks.named("test"), integrationTest)
     executionData.setFrom(fileTree(layout.buildDirectory.dir("jacoco")).include("*.exec"))
@@ -102,4 +97,8 @@ tasks.named<JacocoReport>("jacocoTestReport") {
         xml.required.set(true)
         html.required.set(true)
     }
+}
+
+tasks.named("check") {
+    dependsOn(integrationTest, tasks.named("jacocoTestReport"))
 }
