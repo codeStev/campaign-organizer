@@ -1,8 +1,9 @@
 # Environment
 .env
 
-# Java / Maven
-backend/target/
+# Java / Gradle
+backend/build/
+backend/.gradle/
 *.class
 
 # Node / Vite
