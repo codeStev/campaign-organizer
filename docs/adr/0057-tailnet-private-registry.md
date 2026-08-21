@@ -29,7 +29,15 @@ server, or another node), reachable only from the tailnet:
   `tailscale/github-action` to join the tailnet as an ephemeral node tagged
   `tag:ci` (via a Tailscale OAuth client scoped to that tag), for the duration
   of the job only, then builds and pushes `campaign-organizer-backend` and
-  `campaign-organizer-frontend` images tagged `latest` and `${{ github.sha }}`.
+  `campaign-organizer-frontend` images.
+- **Versioning**: every push to `master` publishes/updates `latest` and a
+  `${{ github.sha }}` tag (traceable, but mutable/floating). Pushing a
+  `vX.Y.Z` git tag additionally publishes immutable `vX.Y.Z`, `vX.Y`, and `vX`
+  image tags — computed by `docker/metadata-action` from the git tag, not from
+  the project's own `version` fields (`backend/build.gradle.kts`,
+  `frontend/package.json`), which today aren't bumped as part of any release
+  process. Cutting a release is a deliberate `git tag vX.Y.Z && git push --tags`,
+  not automatic on every merge — see "Alternatives considered".
 - The deploy server pulls directly — it's already a tailnet member, so no
   `tailscale serve`/proxy is needed on the pulling side.
 
@@ -74,3 +82,8 @@ server, or another node), reachable only from the tailnet:
   the registry container) instead of `tailscale serve`: gives the same
   real-certificate outcome, but `tailscale serve` handles renewal
   automatically where a hand-run `tailscale cert` would need its own cron job.
+- **Version tags sourced from `build.gradle.kts`/`package.json`** instead of
+  git release tags: would publish a versioned image on every master push
+  automatically, but silently overwrites the same image tag whenever a commit
+  merges without a version bump — a git tag is an explicit, one-time act that
+  can't be forgotten into a collision the way a source-file version can.

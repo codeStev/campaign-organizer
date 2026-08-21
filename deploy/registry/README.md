@@ -79,6 +79,21 @@ the duration of each run using an OAuth client scoped to a tag.
      (e.g. `myserver.tailxxxxx.ts.net`, no port — `tailscale serve` listens
      on the standard HTTPS port).
 
+## Image tags
+
+Every push to `master` publishes/updates `latest` and a `<commit-sha>` tag —
+useful for traceability, but both are mutable/floating. To cut an actual
+release with an immutable version tag:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+This publishes `vX.Y.Z`, `vX.Y`, and `vX` tags for both images (in addition
+to `latest` continuing to track `master`), computed from the git tag —
+there's no separate version-bump step in the repo to remember.
+
 ## Deploying pulled images
 
 On the server (already a tailnet member, so it reaches `REGISTRY_HOST`
@@ -86,6 +101,6 @@ directly — no `tailscale serve`/proxy needed for outbound pulls):
 
 ```bash
 docker login <REGISTRY_HOST> -u <registry-user>
-docker pull <REGISTRY_HOST>/campaign-organizer-backend:latest
-docker pull <REGISTRY_HOST>/campaign-organizer-frontend:latest
+docker pull <REGISTRY_HOST>/campaign-organizer-backend:v0.2.0
+docker pull <REGISTRY_HOST>/campaign-organizer-frontend:v0.2.0
 ```
