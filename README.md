@@ -39,8 +39,8 @@ Sign in with the value of `APP_PASSWORD`.
 
 ```bash
 cd backend
-mvn spring-boot:run           # needs a local Postgres, or run `docker compose up db`
-mvn test                      # unit + Testcontainers integration tests (needs Docker)
+./gradlew bootRun             # needs a local Postgres, or run `docker compose up db`
+./gradlew check               # unit + Testcontainers integration tests (needs Docker)
 ```
 
 **Frontend**
