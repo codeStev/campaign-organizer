@@ -1,0 +1,16 @@
+# Applies to the backend build context (repo root, per docker-compose.yml).
+# frontend/ has its own .dockerignore for its own (./frontend) build context.
+.git/
+backend/build/
+backend/.gradle/
+*.class
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+docs/
+data/
+backups/
+.idea/
+*.iml
+.vscode/
+.DS_Store
