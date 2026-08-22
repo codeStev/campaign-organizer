@@ -47,12 +47,13 @@ server, or another node), reachable only from the tailnet:
   tailnet hostname and a `docker-compose.yml` referencing `image:` instead of
   `build:` (left as a follow-up — this ADR covers publishing, not yet
   rewiring the server's compose file to consume it).
-- New setup is required outside this repo, documented in
-  `deploy/registry/README.md`: enabling Tailscale HTTPS Certificates, running
-  `tailscale serve`, creating a tag-scoped Tailscale OAuth client and an ACL
-  grant for `tag:ci`, and four GitHub Actions secrets/variables
-  (`TS_OAUTH_CLIENT_ID`, `TS_OAUTH_CLIENT_SECRET`, `REGISTRY_USERNAME`,
-  `REGISTRY_PASSWORD`) plus one variable (`REGISTRY_HOST`).
+- New setup is required outside this repo: a tag-scoped Tailscale OAuth
+  client, network access for that tag to the registry, and the GitHub Actions
+  secrets/variables `deploy/registry/README.md` lists. How the registry is
+  actually exposed to the tailnet (reverse proxy, TLS, etc.) is left to the
+  owner's own infrastructure and isn't tracked here (see ADR-0058 for the
+  CA-trust mechanism this implies, described without prescribing a specific
+  setup).
 - Every merge to `master` now pushes fresh `latest` images, whether or not the
   owner is ready to deploy them — deploying is still a manual `docker pull` on
   the server, so this doesn't auto-deploy, just keeps the registry current.

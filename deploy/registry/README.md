@@ -1,124 +1,64 @@
-# Private image registry (tailnet-only)
+# Private image registry
 
-Runs a plain Docker Registry v2 on your server, reachable only from your
-tailnet. TLS termination is handled by **your own Caddy instance** (already
-configured, per ADR-0058) — Caddy listens on `<tailnet-hostname>:5000` with
-its self-signed internal CA and reverse-proxies to the registry container on
-`localhost:5000`. GitHub Actions pushes to it by joining the tailnet for the
-duration of a CI run; your server pulls from it directly since it's already
-a tailnet member.
+`docker-compose.yml` runs a plain Docker Registry v2, bound to `127.0.0.1`
+only — how it's exposed to CI and to the deploy server (reverse proxy, TLS,
+network access) is left entirely to your own infrastructure.
 
-Because Caddy's cert comes from its own internal CA rather than a publicly
-trusted one, every consumer (CI runner, deploy server) needs that CA
-explicitly trusted for this registry host — see below.
+## What CI needs
 
-## One-time server setup
+The `publish` job in `.github/workflows/ci.yml` needs these GitHub Actions
+secrets and variables:
 
-1. **Basic auth credentials** — the registry container itself is only
-   reachable via your Caddy proxy, but auth is worth keeping anyway (defense
-   in depth: anyone who can reach that Caddy site can otherwise push/pull
-   freely).
+| Name | Kind | What it is |
+| --- | --- | --- |
+| `TS_OAUTH_CLIENT_ID` | secret | Tailscale OAuth client ID, scoped to `tag:ci` |
+| `TS_OAUTH_CLIENT_SECRET` | secret | its matching secret |
+| `REGISTRY_USERNAME` | secret | registry auth username |
+| `REGISTRY_PASSWORD` | secret | registry auth password |
+| `REGISTRY_CA_CERT` | secret | PEM contents of your registry endpoint's CA cert, if it isn't publicly trusted |
+| `REGISTRY_HOST` | variable | the registry's address as CI should reach it (host:port) |
 
-   ```bash
-   cd deploy/registry
-   mkdir -p auth
-   docker run --rm --entrypoint htpasswd httpd:2.4-alpine \
-     -Bbn <registry-user> '<registry-password>' > auth/htpasswd
-   ```
+The CI job joins the tailnet as an ephemeral `tag:ci` node for the run's
+duration, installs `REGISTRY_CA_CERT` into Docker's per-registry `certs.d`
+(no daemon restart needed), then builds and pushes
+`campaign-organizer-backend`/`campaign-organizer-frontend`.
 
-2. **Start the registry** (bound to `127.0.0.1` only — see `docker-compose.yml`):
+## Auth credentials
 
-   ```bash
-   docker compose up -d
-   ```
+Generate the registry's htpasswd file before starting it:
 
-3. Confirm Caddy is proxying `<tailnet-hostname>:5000` → `http://localhost:5000`
-   with TLS — this is the `REGISTRY_HOST` value used everywhere below (with
-   the `:5000` port included, since that's the port Caddy listens on, not
-   the standard HTTPS port).
-
-4. **Export Caddy's root CA certificate.** The exact path depends on how
-   Caddy is installed — commonly:
-
-   ```bash
-   # Official Caddy Docker image (data volume mounted at /data):
-   docker cp <caddy-container>:/data/caddy/pki/authorities/local/root.crt ./caddy-ca.crt
-
-   # Native package install (running as the `caddy` user):
-   sudo cat /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt > ./caddy-ca.crt
-   ```
-
-   Keep `caddy-ca.crt` — it's needed as a GitHub secret (below) and on the
-   server itself (next section).
-
-5. By default this is reachable by every device on your tailnet that can
-   reach this node's Caddy port. If you want to restrict it further, use
-   Tailscale ACL grants to limit which users/tags can reach it, rather than
-   relying on registry auth alone.
-
-## One-time Tailscale + GitHub setup (for CI push)
-
-GitHub's hosted runners aren't on your tailnet, so the CI job joins it for
-the duration of each run using an OAuth client scoped to a tag. They also
-don't trust Caddy's internal CA by default, so CI installs it per run,
-scoped to just this registry host (Docker's `certs.d`, no daemon restart
-needed).
-
-1. **Tailscale admin console** → Settings → OAuth clients → generate a client.
-   - Scope it to a dedicated tag, e.g. `tag:ci`, so it can only ever bring up
-     ephemeral CI nodes, not full tailnet-admin access.
-   - Add `tag:ci` to your tailnet's ACL policy (`https://login.tailscale.com/admin/acls`)
-     with access to the registry node on port 5000, e.g.:
-     ```json
-     "acls": [
-       {"action": "accept", "src": ["tag:ci"], "dst": ["<registry-node-ip-or-tag>:5000"]}
-     ],
-     "tagOwners": {
-       "tag:ci": ["autogroup:admin"]
-     }
-     ```
-     (Merge into your existing policy file rather than replacing it — adjust
-     to however your policy already tags/groups devices.)
-
-2. **GitHub repo settings** → Secrets and variables → Actions:
-   - Secrets: `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_CLIENT_SECRET` (from step 1),
-     `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` (from server setup step 1),
-     `REGISTRY_CA_CERT` (the full PEM contents of `caddy-ca.crt` from server
-     setup step 4 — paste it as-is, including the `-----BEGIN/END
-     CERTIFICATE-----` lines).
-   - Variable: `REGISTRY_HOST` = the tailnet hostname **with the `:5000`
-     port** (e.g. `myserver.tailxxxxx.ts.net:5000`).
+```bash
+cd deploy/registry
+mkdir -p auth
+docker run --rm --entrypoint htpasswd httpd:2.4-alpine \
+  -Bbn <username> '<password>' > auth/htpasswd
+docker compose up -d
+```
 
 ## Image tags
 
-Every push to `master` publishes/updates `latest` and a `<commit-sha>` tag —
-useful for traceability, but both are mutable/floating. To cut an actual
-release with an immutable version tag:
+Every push to `master` publishes/updates `latest` and a `<commit-sha>` tag.
+An immutable release:
 
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-This publishes `vX.Y.Z`, `vX.Y`, and `vX` tags for both images (in addition
-to `latest` continuing to track `master`), computed from the git tag —
-there's no separate version-bump step in the repo to remember.
+This publishes `vX.Y.Z`/`vX.Y`/`vX` tags for both images, computed from the
+git tag.
 
 ## Deploying pulled images
 
-On the server (already a tailnet member, so it reaches `REGISTRY_HOST`
-directly): trust Caddy's CA for this registry host the same way CI does,
-once:
+```bash
+docker login <REGISTRY_HOST> -u <username>
+docker pull <REGISTRY_HOST>/campaign-organizer-backend:v0.2.0
+docker pull <REGISTRY_HOST>/campaign-organizer-frontend:v0.2.0
+```
+
+If `REGISTRY_HOST` isn't publicly trusted, trust its CA the same way CI does:
 
 ```bash
 sudo mkdir -p /etc/docker/certs.d/<REGISTRY_HOST>
-sudo cp caddy-ca.crt /etc/docker/certs.d/<REGISTRY_HOST>/ca.crt
-```
-
-Then log in and pull as normal:
-
-```bash
-docker login <REGISTRY_HOST> -u <registry-user>
-docker pull <REGISTRY_HOST>/campaign-organizer-backend:v0.2.0
-docker pull <REGISTRY_HOST>/campaign-organizer-frontend:v0.2.0
+sudo cp <ca-cert> /etc/docker/certs.d/<REGISTRY_HOST>/ca.crt
 ```

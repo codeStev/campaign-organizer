@@ -8,10 +8,11 @@ ADR-0057 chose `tailscale serve` to terminate HTTPS in front of the
 tailnet-private registry, specifically to get a real, auto-renewing
 certificate with no manual cert handling. In practice, the owner already runs
 Caddy as their general-purpose reverse proxy and had already configured it to
-front the registry — listening on `<tailnet-hostname>:5000` and proxying to
-the registry container on `localhost:5000` — before `tailscale serve` was
-ever set up. Running both would be redundant; Caddy is the one actually in
-use.
+front the registry — listening on `<tailnet-hostname>:<caddy-port>` (a port
+of the owner's choosing, independent of the registry container's own port)
+and proxying to the registry container on `localhost:5000` — before
+`tailscale serve` was ever set up. Running both would be redundant; Caddy is
+the one actually in use.
 
 Caddy's certificate here comes from its own internal self-signed CA (`tls
 internal`, Caddy's default when it can't obtain a publicly trusted cert for a
@@ -23,8 +24,11 @@ Use **Caddy**, already configured by the owner, as the registry's TLS
 termination point, and adjust everything downstream that assumed a
 publicly-trusted certificate:
 
-- `REGISTRY_HOST` includes the port Caddy listens on (`<tailnet-hostname>:5000`),
-  not the standard HTTPS port `tailscale serve` would have used.
+- `REGISTRY_HOST` includes whatever external port Caddy's site listens on
+  (`<tailnet-hostname>:<caddy-port>`) — not the standard HTTPS port
+  `tailscale serve` would have used, and not the registry container's own
+  internal `5000`, which Caddy's site config proxies to but which is
+  otherwise irrelevant to anything outside the host.
 - Because the cert is self-signed, every Docker client talking to the
   registry needs that CA trusted **for this registry host specifically**, via
   Docker's per-registry `certs.d` mechanism
