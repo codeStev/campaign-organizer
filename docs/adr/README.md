@@ -65,6 +65,7 @@ the old one.
 | [0056](0056-gradle-build-tool.md) | Gradle build tool for the backend (replaces Maven) | Accepted |
 | [0057](0057-tailnet-private-registry.md) | Tailnet-private Docker registry for deployment images | Accepted |
 | [0058](0058-caddy-registry-tls.md) | Caddy fronts the registry's TLS (supersedes 0057's `tailscale serve` choice) | Accepted |
+| [0059](0059-combined-image-static-frontend.md) | Combined image — backend statically serves the frontend | Accepted |
 
 ## Template
 
