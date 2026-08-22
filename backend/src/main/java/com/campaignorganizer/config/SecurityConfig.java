@@ -15,14 +15,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 /**
  * Stateless security. The only public endpoints are the login route and the
- * generated API docs; everything else requires a valid owner bearer token.
- * See docs/adr/0006-single-password-auth.md.
+ * generated API docs; everything under /api/** otherwise requires a valid
+ * owner bearer token. Everything *outside* /api/** is left open at this
+ * layer too — on the combined image (ADR-0059) that's the static SPA shell,
+ * which must load before the user can log in; on the API-only image there's
+ * nothing there to serve, so this is a no-op. See
+ * docs/adr/0006-single-password-auth.md.
  */
 @Configuration
 @EnableConfigurationProperties(AppProperties.class)
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_PATHS = {
+    private static final String[] PUBLIC_API_PATHS = {
             "/api/auth/login",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -37,10 +41,11 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers(PUBLIC_API_PATHS).permitAll()
                         // Public image serving, addressed by unguessable id (ADR-0016).
                         .requestMatchers(HttpMethod.GET, "/api/media/*/content").permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll())
                 .exceptionHandling(eh -> eh
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
