@@ -2,8 +2,10 @@
 
 Runs a plain Docker Registry v2 on your server, reachable only from your
 tailnet. TLS termination is handled by **your own Caddy instance** (already
-configured, per ADR-0058) — Caddy listens on `<tailnet-hostname>:5000` with
-its self-signed internal CA and reverse-proxies to the registry container on
+configured, per ADR-0058) — Caddy listens on `<tailnet-hostname>:<caddy-port>`
+(whatever external port your Caddy site uses — e.g. `8454`; this does **not**
+have to match the registry container's own port) with its self-signed
+internal CA, and reverse-proxies to the registry container on
 `localhost:5000`. GitHub Actions pushes to it by joining the tailnet for the
 duration of a CI run; your server pulls from it directly since it's already
 a tailnet member.
@@ -32,10 +34,12 @@ explicitly trusted for this registry host — see below.
    docker compose up -d
    ```
 
-3. Confirm Caddy is proxying `<tailnet-hostname>:5000` → `http://localhost:5000`
-   with TLS — this is the `REGISTRY_HOST` value used everywhere below (with
-   the `:5000` port included, since that's the port Caddy listens on, not
-   the standard HTTPS port).
+3. Confirm Caddy is proxying `<tailnet-hostname>:<caddy-port>` →
+   `http://localhost:5000` with TLS, **and that Caddy has been reloaded/restarted**
+   after that config was added — a config that's saved but not applied is a
+   common cause of `connection refused` when pushing. `<tailnet-hostname>:<caddy-port>`
+   (the external address, not the internal `:5000`) is the `REGISTRY_HOST`
+   value used everywhere below.
 
 4. **Export Caddy's root CA certificate.** The exact path depends on how
    Caddy is installed — commonly:
@@ -68,10 +72,11 @@ needed).
    - Scope it to a dedicated tag, e.g. `tag:ci`, so it can only ever bring up
      ephemeral CI nodes, not full tailnet-admin access.
    - Add `tag:ci` to your tailnet's ACL policy (`https://login.tailscale.com/admin/acls`)
-     with access to the registry node on port 5000, e.g.:
+     with access to the registry node on **Caddy's external port** (not the
+     registry container's internal `5000`), e.g.:
      ```json
      "acls": [
-       {"action": "accept", "src": ["tag:ci"], "dst": ["<registry-node-ip-or-tag>:5000"]}
+       {"action": "accept", "src": ["tag:ci"], "dst": ["<registry-node-ip-or-tag>:<caddy-port>"]}
      ],
      "tagOwners": {
        "tag:ci": ["autogroup:admin"]
@@ -86,8 +91,9 @@ needed).
      `REGISTRY_CA_CERT` (the full PEM contents of `caddy-ca.crt` from server
      setup step 4 — paste it as-is, including the `-----BEGIN/END
      CERTIFICATE-----` lines).
-   - Variable: `REGISTRY_HOST` = the tailnet hostname **with the `:5000`
-     port** (e.g. `myserver.tailxxxxx.ts.net:5000`).
+   - Variable: `REGISTRY_HOST` = the tailnet hostname **with Caddy's external
+     port** (e.g. `myserver.tailxxxxx.ts.net:8454` — whatever port your Caddy
+     site actually listens on, not the registry container's internal 5000).
 
 ## Image tags
 
