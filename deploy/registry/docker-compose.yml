@@ -1,8 +1,5 @@
-# Private Docker registry, run on a tailnet node (e.g. the deploy server itself).
-# Only bound to localhost: reachability from the rest of the tailnet comes from
-# Caddy (already configured separately, ADR-0058) proxying HTTPS to this
-# container, not from a published port on the host's real network interfaces.
-# See README.md in this directory.
+# Private Docker registry. Only bound to localhost: exposing it beyond that
+# is left to your own reverse proxy / network setup. See README.md.
 services:
   registry:
     image: registry:2
@@ -13,7 +10,10 @@ services:
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
     volumes:
       - registry-data:/var/lib/registry
-      - ./auth:/auth:ro
+      # Not :ro - the registry's htpasswd auth handler needs non-read-only
+      # access to this path, not just a one-time read (panics with "read-only
+      # file system" otherwise).
+      - ./auth:/auth
     ports:
       - "127.0.0.1:5000:5000"
 
