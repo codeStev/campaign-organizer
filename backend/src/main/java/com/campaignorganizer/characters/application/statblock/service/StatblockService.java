@@ -12,6 +12,7 @@ import com.campaignorganizer.characters.application.statblock.port.out.CampaignE
 import com.campaignorganizer.characters.application.statblock.port.out.CampaignStatblockRefPort;
 import com.campaignorganizer.characters.application.statblock.port.out.StatblockRepositoryPort;
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -33,7 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Statblock use cases; also implements the published query port for consumers. */
 @Service
 public class StatblockService implements CreateStatblockUseCase, UpdateStatblockUseCase,
-        DeleteStatblockUseCase, GetStatblockUseCase, ListStatblocksUseCase, StatblockQueryPort {
+        DeleteStatblockUseCase, GetStatblockUseCase, ListStatblocksUseCase, StatblockQueryPort,
+        StatblockImportPort {
 
     private final StatblockRepositoryPort statblocks;
     private final WorldExistsPort worlds;
@@ -120,6 +122,17 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
             });
         }
         return new ArrayList<>(byId.values());
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public StatblockView importStatblock(StatblockView view) {
+        Statblock statblock = Statblock.reconstitute(view.id(), view.worldId(), view.articleId(),
+                view.campaignId(), view.templateId(), view.name(), view.stats(), view.notes(),
+                view.createdAt(), view.updatedAt());
+        return viewMapper.toView(statblocks.save(statblock));
     }
 
     // --- published query port ---

@@ -8,6 +8,7 @@ import com.campaignorganizer.campaign.application.arc.port.in.ListArcsUseCase;
 import com.campaignorganizer.campaign.application.arc.port.in.UpdateArcUseCase;
 import com.campaignorganizer.campaign.application.arc.port.out.ArcRepositoryPort;
 import com.campaignorganizer.campaign.application.arc.port.out.CampaignExistsPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.domain.arc.Arc;
@@ -24,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Arc use cases; also implements the published query port for consumers. */
 @Service
 public class ArcService implements CreateArcUseCase, UpdateArcUseCase, DeleteArcUseCase,
-        ListArcsUseCase, ArcQueryPort {
+        ListArcsUseCase, ArcQueryPort, ArcImportPort {
 
     private final ArcRepositoryPort arcs;
     private final CampaignExistsPort campaigns;
@@ -75,6 +76,16 @@ public class ArcService implements CreateArcUseCase, UpdateArcUseCase, DeleteArc
     public List<ArcView> list(UUID worldId, UUID campaignId) {
         requireCampaign(worldId, campaignId);
         return findByCampaign(campaignId);
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public ArcView importArc(ArcView view) {
+        Arc arc = Arc.reconstitute(view.id(), view.campaignId(), view.title(), view.description(),
+                ArcStatus.valueOf(view.status()), view.position(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(arcs.save(arc));
     }
 
     // --- published query port ---

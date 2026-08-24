@@ -11,6 +11,7 @@ import com.campaignorganizer.characters.application.sheet.port.out.ArticleExists
 import com.campaignorganizer.characters.application.sheet.port.out.CampaignExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.out.CharacterSheetRepositoryPort;
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -30,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CharacterSheetService implements CreateCharacterSheetUseCase, UpdateCharacterSheetUseCase,
         DeleteCharacterSheetUseCase, GetCharacterSheetUseCase, ListCharacterSheetsUseCase,
-        CharacterSheetQueryPort {
+        CharacterSheetQueryPort, CharacterSheetImportPort {
 
     private final CharacterSheetRepositoryPort sheets;
     private final FieldTemplateQueryPort templates;
@@ -96,6 +97,17 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
                 ? sheets.findByWorld(worldId)
                 : sheets.findByWorldAndCampaign(worldId, campaignId);
         return result.stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public CharacterSheetView importCharacterSheet(CharacterSheetView view) {
+        CharacterSheet sheet = CharacterSheet.reconstitute(view.id(), view.worldId(), view.templateId(),
+                view.articleId(), view.campaignId(), view.name(), view.values(), view.createdAt(),
+                view.updatedAt());
+        return viewMapper.toView(sheets.save(sheet));
     }
 
     // --- published query port ---

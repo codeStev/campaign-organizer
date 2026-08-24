@@ -16,6 +16,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.in.UpdateArticl
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRevisionRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleImportPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRevisionView;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleSummaryView;
@@ -23,6 +24,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.published.Artic
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.worldbuilding.domain.wiki.Article;
 import com.campaignorganizer.worldbuilding.domain.wiki.ArticleRevision;
+import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import com.campaignorganizer.worldbuilding.domain.wiki.Slugs;
 import java.time.Clock;
 import java.util.List;
@@ -35,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCase, DeleteArticleUseCase,
         GetArticleUseCase, ListArticlesUseCase, ListArticleRevisionsUseCase, RestoreArticleRevisionUseCase,
-        ArticleQueryPort {
+        ArticleQueryPort, ArticleImportPort {
 
     private final ArticleRepositoryPort articles;
     private final ArticleRevisionRepositoryPort revisions;
@@ -131,6 +133,17 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
         revisions.save(ArticleRevision.snapshot(ids.newId(), article, clock.instant()));
         article.update(article.getCategoryId(), revision.getTitle(), revision.getSlug(),
                 revision.getTemplate(), revision.getBody(), clock.instant());
+        return viewMapper.toView(articles.save(article));
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public ArticleView importArticle(ArticleView view) {
+        Article article = Article.reconstitute(view.id(), view.worldId(), view.categoryId(), view.title(),
+                view.slug(), ArticleTemplate.valueOf(view.template()), view.body(), view.createdAt(),
+                view.updatedAt());
         return viewMapper.toView(articles.save(article));
     }
 

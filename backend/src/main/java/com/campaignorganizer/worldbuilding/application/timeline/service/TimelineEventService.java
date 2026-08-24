@@ -13,6 +13,7 @@ import com.campaignorganizer.worldbuilding.application.timeline.port.in.Timeline
 import com.campaignorganizer.worldbuilding.application.timeline.port.in.UpdateTimelineEventUseCase;
 import com.campaignorganizer.worldbuilding.application.timeline.port.out.ArticleExistsPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.out.TimelineEventRepositoryPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventImportPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventQueryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventView;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
@@ -27,7 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Timeline-event use cases; implements the published query port for consumers. */
 @Service
 public class TimelineEventService implements CreateTimelineEventUseCase, UpdateTimelineEventUseCase,
-        DeleteTimelineEventUseCase, ListTimelineEventsUseCase, TimelineEventQueryPort {
+        DeleteTimelineEventUseCase, ListTimelineEventsUseCase, TimelineEventQueryPort,
+        TimelineEventImportPort {
 
     private final TimelineEventRepositoryPort events;
     private final TimelineLookupPort timelines;
@@ -88,6 +90,17 @@ public class TimelineEventService implements CreateTimelineEventUseCase, UpdateT
     public List<TimelineEventView> list(UUID worldId, UUID timelineId) {
         requireTimeline(worldId, timelineId);
         return events.findByTimelineOrdered(timelineId).stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public TimelineEventView importTimelineEvent(TimelineEventView view) {
+        TimelineEvent event = TimelineEvent.reconstitute(view.id(), view.timelineId(), view.articleId(),
+                view.title(), view.description(), view.year(), view.month(), view.day(), view.createdAt(),
+                view.updatedAt());
+        return viewMapper.toView(events.save(event));
     }
 
     // --- published query port ---

@@ -11,6 +11,7 @@ import com.campaignorganizer.worldbuilding.application.calendar.port.in.ListCale
 import com.campaignorganizer.worldbuilding.application.calendar.port.in.UpdateCalendarUseCase;
 import com.campaignorganizer.worldbuilding.application.calendar.port.out.CalendarRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarMonthView;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarView;
@@ -25,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Calendar use cases; also implements the published query port for consumers. */
 @Service
 public class CalendarService implements CreateCalendarUseCase, UpdateCalendarUseCase,
-        DeleteCalendarUseCase, ListCalendarsUseCase, CalendarQueryPort {
+        DeleteCalendarUseCase, ListCalendarsUseCase, CalendarQueryPort, CalendarImportPort {
 
     private final CalendarRepositoryPort calendars;
     private final WorldExistsPort worlds;
@@ -70,6 +71,18 @@ public class CalendarService implements CreateCalendarUseCase, UpdateCalendarUse
     public List<CalendarView> list(UUID worldId) {
         requireWorld(worldId);
         return calendars.findByWorld(worldId).stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public CalendarView importCalendar(CalendarView view) {
+        List<Month> months = view.months() == null ? List.of()
+                : view.months().stream().map(m -> new Month(m.name(), m.days())).toList();
+        Calendar calendar = Calendar.reconstitute(view.id(), view.worldId(), view.name(),
+                view.daysPerWeek(), months, view.createdAt(), view.updatedAt());
+        return viewMapper.toView(calendars.save(calendar));
     }
 
     // --- published query port ---

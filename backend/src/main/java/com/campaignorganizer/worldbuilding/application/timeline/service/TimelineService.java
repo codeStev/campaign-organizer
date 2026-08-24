@@ -12,6 +12,7 @@ import com.campaignorganizer.worldbuilding.application.timeline.port.in.Timeline
 import com.campaignorganizer.worldbuilding.application.timeline.port.in.UpdateTimelineUseCase;
 import com.campaignorganizer.worldbuilding.application.timeline.port.out.TimelineRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineImportPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineLookupPort;
 import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineView;
 import com.campaignorganizer.worldbuilding.domain.timeline.Timeline;
@@ -25,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Timeline use cases; implements the published lookup port for consumers. */
 @Service
 public class TimelineService implements CreateTimelineUseCase, UpdateTimelineUseCase,
-        DeleteTimelineUseCase, ListTimelinesUseCase, TimelineLookupPort {
+        DeleteTimelineUseCase, ListTimelinesUseCase, TimelineLookupPort, TimelineImportPort {
 
     private final TimelineRepositoryPort timelines;
     private final WorldExistsPort worlds;
@@ -75,6 +76,16 @@ public class TimelineService implements CreateTimelineUseCase, UpdateTimelineUse
     public List<TimelineView> list(UUID worldId) {
         requireWorld(worldId);
         return timelines.findByWorld(worldId).stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public TimelineView importTimeline(TimelineView view) {
+        Timeline timeline = Timeline.reconstitute(view.id(), view.worldId(), view.name(),
+                view.description(), view.calendarId(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(timelines.save(timeline));
     }
 
     // --- published lookup port ---

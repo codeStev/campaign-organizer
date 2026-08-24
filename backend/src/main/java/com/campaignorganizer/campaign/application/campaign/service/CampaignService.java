@@ -9,6 +9,7 @@ import com.campaignorganizer.campaign.application.campaign.port.in.ListCampaigns
 import com.campaignorganizer.campaign.application.campaign.port.in.UpdateCampaignUseCase;
 import com.campaignorganizer.campaign.application.campaign.port.out.CampaignRepositoryPort;
 import com.campaignorganizer.campaign.application.campaign.port.out.WorldExistsPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.domain.campaign.Campaign;
@@ -24,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Campaign use cases; also implements the published query port for consumers. */
 @Service
 public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUseCase,
-        DeleteCampaignUseCase, GetCampaignUseCase, ListCampaignsUseCase, CampaignQueryPort {
+        DeleteCampaignUseCase, GetCampaignUseCase, ListCampaignsUseCase, CampaignQueryPort,
+        CampaignImportPort {
 
     private final CampaignRepositoryPort campaigns;
     private final WorldExistsPort worlds;
@@ -75,6 +77,16 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     public List<CampaignView> list(UUID worldId) {
         requireWorld(worldId);
         return findByWorld(worldId);
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public CampaignView importCampaign(CampaignView view) {
+        Campaign campaign = Campaign.reconstitute(view.id(), view.worldId(), view.name(),
+                view.description(), view.notes(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(campaigns.save(campaign));
     }
 
     // --- published query port ---

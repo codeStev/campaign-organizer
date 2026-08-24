@@ -11,6 +11,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.in.ListCategori
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.UpdateCategoryUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.CategoryRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryImportPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryView;
 import com.campaignorganizer.worldbuilding.domain.wiki.Category;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Category use cases; also implements the published query port for consumers. */
 @Service
 public class CategoryService implements CreateCategoryUseCase, UpdateCategoryUseCase,
-        DeleteCategoryUseCase, ListCategoriesUseCase, CategoryQueryPort {
+        DeleteCategoryUseCase, ListCategoriesUseCase, CategoryQueryPort, CategoryImportPort {
 
     private final CategoryRepositoryPort categories;
     private final WorldExistsPort worlds;
@@ -70,6 +71,16 @@ public class CategoryService implements CreateCategoryUseCase, UpdateCategoryUse
     public List<CategoryView> list(UUID worldId) {
         requireWorld(worldId);
         return findByWorld(worldId);
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public CategoryView importCategory(CategoryView view) {
+        Category category = Category.reconstitute(view.id(), view.worldId(), view.parentId(), view.name(),
+                view.createdAt(), view.updatedAt());
+        return viewMapper.toView(categories.save(category));
     }
 
     // --- published query port ---

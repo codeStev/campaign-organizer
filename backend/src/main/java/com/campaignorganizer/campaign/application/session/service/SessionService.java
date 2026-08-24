@@ -8,6 +8,7 @@ import com.campaignorganizer.campaign.application.session.port.in.SessionCommand
 import com.campaignorganizer.campaign.application.session.port.in.UpdateSessionUseCase;
 import com.campaignorganizer.campaign.application.session.port.out.CampaignExistsPort;
 import com.campaignorganizer.campaign.application.session.port.out.SessionRepositoryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.campaign.domain.session.Session;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Session use cases; also implements the published query port for consumers. */
 @Service
 public class SessionService implements CreateSessionUseCase, UpdateSessionUseCase, DeleteSessionUseCase,
-        ListSessionsUseCase, SessionQueryPort {
+        ListSessionsUseCase, SessionQueryPort, SessionImportPort {
 
     private final SessionRepositoryPort sessions;
     private final CampaignExistsPort campaigns;
@@ -72,6 +73,17 @@ public class SessionService implements CreateSessionUseCase, UpdateSessionUseCas
     public List<SessionView> list(UUID worldId, UUID campaignId) {
         requireCampaign(worldId, campaignId);
         return findOrdered(campaignId);
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public SessionView importSession(SessionView view) {
+        Session session = Session.reconstitute(view.id(), view.campaignId(), view.title(),
+                view.sessionNumber(), view.date(), view.summary(), view.notes(), view.createdAt(),
+                view.updatedAt());
+        return viewMapper.toView(sessions.save(session));
     }
 
     // --- published query port ---

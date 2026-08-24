@@ -11,6 +11,7 @@ import com.campaignorganizer.whiteboard.application.port.in.WhiteboardCommands.C
 import com.campaignorganizer.whiteboard.application.port.in.WhiteboardCommands.UpdateWhiteboardCommand;
 import com.campaignorganizer.whiteboard.application.port.out.WhiteboardRepositoryPort;
 import com.campaignorganizer.whiteboard.application.port.out.WorldExistsPort;
+import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardQueryPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.whiteboard.domain.Whiteboard;
@@ -24,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WhiteboardService
         implements CreateWhiteboardUseCase, UpdateWhiteboardUseCase, DeleteWhiteboardUseCase,
-        GetWhiteboardUseCase, ListWhiteboardsUseCase, WhiteboardQueryPort {
+        GetWhiteboardUseCase, ListWhiteboardsUseCase, WhiteboardQueryPort, WhiteboardImportPort {
 
     private final WhiteboardRepositoryPort whiteboards;
     private final WorldExistsPort worlds;
@@ -75,6 +76,16 @@ public class WhiteboardService
     public List<WhiteboardView> list(UUID worldId) {
         requireWorld(worldId);
         return findByWorld(worldId);
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public WhiteboardView importWhiteboard(WhiteboardView view) {
+        Whiteboard board = Whiteboard.reconstitute(view.id(), view.worldId(), view.name(), view.nodes(),
+                view.edges(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(whiteboards.save(board));
     }
 
     // --- published query port ---

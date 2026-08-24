@@ -12,6 +12,7 @@ import com.campaignorganizer.campaign.application.arc.port.out.ArticleExistsPort
 import com.campaignorganizer.campaign.application.arc.port.out.CampaignExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.out.SessionExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.out.StatblockExistsPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.domain.arc.ArcBeat;
 import com.campaignorganizer.shared.application.IdGenerator;
@@ -26,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Beat write use cases (create/update/delete) plus the per-arc listing, with link validation. */
 @Service
 public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCase, DeleteBeatUseCase,
-        ListBeatsUseCase {
+        ListBeatsUseCase, ArcBeatImportPort {
 
     private final ArcBeatRepositoryPort beats;
     private final ArcRepositoryPort arcs;
@@ -94,6 +95,17 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
     public List<ArcBeatView> list(UUID worldId, UUID campaignId, UUID arcId) {
         requireArc(worldId, campaignId, arcId);
         return beats.findByArc(arcId).stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public ArcBeatView importArcBeat(ArcBeatView view) {
+        ArcBeat beat = ArcBeat.reconstitute(view.id(), view.arcId(), view.articleIds(),
+                view.statblockIds(), view.sessionId(), view.title(), view.body(), view.done(),
+                view.position(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(beats.save(beat));
     }
 
     private void requireArc(UUID worldId, UUID campaignId, UUID arcId) {
