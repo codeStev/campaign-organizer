@@ -61,12 +61,13 @@ the old one.
 | [0052](0052-shared-field-templates.md) | Shared field templates for sheets and statblocks (renames SheetTemplate) | Accepted |
 | [0053](0053-deep-linking.md) | Deep linking via client-side routing (react-router-dom) | Accepted |
 | [0054](0054-article-body-markdown.md) | Article body stored as Markdown, live-preview editor (supersedes ADR-0013 body format, ADR-0025 sanitization timing) | Accepted |
-| [0055](0055-instance-backup.md) | One-click instance backup (ZIP of pg_dump + media) | Accepted |
+| [0055](0055-instance-backup.md) | One-click instance backup (ZIP of pg_dump + media) | Superseded by ADR-0061 |
 | [0056](0056-gradle-build-tool.md) | Gradle build tool for the backend (replaces Maven) | Accepted |
 | [0057](0057-tailnet-private-registry.md) | Tailnet-private Docker registry for deployment images | Accepted |
 | [0058](0058-caddy-registry-tls.md) | Caddy fronts the registry's TLS (supersedes 0057's `tailscale serve` choice) | Accepted |
 | [0059](0059-combined-image-static-frontend.md) | Combined image — backend statically serves the frontend | Accepted |
 | [0060](0060-semver-release-strategy.md) | SemVer release strategy — git tag is the version, GitHub Releases as changelog | Accepted |
+| [0061](0061-backup-import-and-export-bundle.md) | Backup import (additive/overwrite); structured bundle replaces pg_dump (supersedes ADR-0055's format) | Accepted |
 
 ## Template
 
