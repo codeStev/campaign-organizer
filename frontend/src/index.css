@@ -693,6 +693,16 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  /* On the maps view specifically, show the map before the map list/layer
+     controls — the map is the primary content, the sidebar is settings. */
+  .maps-layout .wiki-sidebar {
+    order: 2;
+  }
+
+  .maps-layout .wiki-main {
+    order: 1;
+  }
+
   /* Keep the list short so the article content stays reachable. */
   .article-list-scroll {
     max-height: 45vh;

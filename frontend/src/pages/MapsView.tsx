@@ -249,7 +249,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout maps-layout">
       <aside className="wiki-sidebar">
         <button onClick={() => fileInputRef.current?.click()}>+ New map</button>
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleNewMapFile} />
