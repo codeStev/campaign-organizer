@@ -1,5 +1,8 @@
 :root {
-  color-scheme: light dark;
+  /* The app is hard-coded dark (see body below); claiming "light dark" here
+     just makes native control chrome (date pickers, selects) render light
+     against it on light-OS-theme devices. */
+  color-scheme: dark;
   font-family: system-ui, sans-serif;
   --accent: #6d54c9;
 }
