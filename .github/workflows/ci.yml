@@ -175,3 +175,20 @@ jobs:
           push: true
           tags: ${{ steps.meta-combined.outputs.tags }}
           labels: ${{ steps.meta-combined.outputs.labels }}
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [publish]
+    # Only a `vX.Y.Z` tag push cuts a release (ADR-0060); a plain master push
+    # never reaches this job.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create release with auto-generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" --generate-notes
