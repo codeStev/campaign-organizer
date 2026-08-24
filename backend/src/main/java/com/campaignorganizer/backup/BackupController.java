@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-/** Serves a full instance backup (database + media) as a downloadable ZIP (ADR-0055). */
+/** Serves a full instance backup (per-world JSON + media) as a downloadable ZIP (ADR-0061). */
 @RestController
 public class BackupController {
 

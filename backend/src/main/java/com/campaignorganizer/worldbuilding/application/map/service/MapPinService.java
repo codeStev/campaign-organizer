@@ -11,6 +11,7 @@ import com.campaignorganizer.worldbuilding.application.map.port.in.MapPinCommand
 import com.campaignorganizer.worldbuilding.application.map.port.in.UpdateMapPinUseCase;
 import com.campaignorganizer.worldbuilding.application.map.port.out.ArticleExistsPort;
 import com.campaignorganizer.worldbuilding.application.map.port.out.MapPinRepositoryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
@@ -24,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Map-pin use cases; also implements the published query port for consumers. */
 @Service
 public class MapPinService implements CreateMapPinUseCase, UpdateMapPinUseCase, DeleteMapPinUseCase,
-        ListMapPinsUseCase, MapPinQueryPort {
+        ListMapPinsUseCase, MapPinQueryPort, MapPinImportPort {
 
     private final MapPinRepositoryPort pins;
     private final MapQueryPort maps;
@@ -79,6 +80,16 @@ public class MapPinService implements CreateMapPinUseCase, UpdateMapPinUseCase, 
     public List<MapPinView> list(UUID worldId, UUID mapId) {
         requireMap(worldId, mapId);
         return pins.findByMap(mapId).stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public MapPinView importMapPin(MapPinView view) {
+        MapPin pin = MapPin.reconstitute(view.id(), view.mapId(), view.articleId(), view.label(),
+                view.layer(), view.x(), view.y(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(pins.save(pin));
     }
 
     // --- published query port ---

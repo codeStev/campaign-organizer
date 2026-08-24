@@ -8,11 +8,13 @@ import com.campaignorganizer.media.application.port.in.UploadMediaUseCase;
 import com.campaignorganizer.media.application.port.out.MediaRepositoryPort;
 import com.campaignorganizer.media.application.port.out.MediaStoragePort;
 import com.campaignorganizer.media.application.port.out.WorldExistsPort;
+import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.media.application.port.published.MediaLookupPort;
 import com.campaignorganizer.media.domain.MediaAsset;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Media use cases; also implements the published lookup port for other contexts. */
 @Service
 public class MediaService implements UploadMediaUseCase, ListMediaUseCase, DeleteMediaUseCase,
-        LoadMediaContentUseCase, MediaLookupPort {
+        LoadMediaContentUseCase, MediaLookupPort, MediaImportPort {
 
     private final MediaRepositoryPort media;
     private final MediaStoragePort storage;
@@ -83,6 +85,18 @@ public class MediaService implements UploadMediaUseCase, ListMediaUseCase, Delet
     @Transactional(readOnly = true)
     public boolean existsInWorld(UUID mediaId, UUID worldId) {
         return media.findByIdAndWorld(mediaId, worldId).isPresent();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public void importMedia(UUID id, UUID worldId, String filename, String contentType, byte[] content,
+            Instant createdAt) {
+        String key = storage.store(content);
+        MediaAsset asset = MediaAsset.reconstitute(id, worldId, filename, contentType, content.length,
+                key, createdAt);
+        media.save(asset);
     }
 
     private void requireWorld(UUID worldId) {

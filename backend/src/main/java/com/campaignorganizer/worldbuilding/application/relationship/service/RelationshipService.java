@@ -13,6 +13,7 @@ import com.campaignorganizer.worldbuilding.application.relationship.port.in.Upda
 import com.campaignorganizer.worldbuilding.application.relationship.port.out.ArticleExistsPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.out.RelationshipRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipImportPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipQueryPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipView;
 import com.campaignorganizer.worldbuilding.domain.relationship.Relationship;
@@ -26,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RelationshipService implements CreateRelationshipUseCase, UpdateRelationshipUseCase,
         DeleteRelationshipUseCase, ListRelationshipsUseCase, ListArticleRelationshipsUseCase,
-        RelationshipQueryPort {
+        RelationshipQueryPort, RelationshipImportPort {
 
     private final RelationshipRepositoryPort relationships;
     private final ArticleExistsPort articles;
@@ -88,6 +89,17 @@ public class RelationshipService implements CreateRelationshipUseCase, UpdateRel
         }
         return relationships.findTouchingArticle(worldId, articleId).stream()
                 .map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public RelationshipView importRelationship(RelationshipView view) {
+        Relationship relationship = Relationship.reconstitute(view.id(), view.worldId(),
+                view.fromArticleId(), view.toArticleId(), view.label(), view.directed(),
+                view.createdAt(), view.updatedAt());
+        return viewMapper.toView(relationships.save(relationship));
     }
 
     // --- published query port (consumed by other contexts) ---

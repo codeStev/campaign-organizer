@@ -12,6 +12,7 @@ import com.campaignorganizer.worldbuilding.application.world.port.in.UpdateWorld
 import com.campaignorganizer.worldbuilding.application.world.port.in.WorldCommands.CreateWorldCommand;
 import com.campaignorganizer.worldbuilding.application.world.port.in.WorldCommands.UpdateWorldCommand;
 import com.campaignorganizer.worldbuilding.application.world.port.out.WorldRepositoryPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldImportPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
 import com.campaignorganizer.worldbuilding.domain.world.LayerStyle;
@@ -28,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, DeleteWorldUseCase,
         GetWorldUseCase, ListWorldsUseCase, GetLayerStylesUseCase, ReplaceLayerStylesUseCase,
-        WorldQueryPort {
+        WorldQueryPort, WorldImportPort {
 
     private final WorldRepositoryPort worlds;
     private final WorldViewMapper viewMapper;
@@ -88,6 +89,16 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
         World world = require(worldId);
         world.replaceLayerStyles(layerStyles, clock.instant());
         return worlds.save(world).getLayerStyles();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public WorldView importWorld(WorldView view) {
+        World world = World.reconstitute(view.id(), view.name(), view.description(), view.layerStyles(),
+                view.createdAt(), view.updatedAt());
+        return viewMapper.toView(worlds.save(world));
     }
 
     // --- published query port ---

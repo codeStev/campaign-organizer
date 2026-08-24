@@ -1,6 +1,8 @@
 # ADR-0055: One-click instance backup (ZIP of a plain-SQL pg_dump + media)
 
-- Status: Accepted
+- Status: Superseded by ADR-0061 (backup format and mechanism; restore is now
+  built, in-app, and additive-by-default — see ADR-0061 for why the tradeoffs
+  below no longer hold)
 - Date: 2026-08-21
 
 ## Context

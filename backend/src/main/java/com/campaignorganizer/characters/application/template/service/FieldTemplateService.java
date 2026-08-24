@@ -9,6 +9,7 @@ import com.campaignorganizer.characters.application.template.port.in.FieldTempla
 import com.campaignorganizer.characters.application.template.port.in.UpdateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.out.FieldTemplateRepositoryPort;
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
@@ -26,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateFieldTemplateUseCase,
         DeleteFieldTemplateUseCase, GetFieldTemplateUseCase, ListFieldTemplatesUseCase,
-        FieldTemplateQueryPort {
+        FieldTemplateQueryPort, FieldTemplateImportPort {
 
     private final FieldTemplateRepositoryPort templates;
     private final WorldExistsPort worlds;
@@ -77,6 +78,16 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     public List<FieldTemplateView> list(UUID worldId, TemplateKind kind) {
         requireWorld(worldId);
         return kind == null ? findByWorld(worldId) : findByWorldAndKind(worldId, kind);
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public FieldTemplateView importFieldTemplate(FieldTemplateView view) {
+        FieldTemplate template = FieldTemplate.reconstitute(view.id(), view.worldId(), view.name(),
+                view.kind(), view.system(), view.sections(), view.createdAt(), view.updatedAt());
+        return viewMapper.toView(templates.save(template));
     }
 
     // --- published query port ---

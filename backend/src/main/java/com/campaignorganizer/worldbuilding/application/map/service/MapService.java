@@ -13,6 +13,7 @@ import com.campaignorganizer.worldbuilding.application.map.port.in.MapCommands.U
 import com.campaignorganizer.worldbuilding.application.map.port.in.UpdateMapUseCase;
 import com.campaignorganizer.worldbuilding.application.map.port.out.MapRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
 import com.campaignorganizer.worldbuilding.domain.map.WorldMap;
@@ -26,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Map use cases; also implements the published query port for consumers. */
 @Service
 public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMapUseCase,
-        GetMapUseCase, ListMapsUseCase, MapQueryPort {
+        GetMapUseCase, ListMapsUseCase, MapQueryPort, MapImportPort {
 
     private final MapRepositoryPort maps;
     private final WorldExistsPort worlds;
@@ -81,6 +82,16 @@ public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMap
     public List<MapView> list(UUID worldId) {
         requireWorld(worldId);
         return maps.findByWorld(worldId).stream().map(viewMapper::toView).toList();
+    }
+
+    // --- published import port (ADR-0061) ---
+
+    @Override
+    @Transactional
+    public MapView importMap(MapView view) {
+        WorldMap map = WorldMap.reconstitute(view.id(), view.worldId(), view.name(), view.mediaId(),
+                view.createdAt(), view.updatedAt());
+        return viewMapper.toView(maps.save(map));
     }
 
     // --- published query port ---
