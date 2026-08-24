@@ -1,6 +1,12 @@
 import { TemplateField, TemplateSection } from '../api/client';
 import { MarkdownEditor } from './MarkdownEditor';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// and a SELECT-type field can genuinely be saved unset, so that state goes
+// through this sentinel at the Select boundary.
+const NONE_VALUE = '__none__';
 
 interface Props {
   sections: TemplateSection[];
@@ -59,14 +65,22 @@ export function TemplateForm({ sections, values, onChange }: Props) {
                       onChange={(n) => set(field.key, n)}
                     />
                   ) : field.type === 'SELECT' ? (
-                    <select value={(value as string) ?? ''} onChange={(e) => set(field.key, e.target.value)}>
-                      <option value="">—</option>
-                      {(field.options ?? []).map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      value={(value as string) || NONE_VALUE}
+                      onValueChange={(v) => set(field.key, v === NONE_VALUE ? '' : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_VALUE}>—</SelectItem>
+                        {(field.options ?? []).map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <Input value={(value as string) ?? ''} onChange={(e) => set(field.key, e.target.value)} />
                   )}

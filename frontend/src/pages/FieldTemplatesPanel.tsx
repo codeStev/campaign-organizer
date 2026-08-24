@@ -10,6 +10,7 @@ import {
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 interface Props {
   worldId: string;
@@ -114,25 +115,34 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       <div className="editor-actions">
         <label className="muted">
           What are you building?{' '}
-          <select
+          <Select
             value={newKind}
-            onChange={(e) => {
-              setNewKind(e.target.value as TemplateKind);
+            onValueChange={(v) => {
+              setNewKind(v as TemplateKind);
               setChoice('');
             }}
           >
-            <option value="CHARACTER">Character sheet</option>
-            <option value="STATBLOCK">Statblock</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CHARACTER">Character sheet</SelectItem>
+              <SelectItem value="STATBLOCK">Statblock</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
-        <select value={choice} onChange={(e) => setChoice(e.target.value)}>
-          <option value="">Starter system…</option>
-          {buildersForKind.map((b) => (
-            <option key={b.name} value={b.name}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        <Select value={choice} onValueChange={setChoice}>
+          <SelectTrigger>
+            <SelectValue placeholder="Starter system…" />
+          </SelectTrigger>
+          <SelectContent>
+            {buildersForKind.map((b) => (
+              <SelectItem key={b.name} value={b.name}>
+                {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button onClick={addFromBuiltin} disabled={!choice}>
           Add starter
         </Button>

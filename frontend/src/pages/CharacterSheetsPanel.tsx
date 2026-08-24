@@ -11,6 +11,11 @@ import {
 import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// so a meaningfully persistent "none" state goes through this sentinel.
+const NONE_VALUE = '__none__';
 
 interface Props {
   worldId: string;
@@ -152,18 +157,22 @@ export function CharacterSheetsPanel({
       <div className="sheets-list-col">
         <Button onClick={newSheet}>+ New sheet</Button>
         {campaigns.length > 0 && (
-          <select
-            value={filterCampaign}
-            onChange={(e) => setFilterCampaign(e.target.value)}
-            title="Filter by campaign"
+          <Select
+            value={filterCampaign || NONE_VALUE}
+            onValueChange={(v) => setFilterCampaign(v === NONE_VALUE ? '' : v)}
           >
-            <option value="">All campaigns</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger title="Filter by campaign">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>All campaigns</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         <ul className="article-list">
           {sheets.map((s) => (
@@ -194,32 +203,42 @@ export function CharacterSheetsPanel({
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
-              <select
+              <Select
                 value={draft.templateId}
-                onChange={(e) => setDraft({ ...draft, templateId: e.target.value })}
+                onValueChange={(v) => setDraft({ ...draft, templateId: v })}
                 disabled={draft.id != null}
               >
-                {characterTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {characterTemplates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <label className="sheet-article">
               <span className="muted">Linked article</span>
-              <select
-                value={draft.articleId}
-                onChange={(e) => setDraft({ ...draft, articleId: e.target.value })}
+              <Select
+                value={draft.articleId || NONE_VALUE}
+                onValueChange={(v) => setDraft({ ...draft, articleId: v === NONE_VALUE ? '' : v })}
               >
-                <option value="">— none —</option>
-                {articles.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.title}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>— none —</SelectItem>
+                  {articles.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {draft.articleId && (
                 <Button variant="link" onClick={() => onOpenArticle(draft.articleId)}>
                   Open
@@ -230,17 +249,22 @@ export function CharacterSheetsPanel({
             {campaigns.length > 0 && (
               <label className="sheet-article">
                 <span className="muted">Campaign</span>
-                <select
-                  value={draft.campaignId}
-                  onChange={(e) => setDraft({ ...draft, campaignId: e.target.value })}
+                <Select
+                  value={draft.campaignId || NONE_VALUE}
+                  onValueChange={(v) => setDraft({ ...draft, campaignId: v === NONE_VALUE ? '' : v })}
                 >
-                  <option value="">— shared (no campaign) —</option>
-                  {campaigns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>— shared (no campaign) —</SelectItem>
+                    {campaigns.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
             )}
 

@@ -17,6 +17,11 @@ import { MapPrintView } from './MapPrintView';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// so a meaningfully persistent "none" state goes through this sentinel.
+const NONE_VALUE = '__none__';
 
 interface Props {
   worldId: string;
@@ -283,19 +288,22 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                   onChange={(e) => setLayerColor(layer, e.target.value)}
                   title={`Colour for ${layer}`}
                 />
-                <select
-                  className="layer-icon-select"
-                  value={styles[layer]?.icon ?? ''}
-                  onChange={(e) => setLayerIcon(layer, e.target.value)}
-                  title={`Icon for ${layer}`}
+                <Select
+                  value={styles[layer]?.icon || NONE_VALUE}
+                  onValueChange={(v) => setLayerIcon(layer, v === NONE_VALUE ? '' : v)}
                 >
-                  <option value="">#</option>
-                  {LAYER_ICONS.map((ic) => (
-                    <option key={ic.key} value={ic.key}>
-                      {ic.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="layer-icon-select" title={`Icon for ${layer}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>#</SelectItem>
+                    {LAYER_ICONS.map((ic) => (
+                      <SelectItem key={ic.key} value={ic.key}>
+                        {ic.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <label className="layer-toggle">
                   <input
                     type="checkbox"
@@ -456,14 +464,19 @@ function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEdito
       </label>
       <label>
         Linked article
-        <select value={articleId} onChange={(e) => setArticleId(e.target.value)}>
-          <option value="">— none —</option>
-          {articles.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.title}
-            </option>
-          ))}
-        </select>
+        <Select value={articleId || NONE_VALUE} onValueChange={(v) => setArticleId(v === NONE_VALUE ? '' : v)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_VALUE}>— none —</SelectItem>
+            {articles.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
       <div className="editor-actions">
         <Button onClick={() => onSave({ label, layer, articleId })} disabled={!dirty}>

@@ -18,6 +18,7 @@ import {
 } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
@@ -31,6 +32,10 @@ import { SheetsView } from './SheetsView';
 import { WhiteboardsView } from './WhiteboardsView';
 
 /** True when the Markdown has no meaningful text content. */
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// so a meaningfully persistent "none" state goes through this sentinel.
+const NONE_VALUE = '__none__';
+
 function isEmptyMarkdown(markdown: string): boolean {
   return !markdown || !markdown.trim().length;
 }
@@ -436,19 +441,22 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           </div>
 
           {campaigns.length > 0 && (
-            <select
-              className="campaign-filter"
-              value={campaignFilter}
-              onChange={(e) => setCampaignFilter(e.target.value)}
-              title="Show only articles used in a campaign"
+            <Select
+              value={campaignFilter || NONE_VALUE}
+              onValueChange={(v) => setCampaignFilter(v === NONE_VALUE ? '' : v)}
             >
-              <option value="">All campaigns</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  Used in {c.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="campaign-filter" title="Show only articles used in a campaign">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>All campaigns</SelectItem>
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    Used in {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           <div className="article-list-scroll">
@@ -485,16 +493,18 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                   required
                 />
-                <select
-                  value={draft.template}
-                  onChange={(e) => selectTemplate(e.target.value as ArticleTemplate)}
-                >
-                  {ARTICLE_TEMPLATES.map((t) => (
-                    <option key={t} value={t}>
-                      {templateLabel(t)}
-                    </option>
-                  ))}
-                </select>
+                <Select value={draft.template} onValueChange={(v) => selectTemplate(v as ArticleTemplate)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ARTICLE_TEMPLATES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {templateLabel(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <MarkdownEditor
                   value={draft.body}
                   onChange={(body) => setDraft({ ...draft, body })}

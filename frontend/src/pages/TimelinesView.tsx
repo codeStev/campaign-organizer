@@ -14,6 +14,11 @@ import {
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// so a meaningfully persistent "none" state goes through this sentinel.
+const NONE_VALUE = '__none__';
 
 interface Props {
   worldId: string;
@@ -228,17 +233,22 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
             <div className="map-bar">
               <strong>{selected.name}</strong>
               <div className="editor-actions">
-                <select
-                  value={selected.calendarId ?? ''}
-                  onChange={(e) => setTimelineCalendar(e.target.value || null)}
+                <Select
+                  value={selected.calendarId ?? NONE_VALUE}
+                  onValueChange={(v) => setTimelineCalendar(v === NONE_VALUE ? null : v)}
                 >
-                  <option value="">No calendar</option>
-                  {calendars.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>No calendar</SelectItem>
+                    {calendars.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => deleteTimeline(selected)}>
                   Delete timeline
                 </Button>
@@ -276,17 +286,22 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                   onChange={(e) => setDraft({ ...draft, day: e.target.value })}
                 />
               </div>
-              <select
-                value={draft.articleId}
-                onChange={(e) => setDraft({ ...draft, articleId: e.target.value })}
+              <Select
+                value={draft.articleId || NONE_VALUE}
+                onValueChange={(v) => setDraft({ ...draft, articleId: v === NONE_VALUE ? '' : v })}
               >
-                <option value="">— link article (optional) —</option>
-                {articles.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.title}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>— link article (optional) —</SelectItem>
+                  {articles.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Textarea
                 placeholder="Description (optional)"
                 value={draft.description}
