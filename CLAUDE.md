@@ -23,6 +23,8 @@ World Anvil. Not multi-tenant, no community features.
 - **Repo:** monorepo. — ADR-0010
 - **Tests:** unit + Testcontainers integration; run in CI. — ADR-0011
 - **Schema:** Flyway migrations; Hibernate `ddl-auto: validate`. — ADR-0012
+- **Versioning:** SemVer via git tags (`vX.Y.Z`); `build.gradle.kts`/
+  `package.json` versions are not authoritative. — ADR-0060
 
 ## Architecture (hexagonal, bounded-context modular monolith)
 The backend is a **hexagonal, bounded-context modular monolith**; the M0–M13

@@ -38,15 +38,16 @@ docker compose up -d
 ## Image tags
 
 Every push to `master` publishes/updates `latest` and a `<commit-sha>` tag.
-An immutable release:
+An immutable release (see ADR-0060 for what counts as major/minor/patch):
 
 ```bash
-git tag v0.2.0
+git tag v0.2.0 -m "..."
 git push origin v0.2.0
 ```
 
-This publishes `vX.Y.Z`/`vX.Y`/`vX` tags for both images, computed from the
-git tag.
+This publishes `vX.Y.Z`/`vX.Y`/`vX` tags for all three images
+(`campaign-organizer-backend`, `-frontend`, `-combined`), computed from the
+git tag, and creates a GitHub Release with auto-generated notes.
 
 ## Deploying pulled images
 
