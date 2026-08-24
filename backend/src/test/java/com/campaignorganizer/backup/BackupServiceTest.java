@@ -1,40 +1,51 @@
 package com.campaignorganizer.backup;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.Mockito.when;
 
-import com.campaignorganizer.config.AppProperties;
+import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
+import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
+import com.campaignorganizer.media.application.port.in.ListMediaUseCase;
+import com.campaignorganizer.media.application.port.in.LoadMediaContentUseCase;
+import com.campaignorganizer.media.application.port.in.LoadMediaContentUseCase.MediaContent;
+import com.campaignorganizer.media.application.port.in.MediaView;
+import com.campaignorganizer.worldbuilding.application.world.port.in.ListWorldsUseCase;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
+import tools.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Unit tests for the ZIP composition logic only — no real Postgres or
- * {@code pg_dump} binary involved (ADR-0055); {@link PgDumpRunner} is faked.
- */
+/** Unit test for the ZIP composition logic — every collaborator mocked, no DB/disk. */
+@ExtendWith(MockitoExtension.class)
 class BackupServiceTest {
 
-    private static final byte[] FAKE_DUMP = "FAKE PG_DUMP BYTES".getBytes(StandardCharsets.UTF_8);
+    @Mock
+    private ListWorldsUseCase listWorlds;
+    @Mock
+    private ExportWorldUseCase exportUseCase;
+    @Mock
+    private ListMediaUseCase listMedia;
+    @Mock
+    private LoadMediaContentUseCase loadMedia;
 
-    @TempDir
-    Path mediaDir;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BackupService service() {
-        PgDumpRunner fakeRunner = () -> new ByteArrayInputStream(FAKE_DUMP);
-        AppProperties props = new AppProperties(
-                "pw",
-                new AppProperties.Jwt("unit-test-secret-that-is-at-least-32-bytes-long", 1),
-                new AppProperties.Media(mediaDir.toString()));
-        return new BackupService(fakeRunner, props);
+        return new BackupService(listWorlds, exportUseCase, listMedia, loadMedia, objectMapper);
     }
 
     private Map<String, byte[]> readZip(byte[] zipBytes) throws IOException {
@@ -49,46 +60,44 @@ class BackupServiceTest {
     }
 
     @Test
-    void backupContainsDatabaseDumpAndMediaFiles() throws IOException {
-        Files.writeString(mediaDir.resolve("cover.png"), "image-bytes");
-        Path sub = Files.createDirectory(mediaDir.resolve("sub"));
-        Files.writeString(sub.resolve("map.jpg"), "nested-image-bytes");
+    void backupContainsManifestWorldJsonAndMediaFiles() throws IOException {
+        UUID worldId = UUID.randomUUID();
+        UUID mediaId = UUID.randomUUID();
+        WorldView world = new WorldView(worldId, "Dark Caribbean", null, Map.of(),
+                Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z"));
+        Map<String, Object> bundleData = new LinkedHashMap<>();
+        bundleData.put("exportVersion", 1);
+        bundleData.put("world", world);
+        MediaView mediaView = new MediaView(mediaId, worldId, "cover.png", "image/png", 3,
+                Instant.parse("2026-01-01T00:00:00Z"));
+
+        when(listWorlds.list()).thenReturn(List.of(world));
+        when(exportUseCase.export(worldId)).thenReturn(new WorldExportBundle(world.name(), bundleData));
+        when(listMedia.list(worldId)).thenReturn(List.of(mediaView));
+        when(loadMedia.load(mediaId)).thenReturn(new MediaContent("image/png", new byte[] {1, 2, 3}));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         service().writeBackup(out);
         Map<String, byte[]> entries = readZip(out.toByteArray());
 
-        assertThat(entries).containsKey("database.sql");
-        assertThat(entries.get("database.sql")).isEqualTo(FAKE_DUMP);
-        assertThat(entries).containsKey("media/cover.png");
-        assertThat(new String(entries.get("media/cover.png"), StandardCharsets.UTF_8)).isEqualTo("image-bytes");
-        assertThat(entries).containsKey("media/sub/map.jpg");
-        assertThat(new String(entries.get("media/sub/map.jpg"), StandardCharsets.UTF_8))
-                .isEqualTo("nested-image-bytes");
+        assertThat(entries).containsKey("manifest.json");
+        assertThat(new String(entries.get("manifest.json"), StandardCharsets.UTF_8))
+                .contains(worldId.toString());
+        assertThat(entries).containsKey("worlds/" + worldId + ".json");
+        assertThat(new String(entries.get("worlds/" + worldId + ".json"), StandardCharsets.UTF_8))
+                .contains("Dark Caribbean")
+                .contains("\"media\"");
+        assertThat(entries.get("media/" + worldId + "/" + mediaId)).isEqualTo(new byte[] {1, 2, 3});
     }
 
     @Test
-    void backupWorksWithNoMediaFiles() throws IOException {
+    void backupWithNoWorldsIsJustAManifest() throws IOException {
+        when(listWorlds.list()).thenReturn(List.of());
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         service().writeBackup(out);
         Map<String, byte[]> entries = readZip(out.toByteArray());
 
-        assertThat(entries).containsOnlyKeys("database.sql");
-    }
-
-    @Test
-    void propagatesIOExceptionFromDumpRunner() {
-        PgDumpRunner failingRunner = () -> {
-            throw new IOException("pg_dump not found");
-        };
-        AppProperties props = new AppProperties(
-                "pw",
-                new AppProperties.Jwt("unit-test-secret-that-is-at-least-32-bytes-long", 1),
-                new AppProperties.Media(mediaDir.toString()));
-        BackupService service = new BackupService(failingRunner, props);
-
-        assertThat(catchThrowable(() -> service.writeBackup(new ByteArrayOutputStream())))
-                .isInstanceOf(IOException.class)
-                .hasMessageContaining("pg_dump not found");
+        assertThat(entries).containsOnlyKeys("manifest.json");
     }
 }
