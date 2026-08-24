@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import {
   FieldTemplate,
   FieldTemplateRequest,
@@ -282,17 +283,21 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
                 </div>
                 <div className="bf-row">
                   <span className="muted field-type">{defaultLabel(f.type)}</span>
-                  <select
+                  <Select
                     value={f.width}
-                    title="Width — set two to ½ to place them side by side"
-                    onChange={(e) => mutateField(si, fi, { width: e.target.value as FieldWidth })}
+                    onValueChange={(v) => mutateField(si, fi, { width: v as FieldWidth })}
                   >
-                    {WIDTHS.map((w) => (
-                      <option key={w.w} value={w.w}>
-                        {w.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger title="Width — set two to ½ to place them side by side">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WIDTHS.map((w) => (
+                        <SelectItem key={w.w} value={w.w}>
+                          {w.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {f.type === 'CIRCLES' && (
                     <Input
                       type="number"

@@ -15,6 +15,11 @@ import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// so a meaningfully persistent "none" state goes through this sentinel.
+const NONE_VALUE = '__none__';
 
 function sessionLabel(s: Session): string {
   const num = s.sessionNumber != null ? `#${s.sessionNumber} ` : '';
@@ -272,13 +277,18 @@ function ArcCard({
           <strong>{arc.title}</strong>
         </button>
         <span className={`arc-status arc-${arc.status.toLowerCase()}`}>{arc.status.toLowerCase()}</span>
-        <select value={arc.status} onChange={(e) => onStatus(e.target.value as ArcStatus)}>
-          {ARC_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0) + s.slice(1).toLowerCase()}
-            </option>
-          ))}
-        </select>
+        <Select value={arc.status} onValueChange={(v) => onStatus(v as ArcStatus)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ARC_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s.charAt(0) + s.slice(1).toLowerCase()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button variant="link" className="text-destructive hover:text-destructive" onClick={onRemove}>
           ✕
         </Button>
@@ -373,34 +383,53 @@ function ArcCard({
                       </div>
                     )}
                     <div className="beat-links">
-                      <select value="" onChange={(e) => addDraftArticle(e.target.value)}>
-                        <option value="">+ link article (place, NPC…)</option>
-                        {articles
-                          .filter((a) => !draft.articleIds.includes(a.id))
-                          .map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.title}
-                            </option>
+                      {/* Always shows its placeholder: picking an item fires a one-shot
+                          "add to list" side effect rather than persisting a selection, so
+                          there's no real empty item to represent - value stays "". */}
+                      <Select value="" onValueChange={addDraftArticle}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="+ link article (place, NPC…)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {articles
+                            .filter((a) => !draft.articleIds.includes(a.id))
+                            .map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.title}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value="" onValueChange={addDraftStatblock}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="+ link statblock (monster, NPC…)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statblocks
+                            .filter((s) => !draft.statblockIds.includes(s.id))
+                            .map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={draft.sessionId || NONE_VALUE}
+                        onValueChange={(v) => setDraft({ ...draft, sessionId: v === NONE_VALUE ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NONE_VALUE}>link session…</SelectItem>
+                          {sessions.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {sessionLabel(s)}
+                            </SelectItem>
                           ))}
-                      </select>
-                      <select value="" onChange={(e) => addDraftStatblock(e.target.value)}>
-                        <option value="">+ link statblock (monster, NPC…)</option>
-                        {statblocks
-                          .filter((s) => !draft.statblockIds.includes(s.id))
-                          .map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                      </select>
-                      <select value={draft.sessionId} onChange={(e) => setDraft({ ...draft, sessionId: e.target.value })}>
-                        <option value="">link session…</option>
-                        {sessions.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {sessionLabel(s)}
-                          </option>
-                        ))}
-                      </select>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="editor-actions">
                       <Button onClick={() => saveEdit(b)}>Save beat</Button>
