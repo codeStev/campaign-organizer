@@ -4,6 +4,7 @@ import { getToken, clearToken, worldsApi, World, ApiError } from './api/client';
 import { LoginPage } from './pages/LoginPage';
 import { WorldsPage } from './pages/WorldsPage';
 import { WorldView } from './pages/WorldView';
+import { ThemeToggle } from './components/ThemeToggle';
 
 export function App() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
@@ -17,11 +18,14 @@ export function App() {
     <div className="app">
       <header className="app-header">
         <h1>Campaign Organizer</h1>
-        {authed && (
-          <button className="link-button" onClick={handleLogout}>
-            Log out
-          </button>
-        )}
+        <div className="app-header-actions">
+          <ThemeToggle />
+          {authed && (
+            <button className="link-button" onClick={handleLogout}>
+              Log out
+            </button>
+          )}
+        </div>
       </header>
       <main>
         {!authed ? (
