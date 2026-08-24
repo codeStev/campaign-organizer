@@ -7,6 +7,7 @@ import {
   ApiError,
 } from '../api/client';
 import { RelationshipGraph } from '../components/RelationshipGraph';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -108,9 +109,9 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
             <input type="checkbox" checked={directed} onChange={(e) => setDirected(e.target.checked)} />
             Directed (arrow)
           </label>
-          <button type="submit" disabled={!from || !to}>
+          <Button type="submit" disabled={!from || !to}>
             Add relationship
-          </button>
+          </Button>
         </form>
 
         <ul className="article-list">
@@ -121,9 +122,9 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
                 <em className="muted">{r.label || (r.directed ? '→' : '—')}</em>{' '}
                 {labels.get(r.toArticleId) ?? '?'}
               </span>
-              <button className="link-button danger" onClick={() => removeRelationship(r.id)}>
+              <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => removeRelationship(r.id)}>
                 ✕
-              </button>
+              </Button>
             </li>
           ))}
           {loading && <li className="muted">Loading…</li>}

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { diceApi, DiceRollResult, ApiError } from '../api/client';
+import { Button } from './ui/button';
 
 interface Props {
   onAuthExpired: () => void;
@@ -32,7 +33,7 @@ export function DiceRollerWidget({ onAuthExpired }: Props) {
       <strong>🎲 Dice</strong>
       <form className="dice-form" onSubmit={submit}>
         <input value={expr} onChange={(e) => setExpr(e.target.value)} placeholder="2d6+3" />
-        <button type="submit">Roll</button>
+        <Button type="submit">Roll</Button>
       </form>
       <div className="dice-presets">
         {PRESETS.map((p) => (

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Button } from './ui/button';
 import {
   FieldTemplate,
   FieldTemplateRequest,
@@ -235,13 +236,14 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
         >
           <legend>
             <input value={sec.title} onChange={(e) => mutateSection(si, { title: e.target.value })} />
-            <button
+            <Button
               type="button"
-              className="link-button danger"
+              variant="link"
+              className="text-destructive hover:text-destructive"
               onClick={() => setSections((s) => s.filter((_, j) => j !== si))}
             >
               ✕ section
-            </button>
+            </Button>
           </legend>
 
           <div className="builder-grid">
@@ -268,13 +270,14 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
                     value={f.label}
                     onChange={(e) => mutateField(si, fi, { label: e.target.value })}
                   />
-                  <button
+                  <Button
                     type="button"
-                    className="link-button danger"
+                    variant="link"
+                    className="text-destructive hover:text-destructive"
                     onClick={() => mutateSection(si, { fields: sec.fields.filter((_, k) => k !== fi) })}
                   >
                     ✕
-                  </button>
+                  </Button>
                 </div>
                 <div className="bf-row">
                   <span className="muted field-type">{defaultLabel(f.type)}</span>
@@ -301,12 +304,12 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
                     />
                   )}
                   <span className="bf-spacer" />
-                  <button type="button" className="link-button" onClick={() => moveArrow(si, fi, -1)} title="Move earlier">
+                  <Button type="button" variant="link" onClick={() => moveArrow(si, fi, -1)} title="Move earlier">
                     ↑
-                  </button>
-                  <button type="button" className="link-button" onClick={() => moveArrow(si, fi, 1)} title="Move later">
+                  </Button>
+                  <Button type="button" variant="link" onClick={() => moveArrow(si, fi, 1)} title="Move later">
                     ↓
-                  </button>
+                  </Button>
                 </div>
                 {f.type === 'SELECT' && (
                   <input
@@ -324,16 +327,16 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
       ))}
 
       <div className="editor-actions">
-        <button type="button" className="link-button" onClick={() => setSections((s) => [...s, { title: 'Section', fields: [] }])}>
+        <Button type="button" variant="link" onClick={() => setSections((s) => [...s, { title: 'Section', fields: [] }])}>
           + Section
-        </button>
+        </Button>
         <span style={{ flex: 1 }} />
-        <button onClick={save} disabled={!name}>
+        <Button onClick={save} disabled={!name}>
           Save template
-        </button>
-        <button type="button" className="link-button" onClick={onCancel}>
+        </Button>
+        <Button type="button" variant="link" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );

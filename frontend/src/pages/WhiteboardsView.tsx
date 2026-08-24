@@ -8,6 +8,7 @@ import {
   ApiError,
 } from '../api/client';
 import { WhiteboardCanvas } from '../components/WhiteboardCanvas';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -109,7 +110,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <button onClick={createBoard}>+ New whiteboard</button>
+        <Button onClick={createBoard}>+ New whiteboard</Button>
         <ul className="article-list">
           {list.map((b) => (
             <li key={b.id}>
@@ -134,12 +135,16 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
             <div className="map-bar">
               <strong>{selected.name}</strong>
               <div className="editor-actions">
-                <button onClick={save} disabled={!dirty}>
+                <Button onClick={save} disabled={!dirty}>
                   {dirty ? 'Save' : 'Saved'}
-                </button>
-                <button className="link-button danger" onClick={() => removeBoard(selected)}>
+                </Button>
+                <Button
+                  variant="link"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => removeBoard(selected)}
+                >
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
             <p className="muted hint">Drag to move · double-click to edit · Connect to link nodes.</p>

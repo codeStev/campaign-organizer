@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { worldsApi, downloadBackup, importBackup, World, ApiError } from '../api/client';
+import { Button } from '../components/ui/button';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -119,18 +120,18 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <button type="submit" disabled={name.length === 0}>
+        <Button type="submit" disabled={name.length === 0}>
           Create world
-        </button>
+        </Button>
       </form>
 
       {error && <p className="error">{error}</p>}
 
       <div className="worlds-head">
         <h2>Worlds</h2>
-        <button className="link-button" onClick={handleBackup} disabled={backingUp} title="Download a full backup (every world + media)">
+        <Button variant="link" onClick={handleBackup} disabled={backingUp} title="Download a full backup (every world + media)">
           {backingUp ? 'Backing up…' : '⬇ Backup'}
-        </button>
+        </Button>
         <input
           ref={fileInputRef}
           type="file"
@@ -138,14 +139,14 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
           style={{ display: 'none' }}
           onChange={handleImportFileChosen}
         />
-        <button
-          className="link-button"
+        <Button
+          variant="link"
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
           title="Import a backup ZIP"
         >
           Import
-        </button>
+        </Button>
       </div>
 
       {importFile && (
@@ -153,15 +154,20 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
           <p>
             Import <strong>{importFile.name}</strong> as:
           </p>
-          <button onClick={handleImportAdditive} disabled={importing}>
+          <Button onClick={handleImportAdditive} disabled={importing}>
             {importing ? 'Importing…' : 'Add as new'}
-          </button>
-          <button className="link-button danger" onClick={handleImportOverwrite} disabled={importing}>
+          </Button>
+          <Button
+            variant="link"
+            className="text-destructive hover:text-destructive"
+            onClick={handleImportOverwrite}
+            disabled={importing}
+          >
             Replace everything
-          </button>
-          <button className="link-button" onClick={() => setImportFile(null)} disabled={importing}>
+          </Button>
+          <Button variant="link" onClick={() => setImportFile(null)} disabled={importing}>
             Cancel
-          </button>
+          </Button>
         </div>
       )}
 
@@ -177,9 +183,9 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
                 <strong>{world.name}</strong>
                 {world.description && <p className="muted">{world.description}</p>}
               </button>
-              <button className="link-button danger" onClick={() => handleDelete(world.id)}>
+              <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => handleDelete(world.id)}>
                 Delete
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

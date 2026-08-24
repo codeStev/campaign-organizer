@@ -4,6 +4,7 @@ import { statblocksApi, Statblock, Campaign, FieldTemplate, FieldType } from '..
 import { StatblockCardsView } from './StatblockCardsView';
 import { TemplateForm } from '../components/TemplateForm';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -186,14 +187,14 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   return (
     <div className="sheets-panel">
       <div className="sheets-list-col">
-        <button
+        <Button
           onClick={() => {
             setDraft({ ...EMPTY, campaignId: filterCampaign });
             navigate(`/worlds/${worldId}/sheets/statblocks`);
           }}
         >
           + New statblock
-        </button>
+        </Button>
         {campaigns.length > 0 && (
           <select
             value={filterCampaign}
@@ -210,8 +211,8 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         )}
         {list.length > 0 && (
           <div className="statblock-print-bar">
-            <button
-              className="link-button"
+            <Button
+              variant="link"
               onClick={() => setCardsOpen(true)}
               title={
                 selected.size
@@ -220,11 +221,11 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
               }
             >
               🖨 Print {selected.size ? `${selected.size} card${selected.size > 1 ? 's' : ''}` : 'cards'}
-            </button>
+            </Button>
             {selected.size > 0 && (
-              <button className="link-button" onClick={() => setSelected(new Set())}>
+              <Button variant="link" onClick={() => setSelected(new Set())}>
                 Clear
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -306,31 +307,36 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
               value={row.value}
               onChange={(e) => setRow(index, { value: e.target.value })}
             />
-            <button
+            <Button
               type="button"
-              className="link-button danger"
+              variant="link"
+              className="text-destructive hover:text-destructive"
               onClick={() => setDraft((d) => ({ ...d, rows: d.rows.filter((_, j) => j !== index) }))}
             >
               ✕
-            </button>
+            </Button>
           </div>
         ))}
-        <button
+        <Button
           type="button"
-          className="link-button"
+          variant="link"
           onClick={() => setDraft((d) => ({ ...d, rows: [...d.rows, { key: '', value: '' }] }))}
         >
           + Add stat
-        </button>
+        </Button>
         <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
         <div className="editor-actions">
-          <button onClick={save} disabled={!draft.name}>
+          <Button onClick={save} disabled={!draft.name}>
             {draft.id ? 'Save statblock' : 'Create statblock'}
-          </button>
+          </Button>
           {draft.id && (
-            <button className="link-button danger" onClick={() => remove(list.find((s) => s.id === draft.id)!)}>
+            <Button
+              variant="link"
+              className="text-destructive hover:text-destructive"
+              onClick={() => remove(list.find((s) => s.id === draft.id)!)}
+            >
               Delete
-            </button>
+            </Button>
           )}
         </div>
       </div>

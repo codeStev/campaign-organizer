@@ -11,6 +11,7 @@ import {
   Calendar,
   ApiError,
 } from '../api/client';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -200,7 +201,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <button onClick={createTimeline}>+ New timeline</button>
+        <Button onClick={createTimeline}>+ New timeline</Button>
         <ul className="article-list">
           {list.map((t) => (
             <li key={t.id}>
@@ -236,9 +237,9 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                     </option>
                   ))}
                 </select>
-                <button className="link-button danger" onClick={() => deleteTimeline(selected)}>
+                <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => deleteTimeline(selected)}>
                   Delete timeline
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -290,13 +291,13 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               />
               <div className="editor-actions">
-                <button type="submit" disabled={draft.title.length === 0}>
+                <Button type="submit" disabled={draft.title.length === 0}>
                   {draft.id ? 'Save event' : 'Add event'}
-                </button>
+                </Button>
                 {draft.id && (
-                  <button type="button" className="link-button" onClick={() => setDraft(EMPTY_EVENT)}>
+                  <Button type="button" variant="link" onClick={() => setDraft(EMPTY_EVENT)}>
                     Cancel
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
@@ -309,17 +310,17 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                     <strong>{event.title}</strong>
                     {event.description && <p className="muted">{event.description}</p>}
                     <div className="editor-actions">
-                      <button className="link-button" onClick={() => editEvent(event)}>
+                      <Button variant="link" onClick={() => editEvent(event)}>
                         Edit
-                      </button>
+                      </Button>
                       {event.articleId && (
-                        <button className="link-button" onClick={() => onOpenArticle(event.articleId!)}>
+                        <Button variant="link" onClick={() => onOpenArticle(event.articleId!)}>
                           Open article
-                        </button>
+                        </Button>
                       )}
-                      <button className="link-button danger" onClick={() => deleteEvent(event)}>
+                      <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => deleteEvent(event)}>
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </li>

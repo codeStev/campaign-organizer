@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { login, ApiError } from '../api/client';
+import { Button } from '../components/ui/button';
 
 interface Props {
   onLoggedIn: () => void;
@@ -36,9 +37,9 @@ export function LoginPage({ onLoggedIn }: Props) {
         autoFocus
       />
       {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={busy || password.length === 0}>
+      <Button type="submit" disabled={busy || password.length === 0}>
         {busy ? 'Signing in…' : 'Sign in'}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { WorldMap, MapPin } from '../api/client';
 import { iconComponent } from '../components/mapIcons';
+import { Button } from '../components/ui/button';
 
 interface Props {
   map: WorldMap;
@@ -109,10 +110,10 @@ export function MapPrintView({
           Legend
         </label>
         <span className="print-toolbar-spacer" />
-        <button onClick={() => window.print()}>🖨 Print</button>
-        <button className="link-button" onClick={onClose}>
+        <Button onClick={() => window.print()}>🖨 Print</Button>
+        <Button variant="link" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
 
       {showPins && (layers.length > 0 || pins.some((p) => !p.layer)) && (

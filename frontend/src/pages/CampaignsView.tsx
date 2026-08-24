@@ -12,6 +12,7 @@ import {
 import { SessionLog } from './SessionLog';
 import { ArcBoard } from './ArcBoard';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -116,7 +117,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <button onClick={createCampaign}>+ New campaign</button>
+        <Button onClick={createCampaign}>+ New campaign</Button>
         <ul className="article-list">
           {list.map((c) => (
             <li key={c.id}>
@@ -140,9 +141,9 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
           <>
             <div className="map-bar">
               <h2>{selected.name}</h2>
-              <button className="link-button danger" onClick={() => removeCampaign(selected)}>
+              <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => removeCampaign(selected)}>
                 Delete campaign
-              </button>
+              </Button>
             </div>
             {selected.description && <p className="muted">{selected.description}</p>}
 
@@ -158,9 +159,9 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 />
               </div>
               <div className="editor-actions">
-                <button onClick={saveNotes} disabled={!notesDirty}>
+                <Button onClick={saveNotes} disabled={!notesDirty}>
                   Save notes
-                </button>
+                </Button>
               </div>
             </section>
 

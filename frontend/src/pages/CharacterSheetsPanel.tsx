@@ -9,6 +9,7 @@ import {
   Campaign,
 } from '../api/client';
 import { TemplateForm } from '../components/TemplateForm';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -148,7 +149,7 @@ export function CharacterSheetsPanel({
   return (
     <div className="sheets-panel">
       <div className="sheets-list-col">
-        <button onClick={newSheet}>+ New sheet</button>
+        <Button onClick={newSheet}>+ New sheet</Button>
         {campaigns.length > 0 && (
           <select
             value={filterCampaign}
@@ -219,9 +220,9 @@ export function CharacterSheetsPanel({
                 ))}
               </select>
               {draft.articleId && (
-                <button className="link-button" onClick={() => onOpenArticle(draft.articleId)}>
+                <Button variant="link" onClick={() => onOpenArticle(draft.articleId)}>
                   Open
-                </button>
+                </Button>
               )}
             </label>
 
@@ -251,18 +252,18 @@ export function CharacterSheetsPanel({
             )}
 
             <div className="editor-actions">
-              <button onClick={save} disabled={!draft.name}>
+              <Button onClick={save} disabled={!draft.name}>
                 {draft.id ? 'Save sheet' : 'Create sheet'}
-              </button>
+              </Button>
               {draft.id && template && (
-                <button className="link-button" onClick={exportPdf} title="Download a filled fillable PDF">
+                <Button variant="link" onClick={exportPdf} title="Download a filled fillable PDF">
                   ⭳ Export PDF
-                </button>
+                </Button>
               )}
               {draft.id && (
-                <button className="link-button danger" onClick={remove}>
+                <Button variant="link" className="text-destructive hover:text-destructive" onClick={remove}>
                   Delete
-                </button>
+                </Button>
               )}
             </div>
           </>

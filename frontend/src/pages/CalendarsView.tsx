@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -117,14 +118,14 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <button
+        <Button
           onClick={() => {
             setDraft(EMPTY_DRAFT);
             navigate(`/worlds/${worldId}/calendars`);
           }}
         >
           + New calendar
-        </button>
+        </Button>
         <ul className="article-list">
           {list.map((c) => (
             <li key={c.id}>
@@ -176,35 +177,37 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
                 value={month.days}
                 onChange={(e) => setMonth(i, { days: Number(e.target.value) })}
               />
-              <button
+              <Button
                 type="button"
-                className="link-button danger"
+                variant="link"
+                className="text-destructive hover:text-destructive"
                 onClick={() => setDraft((d) => ({ ...d, months: d.months.filter((_, j) => j !== i) }))}
               >
                 ✕
-              </button>
+              </Button>
             </div>
           ))}
-          <button
+          <Button
             type="button"
-            className="link-button"
+            variant="link"
             onClick={() => setDraft((d) => ({ ...d, months: [...d.months, { name: '', days: 30 }] }))}
           >
             + Add month
-          </button>
+          </Button>
 
           <div className="editor-actions">
-            <button type="submit" disabled={draft.name.length === 0}>
+            <Button type="submit" disabled={draft.name.length === 0}>
               {draft.id ? 'Save calendar' : 'Create calendar'}
-            </button>
+            </Button>
             {draft.id && (
-              <button
+              <Button
                 type="button"
-                className="link-button danger"
+                variant="link"
+                className="text-destructive hover:text-destructive"
                 onClick={() => remove(list.find((c) => c.id === draft.id)!)}
               >
                 Delete
-              </button>
+              </Button>
             )}
           </div>
         </form>

@@ -1,4 +1,5 @@
 import { NewWindowPortal } from '../components/NewWindowPortal';
+import { Button } from '../components/ui/button';
 import { Statblock, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
 import { renderMarkdown } from '../lib/markdown';
@@ -22,12 +23,12 @@ export function StatblockCardsView({ statblocks, templates, title, onClose }: Pr
         <strong>Statblock cards</strong>
         <span className="muted">{title}</span>
         <span className="print-toolbar-spacer" />
-        <button onClick={() => window.print()} disabled={statblocks.length === 0}>
+        <Button onClick={() => window.print()} disabled={statblocks.length === 0}>
           🖨 Print
-        </button>
-        <button className="link-button" onClick={onClose}>
+        </Button>
+        <Button variant="link" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
 
       <div className="print-doc card-sheet">

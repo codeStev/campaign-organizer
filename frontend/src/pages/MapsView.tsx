@@ -15,6 +15,7 @@ import {
 import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -251,7 +252,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout maps-layout">
       <aside className="wiki-sidebar">
-        <button onClick={() => fileInputRef.current?.click()}>+ New map</button>
+        <Button onClick={() => fileInputRef.current?.click()}>+ New map</Button>
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleNewMapFile} />
         <ul className="article-list">
           {list.map((m) => (
@@ -323,12 +324,16 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 />
                 Labels
               </label>
-              <button className="link-button" onClick={() => setPrintOpen(true)} title="Print or save as PDF">
+              <Button variant="link" onClick={() => setPrintOpen(true)} title="Print or save as PDF">
                 🖨 Print map
-              </button>
-              <button className="link-button danger" onClick={() => deleteMap(selected)}>
+              </Button>
+              <Button
+                variant="link"
+                className="text-destructive hover:text-destructive"
+                onClick={() => deleteMap(selected)}
+              >
                 Delete map
-              </button>
+              </Button>
             </div>
             {selected.imageUrl ? (
               <MapCanvas
@@ -460,17 +465,17 @@ function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEdito
         </select>
       </label>
       <div className="editor-actions">
-        <button onClick={() => onSave({ label, layer, articleId })} disabled={!dirty}>
+        <Button onClick={() => onSave({ label, layer, articleId })} disabled={!dirty}>
           Save pin
-        </button>
+        </Button>
         {pin.articleId && (
-          <button className="link-button" onClick={() => onOpen(pin.articleId!)}>
+          <Button variant="link" onClick={() => onOpen(pin.articleId!)}>
             Open article
-          </button>
+          </Button>
         )}
-        <button className="link-button danger" onClick={onDelete}>
+        <Button variant="link" className="text-destructive hover:text-destructive" onClick={onDelete}>
           Delete pin
-        </button>
+        </Button>
       </div>
     </div>
   );

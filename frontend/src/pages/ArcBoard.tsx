@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
+import { Button } from '../components/ui/button';
 
 function sessionLabel(s: Session): string {
   const num = s.sessionNumber != null ? `#${s.sessionNumber} ` : '';
@@ -91,9 +92,9 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArti
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
         />
-        <button type="submit" disabled={!newTitle}>
+        <Button type="submit" disabled={!newTitle}>
           Add arc
-        </button>
+        </Button>
       </form>
 
       <div className="arc-list">
@@ -277,9 +278,9 @@ function ArcCard({
             </option>
           ))}
         </select>
-        <button className="link-button danger" onClick={onRemove}>
+        <Button variant="link" className="text-destructive hover:text-destructive" onClick={onRemove}>
           ✕
-        </button>
+        </Button>
       </div>
 
       {open && (
@@ -295,9 +296,9 @@ function ArcCard({
                   {b.articleIds
                     .filter((id) => titleById.has(id))
                     .map((id) => (
-                      <button key={id} className="link-button beat-link" onClick={() => onOpenArticle(id)}>
+                      <Button key={id} variant="link" className="beat-link" onClick={() => onOpenArticle(id)}>
                         {titleById.get(id)}
-                      </button>
+                      </Button>
                     ))}
                   {b.statblockIds
                     .filter((id) => statblockNameById.has(id))
@@ -310,12 +311,12 @@ function ArcCard({
                     <span className="beat-session muted">{sessionLabel(sessionById.get(b.sessionId)!)}</span>
                   )}
                   <span className="bf-spacer" />
-                  <button className="link-button" onClick={() => (editingId === b.id ? setEditingId(null) : startEdit(b))}>
+                  <Button variant="link" onClick={() => (editingId === b.id ? setEditingId(null) : startEdit(b))}>
                     {editingId === b.id ? 'Close' : 'Edit'}
-                  </button>
-                  <button className="link-button danger" onClick={() => removeBeat(b)}>
+                  </Button>
+                  <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => removeBeat(b)}>
                     ✕
-                  </button>
+                  </Button>
                 </div>
 
                 {editingId !== b.id && b.body && (
@@ -338,23 +339,25 @@ function ArcCard({
                         {draft.articleIds.map((id) => (
                           <span key={id} className="beat-chip">
                             {titleById.get(id) ?? 'article'}
-                            <button
+                            <Button
                               type="button"
-                              className="link-button danger"
+                              variant="link"
+                              className="text-destructive hover:text-destructive"
                               onClick={() =>
                                 setDraft({ ...draft, articleIds: draft.articleIds.filter((x) => x !== id) })
                               }
                             >
                               ✕
-                            </button>
+                            </Button>
                           </span>
                         ))}
                         {draft.statblockIds.map((id) => (
                           <span key={id} className="beat-chip beat-chip-statblock">
                             ⚔ {statblockNameById.get(id) ?? 'statblock'}
-                            <button
+                            <Button
                               type="button"
-                              className="link-button danger"
+                              variant="link"
+                              className="text-destructive hover:text-destructive"
                               onClick={() =>
                                 setDraft({
                                   ...draft,
@@ -363,7 +366,7 @@ function ArcCard({
                               }
                             >
                               ✕
-                            </button>
+                            </Button>
                           </span>
                         ))}
                       </div>
@@ -399,10 +402,10 @@ function ArcCard({
                       </select>
                     </div>
                     <div className="editor-actions">
-                      <button onClick={() => saveEdit(b)}>Save beat</button>
-                      <button className="link-button" onClick={() => setEditingId(null)}>
+                      <Button onClick={() => saveEdit(b)}>Save beat</Button>
+                      <Button variant="link" onClick={() => setEditingId(null)}>
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -416,9 +419,9 @@ function ArcCard({
               value={beatTitle}
               onChange={(e) => setBeatTitle(e.target.value)}
             />
-            <button type="submit" disabled={!beatTitle}>
+            <Button type="submit" disabled={!beatTitle}>
               Add
-            </button>
+            </Button>
           </form>
         </div>
       )}

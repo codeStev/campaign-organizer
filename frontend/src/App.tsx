@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { WorldsPage } from './pages/WorldsPage';
 import { WorldView } from './pages/WorldView';
 import { ThemeToggle } from './components/ThemeToggle';
+import { Button } from './components/ui/button';
 
 export function App() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
@@ -21,9 +22,9 @@ export function App() {
         <div className="app-header-actions">
           <ThemeToggle />
           {authed && (
-            <button className="link-button" onClick={handleLogout}>
+            <Button variant="link" onClick={handleLogout}>
               Log out
-            </button>
+            </Button>
           )}
         </div>
       </header>

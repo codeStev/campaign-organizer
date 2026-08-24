@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { WhiteboardNode, WhiteboardEdge } from '../api/client';
+import { Button } from './ui/button';
 
 interface Props {
   nodes: WhiteboardNode[];
@@ -78,7 +79,7 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
   return (
     <div className="whiteboard">
       <div className="editor-actions whiteboard-toolbar">
-        <button onClick={addNode}>+ Node</button>
+        <Button onClick={addNode}>+ Node</Button>
         <button
           className={connectFrom ? 'tab active' : 'tab'}
           onClick={() => setConnectFrom(connectFrom ? null : '')}
@@ -125,15 +126,16 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
             onDoubleClick={() => editNode(n)}
           >
             <span>{n.text}</span>
-            <button
-              className="link-button danger node-del"
+            <Button
+              variant="link"
+              className="node-del text-destructive hover:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 deleteNode(n.id);
               }}
             >
               ✕
-            </button>
+            </Button>
           </div>
         ))}
         {nodes.length === 0 && <p className="muted whiteboard-empty">Add a node to start plotting.</p>}

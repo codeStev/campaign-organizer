@@ -9,6 +9,7 @@ import {
   TemplateKind,
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -132,34 +133,39 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             </option>
           ))}
         </select>
-        <button onClick={addFromBuiltin} disabled={!choice}>
+        <Button onClick={addFromBuiltin} disabled={!choice}>
           Add starter
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => {
             setEditing(null);
             setBuilding(true);
           }}
         >
           Build new
-        </button>
+        </Button>
       </div>
 
       <ul className="article-list">
         {templates.map((t) => (
           <li key={t.id} className="rel-row">
-            <button
-              className="link-button template-open"
+            <Button
+              variant="link"
+              className="template-open"
               onClick={() => navigate(`/worlds/${worldId}/sheets/templates/${t.id}`)}
             >
               <strong>{t.name}</strong>{' '}
               <small className="muted">
                 {KIND_LABEL[t.kind]} · {t.system ?? 'custom'} · {t.sections.length} sections
               </small>
-            </button>
-            <button className="link-button danger" onClick={() => remove(t)}>
+            </Button>
+            <Button
+              variant="link"
+              className="text-destructive hover:text-destructive"
+              onClick={() => remove(t)}
+            >
               ✕
-            </button>
+            </Button>
           </li>
         ))}
         {loading && <li className="muted">Loading…</li>}

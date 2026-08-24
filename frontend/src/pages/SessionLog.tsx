@@ -3,6 +3,7 @@ import { sessionsApi, Session } from '../api/client';
 import { SessionPacketView } from './SessionPacketView';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -113,13 +114,13 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
           <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
         </label>
         <div className="editor-actions">
-          <button type="submit" disabled={!draft.title}>
+          <Button type="submit" disabled={!draft.title}>
             {draft.id ? 'Save session' : 'Add session'}
-          </button>
+          </Button>
           {draft.id && (
-            <button type="button" className="link-button" onClick={() => setDraft(EMPTY)}>
+            <Button type="button" variant="link" onClick={() => setDraft(EMPTY)}>
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </form>
@@ -140,19 +141,23 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
                 />
               )}
               <div className="editor-actions">
-                <button className="link-button" onClick={() => edit(s)}>
+                <Button variant="link" onClick={() => edit(s)}>
                   Edit
-                </button>
-                <button
-                  className="link-button"
+                </Button>
+                <Button
+                  variant="link"
                   onClick={() => setPacketSessionId(s.id)}
                   title="Print a one-page prep packet for this session"
                 >
                   🖨 Packet
-                </button>
-                <button className="link-button danger" onClick={() => remove(s.id)}>
+                </Button>
+                <Button
+                  variant="link"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => remove(s.id)}
+                >
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
           </li>

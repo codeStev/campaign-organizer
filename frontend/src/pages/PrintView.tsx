@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
+import { Button } from '../components/ui/button';
 import {
   articlesApi,
   mapsApi,
@@ -107,12 +108,12 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           Maps
         </label>
         <span className="print-toolbar-spacer" />
-        <button onClick={() => window.print()} disabled={loading}>
+        <Button onClick={() => window.print()} disabled={loading}>
           🖨 Print
-        </button>
-        <button className="link-button" onClick={onClose}>
+        </Button>
+        <Button variant="link" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
 
       <div className="print-doc">

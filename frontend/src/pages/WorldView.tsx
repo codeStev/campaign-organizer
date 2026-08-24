@@ -16,6 +16,7 @@ import {
   mediaApi,
   ApiError,
 } from '../api/client';
+import { Button } from '../components/ui/button';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
@@ -408,7 +409,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button
+          <Button
             onClick={() => {
               setDraft(EMPTY_DRAFT);
               setPreviewHtml('');
@@ -417,7 +418,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
             }}
           >
             + New article
-          </button>
+          </Button>
 
           <div className="type-filters">
             {ARTICLE_TEMPLATES.map((t) => (
@@ -499,18 +500,23 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   onUploadImage={async (file) => (await media.upload(file)).url}
                 />
                 <div className="editor-actions">
-                  <button type="submit" disabled={draft.title.length === 0}>
+                  <Button type="submit" disabled={draft.title.length === 0}>
                     {draft.id ? 'Save changes' : 'Create article'}
-                  </button>
+                  </Button>
                   {draft.id && (
-                    <button type="button" className="link-button" onClick={() => setMode('read')}>
+                    <Button type="button" variant="link" onClick={() => setMode('read')}>
                       Cancel
-                    </button>
+                    </Button>
                   )}
                   {draft.id && (
-                    <button type="button" className="link-button danger" onClick={handleDelete}>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-destructive hover:text-destructive"
+                      onClick={handleDelete}
+                    >
                       Delete
-                    </button>
+                    </Button>
                   )}
                 </div>
                 <p className="muted hint">
@@ -536,18 +542,23 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
               <div className="article-read-head">
                 <h2>{draft.title}</h2>
                 <div className="editor-actions">
-                  <button type="button" onClick={() => setMode('edit')}>
+                  <Button type="button" onClick={() => setMode('edit')}>
                     Edit
-                  </button>
-                  <button type="button" className="link-button" onClick={toggleUsages}>
+                  </Button>
+                  <Button type="button" variant="link" onClick={toggleUsages}>
                     Used by
-                  </button>
-                  <button type="button" className="link-button" onClick={toggleHistory}>
+                  </Button>
+                  <Button type="button" variant="link" onClick={toggleHistory}>
                     History
-                  </button>
-                  <button type="button" className="link-button danger" onClick={handleDelete}>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleDelete}
+                  >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -565,12 +576,13 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                         <li key={i} className="usage-item">
                           <span className="usage-type">{USAGE_LABELS[u.type]}</span>
                           {clickable ? (
-                            <button
-                              className="link-button usage-label"
+                            <Button
+                              variant="link"
+                              className="usage-label"
                               onClick={() => openArticle(u.targetId!)}
                             >
                               {u.label}
-                            </button>
+                            </Button>
                           ) : (
                             <span className="usage-label">{u.label}</span>
                           )}
@@ -608,9 +620,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                             </label>
                             <span className="muted">{v.label}</span>
                             {v.id !== 'current' && (
-                              <button className="link-button" onClick={() => restoreRevision(v.id)}>
+                              <Button variant="link" onClick={() => restoreRevision(v.id)}>
                                 Restore
-                              </button>
+                              </Button>
                             )}
                           </li>
                         ))}
@@ -664,27 +676,29 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         />
       )}
       <div className="world-view-bar">
-        <button className="link-button" onClick={onBack}>
+        <Button variant="link" onClick={onBack}>
           ← Worlds
-        </button>
+        </Button>
         <h2>{worldName}</h2>
-        <button
-          className="link-button palette-btn"
+        <Button
+          variant="link"
+          className="palette-btn"
           onClick={() => void openPalette()}
           title="Jump to anything (Ctrl/⌘-K)"
         >
           ⌘K Jump…
-        </button>
-        <button
-          className="link-button print-btn"
+        </Button>
+        <Button
+          variant="link"
+          className="print-btn"
           onClick={() => setPrintOpen(true)}
           title="Print or save as PDF"
         >
           🖨 Print
-        </button>
-        <button className="link-button export-btn" onClick={handleExport} title="Download world as JSON">
+        </Button>
+        <Button variant="link" className="export-btn" onClick={handleExport} title="Download world as JSON">
           ⭳ Export
-        </button>
+        </Button>
         <nav className="tabs">
           {TABS.map((t) => (
             <NavLink
