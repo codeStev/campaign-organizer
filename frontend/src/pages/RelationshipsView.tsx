@@ -9,6 +9,7 @@ import {
 import { RelationshipGraph } from '../components/RelationshipGraph';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 interface Props {
   worldId: string;
@@ -85,27 +86,35 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
       <aside className="wiki-sidebar">
         <form className="card" onSubmit={addRelationship}>
           <strong>New relationship</strong>
-          <select value={from} onChange={(e) => setFrom(e.target.value)} required>
-            <option value="">From…</option>
-            {articles.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.title}
-              </option>
-            ))}
-          </select>
+          <Select value={from} onValueChange={setFrom}>
+            <SelectTrigger>
+              <SelectValue placeholder="From…" />
+            </SelectTrigger>
+            <SelectContent>
+              {articles.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             placeholder="label, e.g. parent of"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
-          <select value={to} onChange={(e) => setTo(e.target.value)} required>
-            <option value="">To…</option>
-            {articles.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.title}
-              </option>
-            ))}
-          </select>
+          <Select value={to} onValueChange={setTo}>
+            <SelectTrigger>
+              <SelectValue placeholder="To…" />
+            </SelectTrigger>
+            <SelectContent>
+              {articles.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <label className="layer-toggle">
             <input type="checkbox" checked={directed} onChange={(e) => setDirected(e.target.checked)} />
             Directed (arrow)

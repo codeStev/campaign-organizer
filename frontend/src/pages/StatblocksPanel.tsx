@@ -6,6 +6,12 @@ import { TemplateForm } from '../components/TemplateForm';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
+// Radix Select can't use "" as an item value (it's reserved for "no selection"),
+// so options that mean a real, persistently-selectable "none" state (as opposed
+// to a not-yet-chosen placeholder) go through this sentinel at the Select boundary.
+const NONE_VALUE = '__none__';
 
 interface Props {
   worldId: string;
@@ -197,18 +203,22 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
           + New statblock
         </Button>
         {campaigns.length > 0 && (
-          <select
-            value={filterCampaign}
-            onChange={(e) => setFilterCampaign(e.target.value)}
-            title="Filter by campaign"
+          <Select
+            value={filterCampaign || NONE_VALUE}
+            onValueChange={(v) => setFilterCampaign(v === NONE_VALUE ? '' : v)}
           >
-            <option value="">All campaigns</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger title="Filter by campaign">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>All campaigns</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {list.length > 0 && (
           <div className="statblock-print-bar">
@@ -263,32 +273,42 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         {campaigns.length > 0 && (
           <label className="sheet-article">
             <span className="muted">Campaign</span>
-            <select
-              value={draft.campaignId}
-              onChange={(e) => setDraft({ ...draft, campaignId: e.target.value })}
+            <Select
+              value={draft.campaignId || NONE_VALUE}
+              onValueChange={(v) => setDraft({ ...draft, campaignId: v === NONE_VALUE ? '' : v })}
             >
-              <option value="">— shared (no campaign) —</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>— shared (no campaign) —</SelectItem>
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
         )}
         <label className="sheet-article">
           <span className="muted">Template</span>
-          <select
-            value={draft.templateId}
-            onChange={(e) => setDraft({ ...draft, templateId: e.target.value })}
+          <Select
+            value={draft.templateId || NONE_VALUE}
+            onValueChange={(v) => setDraft({ ...draft, templateId: v === NONE_VALUE ? '' : v })}
           >
-            <option value="">None — free-form</option>
-            {statblockTemplates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>None — free-form</SelectItem>
+              {statblockTemplates.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
 
         {template && (
