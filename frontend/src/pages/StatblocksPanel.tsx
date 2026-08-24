@@ -5,6 +5,7 @@ import { StatblockCardsView } from './StatblockCardsView';
 import { TemplateForm } from '../components/TemplateForm';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   worldId: string;
@@ -253,7 +254,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       </div>
 
       <div className="sheet-detail card">
-        <input
+        <Input
           className="title-input"
           placeholder="Statblock name (e.g. Goblin)"
           value={draft.name}
@@ -297,12 +298,12 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         <strong className="muted">{template ? 'Other stats' : 'Stats'}</strong>
         {(template ? otherRows : draft.rows.map((row, index) => ({ row, index }))).map(({ row, index }) => (
           <div key={index} className="month-row">
-            <input
+            <Input
               placeholder="stat (AC)"
               value={row.key}
               onChange={(e) => setRow(index, { key: e.target.value })}
             />
-            <input
+            <Input
               placeholder="value (15)"
               value={row.value}
               onChange={(e) => setRow(index, { value: e.target.value })}

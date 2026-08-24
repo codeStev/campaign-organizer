@@ -8,6 +8,7 @@ import {
 } from '../api/client';
 import { RelationshipGraph } from '../components/RelationshipGraph';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   worldId: string;
@@ -92,7 +93,7 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
               </option>
             ))}
           </select>
-          <input
+          <Input
             placeholder="label, e.g. parent of"
             value={label}
             onChange={(e) => setLabel(e.target.value)}

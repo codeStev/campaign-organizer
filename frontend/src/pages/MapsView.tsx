@@ -16,6 +16,7 @@ import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   worldId: string;
@@ -437,11 +438,11 @@ function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEdito
       <strong>{fallbackTitle}</strong>
       <label>
         Label
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Old Keep" />
+        <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Old Keep" />
       </label>
       <label>
         Layer
-        <input
+        <Input
           value={layer}
           list="pin-layer-options"
           onChange={(e) => setLayer(e.target.value)}

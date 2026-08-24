@@ -12,6 +12,8 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
 
 interface Props {
   worldId: string;
@@ -245,28 +247,28 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
 
             <form className="card" onSubmit={saveEvent}>
               <strong>{draft.id ? 'Edit event' : 'New event'}</strong>
-              <input
+              <Input
                 placeholder="Event title"
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 required
               />
               <div className="date-fields">
-                <input
+                <Input
                   type="number"
                   placeholder="Year"
                   value={draft.year}
                   onChange={(e) => setDraft({ ...draft, year: e.target.value })}
                   required
                 />
-                <input
+                <Input
                   type="number"
                   min="1"
                   placeholder="Month"
                   value={draft.month}
                   onChange={(e) => setDraft({ ...draft, month: e.target.value })}
                 />
-                <input
+                <Input
                   type="number"
                   min="1"
                   placeholder="Day"
@@ -285,7 +287,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                   </option>
                 ))}
               </select>
-              <textarea
+              <Textarea
                 placeholder="Description (optional)"
                 value={draft.description}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}

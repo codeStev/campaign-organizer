@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import {
   FieldTemplate,
   FieldTemplateRequest,
@@ -209,8 +210,8 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
   return (
     <div className="card template-builder" onPointerMove={onBuilderPointerMove} onPointerUp={endDrag}>
       <div className="builder-head">
-        <input className="title-input" placeholder="Template name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input placeholder="system (e.g. homebrew)" value={system} onChange={(e) => setSystem(e.target.value)} />
+        <Input className="title-input" placeholder="Template name" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input placeholder="system (e.g. homebrew)" value={system} onChange={(e) => setSystem(e.target.value)} />
         <small className="muted">{kind === 'CHARACTER' ? 'Character sheet' : 'Statblock'} template</small>
       </div>
 
@@ -235,7 +236,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
           data-si={si}
         >
           <legend>
-            <input value={sec.title} onChange={(e) => mutateSection(si, { title: e.target.value })} />
+            <Input value={sec.title} onChange={(e) => mutateSection(si, { title: e.target.value })} />
             <Button
               type="button"
               variant="link"
@@ -264,7 +265,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
                   >
                     ⠿
                   </span>
-                  <input
+                  <Input
                     className="field-label-in"
                     placeholder="Label"
                     value={f.label}
@@ -293,7 +294,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
                     ))}
                   </select>
                   {f.type === 'CIRCLES' && (
-                    <input
+                    <Input
                       type="number"
                       min={1}
                       max={20}
@@ -312,7 +313,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
                   </Button>
                 </div>
                 {f.type === 'SELECT' && (
-                  <input
+                  <Input
                     className="bf-options"
                     placeholder="options, comma separated"
                     value={f.optionsText}

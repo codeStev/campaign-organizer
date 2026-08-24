@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Input } from './ui/input';
 
 export interface Command {
   id: string;
@@ -86,7 +87,7 @@ export function CommandPalette({ open, commands, onClose }: Props) {
   return (
     <div className="palette-overlay" onMouseDown={onClose}>
       <div className="palette" onMouseDown={(e) => e.stopPropagation()}>
-        <input
+        <Input
           ref={inputRef}
           className="palette-input"
           type="text"

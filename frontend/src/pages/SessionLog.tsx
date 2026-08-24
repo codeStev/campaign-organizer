@@ -4,6 +4,7 @@ import { SessionPacketView } from './SessionPacketView';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   worldId: string;
@@ -89,19 +90,19 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
       <h3>Sessions</h3>
       <form className="session-form" onSubmit={save}>
         <div className="session-form-row">
-          <input
+          <Input
             type="number"
             className="num-input"
             placeholder="#"
             value={draft.sessionNumber}
             onChange={(e) => setDraft({ ...draft, sessionNumber: e.target.value })}
           />
-          <input
+          <Input
             type="date"
             value={draft.date}
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
           />
-          <input
+          <Input
             placeholder="Session title"
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}

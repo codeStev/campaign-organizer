@@ -1,6 +1,8 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { worldsApi, downloadBackup, importBackup, World, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -113,9 +115,9 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
       <form className="card" onSubmit={handleCreate}>
         <h2>New world</h2>
         <label htmlFor="name">Name</label>
-        <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
         <label htmlFor="description">Description</label>
-        <textarea
+        <Textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}

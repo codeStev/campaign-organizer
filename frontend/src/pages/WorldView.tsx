@@ -17,6 +17,7 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
@@ -403,7 +404,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const articlesPane = (
       <div className="wiki-layout">
         <aside className="wiki-sidebar">
-          <input
+          <Input
             type="search"
             placeholder="Search articles…"
             value={query}
@@ -477,7 +478,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           {mode === 'edit' ? (
             <>
               <form className="wiki-editor card" onSubmit={handleSave}>
-                <input
+                <Input
                   className="title-input"
                   placeholder="Article title"
                   value={draft.title}

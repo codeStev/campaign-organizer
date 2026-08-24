@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   worldId: string;
@@ -147,7 +148,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
         {error && <p className="error">{error}</p>}
         <form className="card" onSubmit={save}>
           <strong>{draft.id ? 'Edit calendar' : 'New calendar'}</strong>
-          <input
+          <Input
             placeholder="Calendar name"
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -155,7 +156,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
           />
           <label className="muted">
             Days per week (optional)
-            <input
+            <Input
               type="number"
               min="1"
               value={draft.daysPerWeek}
@@ -166,12 +167,12 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
           <strong className="muted">Months</strong>
           {draft.months.map((month, i) => (
             <div key={i} className="month-row">
-              <input
+              <Input
                 placeholder={`Month ${i + 1} name`}
                 value={month.name}
                 onChange={(e) => setMonth(i, { name: e.target.value })}
               />
-              <input
+              <Input
                 type="number"
                 min="1"
                 value={month.days}

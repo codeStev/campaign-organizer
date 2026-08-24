@@ -1,5 +1,6 @@
 import { TemplateField, TemplateSection } from '../api/client';
 import { MarkdownEditor } from './MarkdownEditor';
+import { Input } from './ui/input';
 
 interface Props {
   sections: TemplateSection[];
@@ -40,7 +41,7 @@ export function TemplateForm({ sections, values, onChange }: Props) {
                       onChange={(v) => set(field.key, v)}
                     />
                   ) : field.type === 'NUMBER' ? (
-                    <input
+                    <Input
                       type="number"
                       value={(value as number | string) ?? ''}
                       onChange={(e) => set(field.key, e.target.value === '' ? null : Number(e.target.value))}
@@ -67,7 +68,7 @@ export function TemplateForm({ sections, values, onChange }: Props) {
                       ))}
                     </select>
                   ) : (
-                    <input value={(value as string) ?? ''} onChange={(e) => set(field.key, e.target.value)} />
+                    <Input value={(value as string) ?? ''} onChange={(e) => set(field.key, e.target.value)} />
                   )}
                 </label>
               );

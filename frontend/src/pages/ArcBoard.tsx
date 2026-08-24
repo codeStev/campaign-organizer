@@ -14,6 +14,7 @@ import {
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 function sessionLabel(s: Session): string {
   const num = s.sessionNumber != null ? `#${s.sessionNumber} ` : '';
@@ -87,7 +88,7 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArti
     <section className="card">
       <h3>Story arcs</h3>
       <form className="editor-actions" onSubmit={addArc}>
-        <input
+        <Input
           placeholder="New arc title"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
@@ -328,7 +329,7 @@ function ArcCard({
 
                 {editingId === b.id && (
                   <div className="beat-editor">
-                    <input
+                    <Input
                       value={draft.title}
                       placeholder="Beat title"
                       onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -414,7 +415,7 @@ function ArcCard({
             {beats.length === 0 && <li className="muted">No beats yet.</li>}
           </ul>
           <form className="beat-form" onSubmit={addBeat}>
-            <input
+            <Input
               placeholder="New beat — then Edit to add notes & links"
               value={beatTitle}
               onChange={(e) => setBeatTitle(e.target.value)}

@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { login, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   onLoggedIn: () => void;
@@ -29,7 +30,7 @@ export function LoginPage({ onLoggedIn }: Props) {
     <form className="card login" onSubmit={handleSubmit}>
       <h2>Sign in</h2>
       <label htmlFor="password">Password</label>
-      <input
+      <Input
         id="password"
         type="password"
         value={password}

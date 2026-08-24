@@ -10,6 +10,7 @@ import {
 } from '../api/client';
 import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 interface Props {
   worldId: string;
@@ -187,7 +188,7 @@ export function CharacterSheetsPanel({
         {draft && (
           <>
             <div className="sheet-head">
-              <input
+              <Input
                 className="title-input"
                 placeholder="Character name"
                 value={draft.name}
