@@ -808,7 +808,7 @@ export async function exportWorld(worldId: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-/** Downloads a full instance backup (database + media) as a ZIP (ADR-0055). */
+/** Downloads a full instance backup (every world + media) as a ZIP (ADR-0061). */
 export async function downloadBackup(): Promise<void> {
   const token = getToken();
   const response = await fetch('/api/backup', {
@@ -833,6 +833,28 @@ export async function downloadBackup(): Promise<void> {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+export type ImportMode = 'ADDITIVE' | 'OVERWRITE';
+
+/** Imports a backup ZIP produced by {@link downloadBackup} (ADR-0061). */
+export async function importBackup(file: File, mode: ImportMode): Promise<void> {
+  const token = getToken();
+  const body = new FormData();
+  body.set('mode', mode);
+  body.set('file', file);
+  const response = await fetch('/api/backup/import', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  if (response.status === 401) {
+    clearToken();
+    throw new ApiError(401, 'Not authenticated');
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeProblemDetail(response));
+  }
 }
 
 // ---- Whiteboards (mirrors docs/api/openapi.yaml) ----

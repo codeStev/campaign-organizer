@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { worldsApi, downloadBackup, World, ApiError } from '../api/client';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import { worldsApi, downloadBackup, importBackup, World, ApiError } from '../api/client';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -13,6 +13,9 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void refresh();
@@ -70,6 +73,40 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
     }
   }
 
+  function handleImportFileChosen(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setImportFile(file);
+    event.target.value = '';
+  }
+
+  async function runImport(mode: 'ADDITIVE' | 'OVERWRITE') {
+    if (!importFile) return;
+    setImporting(true);
+    setError(null);
+    try {
+      await importBackup(importFile, mode);
+      setImportFile(null);
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function handleImportAdditive() {
+    void runImport('ADDITIVE');
+  }
+
+  function handleImportOverwrite() {
+    const consequence =
+      worlds.length === 0
+        ? 'There are no existing worlds to lose, but this cannot be undone.'
+        : `This deletes all ${worlds.length} existing world(s) first. This cannot be undone.`;
+    if (!window.confirm(`Replace everything with this backup? ${consequence}`)) return;
+    void runImport('OVERWRITE');
+  }
+
   return (
     <section>
       <form className="card" onSubmit={handleCreate}>
@@ -91,10 +128,43 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
 
       <div className="worlds-head">
         <h2>Worlds</h2>
-        <button className="link-button" onClick={handleBackup} disabled={backingUp} title="Download a full backup (database + media)">
+        <button className="link-button" onClick={handleBackup} disabled={backingUp} title="Download a full backup (every world + media)">
           {backingUp ? 'Backing up…' : '⬇ Backup'}
         </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip"
+          style={{ display: 'none' }}
+          onChange={handleImportFileChosen}
+        />
+        <button
+          className="link-button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+          title="Import a backup ZIP"
+        >
+          Import
+        </button>
       </div>
+
+      {importFile && (
+        <div className="card">
+          <p>
+            Import <strong>{importFile.name}</strong> as:
+          </p>
+          <button onClick={handleImportAdditive} disabled={importing}>
+            {importing ? 'Importing…' : 'Add as new'}
+          </button>
+          <button className="link-button danger" onClick={handleImportOverwrite} disabled={importing}>
+            Replace everything
+          </button>
+          <button className="link-button" onClick={() => setImportFile(null)} disabled={importing}>
+            Cancel
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <p>Loading…</p>
       ) : worlds.length === 0 ? (
