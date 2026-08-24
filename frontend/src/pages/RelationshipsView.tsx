@@ -10,6 +10,7 @@ import { RelationshipGraph } from '../components/RelationshipGraph';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 
 interface Props {
   worldId: string;
@@ -116,7 +117,7 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
             </SelectContent>
           </Select>
           <label className="layer-toggle">
-            <input type="checkbox" checked={directed} onChange={(e) => setDirected(e.target.checked)} />
+            <Checkbox checked={directed} onCheckedChange={(checked) => setDirected(checked === true)} />
             Directed (arrow)
           </label>
           <Button type="submit" disabled={!from || !to}>

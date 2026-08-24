@@ -16,6 +16,7 @@ import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -301,7 +302,7 @@ function ArcCard({
               <li key={b.id} className="beat-item">
                 <div className="beat-row">
                   <label className="beat-check">
-                    <input type="checkbox" checked={b.done} onChange={() => toggle(b)} />
+                    <Checkbox checked={b.done} onCheckedChange={() => toggle(b)} />
                     <span className={b.done ? 'beat-done' : ''}>{b.title}</span>
                   </label>
                   {b.articleIds

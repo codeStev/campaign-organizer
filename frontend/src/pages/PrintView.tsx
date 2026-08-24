@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal, useNewWindowContainer } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 import {
   articlesApi,
   mapsApi,
@@ -122,19 +123,17 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           Scope <ScopeSelect scope={scope} campaigns={campaigns} onChange={setScope} />
         </label>
         <label className="print-check">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={includeContents}
-            onChange={(e) => setIncludeContents(e.target.checked)}
+            onCheckedChange={(checked) => setIncludeContents(checked === true)}
           />
           Contents
         </label>
         <label className="print-check" title={scope ? 'Maps print with the whole world only' : ''}>
-          <input
-            type="checkbox"
+          <Checkbox
             checked={includeMaps}
             disabled={!!scope}
-            onChange={(e) => setIncludeMaps(e.target.checked)}
+            onCheckedChange={(checked) => setIncludeMaps(checked === true)}
           />
           Maps
         </label>

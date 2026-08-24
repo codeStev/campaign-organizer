@@ -18,6 +18,7 @@ import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -305,10 +306,9 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                   </SelectContent>
                 </Select>
                 <label className="layer-toggle">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={!hiddenLayers.has(layer)}
-                    onChange={() => toggleLayer(layer)}
+                    onCheckedChange={() => toggleLayer(layer)}
                   />
                   {layer}
                 </label>
@@ -326,10 +326,9 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
             <div className="map-bar">
               <strong>{selected.name}</strong>
               <label className="layer-toggle" title="Show each pin's label on the map">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={showLabels}
-                  onChange={(e) => setShowLabels(e.target.checked)}
+                  onCheckedChange={(checked) => setShowLabels(checked === true)}
                 />
                 Labels
               </label>

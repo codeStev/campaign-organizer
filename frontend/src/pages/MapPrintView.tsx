@@ -4,6 +4,7 @@ import { WorldMap, MapPin } from '../api/client';
 import { iconComponent } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 
 interface Props {
   map: WorldMap;
@@ -116,15 +117,15 @@ export function MapPrintView({
           <FilterSelect filterKey={filterKey} onChange={setFilterKey} />
         </label>
         <label className="print-check">
-          <input type="checkbox" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
+          <Checkbox checked={showPins} onCheckedChange={(checked) => setShowPins(checked === true)} />
           Pins
         </label>
         <label className="print-check">
-          <input type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} />
+          <Checkbox checked={showLabels} onCheckedChange={(checked) => setShowLabels(checked === true)} />
           Labels
         </label>
         <label className="print-check">
-          <input type="checkbox" checked={showLegend} onChange={(e) => setShowLegend(e.target.checked)} />
+          <Checkbox checked={showLegend} onCheckedChange={(checked) => setShowLegend(checked === true)} />
           Legend
         </label>
         <span className="print-toolbar-spacer" />
@@ -139,10 +140,9 @@ export function MapPrintView({
           <span className="muted">Show layers:</span>
           {layers.map((l) => (
             <label key={l} className="print-check">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={!excludedLayers.has(l)}
-                onChange={() => toggleLayer(l)}
+                onCheckedChange={() => toggleLayer(l)}
               />
               <span className="map-print-swatch" style={{ background: colorByLayer[l] ?? defaultColor }} />
               {l}
@@ -150,10 +150,9 @@ export function MapPrintView({
           ))}
           {pins.some((p) => !p.layer) && (
             <label className="print-check">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={includeUnlayered}
-                onChange={(e) => setIncludeUnlayered(e.target.checked)}
+                onCheckedChange={(checked) => setIncludeUnlayered(checked === true)}
               />
               (no layer)
             </label>

@@ -7,6 +7,7 @@ import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (it's reserved for "no selection"),
 // so options that mean a real, persistently-selectable "none" state (as opposed
@@ -243,11 +244,10 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         <ul className="article-list">
           {list.map((sb) => (
             <li key={sb.id} className="statblock-row">
-              <input
-                type="checkbox"
+              <Checkbox
                 className="statblock-check"
                 checked={selected.has(sb.id)}
-                onChange={() => toggleSelected(sb.id)}
+                onCheckedChange={() => toggleSelected(sb.id)}
                 title="Select for printing"
               />
               <button

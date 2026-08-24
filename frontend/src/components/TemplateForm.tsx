@@ -2,6 +2,7 @@ import { TemplateField, TemplateSection } from '../api/client';
 import { MarkdownEditor } from './MarkdownEditor';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // and a SELECT-type field can genuinely be saved unset, so that state goes
@@ -53,10 +54,9 @@ export function TemplateForm({ sections, values, onChange }: Props) {
                       onChange={(e) => set(field.key, e.target.value === '' ? null : Number(e.target.value))}
                     />
                   ) : field.type === 'BOOLEAN' ? (
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={Boolean(value)}
-                      onChange={(e) => set(field.key, e.target.checked)}
+                      onCheckedChange={(checked) => set(field.key, checked === true)}
                     />
                   ) : field.type === 'CIRCLES' ? (
                     <CircleTracker

@@ -19,6 +19,7 @@ import {
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
@@ -623,10 +624,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                         }))].map((v) => (
                           <li key={v.id} className="revision-item">
                             <label className="diff-pick" title="Select for comparison">
-                              <input
-                                type="checkbox"
+                              <Checkbox
                                 checked={diffPick.includes(v.id)}
-                                onChange={() => toggleDiffPick(v.id)}
+                                onCheckedChange={() => toggleDiffPick(v.id)}
                               />
                             </label>
                             <span className="muted">{v.label}</span>
