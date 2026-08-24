@@ -27,13 +27,16 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
     onChange([...nodes, n], edges);
   }
 
-  function onNodeMouseDown(e: React.MouseEvent, node: WhiteboardNode) {
+  // Pointer Events cover mouse, touch, and pen through one code path (unlike the
+  // Mouse Events this replaced, which never fired for touch input at all).
+  function onNodePointerDown(e: React.PointerEvent, node: WhiteboardNode) {
     if (connectFrom !== null) return; // connect mode handles clicks separately
     const rect = ref.current!.getBoundingClientRect();
     drag.current = { id: node.id, dx: e.clientX - rect.left - node.x, dy: e.clientY - rect.top - node.y };
+    e.currentTarget.setPointerCapture(e.pointerId);
   }
 
-  function onMouseMove(e: React.MouseEvent) {
+  function onPointerMove(e: React.PointerEvent) {
     if (!drag.current || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const x = Math.max(0, e.clientX - rect.left - drag.current.dx);
@@ -87,9 +90,9 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
       <div
         ref={ref}
         className="whiteboard-canvas"
-        onMouseMove={onMouseMove}
-        onMouseUp={endDrag}
-        onMouseLeave={endDrag}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
       >
         <svg className="whiteboard-edges">
           {edges.map((e) => {
@@ -117,7 +120,7 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
             key={n.id}
             className={`whiteboard-node${connectFrom === '' ? ' connectable' : ''}`}
             style={{ left: n.x, top: n.y, width: NODE_W, minHeight: NODE_H }}
-            onMouseDown={(e) => onNodeMouseDown(e, n)}
+            onPointerDown={(e) => onNodePointerDown(e, n)}
             onClick={() => (connectFrom === '' ? setConnectFrom(n.id) : onNodeClick(n))}
             onDoubleClick={() => editNode(n)}
           >

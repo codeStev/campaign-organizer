@@ -1746,6 +1746,8 @@ button:disabled {
   gap: 0.3rem;
   box-shadow: 0 2px 8px #0006;
   font-size: 0.85rem;
+  /* Let pointerdown start a node drag instead of the browser panning/scrolling. */
+  touch-action: none;
 }
 
 .whiteboard-node.connectable {
