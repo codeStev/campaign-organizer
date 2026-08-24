@@ -165,6 +165,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   width, and canvas-style interactions (whiteboards, the sheet template
   builder) support touch/pen input via Pointer Events, not just a mouse.
   (ADR-0062)
+- **NFR-10 Component foundation & theming.** Core UI components (buttons,
+  inputs, selects, dialogs, tabs, checkboxes) are built on shadcn/ui (Radix
+  primitives + Tailwind), giving consistent behavior/accessibility and a
+  real light/dark theme toggle. (ADR-0063, supersedes ADR-0062's
+  single-dark-theme premise)
 
 ---
 
