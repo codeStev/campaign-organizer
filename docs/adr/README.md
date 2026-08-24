@@ -68,6 +68,7 @@ the old one.
 | [0059](0059-combined-image-static-frontend.md) | Combined image — backend statically serves the frontend | Accepted |
 | [0060](0060-semver-release-strategy.md) | SemVer release strategy — git tag is the version, GitHub Releases as changelog | Accepted |
 | [0061](0061-backup-import-and-export-bundle.md) | Backup import (additive/overwrite); structured bundle replaces pg_dump (supersedes ADR-0055's format) | Accepted |
+| [0062](0062-pointer-events-touch-input.md) | Pointer Events for canvas drag interactions; mobile/tablet touch support | Accepted |
 
 ## Template
 

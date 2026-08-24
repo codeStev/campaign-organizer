@@ -161,6 +161,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   environment; non-root container users.
 - **NFR-8 Errors.** API errors use RFC 9457/7807 `application/problem+json`.
   (ADR-0009)
+- **NFR-9 Responsive & touch UI.** The frontend layout adapts down to phone
+  width, and canvas-style interactions (whiteboards, the sheet template
+  builder) support touch/pen input via Pointer Events, not just a mouse.
+  (ADR-0062)
 
 ---
 
