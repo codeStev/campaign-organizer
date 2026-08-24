@@ -1,4 +1,4 @@
-import { DragEvent, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   FieldTemplate,
   FieldTemplateRequest,
@@ -47,6 +47,19 @@ const WIDTHS: { w: FieldWidth; label: string }[] = [
 const SPAN: Record<FieldWidth, number> = { FULL: 12, HALF: 6, THIRD: 4, QUARTER: 3 };
 
 type Drag = { kind: 'new'; type: FieldType } | { kind: 'move'; si: number; fi: number };
+type DropTarget = { si: number; fi: number | null };
+
+// Find the section/field under a pointer position. Used instead of native HTML5
+// drag-and-drop (onDragOver/onDrop), which iOS Safari and most mobile browsers
+// don't support, so field placement was previously mouse-only.
+function dropTargetAt(x: number, y: number): DropTarget | null {
+  const el = document.elementFromPoint(x, y);
+  const field = el?.closest<HTMLElement>('[data-drop-field]');
+  if (field) return { si: Number(field.dataset.si), fi: Number(field.dataset.fi) };
+  const section = el?.closest<HTMLElement>('[data-drop-section]');
+  if (section) return { si: Number(section.dataset.si), fi: null };
+  return null;
+}
 
 function defaultLabel(type: FieldType): string {
   return PALETTE.find((p) => p.type === type)?.label ?? 'Field';
@@ -84,6 +97,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [system, setSystem] = useState(initial?.system ?? '');
   const [sections, setSections] = useState<SectionDraft[]>(toDrafts(initial));
+  const [dropHover, setDropHover] = useState<DropTarget | null>(null);
   const drag = useRef<Drag | null>(null);
 
   function mutateSection(i: number, patch: Partial<SectionDraft>) {
@@ -123,17 +137,30 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
     });
   }
 
-  function handleDrop(si: number, fi: number | null, e: DragEvent) {
+  function beginDrag(e: React.PointerEvent, d: Drag) {
     e.preventDefault();
-    e.stopPropagation();
-    const d = drag.current;
-    drag.current = null;
-    if (!d) return;
-    if (d.kind === 'new') insertField(si, fi, newField(d.type));
-    else moveField({ si: d.si, fi: d.fi }, { si, fi });
+    drag.current = d;
+    e.currentTarget.setPointerCapture(e.pointerId);
   }
 
-  const allowDrop = (e: DragEvent) => e.preventDefault();
+  function onBuilderPointerMove(e: React.PointerEvent) {
+    if (!drag.current) return;
+    setDropHover(dropTargetAt(e.clientX, e.clientY));
+  }
+
+  function endDrag(e: React.PointerEvent) {
+    const d = drag.current;
+    drag.current = null;
+    const target = dropTargetAt(e.clientX, e.clientY);
+    setDropHover(null);
+    if (!d || !target) return;
+    if (d.kind === 'new') insertField(target.si, target.fi, newField(d.type));
+    else moveField({ si: d.si, fi: d.fi }, target);
+  }
+
+  function isHover(si: number, fi: number | null) {
+    return dropHover?.si === si && dropHover?.fi === fi;
+  }
 
   function moveArrow(si: number, fi: number, dir: -1 | 1) {
     const to = fi + dir;
@@ -179,21 +206,20 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
   }
 
   return (
-    <div className="card template-builder">
+    <div className="card template-builder" onPointerMove={onBuilderPointerMove} onPointerUp={endDrag}>
       <div className="builder-head">
         <input className="title-input" placeholder="Template name" value={name} onChange={(e) => setName(e.target.value)} />
         <input placeholder="system (e.g. homebrew)" value={system} onChange={(e) => setSystem(e.target.value)} />
         <small className="muted">{kind === 'CHARACTER' ? 'Character sheet' : 'Statblock'} template</small>
       </div>
 
-      <div className="palette">
+      <div className="field-palette">
         <span className="muted">Drag a component into a section:</span>
         {PALETTE.map((p) => (
           <div
             key={p.type}
             className="palette-chip"
-            draggable
-            onDragStart={() => (drag.current = { kind: 'new', type: p.type })}
+            onPointerDown={(e) => beginDrag(e, { kind: 'new', type: p.type })}
           >
             + {p.label}
           </div>
@@ -201,7 +227,12 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
       </div>
 
       {sections.map((sec, si) => (
-        <fieldset key={si} className="builder-section" onDragOver={allowDrop} onDrop={(e) => handleDrop(si, null, e)}>
+        <fieldset
+          key={si}
+          className={`builder-section${isHover(si, null) ? ' drop-hover' : ''}`}
+          data-drop-section
+          data-si={si}
+        >
           <legend>
             <input value={sec.title} onChange={(e) => mutateSection(si, { title: e.target.value })} />
             <button
@@ -217,16 +248,16 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
             {sec.fields.map((f, fi) => (
               <div
                 key={fi}
-                className="builder-field"
+                className={`builder-field${isHover(si, fi) ? ' drop-hover' : ''}`}
                 style={{ gridColumn: `span ${SPAN[f.width]}` }}
-                onDragOver={allowDrop}
-                onDrop={(e) => handleDrop(si, fi, e)}
+                data-drop-field
+                data-si={si}
+                data-fi={fi}
               >
                 <div className="bf-row">
                   <span
                     className="drag-handle"
-                    draggable
-                    onDragStart={() => (drag.current = { kind: 'move', si, fi })}
+                    onPointerDown={(e) => beginDrag(e, { kind: 'move', si, fi })}
                     title="Drag to move"
                   >
                     ⠿
