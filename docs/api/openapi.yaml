@@ -55,7 +55,7 @@ tags:
   - name: whiteboards
     description: Free-form plotting whiteboards (nodes and connections).
   - name: backup
-    description: Instance-wide backup (database + media).
+    description: Instance-wide backup and restore (per-world JSON + media).
 
 paths:
   /auth/login:
@@ -85,20 +85,52 @@ paths:
   /backup:
     get:
       tags: [backup]
-      summary: Download a full instance backup (database + media) as a ZIP (FR-36)
+      summary: Download a full instance backup (every world + media) as a ZIP (FR-36)
       operationId: downloadBackup
       responses:
         '200':
           description: >
-            A ZIP containing database.sql (a plain-SQL pg_dump of the whole
-            database) and media/<path> for every file under the media
-            volume. See ADR-0055 for the restore procedure; this endpoint only
-            produces the backup, it does not restore one.
+            A ZIP containing manifest.json (world ids + export time),
+            worlds/<worldId>.json (one export bundle per world, per
+            GET /worlds/{worldId}/export's shape, plus that world's media
+            metadata) and media/<worldId>/<mediaId> for every referenced
+            media file. See ADR-0061.
           content:
             application/zip:
               schema:
                 type: string
                 format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /backup/import:
+    post:
+      tags: [backup]
+      summary: Import a backup ZIP produced by GET /backup (ADR-0061)
+      operationId: importBackup
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [mode, file]
+              properties:
+                mode:
+                  type: string
+                  enum: [ADDITIVE, OVERWRITE]
+                  description: >
+                    ADDITIVE adds the backup's worlds as new data, each with
+                    freshly generated ids — nothing existing is touched.
+                    OVERWRITE deletes every existing world first.
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '204':
+          description: Import succeeded.
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
 

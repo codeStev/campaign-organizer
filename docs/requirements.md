@@ -136,9 +136,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   character sheet/statblock/field template/whiteboard currently open — so
   reloading, bookmarking, sharing a link, and browser back/forward all land
   you back in the same place. (ADR-0053; refines FR-26.)
-- **FR-36 Instance backup.** One-click download of a full instance backup
-  (a `pg_dump` of the whole database plus every media file) as a single ZIP;
-  restore is a documented manual procedure, not a UI feature. (ADR-0055)
+- **FR-36 Instance backup and import.** One-click download of a full instance
+  backup (every world as a JSON bundle plus its media files) as a single ZIP,
+  and in-app import of that ZIP, either additive (new worlds alongside
+  existing ones) or full-overwrite (replaces everything). (ADR-0061,
+  supersedes ADR-0055)
 
 ---
 
