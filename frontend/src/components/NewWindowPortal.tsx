@@ -1,5 +1,17 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+const NewWindowContainerContext = createContext<HTMLElement | null>(null);
+
+/**
+ * The popped-out window's mount element, for components that need an explicit
+ * portal container (Radix Select/Dialog dropdowns etc.) — without this they
+ * default to the *main* window's document.body, rendering invisibly behind
+ * the print window instead of inside it.
+ */
+export function useNewWindowContainer(): HTMLElement | null {
+  return useContext(NewWindowContainerContext);
+}
 
 interface Props {
   title: string;
@@ -51,5 +63,8 @@ export function NewWindowPortal({ title, onClose, children }: Props) {
   }, []);
 
   if (!container) return null;
-  return createPortal(children, container);
+  return createPortal(
+    <NewWindowContainerContext.Provider value={container}>{children}</NewWindowContainerContext.Provider>,
+    container,
+  );
 }

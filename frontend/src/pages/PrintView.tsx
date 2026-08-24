@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, useNewWindowContainer } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import {
   articlesApi,
   mapsApi,
@@ -10,6 +11,44 @@ import {
   MapPin,
   WorldMap,
 } from '../api/client';
+
+// Radix Select can't use "" as an item value (reserved for "no selection"),
+// so the meaningfully persistent "whole world" scope goes through this sentinel.
+const NONE_VALUE = '__none__';
+
+/**
+ * A separate component (not inlined in PrintView) so useNewWindowContainer()
+ * runs as a descendant of NewWindowPortal's provider — PrintView itself
+ * renders *above* NewWindowPortal in the tree, so calling the hook there
+ * would miss the popped-out window's container and portal into the wrong
+ * (hidden, main-app) window instead.
+ */
+function ScopeSelect({
+  scope,
+  campaigns,
+  onChange,
+}: {
+  scope: string;
+  campaigns: Campaign[];
+  onChange: (scope: string) => void;
+}) {
+  const container = useNewWindowContainer();
+  return (
+    <Select value={scope || NONE_VALUE} onValueChange={(v) => onChange(v === NONE_VALUE ? '' : v)}>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent container={container}>
+        <SelectItem value={NONE_VALUE}>Whole world</SelectItem>
+        {campaigns.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            {c.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 interface Props {
   worldId: string;
@@ -80,15 +119,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
       <div className="print-toolbar">
         <strong>Print / PDF</strong>
         <label>
-          Scope{' '}
-          <select value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="">Whole world</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          Scope <ScopeSelect scope={scope} campaigns={campaigns} onChange={setScope} />
         </label>
         <label className="print-check">
           <input

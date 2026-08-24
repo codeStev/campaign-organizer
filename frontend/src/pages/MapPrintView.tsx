@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, useNewWindowContainer } from '../components/NewWindowPortal';
 import { WorldMap, MapPin } from '../api/client';
 import { iconComponent } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 interface Props {
   map: WorldMap;
@@ -24,6 +25,29 @@ const FILTERS: { key: string; label: string; css: string }[] = [
   { key: 'blueprint', label: 'Blueprint', css: 'invert(1) hue-rotate(180deg) contrast(1.1)' },
   { key: 'contrast', label: 'High contrast', css: 'contrast(1.4)' },
 ];
+
+/**
+ * A separate component (not inlined below) so useNewWindowContainer() runs as
+ * a descendant of NewWindowPortal's provider — see the identical note in
+ * PrintView.tsx's ScopeSelect.
+ */
+function FilterSelect({ filterKey, onChange }: { filterKey: string; onChange: (key: string) => void }) {
+  const container = useNewWindowContainer();
+  return (
+    <Select value={filterKey} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent container={container}>
+        {FILTERS.map((f) => (
+          <SelectItem key={f.key} value={f.key}>
+            {f.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 /**
  * Prints a single map in its own tab (ADR-0047) with a customization menu:
@@ -89,13 +113,7 @@ export function MapPrintView({
         </label>
         <label className="print-check">
           Filter
-          <select value={filterKey} onChange={(e) => setFilterKey(e.target.value)}>
-            {FILTERS.map((f) => (
-              <option key={f.key} value={f.key}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+          <FilterSelect filterKey={filterKey} onChange={setFilterKey} />
         </label>
         <label className="print-check">
           <input type="checkbox" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
