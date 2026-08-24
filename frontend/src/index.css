@@ -77,13 +77,13 @@ body {
   margin: 3rem auto;
 }
 
+/* Baseline reset for the few native <input>s left after the shadcn Input
+   conversion (checkbox/color/hidden-file — see index.css commit history for
+   why background/border/padding were removed here: same unlayered-CSS vs.
+   @layer-utilities collision as the button {} rule had). */
 input,
 textarea {
-  background: var(--background);
-  border: 1px solid var(--input);
-  border-radius: 6px;
   color: inherit;
-  padding: 0.5rem;
   font: inherit;
 }
 
