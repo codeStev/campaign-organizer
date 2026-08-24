@@ -1,20 +1,44 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Light and dark palettes, both built from the app's existing brand purple
+   (#6d54c9) and the dark theme's original hand-picked colors (ADR-0063) —
+   not the shadcn CLI's generic "Nova" neutral-gray defaults. */
 :root {
-  /* The app is hard-coded dark (see body below); claiming "light dark" here
-     just makes native control chrome (date pickers, selects) render light
-     against it on light-OS-theme devices. */
-  color-scheme: dark;
-  font-family: system-ui, sans-serif;
-  --accent: #6d54c9;
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #1b1826;
+  --card: #ffffff;
+  --card-foreground: #1b1826;
+  --popover: #ffffff;
+  --popover-foreground: #1b1826;
+  --primary: #6d54c9;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f1ea;
+  --secondary-foreground: #1b1826;
+  --muted: #f1eff7;
+  --muted-foreground: #6b6480;
+  --accent: #efeaf9;
+  --accent-foreground: #1b1826;
+  --destructive: #c2455f;
+  --border: #e4e0ee;
+  --input: #e4e0ee;
+  --ring: #6d54c9;
+  --radius: 0.625rem;
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* Color/font come from @layer base at the bottom of this file (Tailwind's
+   bg-background/text-foreground/font-sans utilities), so both react to the
+   .dark class toggle. */
 body {
   margin: 0;
-  background: #14121a;
-  color: #eae7f2;
 }
 
 .app {
@@ -27,13 +51,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #2c2838;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
 }
 
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .card {
-  background: #1d1a27;
-  border: 1px solid #2c2838;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
@@ -49,8 +79,8 @@ body {
 
 input,
 textarea {
-  background: #14121a;
-  border: 1px solid #3a3550;
+  background: var(--background);
+  border: 1px solid var(--input);
   border-radius: 6px;
   color: inherit;
   padding: 0.5rem;
@@ -63,7 +93,7 @@ textarea {
 }
 
 button {
-  background: var(--accent);
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: 6px;
@@ -80,12 +110,12 @@ button:disabled {
 
 .link-button {
   background: none;
-  color: var(--accent);
+  color: var(--primary);
   padding: 0;
 }
 
 .link-button.danger {
-  color: #d9647a;
+  color: var(--destructive);
 }
 
 .world-list {
@@ -100,12 +130,12 @@ button:disabled {
 }
 
 .muted {
-  color: #9a93ad;
+  color: var(--muted-foreground);
   margin: 0.25rem 0 0;
 }
 
 .error {
-  color: #d9647a;
+  color: var(--destructive);
 }
 
 /* Worlds list: make the whole card body a clickable open target. */
@@ -118,7 +148,7 @@ button:disabled {
 }
 
 .world-open strong {
-  color: var(--accent);
+  color: var(--primary);
 }
 
 /* World / wiki view */
@@ -168,16 +198,16 @@ button:disabled {
 
 .article-link {
   width: 100%;
-  background: #1d1a27;
+  background: var(--card);
   color: inherit;
   text-align: left;
   display: flex;
   flex-direction: column;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
 }
 
 .article-link.active {
-  border-color: var(--accent);
+  border-color: var(--primary);
 }
 
 .title-input {
@@ -194,9 +224,9 @@ button:disabled {
 }
 
 .type-chip {
-  background: #1d1a27;
-  border: 1px solid #2c2838;
-  color: #9a93ad;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
   padding: 0.15rem 0.55rem;
   font-size: 0.72rem;
   border-radius: 999px;
@@ -204,9 +234,9 @@ button:disabled {
 }
 
 .type-chip.active {
-  background: var(--accent);
+  background: var(--primary);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--primary);
 }
 
 /* Read view */
@@ -227,7 +257,7 @@ button:disabled {
 }
 
 .editor {
-  border: 1px solid #3a3550;
+  border: 1px solid var(--input);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -236,18 +266,18 @@ button:disabled {
   display: flex;
   gap: 0.25rem;
   padding: 0.35rem;
-  background: #14121a;
-  border-bottom: 1px solid #3a3550;
+  background: var(--background);
+  border-bottom: 1px solid var(--input);
 }
 
 .editor-toolbar button {
-  background: #2c2838;
+  background: var(--border);
   padding: 0.2rem 0.6rem;
   min-width: 2rem;
 }
 
 .editor-toolbar button.active {
-  background: var(--accent);
+  background: var(--primary);
 }
 
 .editor-content :focus-visible {
@@ -284,21 +314,21 @@ button:disabled {
 }
 
 .hint code {
-  background: #14121a;
+  background: var(--background);
   padding: 0.05rem 0.3rem;
   border-radius: 4px;
 }
 
 .preview-body .wiki-link {
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
   text-decoration: none;
-  border-bottom: 1px solid var(--accent);
+  border-bottom: 1px solid var(--primary);
 }
 
 .preview-body .broken-link {
-  color: #d9647a;
-  border-bottom: 1px dotted #d9647a;
+  color: var(--destructive);
+  border-bottom: 1px dotted var(--destructive);
 }
 
 /* Tabs */
@@ -323,7 +353,7 @@ button:disabled {
 }
 
 .editor-content img.ProseMirror-selectednode {
-  outline: 2px solid #6d54c9;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -367,13 +397,13 @@ button:disabled {
 .preview-body blockquote {
   margin: 0.5em 0;
   padding: 0.25rem 0.9rem;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--primary);
   color: #b8b3c9;
 }
 
 .editor-content .ProseMirror code,
 .preview-body code {
-  background: #14121a;
+  background: var(--background);
   border-radius: 4px;
   padding: 0.05rem 0.3rem;
   font-size: 0.9em;
@@ -381,8 +411,8 @@ button:disabled {
 
 .editor-content .ProseMirror pre,
 .preview-body pre {
-  background: #14121a;
-  border: 1px solid #3a3550;
+  background: var(--background);
+  border: 1px solid var(--input);
   border-radius: 6px;
   padding: 0.6rem 0.8rem;
   overflow-x: auto;
@@ -404,30 +434,30 @@ button:disabled {
 .editor-content .ProseMirror td,
 .preview-body th,
 .preview-body td {
-  border: 1px solid #3a3550;
+  border: 1px solid var(--input);
   padding: 0.35rem 0.6rem;
 }
 
 .editor-content .ProseMirror th,
 .preview-body th {
-  background: #14121a;
+  background: var(--background);
 }
 
 .tab {
-  background: #1d1a27;
-  border: 1px solid #2c2838;
+  background: var(--card);
+  border: 1px solid var(--border);
   padding: 0.35rem 0.9rem;
 }
 
 .tab.active {
-  background: var(--accent);
+  background: var(--primary);
 }
 
 /* Maps */
 .map-canvas {
   height: 520px;
   border-radius: 8px;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -448,7 +478,7 @@ button:disabled {
   gap: 0.3rem;
   margin-top: 0.75rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #2c2838;
+  border-top: 1px solid var(--border);
 }
 
 .layer-toggle {
@@ -468,7 +498,7 @@ button:disabled {
   width: 1.6rem;
   height: 1.6rem;
   padding: 0;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 4px;
   background: none;
   cursor: pointer;
@@ -506,13 +536,13 @@ button:disabled {
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
-  border: 2px solid #14121a;
+  border: 2px solid var(--background);
   box-sizing: border-box;
 }
 
 .pin-badge.selected {
   border-color: #fff;
-  box-shadow: 0 0 0 2px #14121a;
+  box-shadow: 0 0 0 2px var(--background);
 }
 
 /* Icons render as inline SVG inside the badge. */
@@ -618,7 +648,7 @@ button:disabled {
 .timeline-date {
   min-width: 5rem;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--primary);
   font-weight: 600;
   padding-top: 0.1rem;
 }
@@ -649,7 +679,7 @@ button:disabled {
 .rel-graph {
   width: 100%;
   height: auto;
-  background: #14121a;
+  background: var(--background);
   border-radius: 8px;
 }
 
@@ -658,12 +688,12 @@ button:disabled {
 }
 
 .rel-node-label {
-  fill: #eae7f2;
+  fill: var(--foreground);
   font-size: 11px;
 }
 
 .rel-edge-label {
-  fill: #9a93ad;
+  fill: var(--muted-foreground);
   font-size: 10px;
 }
 
@@ -673,7 +703,7 @@ button:disabled {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -795,7 +825,7 @@ button:disabled {
 }
 
 .session-num {
-  color: var(--accent);
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -814,7 +844,7 @@ button:disabled {
 }
 
 .arc-card {
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
 }
@@ -837,7 +867,7 @@ button:disabled {
 }
 
 .arc-toggle .caret {
-  color: var(--accent);
+  color: var(--primary);
   font-size: 0.75rem;
 }
 
@@ -846,30 +876,30 @@ button:disabled {
   text-transform: uppercase;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  border: 1px solid #3a3550;
-  color: #9a93ad;
+  border: 1px solid var(--input);
+  color: var(--muted-foreground);
 }
 
 .arc-planned {
-  color: #9a93ad;
+  color: var(--muted-foreground);
 }
 .arc-active {
   color: #6ad39f;
   border-color: #6ad39f;
 }
 .arc-completed {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 .arc-abandoned {
-  color: #d9647a;
-  border-color: #d9647a;
+  color: var(--destructive);
+  border-color: var(--destructive);
 }
 
 .arc-beats {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #2c2838;
+  border-top: 1px solid var(--border);
 }
 
 .beat-list {
@@ -886,7 +916,7 @@ button:disabled {
   flex-direction: column;
   gap: 0.3rem;
   padding: 0.3rem 0;
-  border-bottom: 1px solid #2c2838;
+  border-bottom: 1px solid var(--border);
 }
 
 .beat-row {
@@ -910,8 +940,8 @@ button:disabled {
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.4rem 0.5rem;
-  background: #14121a;
-  border: 1px solid #2c2838;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -936,8 +966,8 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background: #1d1a27;
-  border: 1px solid var(--accent);
+  background: var(--card);
+  border: 1px solid var(--primary);
   border-radius: 999px;
   padding: 0.1rem 0.5rem;
   font-size: 0.8rem;
@@ -952,7 +982,7 @@ button:disabled {
 
 .beat-done {
   text-decoration: line-through;
-  color: #9a93ad;
+  color: var(--muted-foreground);
 }
 
 .beat-link {
@@ -1020,14 +1050,14 @@ button:disabled {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  border-top: 1px solid #2c2838;
+  border-top: 1px solid var(--border);
   padding-top: 0.4rem;
 }
 
 .dice-total {
   font-size: 1.6rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--primary);
 }
 
 .sheets-panel {
@@ -1070,13 +1100,13 @@ button:disabled {
 }
 
 .sheet-section {
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
 }
 
 .sheet-section legend {
-  color: var(--accent);
+  color: var(--primary);
   font-weight: 600;
   padding: 0 0.35rem;
 }
@@ -1096,7 +1126,7 @@ button:disabled {
 
 .field-label {
   font-size: 0.78rem;
-  color: #9a93ad;
+  color: var(--muted-foreground);
 }
 
 .sheet-field.field-boolean {
@@ -1118,14 +1148,14 @@ button:disabled {
   height: 18px;
   border-radius: 50%;
   padding: 0;
-  background: #14121a;
-  border: 2px solid var(--accent);
+  background: var(--background);
+  border: 2px solid var(--primary);
   cursor: pointer;
   align-self: auto;
 }
 
 .pip.on {
-  background: var(--accent);
+  background: var(--primary);
 }
 
 /* On narrow screens collapse the 12-col grid to a single column. */
@@ -1161,7 +1191,7 @@ button:disabled {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.25rem 0.4rem;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -1187,7 +1217,7 @@ button:disabled {
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0.4rem;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -1197,7 +1227,7 @@ button:disabled {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: #a89fc4;
-  background: #2c2838;
+  background: var(--border);
   border-radius: 4px;
   padding: 0.05rem 0.35rem;
 }
@@ -1255,7 +1285,7 @@ button:disabled {
 .diff-view {
   max-height: 50vh;
   overflow-y: auto;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
@@ -1672,7 +1702,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   background: #1b1826;
-  border: 1px solid #3a3550;
+  border: 1px solid var(--input);
   border-radius: 10px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
@@ -1680,7 +1710,7 @@ button:disabled {
 
 .palette-input {
   border: none;
-  border-bottom: 1px solid #3a3550;
+  border-bottom: 1px solid var(--input);
   border-radius: 0;
   background: transparent;
   padding: 0.85rem 1rem;
@@ -1741,12 +1771,12 @@ button:disabled {
 .whiteboard-canvas {
   position: relative;
   height: 540px;
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background:
     linear-gradient(#1d1a2733 1px, transparent 1px) 0 0 / 24px 24px,
     linear-gradient(90deg, #1d1a2733 1px, transparent 1px) 0 0 / 24px 24px,
-    #14121a;
+    var(--background);
   overflow: hidden;
   user-select: none;
 }
@@ -1761,8 +1791,8 @@ button:disabled {
 
 .whiteboard-node {
   position: absolute;
-  background: #1d1a27;
-  border: 1px solid var(--accent);
+  background: var(--card);
+  border: 1px solid var(--primary);
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
   cursor: grab;
@@ -1807,7 +1837,7 @@ button:disabled {
 }
 
 .builder-section {
-  border: 1px solid #2c2838;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   display: flex;
@@ -1824,7 +1854,7 @@ button:disabled {
 
 .builder-section legend input {
   font-weight: 600;
-  color: var(--accent);
+  color: var(--primary);
 }
 
 /* WYSIWYG builder grid: cards sit side by side by their width. */
@@ -1839,8 +1869,8 @@ button:disabled {
   flex-direction: column;
   gap: 0.3rem;
   min-width: 0;
-  background: #14121a;
-  border: 1px solid #2c2838;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.35rem 0.45rem;
 }
@@ -1888,7 +1918,7 @@ button:disabled {
 
 .drag-handle {
   cursor: grab;
-  color: #9a93ad;
+  color: var(--muted-foreground);
   padding: 0 0.2rem;
   user-select: none;
   touch-action: none;
@@ -1896,11 +1926,11 @@ button:disabled {
 
 /* Drop target highlight while a pointer-drag is over a section/field. */
 .builder-section.drop-hover {
-  border-color: var(--accent);
+  border-color: var(--primary);
 }
 
 .builder-field.drop-hover {
-  outline: 2px dashed var(--accent);
+  outline: 2px dashed var(--primary);
   outline-offset: 2px;
 }
 
@@ -1917,12 +1947,12 @@ button:disabled {
   align-items: center;
   gap: 0.35rem;
   padding: 0.5rem;
-  border: 1px dashed #3a3550;
+  border: 1px dashed var(--input);
   border-radius: 8px;
 }
 
 .palette-chip {
-  background: var(--accent);
+  background: var(--primary);
   color: #fff;
   border-radius: 999px;
   padding: 0.2rem 0.6rem;
@@ -1936,6 +1966,68 @@ button:disabled {
   font-size: 0.72rem;
   text-align: center;
   padding: 0.25rem;
-  border: 1px dashed #2c2838;
+  border: 1px dashed var(--border);
   border-radius: 6px;
+}
+
+@theme inline {
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #14121a;
+  --foreground: #eae7f2;
+  --card: #1d1a27;
+  --card-foreground: #eae7f2;
+  --popover: #1d1a27;
+  --popover-foreground: #eae7f2;
+  --primary: #6d54c9;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2838;
+  --secondary-foreground: #eae7f2;
+  --muted: #2c2838;
+  --muted-foreground: #9a93ad;
+  --accent: #2c2740;
+  --accent-foreground: #eae7f2;
+  --destructive: #d9647a;
+  --border: #2c2838;
+  --input: #3a3550;
+  --ring: #6d54c9;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
