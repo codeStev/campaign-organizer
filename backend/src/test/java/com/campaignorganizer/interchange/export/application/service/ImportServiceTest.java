@@ -1,0 +1,169 @@
+package com.campaignorganizer.interchange.export.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
+import com.campaignorganizer.media.application.port.published.MediaImportPort;
+import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
+import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinImportPort;
+import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipImportPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineEventImportPort;
+import com.campaignorganizer.worldbuilding.application.timeline.port.published.TimelineImportPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleImportPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryImportPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryView;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldImportPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
+import tools.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+/**
+ * Unit test for the id-remapping/dispatch orchestration — every published
+ * import port mocked, real Jackson for the JSON parsing under test.
+ */
+@ExtendWith(MockitoExtension.class)
+class ImportServiceTest {
+
+    @Mock
+    private WorldImportPort worldImportPort;
+    @Mock
+    private CategoryImportPort categoryImportPort;
+    @Mock
+    private ArticleImportPort articleImportPort;
+    @Mock
+    private MapImportPort mapImportPort;
+    @Mock
+    private MapPinImportPort mapPinImportPort;
+    @Mock
+    private CalendarImportPort calendarImportPort;
+    @Mock
+    private TimelineImportPort timelineImportPort;
+    @Mock
+    private TimelineEventImportPort timelineEventImportPort;
+    @Mock
+    private RelationshipImportPort relationshipImportPort;
+    @Mock
+    private CampaignImportPort campaignImportPort;
+    @Mock
+    private SessionImportPort sessionImportPort;
+    @Mock
+    private ArcImportPort arcImportPort;
+    @Mock
+    private FieldTemplateImportPort fieldTemplateImportPort;
+    @Mock
+    private CharacterSheetImportPort characterSheetImportPort;
+    @Mock
+    private StatblockImportPort statblockImportPort;
+    @Mock
+    private ArcBeatImportPort arcBeatImportPort;
+    @Mock
+    private WhiteboardImportPort whiteboardImportPort;
+    @Mock
+    private MediaImportPort mediaImportPort;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private ImportService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new ImportService(objectMapper, worldImportPort, categoryImportPort, articleImportPort,
+                mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
+                timelineEventImportPort, relationshipImportPort, campaignImportPort, sessionImportPort,
+                arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
+                arcBeatImportPort, whiteboardImportPort, mediaImportPort);
+    }
+
+    @Test
+    void remapsIdsAndRewritesMediaLinksInArticleBody() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCategoryId = UUID.randomUUID();
+        UUID oldArticleId = UUID.randomUUID();
+        UUID oldMediaId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("media", List.of(Map.of("id", oldMediaId, "worldId", oldWorldId, "filename", "cover.png",
+                "contentType", "image/png", "sizeBytes", 3, "createdAt", now.toString())));
+        bundle.put("categories", List.of(
+                new CategoryView(oldCategoryId, oldWorldId, null, "Places", now, now)));
+        bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, oldCategoryId, "Tortuga",
+                "tortuga", "LOCATION", "See ![cover](/api/media/" + oldMediaId + "/content)", now, now)));
+        bundle.put("maps", List.of());
+        bundle.put("mapPins", List.of());
+        bundle.put("calendars", List.of());
+        bundle.put("timelines", List.of());
+        bundle.put("timelineEvents", List.of());
+        bundle.put("relationships", List.of());
+        bundle.put("campaigns", List.of());
+        bundle.put("sessions", List.of());
+        bundle.put("arcs", List.of());
+        bundle.put("beats", List.of());
+        bundle.put("fieldTemplates", List.of());
+        bundle.put("characterSheets", List.of());
+        bundle.put("statblocks", List.of());
+        bundle.put("whiteboards", List.of());
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        byte[] mediaBytes = {1, 2, 3};
+        service.importWorld(json, Map.of(oldMediaId, mediaBytes));
+
+        ArgumentCaptor<WorldView> worldCaptor = ArgumentCaptor.forClass(WorldView.class);
+        verify(worldImportPort).importWorld(worldCaptor.capture());
+        UUID newWorldId = worldCaptor.getValue().id();
+        assertThat(newWorldId).isNotEqualTo(oldWorldId);
+        assertThat(worldCaptor.getValue().name()).isEqualTo("Dark Caribbean");
+
+        ArgumentCaptor<CategoryView> categoryCaptor = ArgumentCaptor.forClass(CategoryView.class);
+        verify(categoryImportPort).importCategory(categoryCaptor.capture());
+        UUID newCategoryId = categoryCaptor.getValue().id();
+        assertThat(newCategoryId).isNotEqualTo(oldCategoryId);
+        assertThat(categoryCaptor.getValue().worldId()).isEqualTo(newWorldId);
+
+        ArgumentCaptor<ArticleView> articleCaptor = ArgumentCaptor.forClass(ArticleView.class);
+        verify(articleImportPort).importArticle(articleCaptor.capture());
+        ArticleView importedArticle = articleCaptor.getValue();
+        assertThat(importedArticle.id()).isNotEqualTo(oldArticleId);
+        assertThat(importedArticle.worldId()).isEqualTo(newWorldId);
+        assertThat(importedArticle.categoryId()).isEqualTo(newCategoryId);
+        assertThat(importedArticle.body()).doesNotContain(oldMediaId.toString());
+
+        verify(mediaImportPort).importMedia(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void rejectsMismatchedExportVersion() throws Exception {
+        Map<String, Object> bundle = Map.of("exportVersion", ExportService.EXPORT_VERSION + 99);
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        assertThatThrownBy(() -> service.importWorld(json, Map.of()))
+                .isInstanceOf(ValidationException.class);
+    }
+}
