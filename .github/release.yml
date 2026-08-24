@@ -1,0 +1,13 @@
+# Configures GitHub's auto-generated release notes (ADR-0060). Groups merged
+# PRs by label; anything unlabeled falls into "Other Changes" — labels are
+# optional, not required, so this degrades gracefully.
+changelog:
+  categories:
+    - title: Features
+      labels: [feature, enhancement]
+    - title: Fixes
+      labels: [fix, bug]
+    - title: Chores & Infra
+      labels: [chore, infra, ci, docs]
+    - title: Other Changes
+      labels: ["*"]
