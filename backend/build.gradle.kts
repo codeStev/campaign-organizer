@@ -8,7 +8,8 @@ plugins {
 }
 
 group = "com.campaignorganizer"
-version = "0.1.0"
+// Not authoritative — the git tag is the version (ADR-0060). Left static.
+version = "0.0.0"
 description = "Personal worldbuilding and RPG campaign manager"
 
 java {
