@@ -29,6 +29,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.jwtService = jwtService;
     }
 
+    /**
+     * Streaming responses (e.g. the backup download) trigger a second, internal
+     * ASYNC dispatch through the filter chain to complete the response. Without
+     * this override, {@link OncePerRequestFilter}'s default skips that dispatch,
+     * so the security context is empty when {@code AuthorizationFilter} re-checks
+     * authorization on it, and the request is denied after the response has
+     * already been committed.
+     */
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
