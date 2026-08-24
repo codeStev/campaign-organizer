@@ -738,6 +738,18 @@ button:disabled {
   .map-canvas {
     height: 380px;
   }
+
+  /* Bigger touch targets for the stat-tracker pips and map layer swatches —
+     18px/25.6px are comfortable for a mouse pointer but fiddly to tap precisely. */
+  .pip {
+    width: 26px;
+    height: 26px;
+  }
+
+  .layer-color {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
 }
 
 /* Campaign manager */
