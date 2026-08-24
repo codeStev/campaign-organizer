@@ -92,12 +92,17 @@ textarea {
   resize: vertical;
 }
 
+/* Baseline reset for the few native <button>s still left after the shadcn
+   Button conversion (custom clickable rows/toggles: .article-link,
+   .world-open, .arc-toggle, .pin-legend-btn, .tab, .type-chip, .pip — each
+   sets its own background/color/padding). No background/color/padding here
+   anymore: this is unlayered CSS, so it used to outrank shadcn Button's
+   @layer-utilities classes (bg-primary, text-*, px-*) for every variant that
+   doesn't set its own background (link/ghost/outline), forcing them all to
+   render as filled purple pills regardless of variant. */
 button {
-  background: var(--primary);
-  color: white;
   border: none;
   border-radius: 6px;
-  padding: 0.5rem 1rem;
   font: inherit;
   cursor: pointer;
   align-self: flex-start;
@@ -204,6 +209,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
+  padding: 0.5rem 1rem;
 }
 
 .article-link.active {
@@ -268,16 +274,6 @@ button:disabled {
   padding: 0.35rem;
   background: var(--background);
   border-bottom: 1px solid var(--input);
-}
-
-.editor-toolbar button {
-  background: var(--border);
-  padding: 0.2rem 0.6rem;
-  min-width: 2rem;
-}
-
-.editor-toolbar button.active {
-  background: var(--primary);
 }
 
 .editor-content :focus-visible {
@@ -447,10 +443,12 @@ button:disabled {
   background: var(--card);
   border: 1px solid var(--border);
   padding: 0.35rem 0.9rem;
+  color: var(--foreground);
 }
 
 .tab.active {
   background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 /* Maps */

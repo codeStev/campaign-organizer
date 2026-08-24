@@ -14,6 +14,7 @@ import { listener, listenerCtx } from '@milkdown/kit/plugin/listener';
 import { callCommand, insert, replaceAll } from '@milkdown/kit/utils';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import '@milkdown/kit/prose/view/style/prosemirror.css';
+import { Button } from './ui/button';
 
 interface Props {
   value: string;
@@ -121,22 +122,22 @@ function MarkdownEditorInner({ value, onChange, onUploadImage }: Props) {
   return (
     <div className="editor md-editor">
       <div className="editor-toolbar">
-        <button type="button" onClick={toggleBold}>
+        <Button type="button" variant="outline" size="sm" onClick={toggleBold}>
           B
-        </button>
-        <button type="button" onClick={toggleItalic}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={toggleItalic}>
           i
-        </button>
-        <button type="button" onClick={toggleHeading}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={toggleHeading}>
           H2
-        </button>
-        <button type="button" onClick={toggleBulletList}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={toggleBulletList}>
           • List
-        </button>
+        </Button>
         {onUploadImage && (
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
+          <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             🖼 Image
-          </button>
+          </Button>
         )}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileSelected} />
