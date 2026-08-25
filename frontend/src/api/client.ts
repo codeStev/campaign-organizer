@@ -966,3 +966,87 @@ export async function exportCharacterSheetPdf(worldId: string, sheetId: string):
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+export interface RollTableEntryInput {
+  minResult?: number | null;
+  maxResult?: number | null;
+  body: string;
+}
+
+export interface RollTableEntry {
+  id: string;
+  minResult?: number | null;
+  maxResult?: number | null;
+  body: string;
+}
+
+export interface RollTable {
+  id: string;
+  worldId: string;
+  title: string;
+  description?: string | null;
+  diceExpression: string;
+  minResult: number;
+  maxResult: number;
+  entries: RollTableEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RollTableRequest {
+  title: string;
+  description?: string;
+  diceExpression: string;
+  entries: RollTableEntryInput[];
+}
+
+export function rollTablesApi(worldId: string) {
+  const base = `/worlds/${worldId}/roll-tables`;
+  return {
+    list: () => request<RollTable[]>(base),
+    create: (body: RollTableRequest) =>
+      request<RollTable>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: RollTableRequest) =>
+      request<RollTable>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export interface DeckCardInput {
+  title?: string;
+  body: string;
+}
+
+export interface DeckCard {
+  id: string;
+  title?: string | null;
+  body: string;
+}
+
+export interface CardDeck {
+  id: string;
+  worldId: string;
+  title: string;
+  description?: string | null;
+  cards: DeckCard[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CardDeckRequest {
+  title: string;
+  description?: string;
+  cards: DeckCardInput[];
+}
+
+export function cardDecksApi(worldId: string) {
+  const base = `/worlds/${worldId}/card-decks`;
+  return {
+    list: () => request<CardDeck[]>(base),
+    create: (body: CardDeckRequest) =>
+      request<CardDeck>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: CardDeckRequest) =>
+      request<CardDeck>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
