@@ -17,7 +17,8 @@ class JwtServiceTest {
         AppProperties props = new AppProperties(
                 "pw",
                 new AppProperties.Jwt(SECRET, hours),
-                new AppProperties.Media("/tmp"));
+                new AppProperties.Media("/tmp"),
+                new AppProperties.Ai(null, null));
         return new JwtService(props);
     }
 
@@ -45,7 +46,8 @@ class JwtServiceTest {
         AppProperties otherProps = new AppProperties(
                 "pw",
                 new AppProperties.Jwt("a-completely-different-secret-32-bytes-xx", 1),
-                new AppProperties.Media("/tmp"));
+                new AppProperties.Media("/tmp"),
+                new AppProperties.Ai(null, null));
         JwtService verifier = new JwtService(otherProps);
 
         String token = issuer.issue().token();

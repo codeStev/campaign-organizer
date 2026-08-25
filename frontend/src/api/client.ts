@@ -762,6 +762,43 @@ export const diceApi = {
     request<DiceRollResult>('/dice/roll', { method: 'POST', body: JSON.stringify({ expression }) }),
 };
 
+export interface DraftArticleTextResult {
+  text: string;
+  provider: string;
+}
+
+/** AI-assisted text drafting (ADR-0064). Stateless; worldId is path-only. */
+export function aiApi(worldId: string) {
+  const base = `/worlds/${worldId}/ai`;
+  return {
+    draftArticleText: (instructions: string, existingContent: string) =>
+      request<DraftArticleTextResult>(`${base}/draft-article-text`, {
+        method: 'POST',
+        body: JSON.stringify({ instructions, existingContent }),
+      }),
+  };
+}
+
+export interface AiProviderSetting {
+  providerId: string;
+  model: string | null;
+  defaultModel: string;
+  configured: boolean;
+  priority: number;
+}
+
+export interface AiProviderSettingInput {
+  providerId: string;
+  model: string | null;
+}
+
+/** Instance-global settings (ADR-0065) - no worldId. API keys stay env-only (NFR-7). */
+export const aiSettingsApi = {
+  get: () => request<AiProviderSetting[]>('/ai/settings'),
+  update: (providers: AiProviderSettingInput[]) =>
+    request<AiProviderSetting[]>('/ai/settings', { method: 'PUT', body: JSON.stringify({ providers }) }),
+};
+
 export interface ArticleRevision {
   id: string;
   articleId: string;

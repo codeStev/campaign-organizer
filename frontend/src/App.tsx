@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { getToken, clearToken, worldsApi, World, ApiError } from './api/client';
 import { LoginPage } from './pages/LoginPage';
 import { WorldsPage } from './pages/WorldsPage';
 import { WorldView } from './pages/WorldView';
+import { SettingsPage } from './pages/SettingsPage';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
 
@@ -22,6 +23,13 @@ export function App() {
         <div className="app-header-actions">
           <ThemeToggle />
           {authed && (
+            <Button variant="link" asChild>
+              <Link to="/settings" title="Settings">
+                ⚙ Settings
+              </Link>
+            </Button>
+          )}
+          {authed && (
             <Button variant="link" onClick={handleLogout}>
               Log out
             </Button>
@@ -36,6 +44,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/worlds" replace />} />
             <Route path="/worlds" element={<WorldsPageRoute onAuthExpired={handleLogout} />} />
             <Route path="/worlds/:worldId/*" element={<WorldViewRoute onAuthExpired={handleLogout} />} />
+            <Route path="/settings/*" element={<SettingsPage onAuthExpired={handleLogout} />} />
             <Route path="*" element={<Navigate to="/worlds" replace />} />
           </Routes>
         )}

@@ -141,6 +141,29 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   and in-app import of that ZIP, either additive (new worlds alongside
   existing ones) or full-overwrite (replaces everything). (ADR-0061,
   supersedes ADR-0055)
+- **FR-37 Session cheat sheet.** *(Proposed, optional — not committed to a
+  phase, not built.)* A condensed, one-page print view separate from the full
+  session packet (FR-28): active NPCs as name + one-line hook + key stat,
+  open plot threads, and faction standings, in large-enough type to scan at a
+  glance. Goal: cut mid-session lookups — which currently compete with the
+  GM's own attention to take notes on what's happening at the table — down to
+  a glance instead of flipping through the full packet. Live voice-note
+  capture (record-then-transcribe, even GM-only self-dictation) was
+  considered for the same problem and explicitly rejected (2026-08-25):
+  dictating notes during a scene, even quietly, distracts the players.
+- **FR-38 AI-assisted text drafting.** An "AI draft" action in the article
+  editor: seed with a few keywords/instructions, get a first-draft
+  description/read-aloud text inserted into the editor to edit before
+  printing. Prep-time only — nothing calls out during a session. Backed by
+  a free-tier cloud LLM API (Groq, falling back to OpenRouter), since the
+  owner's self-hosting hardware can't run a usable model locally.
+  (ADR-0064)
+- **FR-39 Settings menu.** An instance-level settings page (not nested
+  under any world), structured for multiple categories though only "AI"
+  exists so far: per-provider model choice and provider try-order,
+  editable without touching `.env`/restarting. API keys are deliberately
+  not part of this UI — they stay environment-only (NFR-7). (ADR-0065;
+  refines FR-38)
 
 ---
 
@@ -156,7 +179,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **NFR-5 Testing.** Critical paths covered by unit and integration tests; CI
   runs them on every push. (ADR-0011)
 - **NFR-6 Portability.** Self-hostable on a single machine; no external cloud
-  services required (media on local volume).
+  services required (media on local volume). AI drafting (FR-38) is the one
+  deliberate exception — it needs a cloud LLM API and degrades to
+  unavailable, not broken, without one configured; every other feature is
+  fully functional with zero external dependencies.
 - **NFR-7 Security.** Stateless bearer-token auth; secrets supplied via
   environment; non-root container users.
 - **NFR-8 Errors.** API errors use RFC 9457/7807 `application/problem+json`.
@@ -193,3 +219,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 6 | Prep & print (paper-first workflow) | FR-25 … FR-35 |
 | 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
+| 8 | AI-assisted drafting | FR-38, FR-39 |
+| Proposed | Optional, unscheduled | FR-37 (session cheat sheet) |

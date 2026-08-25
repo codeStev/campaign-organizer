@@ -37,7 +37,9 @@ migration to this shape is complete (2026-08-19). Two documents govern it and ar
 - [`docs/architecture/clean-architecture-analysis.md`](docs/architecture/clean-architecture-analysis.md)
   — this project's context map, findings, and the completed migration plan (M0–M13).
 Bounded contexts: `worldbuilding`, `campaign`, `characters`, `media`, `whiteboard`,
-`interchange` (export/usage/packet orchestration). Each has a full domain/
+`interchange` (export/usage/packet orchestration), `ai` (LLM-backed text drafting,
+ADR-0064 — stateless, so it's the one context without a persistence ring). Each has
+a full domain/
 application/adapter ring; cross-context references go only through the target's
 `application.port.published` interfaces — an ArchUnit fitness function
 (`contextsOnlyUsePublishedPorts`) enforces this in CI. `auth`/`config`/`security`/

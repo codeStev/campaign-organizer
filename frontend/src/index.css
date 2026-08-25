@@ -705,10 +705,54 @@ button:disabled {
   border-radius: 6px;
 }
 
+.settings-layout {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-nav-item {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.settings-nav-item.active {
+  background: var(--muted);
+  font-weight: 600;
+}
+
+.settings-provider-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-provider-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
 /* ---- Responsive: tablet ---- */
 @media (max-width: 900px) {
   .wiki-layout {
     grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .settings-layout {
+    grid-template-columns: 140px minmax(0, 1fr);
   }
 }
 
@@ -722,6 +766,14 @@ button:disabled {
   /* Stack the wiki sidebar above the content on narrow screens. */
   .wiki-layout {
     grid-template-columns: 1fr;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    flex-direction: row;
   }
 
   /* On the maps view specifically, show the map before the map list/layer
