@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
-public record AiSettingsRequest(@NotEmpty @Valid List<ProviderInput> providers) {
+public record AiSettingsRequest(@NotEmpty List<@Valid ProviderInput> providers) {
 
     /** List order becomes priority order. */
     public record ProviderInput(@NotBlank String providerId, String model) {
