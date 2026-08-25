@@ -1046,6 +1046,27 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+/* Consistency report (FR-43): source-type chip and inline article links. */
+.consistency-source {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.consistency-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.consistency-link {
+  height: auto;
+  padding: 0;
+}
+
 /* Statblock reference on a beat (row label + editor chip). */
 .beat-statblock {
   font-size: 0.8rem;

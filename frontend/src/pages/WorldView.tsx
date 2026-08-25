@@ -34,6 +34,7 @@ import { CampaignsView } from './CampaignsView';
 import { SheetsView } from './SheetsView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { TablesView } from './TablesView';
+import { ConsistencyView } from './ConsistencyView';
 
 /** True when the Markdown has no meaningful text content. */
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -73,7 +74,8 @@ type Tab =
   | 'campaigns'
   | 'sheets'
   | 'whiteboards'
-  | 'tables';
+  | 'tables'
+  | 'consistency';
 
 /** Route path segments, in nav order. */
 const TABS: { key: Tab; label: string }[] = [
@@ -86,6 +88,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'sheets', label: 'Sheets' },
   { key: 'whiteboards', label: 'Whiteboards' },
   { key: 'tables', label: 'Tables & Decks' },
+  { key: 'consistency', label: 'Consistency' },
 ];
 
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
@@ -683,6 +686,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   );
   const whiteboardsPane = <WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />;
   const tablesPane = <TablesView worldId={worldId} onAuthExpired={onAuthExpired} />;
+  const consistencyPane = (
+    <ConsistencyView
+      worldId={worldId}
+      worldName={worldName}
+      onOpenArticle={openFromMap}
+      onAuthExpired={onAuthExpired}
+    />
+  );
 
   return (
     <section className="world-view">
@@ -764,6 +775,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         <Route path="tables" element={tablesPane} />
         <Route path="tables/:kind" element={tablesPane} />
         <Route path="tables/:kind/:entityId" element={tablesPane} />
+        <Route path="consistency" element={consistencyPane} />
         <Route path="*" element={<Navigate to="articles" replace />} />
       </Routes>
     </section>

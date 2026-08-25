@@ -187,11 +187,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   instance backups (the FR-36 ZIP bundle) to the media volume on a schedule
   (small sidecar container), keeping the last N, so having a recent backup
   stops depending on remembering to click download.
-- **FR-43 Consistency report.** *(Proposed — recorded 2026-08-25, not
-  committed to a phase, not built.)* A per-world lint page: broken
-  `[[wiki-links]]` everywhere, orphaned articles (no inbound links from any
-  article/beat/table/deck), and content not referenced by any campaign.
-  Derived from the usage-index machinery behind FR-25; print-friendly.
+- **FR-43 Consistency report.** A per-world lint page (Consistency tab):
+  broken `[[wiki-links]]` everywhere the wiki pipeline renders (articles,
+  beats, roll-table entries, deck cards), orphaned articles (no inbound
+  links from any of those, self-links don't count), and content not
+  referenced by any campaign. Derived from the usage-index machinery behind
+  FR-25; print-friendly. (ADR-0067)
 - **FR-44 Encounter sheet generator.** *(Proposed — recorded 2026-08-25,
   not committed to a phase, not built.)* Pick statblocks (and optionally PC
   sheets) and get a printable tracking sheet: one row per combatant with HP
@@ -266,4 +267,4 @@ multi-user collaboration. Rationale in ADR-0005.
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
 | 8 | AI-assisted drafting | FR-38, FR-39 |
 | 9 | Randomizers (tables & decks) | FR-40 |
-| Proposed | Optional, unscheduled | FR-37 (cheat-sheet composer), FR-41 … FR-46 |
+| Proposed | Optional, unscheduled | FR-37 (cheat-sheet composer), FR-41 … FR-42, FR-44 … FR-46 |
