@@ -13,17 +13,15 @@ import org.springframework.web.client.RestClientException;
 final class ChatCompletionClient {
 
     private final RestClient restClient;
-    private final String model;
 
-    ChatCompletionClient(String baseUrl, String apiKey, String model) {
+    ChatCompletionClient(String baseUrl, String apiKey) {
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
-        this.model = model;
     }
 
-    String complete(String systemPrompt, String userPrompt) {
+    String complete(String model, String systemPrompt, String userPrompt) {
         ChatResponse response;
         try {
             response = restClient.post()

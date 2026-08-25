@@ -15,9 +15,11 @@ public record AppProperties(String password, Jwt jwt, Media media, Ai ai) {
     }
 
     /**
-     * AI text-drafting provider config (ADR-0064). Either key may be blank —
-     * an unconfigured provider is skipped, not attempted and failed.
+     * AI text-drafting provider secrets (ADR-0064). Either key may be blank — an
+     * unconfigured provider is skipped, not attempted and failed. Model choice and
+     * provider priority are NOT here — they're user-editable settings (ADR-0065),
+     * not deploy-time env config.
      */
-    public record Ai(String groqApiKey, String groqModel, String openRouterApiKey, String openRouterModel) {
+    public record Ai(String groqApiKey, String openRouterApiKey) {
     }
 }

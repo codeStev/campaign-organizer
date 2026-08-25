@@ -29,9 +29,7 @@ services:
       APP_JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-please-32-bytes-minimum}
       APP_MEDIA_DIR: /data/media
       GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-deepseek/deepseek-r1:free}
     volumes:
       - media-data:/data/media
     depends_on:
