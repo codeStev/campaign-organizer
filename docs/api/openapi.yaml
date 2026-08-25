@@ -2194,6 +2194,30 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/consistency-report:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [articles]
+      summary: Consistency report for the whole world
+      description: >
+        Lints the world (FR-43): every broken [[wiki-link]] across article
+        bodies, beat bodies, roll-table entries and deck cards; articles with
+        no inbound link from any of those sources; and articles not referenced
+        by any campaign.
+      operationId: getConsistencyReport
+      responses:
+        '200':
+          description: The three report sections, each possibly empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsistencyReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/articles/{articleId}/revisions/{revisionId}/restore:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -3786,6 +3810,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Usage'
+
+    ConsistencyReport:
+      type: object
+      required: [brokenLinks, orphanedArticles, unreferencedByCampaigns]
+      properties:
+        brokenLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/BrokenLink'
+        orphanedArticles:
+          type: array
+          description: Articles no article body, beat, roll-table entry or deck card links or references.
+          items:
+            $ref: '#/components/schemas/ConsistencyArticle'
+        unreferencedByCampaigns:
+          type: array
+          description: Articles no campaign references via beats, sheets or statblocks.
+          items:
+            $ref: '#/components/schemas/ConsistencyArticle'
+
+    BrokenLink:
+      type: object
+      required: [sourceType, sourceId, sourceLabel, target]
+      properties:
+        sourceType:
+          type: string
+          enum: [ARTICLE, BEAT, ROLL_TABLE, CARD_DECK]
+        sourceId:
+          type: string
+          format: uuid
+        sourceLabel:
+          type: string
+        target:
+          type: string
+          description: The unresolved (lowercased) [[link]] target as written.
+
+    ConsistencyArticle:
+      type: object
+      required: [articleId, title]
+      properties:
+        articleId:
+          type: string
+          format: uuid
+        title:
+          type: string
 
     ArticleRevision:
       type: object
