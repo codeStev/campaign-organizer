@@ -45,8 +45,10 @@ class DraftArticleTextServiceTest {
     void setUp() {
         lenient().when(groq.providerId()).thenReturn("groq");
         lenient().when(groq.defaultModel()).thenReturn("groq-default");
+        lenient().when(groq.configured()).thenReturn(true);
         lenient().when(openRouter.providerId()).thenReturn("openrouter");
         lenient().when(openRouter.defaultModel()).thenReturn("openrouter-default");
+        lenient().when(openRouter.configured()).thenReturn(true);
         // Empty settings -> DefaultProviderSettings.orDefaults() applies: groq then openrouter.
         lenient().when(settingsRepository.findAllOrderedByPriority()).thenReturn(List.of());
         service = new DraftArticleTextService(List.of(groq, openRouter), settingsRepository);
@@ -107,5 +109,39 @@ class DraftArticleTextServiceTest {
         assertThat(result.provider()).isEqualTo("openrouter");
         verify(openRouter).generate(anyString(), anyString(), eq("custom-model"));
         verify(groq, never()).generate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void unconfiguredProvider_isSkippedWithoutAnAttemptedCall() {
+        when(groq.configured()).thenReturn(false); // no GROQ_API_KEY in this scenario
+        when(openRouter.generate(anyString(), anyString(), anyString()))
+                .thenReturn(new DraftResult("fallback text", "openrouter"));
+
+        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", ""));
+
+        assertThat(result.provider()).isEqualTo("openrouter");
+        verify(groq, never()).generate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void everyConfiguredProviderFailing_whileOneLacksAKey_stillThrowsAiUnavailable() {
+        when(groq.configured()).thenReturn(false);
+        when(openRouter.generate(anyString(), anyString(), anyString()))
+                .thenThrow(new TextGenerationFailedException("503 upstream"));
+
+        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "")))
+                .isInstanceOf(AiUnavailableException.class);
+        verify(groq, never()).generate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void noProvidersConfiguredAtAll_throwsAiUnavailableWithoutAnyCall() {
+        when(groq.configured()).thenReturn(false);
+        when(openRouter.configured()).thenReturn(false);
+
+        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "")))
+                .isInstanceOf(AiUnavailableException.class);
+        verify(groq, never()).generate(anyString(), anyString(), anyString());
+        verify(openRouter, never()).generate(anyString(), anyString(), anyString());
     }
 }
