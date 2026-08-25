@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useRef } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Editor, rootCtx, defaultValueCtx } from '@milkdown/kit/core';
 import {
   commonmark,
@@ -21,6 +21,12 @@ interface Props {
   onChange: (markdown: string) => void;
   /** Uploads a file and resolves to its URL; enables image embedding when set. */
   onUploadImage?: (file: File) => Promise<string>;
+  /**
+   * Drafts text from instructions + the editor's current content (ADR-0064);
+   * enables the "AI draft" toolbar action when set. Prep-time only - the
+   * caller owns the actual API call, this component only inserts the result.
+   */
+  onAiDraft?: (instructions: string, existingContent: string) => Promise<string>;
 }
 
 /**
@@ -28,12 +34,15 @@ interface Props {
  * ProseMirror/remark core + commonmark/gfm presets — deliberately not
  * `@milkdown/crepe` (pulls in Vue/KaTeX/CodeMirror we don't need).
  */
-function MarkdownEditorInner({ value, onChange, onUploadImage }: Props) {
+function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const uploadRef = useRef(onUploadImage);
   uploadRef.current = onUploadImage;
+  const aiDraftRef = useRef(onAiDraft);
+  aiDraftRef.current = onAiDraft;
+  const [drafting, setDrafting] = useState(false);
   // Tracks the last markdown string this component itself produced or applied,
   // so the external-sync effect below only replaces content on a genuine
   // outside change (switching articles/beats/…), not on every re-render.
@@ -95,6 +104,22 @@ function MarkdownEditorInner({ value, onChange, onUploadImage }: Props) {
     }
   }
 
+  async function requestAiDraft() {
+    const draft = aiDraftRef.current;
+    if (!draft || drafting) return;
+    const instructions = window.prompt('What should I draft? (keywords/instructions)');
+    if (!instructions) return;
+    setDrafting(true);
+    try {
+      const text = await draft(instructions, lastValueRef.current);
+      get()?.action(insert(text));
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'AI draft failed');
+    } finally {
+      setDrafting(false);
+    }
+  }
+
   async function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -137,6 +162,17 @@ function MarkdownEditorInner({ value, onChange, onUploadImage }: Props) {
         {onUploadImage && (
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             🖼 Image
+          </Button>
+        )}
+        {onAiDraft && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={drafting}
+            onClick={() => void requestAiDraft()}
+          >
+            {drafting ? '✨ Drafting…' : '✨ AI draft'}
           </Button>
         )}
       </div>

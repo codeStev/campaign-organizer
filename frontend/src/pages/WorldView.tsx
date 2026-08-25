@@ -14,6 +14,7 @@ import {
   Usage,
   templatesApi,
   mediaApi,
+  aiApi,
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
@@ -87,6 +88,7 @@ const TABS: { key: Tab; label: string }[] = [
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
   const api = articlesApi(worldId);
   const media = mediaApi(worldId);
+  const ai = aiApi(worldId);
   const navigate = useNavigate();
   // WorldView declares its own nested <Routes> below, so it's an ancestor of
   // wherever "articles/:articleId" matches — useParams() can't see that param
@@ -515,6 +517,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   value={draft.body}
                   onChange={(body) => setDraft({ ...draft, body })}
                   onUploadImage={async (file) => (await media.upload(file)).url}
+                  onAiDraft={async (instructions, existingContent) =>
+                    (await ai.draftArticleText(instructions, existingContent)).text
+                  }
                 />
                 <div className="editor-actions">
                   <Button type="submit" disabled={draft.title.length === 0}>
