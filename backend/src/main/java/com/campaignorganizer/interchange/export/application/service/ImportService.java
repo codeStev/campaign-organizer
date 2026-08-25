@@ -265,8 +265,10 @@ public class ImportService implements ImportBackupUseCase {
         for (ArcBeatView b : beats) {
             List<UUID> articleIds = b.articleIds().stream().map(remap::get).toList();
             List<UUID> statblockIds = b.statblockIds().stream().map(remap::get).toList();
+            List<UUID> tableIds = b.tableIds() == null ? List.of() : b.tableIds().stream().map(remap::get).toList();
+            List<UUID> deckIds = b.deckIds() == null ? List.of() : b.deckIds().stream().map(remap::get).toList();
             arcBeatImportPort.importArcBeat(new ArcBeatView(remap.get(b.id()), remap.get(b.arcId()),
-                    b.title(), b.body(), b.done(), articleIds, statblockIds,
+                    b.title(), b.body(), b.done(), articleIds, statblockIds, tableIds, deckIds,
                     remap.getOrNull(b.sessionId()), b.position(), b.createdAt(), b.updatedAt()));
         }
 

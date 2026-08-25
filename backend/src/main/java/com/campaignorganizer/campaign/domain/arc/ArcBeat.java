@@ -6,13 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** A story beat within an arc, linking articles/statblocks and optionally a session (aggregate root). */
+/** A story beat within an arc, linking articles/statblocks/tables/decks and optionally a session (aggregate root). */
 public final class ArcBeat {
 
     private final UUID id;
     private final UUID arcId;
     private List<UUID> articleIds;
     private List<UUID> statblockIds;
+    private List<UUID> tableIds;
+    private List<UUID> deckIds;
     private UUID sessionId;
     private String title;
     private String body;
@@ -21,43 +23,49 @@ public final class ArcBeat {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private ArcBeat(UUID id, UUID arcId, List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId,
+    private ArcBeat(UUID id, UUID arcId, List<UUID> articleIds, List<UUID> statblockIds,
+                    List<UUID> tableIds, List<UUID> deckIds, UUID sessionId,
                     String title, String body, boolean done, int position, Instant createdAt,
                     Instant updatedAt) {
         this.id = id;
         this.arcId = arcId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(articleIds, statblockIds, sessionId, title, body, done, position);
+        apply(articleIds, statblockIds, tableIds, deckIds, sessionId, title, body, done, position);
     }
 
     public static ArcBeat create(UUID id, UUID arcId, List<UUID> articleIds, List<UUID> statblockIds,
-                                 UUID sessionId, String title, String body, boolean done, int position,
-                                 Instant now) {
-        return new ArcBeat(id, arcId, articleIds, statblockIds, sessionId, title, body, done, position,
-                now, now);
+                                 List<UUID> tableIds, List<UUID> deckIds, UUID sessionId,
+                                 String title, String body, boolean done, int position, Instant now) {
+        return new ArcBeat(id, arcId, articleIds, statblockIds, tableIds, deckIds, sessionId, title,
+                body, done, position, now, now);
     }
 
     public static ArcBeat reconstitute(UUID id, UUID arcId, List<UUID> articleIds, List<UUID> statblockIds,
-                                       UUID sessionId, String title, String body, boolean done,
-                                       int position, Instant createdAt, Instant updatedAt) {
-        return new ArcBeat(id, arcId, articleIds, statblockIds, sessionId, title, body, done, position,
-                createdAt, updatedAt);
+                                       List<UUID> tableIds, List<UUID> deckIds, UUID sessionId,
+                                       String title, String body, boolean done, int position,
+                                       Instant createdAt, Instant updatedAt) {
+        return new ArcBeat(id, arcId, articleIds, statblockIds, tableIds, deckIds, sessionId, title,
+                body, done, position, createdAt, updatedAt);
     }
 
-    public void update(List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId, String title,
-                       String body, boolean done, int position, Instant now) {
-        apply(articleIds, statblockIds, sessionId, title, body, done, position);
+    public void update(List<UUID> articleIds, List<UUID> statblockIds, List<UUID> tableIds,
+                       List<UUID> deckIds, UUID sessionId, String title, String body, boolean done,
+                       int position, Instant now) {
+        apply(articleIds, statblockIds, tableIds, deckIds, sessionId, title, body, done, position);
         this.updatedAt = now;
     }
 
-    private void apply(List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId, String title,
-                       String body, boolean done, int position) {
+    private void apply(List<UUID> articleIds, List<UUID> statblockIds, List<UUID> tableIds,
+                       List<UUID> deckIds, UUID sessionId, String title, String body, boolean done,
+                       int position) {
         if (title == null || title.isBlank()) {
             throw new ValidationException("Beat title must not be blank");
         }
         this.articleIds = articleIds == null ? new ArrayList<>() : new ArrayList<>(articleIds);
         this.statblockIds = statblockIds == null ? new ArrayList<>() : new ArrayList<>(statblockIds);
+        this.tableIds = tableIds == null ? new ArrayList<>() : new ArrayList<>(tableIds);
+        this.deckIds = deckIds == null ? new ArrayList<>() : new ArrayList<>(deckIds);
         this.sessionId = sessionId;
         this.title = title;
         this.body = body;
@@ -79,6 +87,16 @@ public final class ArcBeat {
 
     public List<UUID> getStatblockIds() {
         return statblockIds;
+    }
+
+    /** Roll tables referenced for quick reference/printing in the session packet (FR-40). */
+    public List<UUID> getTableIds() {
+        return tableIds;
+    }
+
+    /** Card decks referenced for quick reference/printing in the session packet (FR-40). */
+    public List<UUID> getDeckIds() {
+        return deckIds;
     }
 
     public UUID getSessionId() {

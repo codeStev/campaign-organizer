@@ -17,13 +17,15 @@ public interface BeatWebMapper {
                                               BeatRequest request) {
         return new CreateBeatCommand(worldId, campaignId, arcId, request.title(), request.body(),
                 request.doneOrDefault(), request.articleIdsOrEmpty(), request.statblockIdsOrEmpty(),
-                request.sessionId(), request.position());
+                request.tableIdsOrEmpty(), request.deckIdsOrEmpty(), request.sessionId(),
+                request.position());
     }
 
     default UpdateBeatCommand toUpdateCommand(UUID worldId, UUID campaignId, UUID arcId, UUID beatId,
                                               BeatRequest request) {
         return new UpdateBeatCommand(worldId, campaignId, arcId, beatId, request.title(), request.body(),
                 request.doneOrDefault(), request.articleIdsOrEmpty(), request.statblockIdsOrEmpty(),
-                request.sessionId(), request.position());
+                request.tableIdsOrEmpty(), request.deckIdsOrEmpty(), request.sessionId(),
+                request.position());
     }
 }

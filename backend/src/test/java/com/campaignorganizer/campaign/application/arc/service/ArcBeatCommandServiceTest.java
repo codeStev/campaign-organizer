@@ -10,8 +10,10 @@ import com.campaignorganizer.campaign.application.arc.port.out.ArcBeatRepository
 import com.campaignorganizer.campaign.application.arc.port.out.ArcRepositoryPort;
 import com.campaignorganizer.campaign.application.arc.port.out.ArticleExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.out.CampaignExistsPort;
+import com.campaignorganizer.campaign.application.arc.port.out.DeckExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.out.SessionExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.out.StatblockExistsPort;
+import com.campaignorganizer.campaign.application.arc.port.out.TableExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
@@ -42,6 +44,10 @@ class ArcBeatCommandServiceTest {
     @Mock
     private StatblockExistsPort statblocks;
     @Mock
+    private TableExistsPort tables;
+    @Mock
+    private DeckExistsPort decks;
+    @Mock
     private SessionExistsPort sessions;
     @Mock
     private IdGenerator ids;
@@ -58,13 +64,13 @@ class ArcBeatCommandServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ArcBeatCommandService(beats, arcs, campaigns, articles, statblocks, sessions,
-                viewMapper, ids, clock);
+        service = new ArcBeatCommandService(beats, arcs, campaigns, articles, statblocks, tables,
+                decks, sessions, viewMapper, ids, clock);
     }
 
     private CreateBeatCommand command(List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId) {
         return new CreateBeatCommand(worldId, campaignId, arcId, "Ambush", "body", false,
-                articleIds, statblockIds, sessionId, 0);
+                articleIds, statblockIds, List.of(), List.of(), sessionId, 0);
     }
 
     @Test

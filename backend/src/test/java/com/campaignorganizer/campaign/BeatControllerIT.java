@@ -160,6 +160,55 @@ class BeatControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    private String rollTableId(String title) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"" + title + "\",\"diceExpression\":\"1d6\","
+                                + "\"entries\":[{\"minResult\":1,\"maxResult\":6,\"body\":\"Rain\"}]}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    private String cardDeckId(String title) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"" + title + "\",\"cards\":[{\"body\":\"The Fool\"}]}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void linksRollTablesAndCardDecksToBeat() throws Exception {
+        setup();
+        String weather = rollTableId("Weather");
+        String omens = cardDeckId("Omens");
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Roadside omen\",\"tableIds\":[\"" + weather + "\"],"
+                                + "\"deckIds\":[\"" + omens + "\"]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tableIds").value(org.hamcrest.Matchers.hasItem(weather)))
+                .andExpect(jsonPath("$.deckIds").value(org.hamcrest.Matchers.hasItem(omens)));
+    }
+
+    @Test
+    void rejectsBeatWithForeignTableOrDeck() throws Exception {
+        setup();
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"tableIds\":[\"" + UUID.randomUUID() + "\"]}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"deckIds\":[\"" + UUID.randomUUID() + "\"]}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void deletingArticleRemovesItFromBeatLinks() throws Exception {
         setup();
