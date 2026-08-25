@@ -2349,6 +2349,35 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /ai/settings/{providerId}/test:
+    post:
+      tags: [ai]
+      summary: Send a tiny test request to one provider (ADR-0065)
+      description: >-
+        Diagnostic for the settings UI: asks the provider to complete a
+        trivial prompt using its persisted model (or its built-in default).
+        A failed test is a normal outcome, reported as data — not a server
+        error.
+      operationId: testAiProvider
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [groq, openrouter]
+      responses:
+        '200':
+          description: The test outcome, successful or not.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProviderTestResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2610,6 +2639,24 @@ components:
         priority:
           type: integer
           description: 0-based fallback try-order; lower is tried first.
+
+    AiProviderTestResult:
+      type: object
+      required: [ok, model, latencyMs]
+      properties:
+        ok:
+          type: boolean
+          description: Whether the provider answered the test request.
+        model:
+          type: string
+          description: The model the request asked for (persisted or default).
+        latencyMs:
+          type: integer
+          description: Round-trip time of the test request in milliseconds.
+        error:
+          type: string
+          nullable: true
+          description: Why the test failed; null when ok is true.
 
     AiSettingsUpdateRequest:
       type: object
