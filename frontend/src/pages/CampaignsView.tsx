@@ -165,7 +165,12 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               </div>
             </section>
 
-            <SessionLog worldId={worldId} campaignId={selected.id} onError={handleError} />
+            <SessionLog
+              worldId={worldId}
+              campaignId={selected.id}
+              campaignName={selected.name}
+              onError={handleError}
+            />
             <ArcBoard
               worldId={worldId}
               campaignId={selected.id}

@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { sessionsApi, Session } from '../api/client';
 import { SessionPacketView } from './SessionPacketView';
+import { RecapView } from './RecapView';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
@@ -9,6 +10,7 @@ import { Input } from '../components/ui/input';
 interface Props {
   worldId: string;
   campaignId: string;
+  campaignName: string;
   onError: (err: unknown) => void;
 }
 
@@ -23,13 +25,15 @@ interface Draft {
 
 const EMPTY: Draft = { id: null, title: '', sessionNumber: '', date: '', summary: '', notes: '' };
 
-export function SessionLog({ worldId, campaignId, onError }: Props) {
+export function SessionLog({ worldId, campaignId, campaignName, onError }: Props) {
   const api = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   // Session whose print packet is open (null = none).
   const [packetSessionId, setPacketSessionId] = useState<string | null>(null);
+  // FR-45: printable "story so far" recap (null = closed).
+  const [recapOpen, setRecapOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -87,7 +91,16 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
 
   return (
     <section className="card">
-      <h3>Sessions</h3>
+      <h3 className="session-heading">
+        Sessions
+        <Button
+          variant="link"
+          onClick={() => setRecapOpen(true)}
+          title="Print the story so far for the next session"
+        >
+          🖨 Recap
+        </Button>
+      </h3>
       <form className="session-form" onSubmit={save}>
         <div className="session-form-row">
           <Input
@@ -175,6 +188,16 @@ export function SessionLog({ worldId, campaignId, onError }: Props) {
           campaignId={campaignId}
           sessionId={packetSessionId}
           onClose={() => setPacketSessionId(null)}
+          onError={onError}
+        />
+      )}
+
+      {recapOpen && (
+        <RecapView
+          worldId={worldId}
+          campaignId={campaignId}
+          campaignName={campaignName}
+          onClose={() => setRecapOpen(false)}
           onError={onError}
         />
       )}

@@ -1067,6 +1067,13 @@ button:disabled {
   padding: 0;
 }
 
+/* Session log heading with inline recap action (FR-45). */
+.session-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
 /* Statblock reference on a beat (row label + editor chip). */
 .beat-statblock {
   font-size: 0.8rem;
