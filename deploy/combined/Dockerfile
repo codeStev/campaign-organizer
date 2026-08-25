@@ -5,7 +5,7 @@
 # containers. Build context is the repo root.
 
 # ---- Frontend build stage ----
-FROM node:20-alpine AS frontend-build
+FROM node:24-alpine AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci || npm install
