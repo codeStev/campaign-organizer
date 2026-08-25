@@ -25,7 +25,8 @@ class ArchitectureTest {
 
     /** Top-level packages that are bounded contexts (ADR-0050); others are cross-cutting infra. */
     private static final Set<String> CONTEXTS =
-            Set.of("worldbuilding", "campaign", "characters", "media", "whiteboard", "interchange", "ai");
+            Set.of("worldbuilding", "campaign", "characters", "media", "whiteboard", "interchange",
+                    "ai", "tables");
 
     /** The domain ring is pure Java: no Spring, JPA, Jackson, or Hibernate. */
     @ArchTest
