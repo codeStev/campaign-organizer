@@ -193,12 +193,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   links from any of those, self-links don't count), and content not
   referenced by any campaign. Derived from the usage-index machinery behind
   FR-25; print-friendly. (ADR-0067)
-- **FR-44 Encounter sheet generator.** *(Proposed — recorded 2026-08-25,
-  not committed to a phase, not built.)* Pick statblocks (and optionally PC
+- **FR-44 Encounter sheet generator.** Pick statblocks (and optionally PC
   sheets) and get a printable tracking sheet: one row per combatant with HP
   tick-boxes, an initiative column, and key defenses cribbed from the
   statblock — pure assembly over existing content, run from paper like the
-  rest of the session material.
+  rest of the session material; quantities and max-HP prefill are staged
+  before printing, nothing is persisted. (ADR-0069)
 - **FR-45 Session chronicle / recap builder.** One click renders "the
   story so far" from completed beats and past sessions' summaries as a
   printable recap to open the next session with — read-only over existing
