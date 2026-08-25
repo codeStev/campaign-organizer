@@ -145,7 +145,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   phase, not built.)* A condensed, one-page print view separate from the full
   session packet (FR-28): active NPCs as name + one-line hook + key stat,
   open plot threads, and faction standings, in large-enough type to scan at a
-  glance. Goal: cut mid-session lookups — which currently compete with the
+  glance. Refined 2026-08-25 into a composer: the sheet is assembled from
+  pinned fragments — arbitrary snippets such as roll-table rows, rule
+  reminders, or a statblock — ordered by drag, not fixed sections only.
+  Goal: cut mid-session lookups — which currently compete with the
   GM's own attention to take notes on what's happening at the table — down to
   a glance instead of flipping through the full packet. Live voice-note
   capture (record-then-transcribe, even GM-only self-dictation) was
@@ -173,6 +176,39 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   it. Wiki-links in printed bodies stay anchors-only; deck draws are
   stateless (print-first). Tables/decks appear in usage backlinks and world
   backups like every other content type. (ADR-0066)
+- **FR-41 Roll-table chaining.** *(Proposed — recorded 2026-08-25, not
+  committed to a phase, not built.)* A table or deck outcome can reference
+  another roll table ("roll on Weather"), resolved recursively when rolling
+  and when printed in packets — with cycle detection, and the nested
+  targets folded into the print-once dedup set of FR-40. (Extends FR-40;
+  will need its own ADR for the resolution/dedup order.)
+- **FR-42 Scheduled backup snapshots.** *(Proposed — recorded 2026-08-25,
+  not committed to a phase, not built.)* The deployment writes timestamped
+  instance backups (the FR-36 ZIP bundle) to the media volume on a schedule
+  (small sidecar container), keeping the last N, so having a recent backup
+  stops depending on remembering to click download.
+- **FR-43 Consistency report.** *(Proposed — recorded 2026-08-25, not
+  committed to a phase, not built.)* A per-world lint page: broken
+  `[[wiki-links]]` everywhere, orphaned articles (no inbound links from any
+  article/beat/table/deck), and content not referenced by any campaign.
+  Derived from the usage-index machinery behind FR-25; print-friendly.
+- **FR-44 Encounter sheet generator.** *(Proposed — recorded 2026-08-25,
+  not committed to a phase, not built.)* Pick statblocks (and optionally PC
+  sheets) and get a printable tracking sheet: one row per combatant with HP
+  tick-boxes, an initiative column, and key defenses cribbed from the
+  statblock — pure assembly over existing content, run from paper like the
+  rest of the session material.
+- **FR-45 Session chronicle / recap builder.** *(Proposed — recorded
+  2026-08-25, not committed to a phase, not built.)* One click renders "the
+  story so far" from completed beats and past sessions' summaries/notes as
+  a printable recap to open the next session with — read-only over existing
+  data.
+- **FR-46 Handout designer.** *(Proposed — recorded 2026-08-25, not
+  committed to a phase, not built.)* Player-facing props — letters, wanted
+  posters, in-world newspaper pages — as styled one-page printables with
+  font/border presets. Deliberately separate from GM-only content: handouts
+  are meant to leave the table in the players' hands. Reuses the standalone
+  print-window pattern (ADR-0038).
 
 ---
 
@@ -230,4 +266,4 @@ multi-user collaboration. Rationale in ADR-0005.
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
 | 8 | AI-assisted drafting | FR-38, FR-39 |
 | 9 | Randomizers (tables & decks) | FR-40 |
-| Proposed | Optional, unscheduled | FR-37 (session cheat sheet) |
+| Proposed | Optional, unscheduled | FR-37 (cheat-sheet composer), FR-41 … FR-46 |
