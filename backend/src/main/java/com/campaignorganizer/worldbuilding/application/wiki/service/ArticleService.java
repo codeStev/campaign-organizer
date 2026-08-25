@@ -28,8 +28,12 @@ import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import com.campaignorganizer.worldbuilding.domain.wiki.Slugs;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -171,6 +175,19 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     @Transactional(readOnly = true)
     public boolean existsInWorld(UUID articleId, UUID worldId) {
         return articles.existsInWorld(articleId, worldId);
+    }
+
+    /** Same name resolution as body rendering — one shared index builder. */
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, UUID> resolveRefs(UUID worldId, Set<String> names) {
+        if (names == null || names.isEmpty()) {
+            return Map.of();
+        }
+        var index = ArticleRefIndex.build(articles.findRefsByWorld(worldId));
+        return names.stream()
+                .filter(index::containsKey)
+                .collect(Collectors.toMap(Function.identity(), name -> index.get(name).id()));
     }
 
     private Article require(UUID worldId, UUID articleId) {

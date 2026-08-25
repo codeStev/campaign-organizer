@@ -96,11 +96,6 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         LinkedHashSet<UUID> articleIds = sessionBeats.stream()
                 .flatMap(b -> b.articleIds().stream())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        List<PacketArticle> packetArticles = articleIds.stream()
-                .map(id -> articles.findByIdInWorld(id, worldId).orElse(null))
-                .filter(a -> a != null)
-                .map(this::toPacketArticle)
-                .toList();
 
         List<PacketBeat> packetBeats = sessionBeats.stream()
                 .map(b -> new PacketBeat(b.id(), b.title(), b.body(), b.done(),
@@ -118,7 +113,39 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .forEach(s -> sbById.putIfAbsent(s.id(), s));
         List<StatblockView> packetStatblocks = List.copyOf(sbById.values());
 
-        // Maps reachable from the session: any map with a pin linking a beat article.
+        // Tables and decks referenced by the session's beats (FR-40), first-seen order.
+        LinkedHashSet<UUID> tableIds = sessionBeats.stream()
+                .flatMap(b -> b.tableIds().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<RollTableView> tables = tableIds.stream()
+                .map(id -> rollTables.findByIdInWorld(id, worldId).orElse(null))
+                .filter(t -> t != null)
+                .toList();
+
+        LinkedHashSet<UUID> deckIds = sessionBeats.stream()
+                .flatMap(b -> b.deckIds().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<CardDeckView> decks = deckIds.stream()
+                .map(id -> cardDecks.findByIdInWorld(id, worldId).orElse(null))
+                .filter(d -> d != null)
+                .toList();
+
+        // Global print-once rule: articles referenced from roll-table outcomes
+        // or deck cards join the same articles section — each id prints once,
+        // in first-seen order (beats before tables before decks).
+        LinkedHashSet<String> refNames = new LinkedHashSet<>();
+        tables.forEach(t -> t.entries().forEach(e -> refNames.addAll(articleRenderer.linkTargets(e.body()))));
+        decks.forEach(d -> d.cards().forEach(c -> refNames.addAll(articleRenderer.linkTargets(c.body()))));
+        articleIds.addAll(articles.resolveRefs(worldId, refNames).values());
+
+        List<PacketArticle> packetArticles = articleIds.stream()
+                .map(id -> articles.findByIdInWorld(id, worldId).orElse(null))
+                .filter(a -> a != null)
+                .map(this::toPacketArticle)
+                .toList();
+
+        // Maps reachable from the session: any map with a pin linking a packet article
+        // (beat links and outcome/card references alike).
         LinkedHashSet<UUID> mapIds = new LinkedHashSet<>();
         articleIds.forEach(artId -> pins.findByArticle(artId).forEach(p -> mapIds.add(p.mapId())));
         List<PacketMap> packetMaps = mapIds.stream()
@@ -127,24 +154,8 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .map(this::toPacketMap)
                 .toList();
 
-        // Tables and decks referenced by the session's beats (FR-40), first-seen order.
-        LinkedHashSet<UUID> tableIds = sessionBeats.stream()
-                .flatMap(b -> b.tableIds().stream())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        List<PacketRollTable> packetTables = tableIds.stream()
-                .map(id -> rollTables.findByIdInWorld(id, worldId).orElse(null))
-                .filter(t -> t != null)
-                .map(this::toPacketRollTable)
-                .toList();
-
-        LinkedHashSet<UUID> deckIds = sessionBeats.stream()
-                .flatMap(b -> b.deckIds().stream())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        List<PacketCardDeck> packetDecks = deckIds.stream()
-                .map(id -> cardDecks.findByIdInWorld(id, worldId).orElse(null))
-                .filter(d -> d != null)
-                .map(this::toPacketCardDeck)
-                .toList();
+        List<PacketRollTable> packetTables = tables.stream().map(this::toPacketRollTable).toList();
+        List<PacketCardDeck> packetDecks = decks.stream().map(this::toPacketCardDeck).toList();
 
         return new SessionPacketResponse(session, campaign.name(),
                 packetBeats, packetArticles, packetMaps, packetStatblocks, packetTables, packetDecks);
