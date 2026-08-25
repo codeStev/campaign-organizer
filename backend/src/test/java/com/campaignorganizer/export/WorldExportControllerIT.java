@@ -43,6 +43,19 @@ class WorldExportControllerIT extends AbstractIntegrationTest {
                         .content("{\"name\":\"Main Campaign\"}"))
                 .andExpect(status().isCreated());
 
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Weather\",\"diceExpression\":\"1d2\",\"entries\":"
+                                + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Rain\"},"
+                                + "{\"minResult\":2,\"maxResult\":2,\"body\":\"Sun\"}]}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Omens\",\"cards\":[{\"body\":\"The Fool\"}]}"))
+                .andExpect(status().isCreated());
+
         mockMvc.perform(get("/api/worlds/{w}/export", worldId).header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, Matchers.containsString(".json")))
@@ -51,6 +64,9 @@ class WorldExportControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.articles.length()").value(1))
                 .andExpect(jsonPath("$.articles[0].title").value("Goblin"))
                 .andExpect(jsonPath("$.campaigns.length()").value(1))
-                .andExpect(jsonPath("$.statblocks.length()").value(0));
+                .andExpect(jsonPath("$.statblocks.length()").value(0))
+                .andExpect(jsonPath("$.rollTables[0].title").value("Weather"))
+                .andExpect(jsonPath("$.rollTables[0].entries.length()").value(2))
+                .andExpect(jsonPath("$.cardDecks[0].title").value("Omens"));
     }
 }

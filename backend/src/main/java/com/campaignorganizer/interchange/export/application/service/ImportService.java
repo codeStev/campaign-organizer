@@ -17,6 +17,10 @@ import com.campaignorganizer.characters.application.template.port.published.Fiel
 import com.campaignorganizer.interchange.export.application.port.in.ImportBackupUseCase;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
@@ -79,6 +83,8 @@ public class ImportService implements ImportBackupUseCase {
     private final ArcBeatImportPort arcBeatImportPort;
     private final WhiteboardImportPort whiteboardImportPort;
     private final MediaImportPort mediaImportPort;
+    private final RollTableImportPort rollTableImportPort;
+    private final CardDeckImportPort cardDeckImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -89,7 +95,8 @@ public class ImportService implements ImportBackupUseCase {
             ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
             CharacterSheetImportPort characterSheetImportPort, StatblockImportPort statblockImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
-            MediaImportPort mediaImportPort) {
+            MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
+            CardDeckImportPort cardDeckImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -109,6 +116,8 @@ public class ImportService implements ImportBackupUseCase {
         this.arcBeatImportPort = arcBeatImportPort;
         this.whiteboardImportPort = whiteboardImportPort;
         this.mediaImportPort = mediaImportPort;
+        this.rollTableImportPort = rollTableImportPort;
+        this.cardDeckImportPort = cardDeckImportPort;
     }
 
     @Override
@@ -145,6 +154,8 @@ public class ImportService implements ImportBackupUseCase {
         List<StatblockView> statblocks = readList(root, "statblocks", StatblockView.class);
         List<ArcBeatView> beats = readList(root, "beats", ArcBeatView.class);
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
+        List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
+        List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -167,6 +178,8 @@ public class ImportService implements ImportBackupUseCase {
         statblocks.forEach(s -> remap.assign(s.id()));
         beats.forEach(b -> remap.assign(b.id()));
         whiteboards.forEach(w -> remap.assign(w.id()));
+        rollTables.forEach(t -> remap.assign(t.id()));
+        cardDecks.forEach(d -> remap.assign(d.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -259,6 +272,19 @@ public class ImportService implements ImportBackupUseCase {
                     remap.getOrNull(s.articleId()), remap.getOrNull(s.campaignId()),
                     remap.getOrNull(s.templateId()), s.name(), s.stats(), s.notes(), s.createdAt(),
                     s.updatedAt()));
+        }
+
+        // Tables and decks before beats: beats reference them (FR-40). Their
+        // bodies carry no id-based links, so only the world id is remapped.
+        for (RollTableView t : rollTables) {
+            rollTableImportPort.importRollTable(new RollTableView(remap.get(t.id()), newWorldId,
+                    t.title(), t.description(), t.diceExpression(), t.minResult(), t.maxResult(),
+                    t.entries(), t.createdAt(), t.updatedAt()));
+        }
+
+        for (CardDeckView d : cardDecks) {
+            cardDeckImportPort.importCardDeck(new CardDeckView(remap.get(d.id()), newWorldId,
+                    d.title(), d.description(), d.cards(), d.createdAt(), d.updatedAt()));
         }
 
         // Beats last among campaign data: they reference statblocks, which must exist first.
