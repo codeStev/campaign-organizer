@@ -673,6 +673,13 @@ button:disabled {
   width: 5rem;
 }
 
+/* Tables & decks: highlight the row a roll or draw landed on (FR-40) */
+.hit-row {
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
 /* Relationship graph */
 .rel-graph {
   width: 100%;

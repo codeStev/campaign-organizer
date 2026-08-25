@@ -1,13 +1,15 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   rollTablesApi,
   cardDecksApi,
+  diceApi,
   RollTable,
   CardDeck,
   ApiError,
 } from '../api/client';
 import { diceRange, DiceRange } from '../lib/dice';
+import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -139,6 +141,13 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  // Roll result for the table editor; matchedIndex points at the hit entry row.
+  const [roll, setRoll] = useState<{ total: number; breakdown: string; matchedIndex: number | null } | null>(null);
+  // Stateless deck draw (ADR-0066): just a highlighted random card.
+  const [drawnIndex, setDrawnIndex] = useState<number | null>(null);
+  // Key of the textarea the link picker inserts into, e.g. "entry-2" / "card-0".
+  const [linkTarget, setLinkTarget] = useState<string | null>(null);
+  const textareas = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -166,6 +175,8 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
 
   function edit(kind: DraftKind, entity: RollTable | CardDeck) {
     setDraft(kind === 'table' ? draftFromTable(entity as RollTable) : draftFromDeck(entity as CardDeck));
+    setRoll(null);
+    setDrawnIndex(null);
   }
 
   // The URL is the source of truth for what's open (ADR-0053): /tables/table/:id
@@ -206,6 +217,67 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       if (target < 0 || target >= cards.length) return d;
       [cards[index], cards[target]] = [cards[target], cards[index]];
       return { ...d, cards };
+    });
+  }
+
+  /** Row a rolled total lands on: explicit range first, else the fallback row. */
+  function matchingEntryIndex(total: number): number | null {
+    const explicit = draft.entries.findIndex(
+      (e) =>
+        e.minResult !== '' &&
+        e.maxResult !== '' &&
+        Number(e.minResult) <= total &&
+        total <= Number(e.maxResult),
+    );
+    if (explicit >= 0) return explicit;
+    return draft.entries.findIndex((e) => e.minResult === '' && e.maxResult === '');
+  }
+
+  async function doRoll() {
+    setError(null);
+    try {
+      const result = await diceApi.roll(draft.diceExpression);
+      setRoll({
+        total: result.total,
+        breakdown: result.breakdown,
+        matchedIndex: matchingEntryIndex(result.total),
+      });
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  function drawCard() {
+    setDrawnIndex(Math.floor(Math.random() * draft.cards.length));
+  }
+
+  /** Splice the picked [[Title]] into the targeted textarea at its caret. */
+  function insertLink(title: string) {
+    const key = linkTarget;
+    if (!key) return;
+    const el = textareas.current[key];
+    if (!el) return;
+    const link = `[[${title}]]`;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? start;
+    const next = el.value.slice(0, start) + link + el.value.slice(end);
+    const caret = start + link.length;
+    if (key.startsWith('entry-')) {
+      setEntry(Number(key.slice('entry-'.length)), { body: next });
+    } else {
+      const i = Number(key.slice('card-'.length));
+      setDraft((d) => ({
+        ...d,
+        cards: d.cards.map((c, j) => (j === i ? { ...c, body: next } : c)),
+      }));
+    }
+    setLinkTarget(null);
+    requestAnimationFrame(() => {
+      const updated = textareas.current[key];
+      if (updated) {
+        updated.focus();
+        updated.setSelectionRange(caret, caret);
+      }
     });
   }
 
@@ -289,6 +361,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         <Button
           onClick={() => {
             setDraft({ ...EMPTY_DRAFT, kind: 'table', entries: [{ minResult: '', maxResult: '', body: '' }] });
+            setRoll(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
         >
@@ -317,6 +390,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         <Button
           onClick={() => {
             setDraft({ ...EMPTY_DRAFT, kind: 'deck', entries: [], cards: [{ title: '', body: '' }] });
+            setDrawnIndex(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
         >
@@ -371,6 +445,19 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                   ? `Possible results: ${liveRange.min}–${liveRange.max}`
                   : 'Enter any dice combination, e.g. 2d6 or 4d6kh3'}
               </small>
+              <div className="editor-actions">
+                <Button type="button" variant="outline" disabled={!liveRange} onClick={() => void doRoll()}>
+                  🎲 Roll
+                </Button>
+                {roll && (
+                  <small className="muted">
+                    Rolled <strong>{roll.total}</strong> ({roll.breakdown})
+                    {roll.matchedIndex == null && liveRange
+                      ? ` — no entry covers ${roll.total}`
+                      : ''}
+                  </small>
+                )}
+              </div>
 
               <div className="editor-actions">
                 <strong className="muted">Entries</strong>
@@ -391,7 +478,11 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 )}
               </div>
               {draft.entries.map((entry, i) => (
-                <div key={i} className="month-row" style={{ alignItems: 'flex-start' }}>
+                <div
+                  key={i}
+                  className={roll?.matchedIndex === i ? 'month-row hit-row' : 'month-row'}
+                  style={{ alignItems: 'flex-start' }}
+                >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Input
                       type="number"
@@ -409,20 +500,28 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                     />
                   </div>
                   <Textarea
+                    ref={(el) => {
+                      textareas.current[`entry-${i}`] = el;
+                    }}
                     placeholder={`Outcome on ${entry.minResult || '?'}–${entry.maxResult || '?'} — [[wiki-links]] allowed`}
                     value={entry.body}
                     onChange={(e) => setEntry(i, { body: e.target.value })}
                   />
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() =>
-                      setDraft((d) => ({ ...d, entries: d.entries.filter((_, j) => j !== i) }))
-                    }
-                  >
-                    ✕
-                  </Button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <Button type="button" variant="link" onClick={() => setLinkTarget(`entry-${i}`)}>
+                      [[link]]
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() =>
+                        setDraft((d) => ({ ...d, entries: d.entries.filter((_, j) => j !== i) }))
+                      }
+                    >
+                      ✕
+                    </Button>
+                  </div>
                 </div>
               ))}
               <Button
@@ -454,8 +553,28 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
               />
 
               <strong className="muted">Cards</strong>
+              <div className="editor-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={draft.cards.length === 0}
+                  onClick={drawCard}
+                >
+                  🃏 Draw a card
+                </Button>
+                {drawnIndex != null && draft.cards[drawnIndex] && (
+                  <small className="muted">
+                    Drew card {drawnIndex + 1}
+                    {draft.cards[drawnIndex].title ? `: ${draft.cards[drawnIndex].title}` : ''}
+                  </small>
+                )}
+              </div>
               {draft.cards.map((card, i) => (
-                <div key={i} className="month-row" style={{ alignItems: 'flex-start' }}>
+                <div
+                  key={i}
+                  className={drawnIndex === i ? 'month-row hit-row' : 'month-row'}
+                  style={{ alignItems: 'flex-start' }}
+                >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Button
                       type="button"
@@ -488,6 +607,9 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       }
                     />
                     <Textarea
+                      ref={(el) => {
+                        textareas.current[`card-${i}`] = el;
+                      }}
                       placeholder="Card body — [[wiki-links]] allowed"
                       value={card.body}
                       onChange={(e) =>
@@ -498,16 +620,22 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       }
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() =>
-                      setDraft((d) => ({ ...d, cards: d.cards.filter((_, j) => j !== i) }))
-                    }
-                  >
-                    ✕
-                  </Button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <Button type="button" variant="link" onClick={() => setLinkTarget(`card-${i}`)}>
+                      [[link]]
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setDraft((d) => ({ ...d, cards: d.cards.filter((_, j) => j !== i) }));
+                        setDrawnIndex(null);
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
                 </div>
               ))}
               <Button
@@ -545,6 +673,13 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           </div>
         </form>
       </div>
+
+      <ArticleLinkPicker
+        worldId={worldId}
+        open={linkTarget != null}
+        onPick={insertLink}
+        onClose={() => setLinkTarget(null)}
+      />
     </div>
   );
 }
