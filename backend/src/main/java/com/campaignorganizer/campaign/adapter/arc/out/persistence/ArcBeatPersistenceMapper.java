@@ -13,7 +13,7 @@ public interface ArcBeatPersistenceMapper {
             return null;
         }
         return ArcBeat.reconstitute(e.getId(), e.getArcId(), e.getArticleIds(), e.getStatblockIds(),
-                e.getSessionId(), e.getTitle(), e.getBody(), e.isDone(), e.getPosition(),
-                e.getCreatedAt(), e.getUpdatedAt());
+                e.getTableIds(), e.getDeckIds(), e.getSessionId(), e.getTitle(), e.getBody(),
+                e.isDone(), e.getPosition(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

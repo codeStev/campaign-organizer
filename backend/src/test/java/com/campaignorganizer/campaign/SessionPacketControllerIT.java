@@ -106,4 +106,83 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
                 // The pin has no label, so it falls back to the linked article's title.
                 .andExpect(jsonPath("$.maps[0].pins[0].label").value("Phandalin"));
     }
+
+    @Test
+    void includesRollTablesAndCardDecksLinkedViaBeats() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        String weather = create("/api/worlds/" + worldId + "/roll-tables",
+                "{\"title\":\"Weather\",\"diceExpression\":\"1d2\",\"entries\":"
+                        + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Rain over [[Phandalin]]\"},"
+                        + "{\"minResult\":2,\"maxResult\":2,\"body\":\"Sun\"}]}");
+        String omens = create("/api/worlds/" + worldId + "/card-decks",
+                "{\"title\":\"Omens\",\"cards\":[{\"title\":\"The Tower\",\"body\":\"Disaster.\"}]}");
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
+                "{\"title\":\"On the road\",\"sessionId\":\"" + sessionId + "\","
+                        + "\"tableIds\":[\"" + weather + "\"],\"deckIds\":[\"" + omens + "\"]}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rollTables.length()").value(1))
+                .andExpect(jsonPath("$.rollTables[0].title").value("Weather"))
+                .andExpect(jsonPath("$.rollTables[0].diceExpression").value("1d2"))
+                .andExpect(jsonPath("$.rollTables[0].entries.length()").value(2))
+                // Outcome text renders through the article pipeline (wiki-links resolved).
+                .andExpect(jsonPath("$.rollTables[0].entries[0].bodyHtml")
+                        .value(Matchers.containsString("Rain over")))
+                .andExpect(jsonPath("$.cardDecks.length()").value(1))
+                .andExpect(jsonPath("$.cardDecks[0].title").value("Omens"))
+                .andExpect(jsonPath("$.cardDecks[0].cards[0].title").value("The Tower"))
+                .andExpect(jsonPath("$.cardDecks[0].cards[0].bodyHtml").value(Matchers.containsString("Disaster.")));
+    }
+
+    @Test
+    void omitsTablesAndDecksWhenBeatsReferenceNone() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
+                "{\"title\":\"Quiet night\",\"sessionId\":\"" + sessionId + "\"}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rollTables.length()").value(0))
+                .andExpect(jsonPath("$.cardDecks.length()").value(0));
+    }
+
+    @Test
+    void printsArticleReferencedFromBeatTableAndDeckExactlyOnce() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        // Referenced three ways: directly on the beat, from a table outcome,
+        // and from a deck card — plus a table-only article.
+        String tavern = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"The Rusty Tankard\"}");
+        String wizard = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Elara the Grey\"}");
+        String weather = create("/api/worlds/" + worldId + "/roll-tables",
+                "{\"title\":\"Weather\",\"diceExpression\":\"1d1\",\"entries\":"
+                        + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Storm hits [[The Rusty Tankard]]\"}]}");
+        String omens = create("/api/worlds/" + worldId + "/card-decks",
+                "{\"title\":\"Omens\",\"cards\":[{\"body\":\"A stranger: [[Elara the Grey]] and "
+                        + "[[The Rusty Tankard]] again\"}]}");
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
+                "{\"title\":\"Night out\",\"sessionId\":\"" + sessionId + "\","
+                        + "\"articleIds\":[\"" + tavern + "\"],"
+                        + "\"tableIds\":[\"" + weather + "\"],\"deckIds\":[\"" + omens + "\"]}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                // The tavern appears once despite three reference paths; the wizard
+                // joins via the deck card; both resolve through [[wiki-links]].
+                .andExpect(jsonPath("$.articles[*].title",
+                        Matchers.containsInAnyOrder("The Rusty Tankard", "Elara the Grey")))
+                .andExpect(jsonPath("$.articles[0].id").value(tavern));
+    }
 }

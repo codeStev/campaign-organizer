@@ -1369,6 +1369,202 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/roll-tables:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [roll-tables]
+      summary: List a world's roll tables
+      operationId: listRollTables
+      responses:
+        '200':
+          description: Roll tables in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RollTable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [roll-tables]
+      summary: Create a roll table
+      operationId: createRollTable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollTableRequest'
+      responses:
+        '201':
+          description: Roll table created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollTable'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/roll-tables/{tableId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/RollTableId'
+    get:
+      tags: [roll-tables]
+      summary: Get a roll table
+      operationId: getRollTable
+      responses:
+        '200':
+          description: The roll table.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollTable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [roll-tables]
+      summary: Update a roll table
+      operationId: updateRollTable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollTableRequest'
+      responses:
+        '200':
+          description: Roll table updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollTable'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [roll-tables]
+      summary: Delete a roll table
+      operationId: deleteRollTable
+      responses:
+        '204':
+          description: Roll table deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/card-decks:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [card-decks]
+      summary: List a world's card decks
+      operationId: listCardDecks
+      responses:
+        '200':
+          description: Card decks in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CardDeck'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [card-decks]
+      summary: Create a card deck
+      operationId: createCardDeck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardDeckRequest'
+      responses:
+        '201':
+          description: Card deck created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardDeck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/card-decks/{deckId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CardDeckId'
+    get:
+      tags: [card-decks]
+      summary: Get a card deck
+      operationId: getCardDeck
+      responses:
+        '200':
+          description: The card deck.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardDeck'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [card-decks]
+      summary: Update a card deck
+      operationId: updateCardDeck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardDeckRequest'
+      responses:
+        '200':
+          description: Card deck updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardDeck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [card-decks]
+      summary: Delete a card deck
+      operationId: deleteCardDeck
+      responses:
+        '204':
+          description: Card deck deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/export:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -2267,6 +2463,22 @@ components:
       schema:
         type: string
         format: uuid
+    RollTableId:
+      name: tableId
+      in: path
+      required: true
+      description: Identifier of the roll table.
+      schema:
+        type: string
+        format: uuid
+    CardDeckId:
+      name: deckId
+      in: path
+      required: true
+      description: Identifier of the card deck.
+      schema:
+        type: string
+        format: uuid
     ArcId:
       name: arcId
       in: path
@@ -2830,6 +3042,18 @@ components:
             type: string
             format: uuid
           description: Linked statblocks (goblin spearman, boss, …).
+        tableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Linked roll tables.
+        deckIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Linked card decks.
         sessionId:
           type: [string, "null"]
           format: uuid
@@ -2839,7 +3063,7 @@ components:
 
     Beat:
       type: object
-      required: [id, arcId, title, done, articleIds, statblockIds, position, createdAt, updatedAt]
+      required: [id, arcId, title, done, articleIds, statblockIds, tableIds, deckIds, position, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2860,6 +3084,16 @@ components:
             type: string
             format: uuid
         statblockIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        deckIds:
           type: array
           items:
             type: string
@@ -3035,7 +3269,7 @@ components:
 
     SessionPacket:
       type: object
-      required: [session, campaignName, beats, articles, maps, statblocks]
+      required: [session, campaignName, beats, articles, maps, statblocks, rollTables, cardDecks]
       description: Everything needed to run one session, aggregated for print.
       properties:
         session:
@@ -3058,6 +3292,221 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Statblock'
+        rollTables:
+          type: array
+          description: >
+            Roll tables linked by the session's beats. Articles referenced from
+            entry outcome texts appear once in `articles` (first-seen order).
+          items:
+            $ref: '#/components/schemas/PacketRollTable'
+        cardDecks:
+          type: array
+          description: Card decks linked by the session's beats.
+          items:
+            $ref: '#/components/schemas/PacketCardDeck'
+
+    RollTableEntryInput:
+      type: object
+      required: [body]
+      properties:
+        minResult:
+          type: [integer, "null"]
+          description: Inclusive lower bound of the covered result range; null = unbounded below.
+        maxResult:
+          type: [integer, "null"]
+          description: Inclusive upper bound of the covered result range; null = unbounded above.
+        body:
+          type: string
+          description: Outcome text as Markdown; supports [[wiki-links]] (ADR-0014).
+
+    RollTableEntry:
+      type: object
+      required: [id, body]
+      properties:
+        id:
+          type: string
+          format: uuid
+        minResult:
+          type: [integer, "null"]
+        maxResult:
+          type: [integer, "null"]
+        body:
+          type: string
+
+    RollTableRequest:
+      type: object
+      required: [title, diceExpression, entries]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+        diceExpression:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Dice expression defining the result range, e.g. "2d6" or "1d20+3".
+        entries:
+          type: array
+          description: >
+            Outcome rows mapped onto the result range. Ranges may not overlap;
+            gaps are allowed (a rolled gap yields no row).
+          items:
+            $ref: '#/components/schemas/RollTableEntryInput'
+
+    RollTable:
+      type: object
+      required: [id, worldId, title, diceExpression, minResult, maxResult, entries, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        diceExpression:
+          type: string
+        minResult:
+          type: integer
+          description: Smallest possible total of the dice expression.
+        maxResult:
+          type: integer
+          description: Largest possible total of the dice expression.
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/RollTableEntry'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeckCardInput:
+      type: object
+      required: [body]
+      properties:
+        title:
+          type: [string, "null"]
+          maxLength: 200
+        body:
+          type: string
+          description: Card text as Markdown; supports [[wiki-links]] (ADR-0014).
+
+    CardDeckRequest:
+      type: object
+      required: [title, cards]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+        cards:
+          type: array
+          description: Cards in deck order (top of the deck first).
+          items:
+            $ref: '#/components/schemas/DeckCardInput'
+
+    DeckCard:
+      type: object
+      required: [id, body]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: [string, "null"]
+        body:
+          type: string
+
+    CardDeck:
+      type: object
+      required: [id, worldId, title, cards, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeckCard'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PacketRollTableEntry:
+      type: object
+      required: [minResult, maxResult, bodyHtml]
+      properties:
+        minResult:
+          type: [integer, "null"]
+        maxResult:
+          type: [integer, "null"]
+        bodyHtml:
+          type: [string, "null"]
+          description: Rendered outcome HTML (Markdown + resolved wiki-links).
+
+    PacketRollTable:
+      type: object
+      required: [id, title, diceExpression, minResult, maxResult, entries]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        diceExpression:
+          type: string
+        minResult:
+          type: integer
+        maxResult:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketRollTableEntry'
+
+    PacketDeckCard:
+      type: object
+      required: [title, bodyHtml]
+      properties:
+        title:
+          type: [string, "null"]
+        bodyHtml:
+          type: [string, "null"]
+
+    PacketCardDeck:
+      type: object
+      required: [id, title, cards]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketDeckCard'
 
     LoginRequest:
       type: object
@@ -3269,7 +3718,7 @@ components:
       properties:
         type:
           type: string
-          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK]
+          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK, ROLL_TABLE, CARD_DECK]
         label:
           type: string
         targetId:

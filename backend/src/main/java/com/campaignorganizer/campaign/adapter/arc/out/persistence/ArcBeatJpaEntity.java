@@ -36,6 +36,18 @@ public class ArcBeatJpaEntity {
     @Column(name = "statblock_id")
     private List<UUID> statblockIds = new ArrayList<>();
 
+    /** Roll tables referenced from this beat; stored in beat_roll_tables (FR-40). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "beat_roll_tables", joinColumns = @JoinColumn(name = "beat_id"))
+    @Column(name = "table_id")
+    private List<UUID> tableIds = new ArrayList<>();
+
+    /** Card decks referenced from this beat; stored in beat_card_decks (FR-40). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "beat_card_decks", joinColumns = @JoinColumn(name = "beat_id"))
+    @Column(name = "deck_id")
+    private List<UUID> deckIds = new ArrayList<>();
+
     @Column(name = "session_id")
     private UUID sessionId;
 
@@ -90,6 +102,22 @@ public class ArcBeatJpaEntity {
 
     public void setStatblockIds(List<UUID> statblockIds) {
         this.statblockIds = statblockIds == null ? new ArrayList<>() : statblockIds;
+    }
+
+    public List<UUID> getTableIds() {
+        return tableIds;
+    }
+
+    public void setTableIds(List<UUID> tableIds) {
+        this.tableIds = tableIds == null ? new ArrayList<>() : tableIds;
+    }
+
+    public List<UUID> getDeckIds() {
+        return deckIds;
+    }
+
+    public void setDeckIds(List<UUID> deckIds) {
+        this.deckIds = deckIds == null ? new ArrayList<>() : deckIds;
     }
 
     public UUID getSessionId() {

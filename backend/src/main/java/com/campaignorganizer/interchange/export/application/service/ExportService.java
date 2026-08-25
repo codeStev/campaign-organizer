@@ -11,6 +11,8 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
 import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
@@ -59,6 +61,8 @@ public class ExportService implements ExportWorldUseCase {
     private final CharacterSheetQueryPort characterSheets;
     private final StatblockQueryPort statblocks;
     private final WhiteboardQueryPort whiteboards;
+    private final RollTableQueryPort rollTables;
+    private final CardDeckQueryPort cardDecks;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
@@ -66,7 +70,8 @@ public class ExportService implements ExportWorldUseCase {
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                          SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
                          FieldTemplateQueryPort fieldTemplates, CharacterSheetQueryPort characterSheets,
-                         StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards) {
+                         StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards,
+                         RollTableQueryPort rollTables, CardDeckQueryPort cardDecks) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -84,6 +89,8 @@ public class ExportService implements ExportWorldUseCase {
         this.characterSheets = characterSheets;
         this.statblocks = statblocks;
         this.whiteboards = whiteboards;
+        this.rollTables = rollTables;
+        this.cardDecks = cardDecks;
     }
 
     @Override
@@ -136,6 +143,9 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));
         bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorld(worldId));
+        // Randomizers (FR-40): beats reference them, so they ship with the world.
+        bundle.put("rollTables", rollTables.findByWorld(worldId));
+        bundle.put("cardDecks", cardDecks.findByWorld(worldId));
 
         return new WorldExportBundle(world.name(), bundle);
     }

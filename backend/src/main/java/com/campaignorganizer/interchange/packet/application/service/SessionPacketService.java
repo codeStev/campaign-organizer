@@ -13,10 +13,18 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketBeat;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCardDeck;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketDeckCard;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketMap;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketPin;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketRollTable;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketRollTableEntry;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.SessionPacketResponse;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
@@ -48,13 +56,16 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
     private final StatblockQueryPort statblocks;
+    private final RollTableQueryPort rollTables;
+    private final CardDeckQueryPort cardDecks;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
 
     public SessionPacketService(CampaignQueryPort campaigns, SessionQueryPort sessions,
                                 ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
-                                StatblockQueryPort statblocks, MapQueryPort maps, MapPinQueryPort pins) {
+                                StatblockQueryPort statblocks, RollTableQueryPort rollTables,
+                                CardDeckQueryPort cardDecks, MapQueryPort maps, MapPinQueryPort pins) {
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.arcs = arcs;
@@ -62,6 +73,8 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         this.articles = articles;
         this.articleRenderer = articleRenderer;
         this.statblocks = statblocks;
+        this.rollTables = rollTables;
+        this.cardDecks = cardDecks;
         this.maps = maps;
         this.pins = pins;
     }
@@ -83,11 +96,6 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         LinkedHashSet<UUID> articleIds = sessionBeats.stream()
                 .flatMap(b -> b.articleIds().stream())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        List<PacketArticle> packetArticles = articleIds.stream()
-                .map(id -> articles.findByIdInWorld(id, worldId).orElse(null))
-                .filter(a -> a != null)
-                .map(this::toPacketArticle)
-                .toList();
 
         List<PacketBeat> packetBeats = sessionBeats.stream()
                 .map(b -> new PacketBeat(b.id(), b.title(), b.body(), b.done(),
@@ -105,7 +113,39 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .forEach(s -> sbById.putIfAbsent(s.id(), s));
         List<StatblockView> packetStatblocks = List.copyOf(sbById.values());
 
-        // Maps reachable from the session: any map with a pin linking a beat article.
+        // Tables and decks referenced by the session's beats (FR-40), first-seen order.
+        LinkedHashSet<UUID> tableIds = sessionBeats.stream()
+                .flatMap(b -> b.tableIds().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<RollTableView> tables = tableIds.stream()
+                .map(id -> rollTables.findByIdInWorld(id, worldId).orElse(null))
+                .filter(t -> t != null)
+                .toList();
+
+        LinkedHashSet<UUID> deckIds = sessionBeats.stream()
+                .flatMap(b -> b.deckIds().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<CardDeckView> decks = deckIds.stream()
+                .map(id -> cardDecks.findByIdInWorld(id, worldId).orElse(null))
+                .filter(d -> d != null)
+                .toList();
+
+        // Global print-once rule: articles referenced from roll-table outcomes
+        // or deck cards join the same articles section — each id prints once,
+        // in first-seen order (beats before tables before decks).
+        LinkedHashSet<String> refNames = new LinkedHashSet<>();
+        tables.forEach(t -> t.entries().forEach(e -> refNames.addAll(articleRenderer.linkTargets(e.body()))));
+        decks.forEach(d -> d.cards().forEach(c -> refNames.addAll(articleRenderer.linkTargets(c.body()))));
+        articleIds.addAll(articles.resolveRefs(worldId, refNames).values());
+
+        List<PacketArticle> packetArticles = articleIds.stream()
+                .map(id -> articles.findByIdInWorld(id, worldId).orElse(null))
+                .filter(a -> a != null)
+                .map(this::toPacketArticle)
+                .toList();
+
+        // Maps reachable from the session: any map with a pin linking a packet article
+        // (beat links and outcome/card references alike).
         LinkedHashSet<UUID> mapIds = new LinkedHashSet<>();
         articleIds.forEach(artId -> pins.findByArticle(artId).forEach(p -> mapIds.add(p.mapId())));
         List<PacketMap> packetMaps = mapIds.stream()
@@ -114,8 +154,28 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .map(this::toPacketMap)
                 .toList();
 
+        List<PacketRollTable> packetTables = tables.stream().map(this::toPacketRollTable).toList();
+        List<PacketCardDeck> packetDecks = decks.stream().map(this::toPacketCardDeck).toList();
+
         return new SessionPacketResponse(session, campaign.name(),
-                packetBeats, packetArticles, packetMaps, packetStatblocks);
+                packetBeats, packetArticles, packetMaps, packetStatblocks, packetTables, packetDecks);
+    }
+
+    /** Entry outcome bodies go through the same render pipeline as article bodies. */
+    private PacketRollTable toPacketRollTable(RollTableView t) {
+        List<PacketRollTableEntry> entries = t.entries().stream()
+                .map(e -> new PacketRollTableEntry(e.minResult(), e.maxResult(),
+                        articleRenderer.renderBody(t.worldId(), e.body())))
+                .toList();
+        return new PacketRollTable(t.id(), t.title(), t.diceExpression(), t.minResult(), t.maxResult(),
+                entries);
+    }
+
+    private PacketCardDeck toPacketCardDeck(CardDeckView d) {
+        List<PacketDeckCard> cards = d.cards().stream()
+                .map(c -> new PacketDeckCard(c.title(), articleRenderer.renderBody(d.worldId(), c.body())))
+                .toList();
+        return new PacketCardDeck(d.id(), d.title(), cards);
     }
 
     private PacketMap toPacketMap(MapView map) {

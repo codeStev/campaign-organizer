@@ -673,6 +673,13 @@ button:disabled {
   width: 5rem;
 }
 
+/* Tables & decks: highlight the row a roll or draw landed on (FR-40) */
+.hit-row {
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
 /* Relationship graph */
 .rel-graph {
   width: 100%;
@@ -1702,6 +1709,47 @@ button:disabled {
 .stat-card-notes {
   margin: 0;
   font-size: 0.85rem;
+}
+
+/* Roll tables in printouts (FR-40) */
+.print-roll-table {
+  break-inside: avoid;
+  margin-bottom: 1.2rem;
+}
+
+.print-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.3rem 0;
+}
+
+.print-table-grid th,
+.print-table-grid td {
+  border: 1px solid #999;
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.print-table-range {
+  white-space: nowrap;
+  width: 1%;
+  font-weight: 600;
+}
+
+/* Card decks in printouts (FR-40): cut-out cards like the statblock sheet */
+.deck-card {
+  break-inside: avoid;
+  border: 1px dashed #999;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+}
+
+.deck-card-name {
+  font-weight: 700;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.35rem;
 }
 
 @media print {

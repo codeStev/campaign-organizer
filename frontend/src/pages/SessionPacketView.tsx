@@ -195,6 +195,55 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                 ))}
               </section>
             )}
+
+            {packet.rollTables.length > 0 && (
+              <section className="print-map-section">
+                <h1>Roll tables</h1>
+                {packet.rollTables.map((t) => (
+                  <div key={t.id} className="print-roll-table">
+                    <h2>{t.title}</h2>
+                    <p className="print-kicker">
+                      {t.diceExpression} ({t.minResult}–{t.maxResult})
+                    </p>
+                    <table className="print-table-grid">
+                      <tbody>
+                        {t.entries.map((e, i) => (
+                          <tr key={i}>
+                            <td className="print-table-range">
+                              {e.minResult != null && e.maxResult != null
+                                ? `${e.minResult}–${e.maxResult}`
+                                : 'else'}
+                            </td>
+                            {/* eslint-disable-next-line react/no-danger */}
+                            <td dangerouslySetInnerHTML={{ __html: e.bodyHtml }} />
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {packet.cardDecks.length > 0 && (
+              <section className="print-map-section">
+                <h1>Card decks</h1>
+                {packet.cardDecks.map((d) => (
+                  <div key={d.id} style={{ marginBottom: '1rem' }}>
+                    <h2>{d.title}</h2>
+                    <div className="card-sheet">
+                      {d.cards.map((c, i) => (
+                        <div key={i} className="deck-card">
+                          {c.title && <div className="deck-card-name">{c.title}</div>}
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div dangerouslySetInnerHTML={{ __html: c.bodyHtml }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
           </>
         )}
       </div>

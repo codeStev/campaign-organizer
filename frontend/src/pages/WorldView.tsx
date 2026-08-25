@@ -33,6 +33,7 @@ import { RelationshipsView } from './RelationshipsView';
 import { CampaignsView } from './CampaignsView';
 import { SheetsView } from './SheetsView';
 import { WhiteboardsView } from './WhiteboardsView';
+import { TablesView } from './TablesView';
 
 /** True when the Markdown has no meaningful text content. */
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -71,7 +72,8 @@ type Tab =
   | 'relationships'
   | 'campaigns'
   | 'sheets'
-  | 'whiteboards';
+  | 'whiteboards'
+  | 'tables';
 
 /** Route path segments, in nav order. */
 const TABS: { key: Tab; label: string }[] = [
@@ -83,6 +85,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'campaigns', label: 'Campaigns' },
   { key: 'sheets', label: 'Sheets' },
   { key: 'whiteboards', label: 'Whiteboards' },
+  { key: 'tables', label: 'Tables & Decks' },
 ];
 
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
@@ -679,6 +682,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     <CampaignsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
   );
   const whiteboardsPane = <WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />;
+  const tablesPane = <TablesView worldId={worldId} onAuthExpired={onAuthExpired} />;
 
   return (
     <section className="world-view">
@@ -757,6 +761,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         />
         <Route path="whiteboards" element={whiteboardsPane} />
         <Route path="whiteboards/:whiteboardId" element={whiteboardsPane} />
+        <Route path="tables" element={tablesPane} />
+        <Route path="tables/:kind" element={tablesPane} />
+        <Route path="tables/:kind/:entityId" element={tablesPane} />
         <Route path="*" element={<Navigate to="articles" replace />} />
       </Routes>
     </section>
