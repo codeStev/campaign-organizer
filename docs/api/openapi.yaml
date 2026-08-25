@@ -2106,6 +2106,53 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
+  /ai/settings:
+    get:
+      tags: [ai]
+      summary: Get the configured AI provider models and fallback priority (ADR-0065)
+      description: >-
+        Instance-global (no worldId): one setting per provider build supports.
+        Returns built-in defaults if nothing has been saved yet.
+      operationId: getAiSettings
+      responses:
+        '200':
+          description: Current settings, one entry per provider, in priority order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiProviderSetting'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [ai]
+      summary: Replace the AI provider models and fallback priority (ADR-0065)
+      description: >-
+        List order becomes the fallback try-order. Takes effect on the very
+        next draft request; no restart needed. API keys are not part of this
+        endpoint - they stay environment-only (NFR-7).
+      operationId: updateAiSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiSettingsUpdateRequest'
+      responses:
+        '200':
+          description: Settings as saved, in the new priority order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiProviderSetting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2327,6 +2374,50 @@ components:
           type: string
           description: Which configured provider produced this draft.
           examples: ["groq", "openrouter"]
+
+    AiProviderSetting:
+      type: object
+      required: [providerId, defaultModel, configured, priority]
+      properties:
+        providerId:
+          type: string
+          description: Which build-in provider this setting is for.
+          examples: ["groq", "openrouter"]
+        model:
+          type: string
+          nullable: true
+          description: >-
+            The model to request from this provider. Null means "use
+            defaultModel".
+        defaultModel:
+          type: string
+          description: The model used when model is null.
+        configured:
+          type: boolean
+          description: Whether this provider has an API key set (env-only, NFR-7).
+        priority:
+          type: integer
+          description: 0-based fallback try-order; lower is tried first.
+
+    AiSettingsUpdateRequest:
+      type: object
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          minItems: 1
+          description: List order becomes the new fallback priority order.
+          items:
+            type: object
+            required: [providerId]
+            properties:
+              providerId:
+                type: string
+                examples: ["groq", "openrouter"]
+              model:
+                type: string
+                nullable: true
+                description: Null to fall back to the provider's default model.
 
     DiceRollRequest:
       type: object
