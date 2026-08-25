@@ -20,6 +20,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
@@ -94,6 +95,10 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const location = useLocation();
   const articleIdMatch = location.pathname.match(/\/articles\/([^/]+)$/);
   const articleId = articleIdMatch ? articleIdMatch[1] : undefined;
+  // Which top-level tab is active, from the URL rather than local state, so a
+  // direct link/reload lands on the right tab too.
+  const activeTabKey = location.pathname.replace(`/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
+  const activeTab: Tab = TABS.some((t) => t.key === activeTabKey) ? (activeTabKey as Tab) : 'articles';
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
@@ -710,17 +715,17 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         <Button variant="link" className="export-btn" onClick={handleExport} title="Download world as JSON">
           ⭳ Export
         </Button>
-        <nav className="tabs">
-          {TABS.map((t) => (
-            <NavLink
-              key={t.key}
-              className={({ isActive }) => (isActive ? 'tab active' : 'tab')}
-              to={t.key === 'articles' && articleId ? `articles/${articleId}` : t.key}
-            >
-              {t.label}
-            </NavLink>
-          ))}
-        </nav>
+        <Tabs value={activeTab} className="tabs">
+          <TabsList variant="line">
+            {TABS.map((t) => (
+              <TabsTrigger key={t.key} value={t.key} asChild>
+                <NavLink to={t.key === 'articles' && articleId ? `articles/${articleId}` : t.key}>
+                  {t.label}
+                </NavLink>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       {error && <p className="error">{error}</p>}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import {
   fieldTemplatesApi,
   articlesApi,
@@ -13,6 +13,7 @@ import { DiceRollerWidget } from '../components/DiceRollerWidget';
 import { CharacterSheetsPanel } from './CharacterSheetsPanel';
 import { StatblocksPanel } from './StatblocksPanel';
 import { FieldTemplatesPanel } from './FieldTemplatesPanel';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 interface Props {
   worldId: string;
@@ -23,6 +24,8 @@ interface Props {
 const SUBTABS = ['characters', 'statblocks', 'templates'] as const;
 
 export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
+  const location = useLocation();
+  const activeSubtab = SUBTABS.find((t) => location.pathname.includes(`/${t}`)) ?? 'characters';
   const templatesApiRef = useMemo(() => fieldTemplatesApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const campaignApi = useMemo(() => campaignsApi(worldId), [worldId]);
@@ -81,13 +84,15 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         <DiceRollerWidget onAuthExpired={onAuthExpired} />
-        <nav className="subtabs">
-          {SUBTABS.map((t) => (
-            <NavLink key={t} className={({ isActive }) => (isActive ? 'tab active' : 'tab')} to={t}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </NavLink>
-          ))}
-        </nav>
+        <Tabs value={activeSubtab} className="subtabs">
+          <TabsList variant="line">
+            {SUBTABS.map((t) => (
+              <TabsTrigger key={t} value={t} asChild>
+                <NavLink to={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</NavLink>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </aside>
 
       <div className="wiki-main">
