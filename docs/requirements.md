@@ -151,6 +151,13 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   capture (record-then-transcribe, even GM-only self-dictation) was
   considered for the same problem and explicitly rejected (2026-08-25):
   dictating notes during a scene, even quietly, distracts the players.
+- **FR-38 AI-assisted text drafting.** An "AI draft" action in the article
+  editor: seed with a few keywords/instructions, get a first-draft
+  description/read-aloud text inserted into the editor to edit before
+  printing. Prep-time only — nothing calls out during a session. Backed by
+  a free-tier cloud LLM API (Groq, falling back to OpenRouter), since the
+  owner's self-hosting hardware can't run a usable model locally.
+  (ADR-0064)
 
 ---
 
@@ -166,7 +173,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **NFR-5 Testing.** Critical paths covered by unit and integration tests; CI
   runs them on every push. (ADR-0011)
 - **NFR-6 Portability.** Self-hostable on a single machine; no external cloud
-  services required (media on local volume).
+  services required (media on local volume). AI drafting (FR-38) is the one
+  deliberate exception — it needs a cloud LLM API and degrades to
+  unavailable, not broken, without one configured; every other feature is
+  fully functional with zero external dependencies.
 - **NFR-7 Security.** Stateless bearer-token auth; secrets supplied via
   environment; non-root container users.
 - **NFR-8 Errors.** API errors use RFC 9457/7807 `application/problem+json`.
@@ -203,4 +213,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 6 | Prep & print (paper-first workflow) | FR-25 … FR-35 |
 | 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
+| 8 | AI-assisted drafting | FR-38 |
 | Proposed | Optional, unscheduled | FR-37 (session cheat sheet) |
