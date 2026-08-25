@@ -39,11 +39,39 @@ public final class SessionPacketDtos {
             String imageUrl,
             List<PacketPin> pins) {}
 
+    /** One roll-table entry with its outcome rendered for print (FR-40). */
+    public record PacketRollTableEntry(
+            Integer minResult,
+            Integer maxResult,
+            String bodyHtml) {}
+
+    /** A roll table referenced by the session's beats, entries print-ready. */
+    public record PacketRollTable(
+            UUID id,
+            String title,
+            String diceExpression,
+            int minResult,
+            int maxResult,
+            List<PacketRollTableEntry> entries) {}
+
+    /** One deck card with its body rendered for print. */
+    public record PacketDeckCard(
+            String title,
+            String bodyHtml) {}
+
+    /** A card deck referenced by the session's beats, cards print-ready. */
+    public record PacketCardDeck(
+            UUID id,
+            String title,
+            List<PacketDeckCard> cards) {}
+
     public record SessionPacketResponse(
             SessionView session,
             String campaignName,
             List<PacketBeat> beats,
             List<PacketArticle> articles,
             List<PacketMap> maps,
-            List<StatblockView> statblocks) {}
+            List<StatblockView> statblocks,
+            List<PacketRollTable> rollTables,
+            List<PacketCardDeck> cardDecks) {}
 }
