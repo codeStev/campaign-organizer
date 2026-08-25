@@ -820,11 +820,21 @@ export interface AiProviderSettingInput {
   model: string | null;
 }
 
+export interface AiProviderTestResult {
+  ok: boolean;
+  model: string;
+  latencyMs: number;
+  error?: string | null;
+}
+
 /** Instance-global settings (ADR-0065) - no worldId. API keys stay env-only (NFR-7). */
 export const aiSettingsApi = {
   get: () => request<AiProviderSetting[]>('/ai/settings'),
   update: (providers: AiProviderSettingInput[]) =>
     request<AiProviderSetting[]>('/ai/settings', { method: 'PUT', body: JSON.stringify({ providers }) }),
+  /** Tiny round-trip to verify a provider actually works (Settings "Test" button). */
+  test: (providerId: string) =>
+    request<AiProviderTestResult>(`/ai/settings/${providerId}/test`, { method: 'POST' }),
 };
 
 export interface ArticleRevision {
