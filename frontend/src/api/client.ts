@@ -779,6 +779,26 @@ export function aiApi(worldId: string) {
   };
 }
 
+export interface AiProviderSetting {
+  providerId: string;
+  model: string | null;
+  defaultModel: string;
+  configured: boolean;
+  priority: number;
+}
+
+export interface AiProviderSettingInput {
+  providerId: string;
+  model: string | null;
+}
+
+/** Instance-global settings (ADR-0065) - no worldId. API keys stay env-only (NFR-7). */
+export const aiSettingsApi = {
+  get: () => request<AiProviderSetting[]>('/ai/settings'),
+  update: (providers: AiProviderSettingInput[]) =>
+    request<AiProviderSetting[]>('/ai/settings', { method: 'PUT', body: JSON.stringify({ providers }) }),
+};
+
 export interface ArticleRevision {
   id: string;
   articleId: string;
