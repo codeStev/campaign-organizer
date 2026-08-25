@@ -56,6 +56,10 @@ tags:
     description: Free-form plotting whiteboards (nodes and connections).
   - name: backup
     description: Instance-wide backup and restore (per-world JSON + media).
+  - name: ai
+    description: >-
+      Prep-time AI text drafting via a cloud LLM (ADR-0064). Stateless;
+      nothing here is persisted.
 
 paths:
   /auth/login:
@@ -2069,6 +2073,39 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/ai/draft-article-text:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    post:
+      tags: [ai]
+      summary: Draft article text from a few keywords/instructions (ADR-0064)
+      description: >-
+        Prep-time only. Sends the instructions and the editor's current
+        content to a cloud LLM (Groq, falling back to OpenRouter) and returns
+        a draft the owner edits before saving/printing; nothing is persisted
+        server-side. Unavailable (503) if no provider is configured or every
+        configured provider fails.
+      operationId: draftArticleText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftArticleTextRequest'
+      responses:
+        '200':
+          description: Drafted text.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftArticleTextResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2251,8 +2288,46 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
+    ServiceUnavailable:
+      description: >-
+        An external dependency (e.g. every configured LLM provider) is
+        unavailable; retryable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
 
   schemas:
+    DraftArticleTextRequest:
+      type: object
+      required: [instructions]
+      properties:
+        instructions:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Keywords/instructions for what to draft.
+          examples: ["gruff dockmaster, hides a smuggling habit"]
+        existingContent:
+          type: string
+          maxLength: 20000
+          description: >-
+            The editor's current plain-text/markdown content, sent as context
+            so the draft continues rather than contradicts what's already
+            written. Empty for a blank article.
+
+    DraftArticleTextResult:
+      type: object
+      required: [text, provider]
+      properties:
+        text:
+          type: string
+          description: Drafted markdown, to insert into the editor for review.
+        provider:
+          type: string
+          description: Which configured provider produced this draft.
+          examples: ["groq", "openrouter"]
+
     DiceRollRequest:
       type: object
       required: [expression]
