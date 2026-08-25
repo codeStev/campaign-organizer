@@ -1074,6 +1074,103 @@ button:disabled {
   justify-content: space-between;
 }
 
+/* Encounter sheet (FR-44): screen-only staging rows and the tracker grid. */
+.encounter-setup {
+  margin-bottom: 1rem;
+}
+
+.encounter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.encounter-name {
+  min-width: 10rem;
+}
+
+.encounter-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.encounter-hp-input {
+  width: 5rem;
+}
+
+.encounter-sheet-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.encounter-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.encounter-table th,
+.encounter-table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.encounter-init {
+  width: 3.5rem;
+}
+
+.encounter-hp {
+  min-width: 14rem;
+}
+
+.encounter-hp-blank {
+  color: var(--muted-foreground);
+  letter-spacing: 0.1em;
+}
+
+.encounter-hp-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+
+.encounter-box {
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1px solid var(--foreground, currentColor);
+  display: inline-block;
+  position: relative;
+}
+
+.encounter-box small {
+  position: absolute;
+  top: -0.85rem;
+  left: -2px;
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
+.encounter-box-gap {
+  margin-right: 0.45rem;
+}
+
+.encounter-hp-total {
+  margin-left: 0.35rem;
+  font-size: 0.8rem;
+}
+
+@media print {
+  .encounter-setup {
+    display: none !important;
+  }
+}
+
 /* Statblock reference on a beat (row label + editor chip). */
 .beat-statblock {
   font-size: 0.8rem;
