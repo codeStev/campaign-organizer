@@ -187,6 +187,31 @@ export function categoriesApi(worldId: string) {
   };
 }
 
+export interface BrokenLink {
+  sourceType: 'ARTICLE' | 'BEAT' | 'ROLL_TABLE' | 'CARD_DECK';
+  sourceId: string;
+  sourceLabel: string;
+  target: string;
+}
+
+export interface ConsistencyArticle {
+  articleId: string;
+  title: string;
+}
+
+export interface ConsistencyReport {
+  brokenLinks: BrokenLink[];
+  orphanedArticles: ConsistencyArticle[];
+  unreferencedByCampaigns: ConsistencyArticle[];
+}
+
+/** FR-43: read-only world lint over the same machinery as the usage panel. */
+export function consistencyApi(worldId: string) {
+  return {
+    report: () => request<ConsistencyReport>(`/worlds/${worldId}/consistency-report`),
+  };
+}
+
 export interface ArticleTemplateSection {
   heading: string;
   hint: string;
