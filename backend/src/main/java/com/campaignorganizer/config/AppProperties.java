@@ -18,8 +18,14 @@ public record AppProperties(String password, Jwt jwt, Media media, Ai ai) {
      * AI text-drafting provider secrets (ADR-0064). Either key may be blank — an
      * unconfigured provider is skipped, not attempted and failed. Model choice and
      * provider priority are NOT here — they're user-editable settings (ADR-0065),
-     * not deploy-time env config.
+     * not deploy-time env config. Base URLs are deploy-time like the keys (they
+     * decide where a key is presented — proxy/compatible-endpoint override);
+     * blank falls back to each adapter's built-in public endpoint.
      */
-    public record Ai(String groqApiKey, String openRouterApiKey) {
+    public record Ai(
+            String groqApiKey,
+            String openRouterApiKey,
+            String groqBaseUrl,
+            String openRouterBaseUrl) {
     }
 }

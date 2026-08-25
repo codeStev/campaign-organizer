@@ -18,8 +18,14 @@ public class OpenRouterTextGenerationAdapter implements TextGenerationPort {
     public OpenRouterTextGenerationAdapter(AppProperties props) {
         AppProperties.Ai ai = props.ai();
         this.client = (ai != null && ai.openRouterApiKey() != null && !ai.openRouterApiKey().isBlank())
-                ? new ChatCompletionClient(BASE_URL, ai.openRouterApiKey())
+                ? new ChatCompletionClient(baseUrl(ai), ai.openRouterApiKey())
                 : null;
+    }
+
+    private static String baseUrl(AppProperties.Ai ai) {
+        return ai.openRouterBaseUrl() != null && !ai.openRouterBaseUrl().isBlank()
+                ? ai.openRouterBaseUrl()
+                : BASE_URL;
     }
 
     @Override
