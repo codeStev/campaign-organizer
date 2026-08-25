@@ -3718,7 +3718,7 @@ components:
       properties:
         type:
           type: string
-          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK]
+          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK, ROLL_TABLE, CARD_DECK]
         label:
           type: string
         targetId:

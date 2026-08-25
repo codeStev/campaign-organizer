@@ -14,6 +14,8 @@ import com.campaignorganizer.interchange.usage.application.port.in.UsageDtos.Usa
 import com.campaignorganizer.interchange.usage.application.port.in.UsageDtos.UsageResponse;
 import com.campaignorganizer.interchange.usage.application.port.published.UsageQueryPort;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
@@ -54,13 +56,16 @@ public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
     private final RelationshipQueryPort relationships;
     private final CharacterSheetQueryPort sheets;
     private final StatblockQueryPort statblocks;
+    private final RollTableQueryPort rollTables;
+    private final CardDeckQueryPort cardDecks;
 
     public UsageService(ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                         ArcBeatQueryPort beats, ArcQueryPort arcs,
                         CampaignQueryPort campaigns, MapPinQueryPort pins, MapQueryPort maps,
                         TimelineEventQueryPort events, TimelineLookupPort timelines,
                         RelationshipQueryPort relationships, CharacterSheetQueryPort sheets,
-                        StatblockQueryPort statblocks) {
+                        StatblockQueryPort statblocks, RollTableQueryPort rollTables,
+                        CardDeckQueryPort cardDecks) {
         this.articles = articles;
         this.articleRenderer = articleRenderer;
         this.beats = beats;
@@ -73,6 +78,8 @@ public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
         this.relationships = relationships;
         this.sheets = sheets;
         this.statblocks = statblocks;
+        this.rollTables = rollTables;
+        this.cardDecks = cardDecks;
     }
 
     @Override
@@ -120,6 +127,19 @@ public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
         // Wiki-link backlinks: other articles whose body [[links]] to this one.
         String slug = article.slug().toLowerCase(Locale.ROOT);
         String title = article.title().toLowerCase(Locale.ROOT);
+
+        // Roll-table outcomes and deck cards can reference the article too (FR-40).
+        rollTables.findByWorld(worldId).forEach(t -> t.entries().stream()
+                .filter(e -> references(articleRenderer, e.body(), slug, title))
+                .findAny()
+                .ifPresent(e -> out.add(new Usage("ROLL_TABLE", "Roll table: " + t.title(),
+                        null, null, null))));
+        cardDecks.findByWorld(worldId).forEach(d -> d.cards().stream()
+                .filter(c -> references(articleRenderer, c.body(), slug, title))
+                .findAny()
+                .ifPresent(c -> out.add(new Usage("CARD_DECK", "Card deck: " + d.title(),
+                        null, null, null))));
+
         for (ArticleView other : articles.findByWorld(worldId)) {
             if (other.id().equals(articleId)) {
                 continue;
@@ -132,6 +152,12 @@ public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
         }
 
         return new UsageResponse(out);
+    }
+
+    /** True when a raw body contains a wiki-link to the given slug or title. */
+    private static boolean references(ArticleRenderPort renderer, String body, String slug, String title) {
+        Set<String> targets = renderer.linkTargets(body);
+        return targets.contains(slug) || targets.contains(title);
     }
 
     // --- published query port ---

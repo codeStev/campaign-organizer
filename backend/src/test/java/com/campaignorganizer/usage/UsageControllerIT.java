@@ -99,4 +99,45 @@ class UsageControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].title").value("Used NPC"));
     }
+
+    @Test
+    void listsRollTableAndCardDeckUsages() throws Exception {
+        auth = authHeader();
+        worldId = createWorld(auth);
+        String tavern = article("The Rusty Tankard", null);
+
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bar Brawls\",\"diceExpression\":\"1d2\",\"entries\":"
+                                + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Trouble at "
+                                + "[[The Rusty Tankard]]\"},"
+                                + "{\"minResult\":2,\"maxResult\":2,\"body\":\"Quiet night\"}]}"))
+                .andExpect(status().isCreated());
+        // An unrelated table must not show up.
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Weather\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Rain\"}]}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Rumours\",\"cards\":[{\"body\":\"Heard of "
+                                + "[[The Rusty Tankard]]?\"}]}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/worlds/{w}/articles/{a}/usages", worldId, tavern)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usages[?(@.type == 'ROLL_TABLE')].label")
+                        .value(Matchers.hasItem("Roll table: Bar Brawls")))
+                .andExpect(jsonPath("$.usages[?(@.type == 'CARD_DECK')].label")
+                        .value(Matchers.hasItem("Card deck: Rumours")))
+                // The unrelated Weather table does not appear.
+                .andExpect(jsonPath("$.usages[*].label",
+                        Matchers.not(Matchers.hasItem("Roll table: Weather"))))
+                .andExpect(jsonPath("$.usages.length()").value(2));
+    }
 }
