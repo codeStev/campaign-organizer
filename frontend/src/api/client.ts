@@ -563,6 +563,32 @@ export interface PacketMap {
   pins: PacketPin[];
 }
 
+export interface PacketRollTableEntry {
+  minResult?: number | null;
+  maxResult?: number | null;
+  bodyHtml: string;
+}
+
+export interface PacketRollTable {
+  id: string;
+  title: string;
+  diceExpression: string;
+  minResult: number;
+  maxResult: number;
+  entries: PacketRollTableEntry[];
+}
+
+export interface PacketDeckCard {
+  title?: string | null;
+  bodyHtml: string;
+}
+
+export interface PacketCardDeck {
+  id: string;
+  title: string;
+  cards: PacketDeckCard[];
+}
+
 export interface SessionPacket {
   session: Session;
   campaignName: string;
@@ -570,6 +596,8 @@ export interface SessionPacket {
   articles: PacketArticle[];
   maps: PacketMap[];
   statblocks: Statblock[];
+  rollTables: PacketRollTable[];
+  cardDecks: PacketCardDeck[];
 }
 
 export function sessionsApi(worldId: string, campaignId: string) {

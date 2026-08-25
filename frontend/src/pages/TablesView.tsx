@@ -4,12 +4,15 @@ import {
   rollTablesApi,
   cardDecksApi,
   diceApi,
+  articlesApi,
   RollTable,
   CardDeck,
   ApiError,
 } from '../api/client';
 import { diceRange, DiceRange } from '../lib/dice';
+import { renderLinkedMarkdown } from '../lib/markdown';
 import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
+import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -148,6 +151,10 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   // Key of the textarea the link picker inserts into, e.g. "entry-2" / "card-0".
   const [linkTarget, setLinkTarget] = useState<string | null>(null);
   const textareas = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  // Standalone print of the open table/deck (ADR-0038 pattern).
+  const [printing, setPrinting] = useState(false);
+  // Lowercase title/slug → display title, for [[wiki-links]] in the printout.
+  const [linkTitles, setLinkTitles] = useState<Map<string, string>>(new Map());
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -202,6 +209,32 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   );
   // Deferred so editing the count doesn't clobber existing entry rows.
   const [splitCount, setSplitCount] = useState('3');
+
+  // The saved entity behind the draft — only saved tables/decks can print.
+  const printTable =
+    draft.kind === 'table' && draft.id != null
+      ? tables.find((t) => t.id === draft.id) ?? null
+      : null;
+  const printDeck =
+    draft.kind === 'deck' && draft.id != null ? decks.find((d) => d.id === draft.id) ?? null : null;
+
+  useEffect(() => {
+    if (!printing || linkTitles.size > 0) return;
+    articlesApi(worldId)
+      .list()
+      .then((list) => {
+        const byName = new Map<string, string>();
+        for (const a of list) {
+          if (!byName.has(a.title.toLowerCase())) byName.set(a.title.toLowerCase(), a.title);
+          if (!byName.has(a.slug.toLowerCase())) byName.set(a.slug.toLowerCase(), a.title);
+        }
+        setLinkTitles(byName);
+      })
+      .catch(() => {
+        // Print anyway; [[links]] render as broken-link spans.
+      });
+  }, [printing, worldId, linkTitles.size]);
+  const titleLookup = (name: string) => linkTitles.get(name) ?? null;
 
   function setEntry(index: number, patch: Partial<TableEntryDraft>) {
     setDraft((d) => ({
@@ -660,6 +693,11 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                   ? 'Create table'
                   : 'Create deck'}
             </Button>
+            {(printTable || printDeck) && (
+              <Button type="button" variant="outline" onClick={() => setPrinting(true)}>
+                🖨 Print
+              </Button>
+            )}
             {editingExisting && (
               <Button
                 type="button"
@@ -680,6 +718,71 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         onPick={insertLink}
         onClose={() => setLinkTarget(null)}
       />
+
+      {(printTable || printDeck) && printing && (
+        <NewWindowPortal
+          title={`Print — ${printTable?.title ?? printDeck?.title ?? ''}`}
+          onClose={() => setPrinting(false)}
+        >
+          <div className="print-toolbar">
+            <strong>{printTable ? 'Roll table' : 'Card deck'}</strong>
+            <span className="print-toolbar-spacer" />
+            <Button onClick={() => window.print()}>🖨 Print</Button>
+            <Button variant="link" onClick={() => setPrinting(false)}>
+              Close
+            </Button>
+          </div>
+          <div className="print-doc">
+            <section className="print-cover">
+              <h1>{printTable?.title ?? printDeck?.title}</h1>
+              {(printTable?.description || printDeck?.description) && (
+                <p className="print-subtitle">{printTable?.description ?? printDeck?.description}</p>
+              )}
+            </section>
+
+            {printTable && (
+              <section className="print-roll-table">
+                <p className="print-kicker">
+                  {printTable.diceExpression} ({printTable.minResult}–{printTable.maxResult})
+                </p>
+                <table className="print-table-grid">
+                  <tbody>
+                    {printTable.entries.map((e) => (
+                      <tr key={e.id}>
+                        <td className="print-table-range">
+                          {e.minResult != null && e.maxResult != null
+                            ? `${e.minResult}–${e.maxResult}`
+                            : 'else'}
+                        </td>
+                        {/* eslint-disable-next-line react/no-danger */}
+                        <td
+                          dangerouslySetInnerHTML={{
+                            __html: renderLinkedMarkdown(e.body, titleLookup),
+                          }}
+                        />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            )}
+
+            {printDeck && (
+              <section className="print-map-section">
+                <div className="card-sheet">
+                  {printDeck.cards.map((c) => (
+                    <div key={c.id} className="deck-card">
+                      {c.title && <div className="deck-card-name">{c.title}</div>}
+                      {/* eslint-disable-next-line react/no-danger */}
+                      <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </NewWindowPortal>
+      )}
     </div>
   );
 }

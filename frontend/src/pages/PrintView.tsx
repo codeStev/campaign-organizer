@@ -7,11 +7,16 @@ import {
   articlesApi,
   mapsApi,
   pinsApi,
+  rollTablesApi,
+  cardDecksApi,
+  RollTable,
+  CardDeck,
   Article,
   Campaign,
   MapPin,
   WorldMap,
 } from '../api/client';
+import { renderLinkedMarkdown } from '../lib/markdown';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so the meaningfully persistent "whole world" scope goes through this sentinel.
@@ -72,17 +77,31 @@ interface PrintableMap {
 export function PrintView({ worldId, worldName, campaigns, onClose, onError }: Props) {
   const api = useMemo(() => articlesApi(worldId), [worldId]);
   const maps = useMemo(() => mapsApi(worldId), [worldId]);
+  const tablesApi = useMemo(() => rollTablesApi(worldId), [worldId]);
+  const decksApi = useMemo(() => cardDecksApi(worldId), [worldId]);
   // '' = whole world; otherwise restrict to a campaign's referenced articles.
   const [scope, setScope] = useState('');
   const [includeMaps, setIncludeMaps] = useState(true);
   const [includeContents, setIncludeContents] = useState(true);
+  const [includeTables, setIncludeTables] = useState(false);
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<Article[]>([]);
   const [printableMaps, setPrintableMaps] = useState<PrintableMap[]>([]);
+  const [rollTables, setRollTables] = useState<RollTable[]>([]);
+  const [cardDecks, setCardDecks] = useState<CardDeck[]>([]);
 
   const scopeName = scope ? campaigns.find((c) => c.id === scope)?.name ?? '' : '';
   // Maps only print at whole-world scope, so `articles` covers every linked pin.
   const articleTitleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
+  // Table/deck bodies resolve [[wiki-links]] against this booklet's articles.
+  const linkLookup = useMemo(() => {
+    const byName = new Map<string, string>();
+    for (const a of articles) {
+      if (!byName.has(a.title.toLowerCase())) byName.set(a.title.toLowerCase(), a.title);
+      if (!byName.has(a.slug.toLowerCase())) byName.set(a.slug.toLowerCase(), a.title);
+    }
+    return (name: string) => byName.get(name) ?? null;
+  }, [articles]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,12 +121,21 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
       } else {
         setPrintableMaps([]);
       }
+
+      if (includeTables && !scope) {
+        const [t, d] = await Promise.all([tablesApi.list(), decksApi.list()]);
+        setRollTables(t);
+        setCardDecks(d);
+      } else {
+        setRollTables([]);
+        setCardDecks([]);
+      }
     } catch (err) {
       onError(err);
     } finally {
       setLoading(false);
     }
-  }, [api, maps, worldId, scope, includeMaps, onError]);
+  }, [api, maps, tablesApi, decksApi, worldId, scope, includeMaps, includeTables, onError]);
 
   useEffect(() => {
     void load();
@@ -136,6 +164,14 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
             onCheckedChange={(checked) => setIncludeMaps(checked === true)}
           />
           Maps
+        </label>
+        <label className="print-check" title={scope ? 'Tables print with the whole world only' : ''}>
+          <Checkbox
+            checked={includeTables}
+            disabled={!!scope}
+            onCheckedChange={(checked) => setIncludeTables(checked === true)}
+          />
+          Tables &amp; decks
         </label>
         <span className="print-toolbar-spacer" />
         <Button onClick={() => window.print()} disabled={loading}>
@@ -214,6 +250,59 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
               )}
             </section>
           ))}
+
+        {!loading && rollTables.length > 0 && (
+          <section className="print-map-section">
+            <h1>Roll tables</h1>
+            {rollTables.map((t) => (
+              <div key={t.id} className="print-roll-table">
+                <h2>{t.title}</h2>
+                <p className="print-kicker">
+                  {t.diceExpression} ({t.minResult}–{t.maxResult})
+                </p>
+                <table className="print-table-grid">
+                  <tbody>
+                    {t.entries.map((e) => (
+                      <tr key={e.id}>
+                        <td className="print-table-range">
+                          {e.minResult != null && e.maxResult != null
+                            ? `${e.minResult}–${e.maxResult}`
+                            : 'else'}
+                        </td>
+                        {/* eslint-disable-next-line react/no-danger */}
+                        <td
+                          dangerouslySetInnerHTML={{
+                            __html: renderLinkedMarkdown(e.body, linkLookup),
+                          }}
+                        />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {!loading && cardDecks.length > 0 && (
+          <section className="print-map-section">
+            <h1>Card decks</h1>
+            {cardDecks.map((d) => (
+              <div key={d.id} style={{ marginBottom: '1rem' }}>
+                <h2>{d.title}</h2>
+                <div className="card-sheet">
+                  {d.cards.map((c) => (
+                    <div key={c.id} className="deck-card">
+                      {c.title && <div className="deck-card-name">{c.title}</div>}
+                      {/* eslint-disable-next-line react/no-danger */}
+                      <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, linkLookup) }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
       </div>
     </NewWindowPortal>
   );
