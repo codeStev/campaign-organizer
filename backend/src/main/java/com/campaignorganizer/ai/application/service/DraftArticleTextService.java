@@ -9,9 +9,8 @@ import com.campaignorganizer.ai.domain.DraftInstructions;
 import com.campaignorganizer.ai.domain.DraftResult;
 import com.campaignorganizer.ai.domain.ProviderSetting;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -26,6 +25,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class DraftArticleTextService implements DraftArticleTextUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(DraftArticleTextService.class);
+
     private static final String SYSTEM_PROMPT = """
             You are a drafting assistant for a tabletop RPG worldbuilding wiki. \
             Write a concise first draft in Markdown for the owner's own article, \
@@ -33,12 +34,11 @@ public class DraftArticleTextService implements DraftArticleTextUseCase {
             Write only the drafted text itself - no preamble, no "Here is a draft", \
             no closing remarks.""";
 
-    private final Map<String, TextGenerationPort> providersById;
+    private final List<TextGenerationPort> providers;
     private final AiProviderSettingsRepositoryPort settings;
 
     public DraftArticleTextService(List<TextGenerationPort> providers, AiProviderSettingsRepositoryPort settings) {
-        this.providersById = providers.stream()
-                .collect(Collectors.toMap(TextGenerationPort::providerId, Function.identity()));
+        this.providers = providers;
         this.settings = settings;
     }
 
@@ -48,19 +48,36 @@ public class DraftArticleTextService implements DraftArticleTextUseCase {
         String userPrompt = toPrompt(instructions);
         List<ProviderSetting> order = DefaultProviderSettings.orDefaults(settings.findAllOrderedByPriority());
         for (ProviderSetting setting : order) {
-            TextGenerationPort provider = providersById.get(setting.providerId());
+            TextGenerationPort provider = byId(setting.providerId());
             if (provider == null) {
                 continue; // A setting for a provider that no longer exists in this build.
+            }
+            if (!provider.configured()) {
+                continue; // No API key for it — skipping is the documented behavior
+                          // (AppProperties.Ai); attempting would just burn a doomed call.
             }
             String model = setting.model() != null ? setting.model() : provider.defaultModel();
             try {
                 return provider.generate(SYSTEM_PROMPT, userPrompt, model);
-            } catch (TextGenerationFailedException ignored) {
-                // Try the next configured provider.
+            } catch (TextGenerationFailedException e) {
+                // Try the next configured provider — but say why this one failed,
+                // or "keys present yet unreachable" stays indistinguishable from
+                // "keys missing" (the generic message below mentions only keys).
+                log.warn("AI provider '{}' failed: {}", setting.providerId(), e.getMessage());
             }
         }
         throw new AiUnavailableException(
-                "No AI provider is configured or reachable. Set GROQ_API_KEY and/or OPENROUTER_API_KEY.");
+                "No AI provider succeeded — see the backend log for each provider's "
+                        + "error. Check GROQ_API_KEY / OPENROUTER_API_KEY and outbound "
+                        + "network access.");
+    }
+
+    /** Resolved per call: a constructor must not invoke methods on its ports. */
+    private TextGenerationPort byId(String providerId) {
+        return providers.stream()
+                .filter(p -> providerId.equals(p.providerId()))
+                .findAny()
+                .orElse(null);
     }
 
     private static String toPrompt(DraftInstructions instructions) {

@@ -18,8 +18,12 @@ public class GroqTextGenerationAdapter implements TextGenerationPort {
     public GroqTextGenerationAdapter(AppProperties props) {
         AppProperties.Ai ai = props.ai();
         this.client = (ai != null && ai.groqApiKey() != null && !ai.groqApiKey().isBlank())
-                ? new ChatCompletionClient(BASE_URL, ai.groqApiKey())
+                ? new ChatCompletionClient(baseUrl(ai), ai.groqApiKey())
                 : null;
+    }
+
+    private static String baseUrl(AppProperties.Ai ai) {
+        return ai.groqBaseUrl() != null && !ai.groqBaseUrl().isBlank() ? ai.groqBaseUrl() : BASE_URL;
     }
 
     @Override

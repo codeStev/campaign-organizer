@@ -46,6 +46,9 @@ app:
     # see docs/adr/0065-ai-provider-settings.md.
     groq-api-key: ${GROQ_API_KEY:}
     open-router-api-key: ${OPENROUTER_API_KEY:}
+    # Override to point a provider at a proxy or any OpenAI-compatible endpoint.
+    groq-base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
+    open-router-base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
 
 springdoc:
   swagger-ui:

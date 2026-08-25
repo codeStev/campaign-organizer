@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { aiSettingsApi, AiProviderSetting, ApiError } from '../api/client';
+import { aiSettingsApi, AiProviderSetting, ApiError, AiProviderTestResult } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
@@ -12,12 +12,19 @@ interface Props {
   onAuthExpired: () => void;
 }
 
+/** Per-row state of the "Test" button: in-flight or its latest outcome. */
+type TestStatus =
+  | { phase: 'testing' }
+  | { phase: 'done'; result: AiProviderTestResult }
+  | { phase: 'failed'; message: string };
+
 export function AiSettingsPanel({ onAuthExpired }: Props) {
   const [providers, setProviders] = useState<AiProviderSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [tests, setTests] = useState<Record<string, TestStatus>>({});
 
   useEffect(() => {
     void refresh();
@@ -75,6 +82,23 @@ export function AiSettingsPanel({ onAuthExpired }: Props) {
     }
   }
 
+  async function test(providerId: string) {
+    setTests((t) => ({ ...t, [providerId]: { phase: 'testing' } }));
+    try {
+      const result = await aiSettingsApi.test(providerId);
+      setTests((t) => ({ ...t, [providerId]: { phase: 'done', result } }));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthExpired();
+        return;
+      }
+      setTests((t) => ({
+        ...t,
+        [providerId]: { phase: 'failed', message: err instanceof Error ? err.message : 'Request failed' },
+      }));
+    }
+  }
+
   if (loading) return <p className="muted">Loading…</p>;
 
   return (
@@ -99,7 +123,31 @@ export function AiSettingsPanel({ onAuthExpired }: Props) {
                 onChange={(e) => setModel(p.providerId, e.target.value)}
               />
             </div>
+            <div className="settings-provider-test">
+              {(() => {
+                const status = tests[p.providerId];
+                if (!status) return null;
+                if (status.phase === 'testing') return <small className="muted">Testing…</small>;
+                if (status.phase === 'failed')
+                  return <small className="error">✗ {status.message}</small>;
+                return status.result.ok ? (
+                  <small className="muted">
+                    ✓ Working · {status.result.model} · {status.result.latencyMs}ms
+                  </small>
+                ) : (
+                  <small className="error">✗ {status.result.error}</small>
+                );
+              })()}
+            </div>
             <div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void test(p.providerId)}
+                disabled={tests[p.providerId]?.phase === 'testing'}
+              >
+                Test
+              </Button>
               <Button type="button" variant="link" onClick={() => move(i, -1)} disabled={i === 0} title="Try earlier">
                 ↑
               </Button>
