@@ -39,6 +39,13 @@ app:
   media:
     # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
     dir: ${APP_MEDIA_DIR:./data/media}
+  ai:
+    # AI-assisted drafting (see docs/adr/0064-ai-text-drafting.md). Both are
+    # optional and free-tier; blank means that provider is skipped.
+    groq-api-key: ${GROQ_API_KEY:}
+    groq-model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+    open-router-api-key: ${OPENROUTER_API_KEY:}
+    open-router-model: "${OPENROUTER_MODEL:deepseek/deepseek-r1:free}"
 
 springdoc:
   swagger-ui:
