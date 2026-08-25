@@ -71,6 +71,7 @@ the old one.
 | [0062](0062-pointer-events-touch-input.md) | Pointer Events for canvas drag interactions; mobile/tablet touch support | Accepted |
 | [0063](0063-shadcn-radix-tailwind-ui.md) | shadcn/ui (Radix + Tailwind v4) as the component foundation | Accepted |
 | [0064](0064-ai-text-drafting.md) | AI-assisted text drafting (new `ai` bounded context) | Accepted |
+| [0065](0065-ai-provider-settings.md) | AI provider settings (model + priority), user-editable (amends ADR-0064's no-persistence premise) | Accepted |
 
 ## Template
 

@@ -158,6 +158,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   a free-tier cloud LLM API (Groq, falling back to OpenRouter), since the
   owner's self-hosting hardware can't run a usable model locally.
   (ADR-0064)
+- **FR-39 Settings menu.** An instance-level settings page (not nested
+  under any world), structured for multiple categories though only "AI"
+  exists so far: per-provider model choice and provider try-order,
+  editable without touching `.env`/restarting. API keys are deliberately
+  not part of this UI — they stay environment-only (NFR-7). (ADR-0065;
+  refines FR-38)
 
 ---
 
@@ -213,5 +219,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 6 | Prep & print (paper-first workflow) | FR-25 … FR-35 |
 | 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
-| 8 | AI-assisted drafting | FR-38 |
+| 8 | AI-assisted drafting | FR-38, FR-39 |
 | Proposed | Optional, unscheduled | FR-37 (session cheat sheet) |
