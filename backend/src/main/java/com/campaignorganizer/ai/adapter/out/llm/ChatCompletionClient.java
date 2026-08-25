@@ -15,10 +15,15 @@ final class ChatCompletionClient {
     private final RestClient restClient;
 
     ChatCompletionClient(String baseUrl, String apiKey) {
-        this.restClient = RestClient.builder()
+        this(RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
-                .build();
+                .build());
+    }
+
+    /** Test seam: lets unit tests bind a {@code MockRestServiceServer} to the builder. */
+    ChatCompletionClient(RestClient restClient) {
+        this.restClient = restClient;
     }
 
     String complete(String model, String systemPrompt, String userPrompt) {
@@ -32,7 +37,8 @@ final class ChatCompletionClient {
                     .retrieve()
                     .body(ChatResponse.class);
         } catch (RestClientException e) {
-            throw new TextGenerationFailedException("Chat completion call failed", e);
+            throw new TextGenerationFailedException(
+                    "Chat completion call failed: " + e.getMessage(), e);
         }
         String text = extractText(response);
         if (text == null || text.isBlank()) {
