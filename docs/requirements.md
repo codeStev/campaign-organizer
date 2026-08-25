@@ -164,6 +164,15 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   editable without touching `.env`/restarting. API keys are deliberately
   not part of this UI — they stay environment-only (NFR-7). (ADR-0065;
   refines FR-38)
+- **FR-40 Roll tables & card decks.** Builders for reusable randomizers:
+  roll tables over any dice combination (entries per result range, one
+  optional catch-all row, free `[[wiki-links]]` inside outcomes) and
+  customized card decks. Both attach to session beats; the session packet,
+  compendium, and standalone printouts include them — and **an article
+  prints exactly once per document** no matter how many sources reference
+  it. Wiki-links in printed bodies stay anchors-only; deck draws are
+  stateless (print-first). Tables/decks appear in usage backlinks and world
+  backups like every other content type. (ADR-0066)
 
 ---
 
@@ -220,4 +229,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
 | 8 | AI-assisted drafting | FR-38, FR-39 |
+| 9 | Randomizers (tables & decks) | FR-40 |
 | Proposed | Optional, unscheduled | FR-37 (session cheat sheet) |
