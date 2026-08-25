@@ -141,6 +141,16 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   and in-app import of that ZIP, either additive (new worlds alongside
   existing ones) or full-overwrite (replaces everything). (ADR-0061,
   supersedes ADR-0055)
+- **FR-37 Session cheat sheet.** *(Proposed, optional — not committed to a
+  phase, not built.)* A condensed, one-page print view separate from the full
+  session packet (FR-28): active NPCs as name + one-line hook + key stat,
+  open plot threads, and faction standings, in large-enough type to scan at a
+  glance. Goal: cut mid-session lookups — which currently compete with the
+  GM's own attention to take notes on what's happening at the table — down to
+  a glance instead of flipping through the full packet. Live voice-note
+  capture (record-then-transcribe, even GM-only self-dictation) was
+  considered for the same problem and explicitly rejected (2026-08-25):
+  dictating notes during a scene, even quietly, distracts the players.
 
 ---
 
@@ -193,3 +203,4 @@ multi-user collaboration. Rationale in ADR-0005.
 | 6 | Prep & print (paper-first workflow) | FR-25 … FR-35 |
 | 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
+| Proposed | Optional, unscheduled | FR-37 (session cheat sheet) |
