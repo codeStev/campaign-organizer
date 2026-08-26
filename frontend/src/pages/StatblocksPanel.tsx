@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { statblocksApi, Statblock, Campaign, FieldTemplate, FieldType } from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
+import { EncounterSheetView } from './EncounterSheetView';
 import { TemplateForm } from '../components/TemplateForm';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
@@ -78,6 +79,8 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [filterCampaign, setFilterCampaign] = useState('');
   const [cardsOpen, setCardsOpen] = useState(false);
+  // FR-44: encounter-sheet builder over the same selection as card printing.
+  const [encounterOpen, setEncounterOpen] = useState(false);
   // Ids ticked for printing; empty = print the whole (filtered) list.
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -234,6 +237,17 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
             >
               🖨 Print {selected.size ? `${selected.size} card${selected.size > 1 ? 's' : ''}` : 'cards'}
             </Button>
+            <Button
+              variant="link"
+              onClick={() => setEncounterOpen(true)}
+              title={
+                selected.size
+                  ? 'Build a combat tracker from the ticked statblocks'
+                  : 'Build a combat tracker from all listed statblocks'
+              }
+            >
+              ⚔ Encounter
+            </Button>
             {selected.size > 0 && (
               <Button variant="link" onClick={() => setSelected(new Set())}>
                 Clear
@@ -374,6 +388,15 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                 : 'All statblocks'
           }
           onClose={() => setCardsOpen(false)}
+        />
+      )}
+
+      {encounterOpen && (
+        <EncounterSheetView
+          worldId={worldId}
+          statblocks={toPrint}
+          templates={statblockTemplates}
+          onClose={() => setEncounterOpen(false)}
         />
       )}
     </div>
