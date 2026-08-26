@@ -154,11 +154,12 @@ class ConsistencyReportServiceTest {
                         List.of())));
         when(rollTables.findByWorld(worldId)).thenReturn(List.of(new RollTableView(
                 UUID.randomUUID(), worldId, "Weather", null, "1d6", 1, 6,
-                List.of(new RollTableEntryView(UUID.randomUUID(), null, null, "[[Storm]] hits.")),
+                List.of(new RollTableEntryView(UUID.randomUUID(), null, null, "[[Storm]] hits.",
+                        List.of(), List.of())),
                 Instant.EPOCH, Instant.EPOCH)));
         when(cardDecks.findByWorld(worldId)).thenReturn(List.of(new CardDeckView(
                 UUID.randomUUID(), worldId, "Rumors", null,
-                List.of(new DeckCardView(UUID.randomUUID(), "R1", "[[Ghost]] seen.")),
+                List.of(new DeckCardView(UUID.randomUUID(), "R1", "[[Ghost]] seen.", List.of(), List.of())),
                 Instant.EPOCH, Instant.EPOCH)));
         knownArticles = Map.of("Harbor Master", UUID.randomUUID());
 
