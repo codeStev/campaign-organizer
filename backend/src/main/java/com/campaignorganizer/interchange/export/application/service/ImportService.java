@@ -17,6 +17,8 @@ import com.campaignorganizer.characters.application.template.port.published.Fiel
 import com.campaignorganizer.interchange.export.application.port.in.ImportBackupUseCase;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
@@ -85,6 +87,7 @@ public class ImportService implements ImportBackupUseCase {
     private final MediaImportPort mediaImportPort;
     private final RollTableImportPort rollTableImportPort;
     private final CardDeckImportPort cardDeckImportPort;
+    private final HandoutImportPort handoutImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -96,7 +99,7 @@ public class ImportService implements ImportBackupUseCase {
             CharacterSheetImportPort characterSheetImportPort, StatblockImportPort statblockImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
-            CardDeckImportPort cardDeckImportPort) {
+            CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -118,6 +121,7 @@ public class ImportService implements ImportBackupUseCase {
         this.mediaImportPort = mediaImportPort;
         this.rollTableImportPort = rollTableImportPort;
         this.cardDeckImportPort = cardDeckImportPort;
+        this.handoutImportPort = handoutImportPort;
     }
 
     @Override
@@ -156,6 +160,7 @@ public class ImportService implements ImportBackupUseCase {
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
         List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
         List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
+        List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -180,6 +185,7 @@ public class ImportService implements ImportBackupUseCase {
         whiteboards.forEach(w -> remap.assign(w.id()));
         rollTables.forEach(t -> remap.assign(t.id()));
         cardDecks.forEach(d -> remap.assign(d.id()));
+        handouts.forEach(h -> remap.assign(h.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -285,6 +291,12 @@ public class ImportService implements ImportBackupUseCase {
         for (CardDeckView d : cardDecks) {
             cardDeckImportPort.importCardDeck(new CardDeckView(remap.get(d.id()), newWorldId,
                     d.title(), d.description(), d.cards(), d.createdAt(), d.updatedAt()));
+        }
+
+        // Handouts (FR-46): standalone props, only the world id is remapped.
+        for (HandoutView h : handouts) {
+            handoutImportPort.importHandout(new HandoutView(remap.get(h.id()), newWorldId,
+                    h.title(), h.preset(), h.body(), h.createdAt(), h.updatedAt()));
         }
 
         // Beats last among campaign data: they reference statblocks, which must exist first.
