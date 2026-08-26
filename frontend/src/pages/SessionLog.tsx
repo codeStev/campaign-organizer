@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { sessionsApi, Session } from '../api/client';
 import { SessionPacketView } from './SessionPacketView';
 import { RecapView } from './RecapView';
+import { CheatSheetView } from './CheatSheetView';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
@@ -34,6 +35,12 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
   const [packetSessionId, setPacketSessionId] = useState<string | null>(null);
   // FR-45: printable "story so far" recap (null = closed).
   const [recapOpen, setRecapOpen] = useState(false);
+  // FR-37: session whose cheat sheet is being edited (null = closed).
+  const [cheatSession, setCheatSession] = useState<Session | null>(null);
+  // Live view of the open sheet's session, so a title edit renames the panel.
+  const cheatOpen = cheatSession
+    ? sessions.find((s) => s.id === cheatSession.id) ?? null
+    : null;
 
   const refresh = useCallback(async () => {
     try {
@@ -72,6 +79,7 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
     try {
       await api.remove(id);
       if (draft.id === id) setDraft(EMPTY);
+      if (cheatSession?.id === id) setCheatSession(null);
       await refresh();
     } catch (err) {
       onError(err);
@@ -139,6 +147,21 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
         </div>
       </form>
 
+      {cheatOpen && (
+        <CheatSheetView
+          worldId={worldId}
+          campaignId={campaignId}
+          sessionId={cheatOpen.id}
+          sessionTitle={
+            cheatOpen.sessionNumber != null
+              ? `Session ${cheatOpen.sessionNumber}: ${cheatOpen.title}`
+              : cheatOpen.title
+          }
+          onClose={() => setCheatSession(null)}
+          onError={onError}
+        />
+      )}
+
       <ol className="session-list">
         {sessions.map((s) => (
           <li key={s.id} className="session-item">
@@ -157,6 +180,13 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
               <div className="editor-actions">
                 <Button variant="link" onClick={() => edit(s)}>
                   Edit
+                </Button>
+                <Button
+                  variant="link"
+                  onClick={() => setCheatSession(s)}
+                  title="Compose a condensed one-page GM cheat sheet for this session"
+                >
+                  📋 Cheat sheet
                 </Button>
                 <Button
                   variant="link"

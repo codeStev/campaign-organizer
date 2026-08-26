@@ -664,6 +664,43 @@ export function sessionsApi(worldId: string, campaignId: string) {
   };
 }
 
+// ---- Session cheat sheet (FR-37): one condensed, ordered sheet per session ----
+
+export type CheatSheetFragmentType = 'FREEFORM' | 'STATBLOCK' | 'TABLE_ROW' | 'DECK_CARD';
+
+export interface CheatSheetFragmentInput {
+  type: CheatSheetFragmentType;
+  text?: string | null;
+  statblockId?: string | null;
+  tableId?: string | null;
+  entryId?: string | null;
+  deckId?: string | null;
+  cardId?: string | null;
+}
+
+export interface CheatSheetFragment extends CheatSheetFragmentInput {
+  id: string | null;
+}
+
+/** `id: null` means no sheet has been saved for the session yet. */
+export interface CheatSheet {
+  id: string | null;
+  sessionId: string;
+  fragments: CheatSheetFragment[];
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export function cheatSheetsApi(worldId: string, campaignId: string, sessionId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions/${sessionId}/cheat-sheet`;
+  return {
+    get: () => request<CheatSheet>(base),
+    put: (fragments: CheatSheetFragmentInput[]) =>
+      request<CheatSheet>(base, { method: 'PUT', body: JSON.stringify({ fragments }) }),
+    remove: () => request<void>(base, { method: 'DELETE' }),
+  };
+}
+
 export function arcsApi(worldId: string, campaignId: string) {
   const base = `/worlds/${worldId}/campaigns/${campaignId}/arcs`;
   return {

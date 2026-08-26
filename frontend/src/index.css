@@ -2052,6 +2052,133 @@ button:disabled {
 .chain-muted {
   color: var(--muted-foreground);
   font-size: 0.8125rem;
+
+.cheatsheet-editor {
+  margin-bottom: 1rem;
+}
+
+.cheatsheet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cheatsheet-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.cheatsheet-item:last-child {
+  border-bottom: none;
+}
+
+.cheatsheet-order {
+  display: flex;
+  flex-direction: column;
+  min-width: 2rem;
+}
+
+.cheatsheet-order button {
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+
+.cheatsheet-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.cheatsheet-content p {
+  margin: 0.15rem 0 0;
+}
+
+.cheatsheet-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  margin-right: 0.35rem;
+}
+
+.cheatsheet-badge-statblock {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+
+.cheatsheet-badge-table_row {
+  background: color-mix(in srgb, #3b82f6 12%, transparent);
+}
+
+.cheatsheet-badge-deck_card {
+  background: color-mix(in srgb, #a855f7 12%, transparent);
+}
+
+.cheatsheet-statline,
+.cheatsheet-ref {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+.cheatsheet-ref {
+  font-style: italic;
+  margin-right: 0.35rem;
+}
+
+.cheatsheet-missing {
+  color: var(--destructive);
+  font-size: 0.85rem;
+}
+
+.cheatsheet-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.cheatsheet-add > * {
+  flex: 1 1 10rem;
+}
+
+.cheatsheet-kind-select {
+  flex: 0 0 11rem !important;
+}
+
+/* The printed sheet is deliberately dense: everything for tonight on one page. */
+.cheat-sheet-print {
+  font-size: 0.85rem;
+}
+
+.cheat-sheet-print .print-cover h1 {
+  margin-bottom: 0.1rem;
+}
+
+.cheat-sheet-print .cheatsheet-num {
+  display: inline-block;
+  min-width: 1.3rem;
+  font-weight: 700;
+  color: var(--muted-foreground, #555);
+}
+
+.cheat-sheet-print .cheatsheet-item {
+  break-inside: avoid;
+  border-bottom: 1px solid #ddd;
+}
+
+@media print {
+  .cheatsheet-order {
+    display: none !important;
+  }
 }
 
 /* Command palette */
