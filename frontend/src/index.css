@@ -2052,6 +2052,7 @@ button:disabled {
 .chain-muted {
   color: var(--muted-foreground);
   font-size: 0.8125rem;
+}
 
 .cheatsheet-editor {
   margin-bottom: 1rem;
