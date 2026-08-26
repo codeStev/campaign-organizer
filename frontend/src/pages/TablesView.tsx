@@ -26,12 +26,18 @@ interface TableEntryDraft {
   minResult: string;
   maxResult: string;
   body: string;
+  nestedTableIds: string[];
+  nestedDeckIds: string[];
 }
 
 interface DeckCardDraft {
   title: string;
   body: string;
+  nestedTableIds: string[];
+  nestedDeckIds: string[];
 }
+
+const emptyChains = { nestedTableIds: [], nestedDeckIds: [] };
 
 /** Which half of the tab the editor shows; the URL keeps it deep-linkable (FR-35). */
 type DraftKind = 'table' | 'deck';
@@ -52,7 +58,7 @@ const EMPTY_DRAFT: Draft = {
   title: '',
   description: '',
   diceExpression: '',
-  entries: [{ minResult: '', maxResult: '', body: '' }],
+  entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
   cards: [],
 };
 
@@ -67,6 +73,8 @@ function draftFromTable(t: RollTable): Draft {
       minResult: e.minResult != null ? String(e.minResult) : '',
       maxResult: e.maxResult != null ? String(e.maxResult) : '',
       body: e.body,
+      nestedTableIds: e.nestedTableIds ?? [],
+      nestedDeckIds: e.nestedDeckIds ?? [],
     })),
     cards: [],
   };
@@ -80,7 +88,12 @@ function draftFromDeck(d: CardDeck): Draft {
     description: d.description ?? '',
     diceExpression: '',
     entries: [],
-    cards: d.cards.map((c) => ({ title: c.title ?? '', body: c.body })),
+    cards: d.cards.map((c) => ({
+      title: c.title ?? '',
+      body: c.body,
+      nestedTableIds: c.nestedTableIds ?? [],
+      nestedDeckIds: c.nestedDeckIds ?? [],
+    })),
   };
 }
 
@@ -93,7 +106,7 @@ function evenSplitRows(range: DiceRange, count: number): TableEntryDraft[] {
   let cursor = range.min;
   for (let i = 0; i < count; i++) {
     const span = per + (i < remainder ? 1 : 0);
-    rows.push({ minResult: String(cursor), maxResult: String(cursor + span - 1), body: '' });
+    rows.push({ minResult: String(cursor), maxResult: String(cursor + span - 1), body: '', ...emptyChains });
     cursor += span;
   }
   return rows;
@@ -150,6 +163,8 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const [drawnIndex, setDrawnIndex] = useState<number | null>(null);
   // Key of the textarea the link picker inserts into, e.g. "entry-2" / "card-0".
   const [linkTarget, setLinkTarget] = useState<string | null>(null);
+  // Row whose chained-content picker is open, same key scheme.
+  const [chainOpen, setChainOpen] = useState<string | null>(null);
   const textareas = useRef<Record<string, HTMLTextAreaElement | null>>({});
   // Standalone print of the open table/deck (ADR-0038 pattern).
   const [printing, setPrinting] = useState(false);
@@ -218,6 +233,64 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const printDeck =
     draft.kind === 'deck' && draft.id != null ? decks.find((d) => d.id === draft.id) ?? null : null;
 
+  // Where the last roll landed / which card was drawn — chains on that row
+  // become live sub-rollers below the result line (FR-41).
+  const landedEntry = roll?.matchedIndex != null ? draft.entries[roll.matchedIndex] ?? null : null;
+  const drawnCard = drawnIndex != null ? draft.cards[drawnIndex] ?? null : null;
+
+  // Everything the printed table/deck chains in, breadth-first, each printed
+  // once — cycles cut by the seen-sets (FR-41).
+  const chainedForPrint = useMemo(() => {
+    if (!printTable && !printDeck) return { tables: [] as RollTable[], decks: [] as CardDeck[] };
+    const outTables: RollTable[] = [];
+    const outDecks: CardDeck[] = [];
+    const seenTables = new Set<string>(printTable ? [printTable.id] : []);
+    const seenDecks = new Set<string>(printDeck ? [printDeck.id] : []);
+    type Ref = { kind: 'table' | 'deck'; id: string };
+    let frontier: Ref[] = [
+      ...(printTable
+        ? printTable.entries.flatMap((e) => [
+            ...e.nestedTableIds.map((id): Ref => ({ kind: 'table', id })),
+            ...e.nestedDeckIds.map((id): Ref => ({ kind: 'deck', id })),
+          ])
+        : []),
+      ...(printDeck
+        ? printDeck.cards.flatMap((c) => [
+            ...c.nestedTableIds.map((id): Ref => ({ kind: 'table', id })),
+            ...c.nestedDeckIds.map((id): Ref => ({ kind: 'deck', id })),
+          ])
+        : []),
+    ];
+    while (frontier.length > 0) {
+      const next: Ref[] = [];
+      for (const ref of frontier) {
+        if (ref.kind === 'table') {
+          if (seenTables.has(ref.id)) continue;
+          seenTables.add(ref.id);
+          const t = tables.find((x) => x.id === ref.id);
+          if (!t) continue;
+          outTables.push(t);
+          t.entries.forEach((e) => {
+            e.nestedTableIds.forEach((id) => next.push({ kind: 'table', id }));
+            e.nestedDeckIds.forEach((id) => next.push({ kind: 'deck', id }));
+          });
+        } else {
+          if (seenDecks.has(ref.id)) continue;
+          seenDecks.add(ref.id);
+          const d = decks.find((x) => x.id === ref.id);
+          if (!d) continue;
+          outDecks.push(d);
+          d.cards.forEach((c) => {
+            c.nestedTableIds.forEach((id) => next.push({ kind: 'table', id }));
+            c.nestedDeckIds.forEach((id) => next.push({ kind: 'deck', id }));
+          });
+        }
+      }
+      frontier = next;
+    }
+    return { tables: outTables, decks: outDecks };
+  }, [printTable, printDeck, tables, decks]);
+
   useEffect(() => {
     if (!printing || linkTitles.size > 0) return;
     articlesApi(worldId)
@@ -241,6 +314,42 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       ...d,
       entries: d.entries.map((e, i) => (i === index ? { ...e, ...patch } : e)),
     }));
+  }
+
+  /** Add/remove a chained table/deck on one entry or card row (FR-41). */
+  function toggleNested(
+    key: string,
+    field: 'nestedTableIds' | 'nestedDeckIds',
+    id: string,
+  ) {
+    const pick = (ids: string[]) =>
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+    setDraft((d) => {
+      if (key.startsWith('entry-')) {
+        const i = Number(key.slice('entry-'.length));
+        return {
+          ...d,
+          entries: d.entries.map((e, j) =>
+            j === i
+              ? field === 'nestedTableIds'
+                ? { ...e, nestedTableIds: pick(e.nestedTableIds) }
+                : { ...e, nestedDeckIds: pick(e.nestedDeckIds) }
+              : e,
+          ),
+        };
+      }
+      const i = Number(key.slice('card-'.length));
+      return {
+        ...d,
+        cards: d.cards.map((c, j) =>
+          j === i
+            ? field === 'nestedTableIds'
+              ? { ...c, nestedTableIds: pick(c.nestedTableIds) }
+              : { ...c, nestedDeckIds: pick(c.nestedDeckIds) }
+            : c,
+        ),
+      };
+    });
   }
 
   function moveCard(index: number, delta: number) {
@@ -321,6 +430,54 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     setDraft((d) => ({ ...d, entries: evenSplitRows(liveRange, count) }));
   }
 
+  /** Chip picker for one row's chained tables/decks; the open entity excludes itself. */
+  function chainPicker(key: string) {
+    const row = key.startsWith('entry-')
+      ? draft.entries[Number(key.slice('entry-'.length))]
+      : draft.cards[Number(key.slice('card-'.length))];
+    if (!row) return null;
+    const otherTables = tables.filter((t) => t.id !== draft.id);
+    const otherDecks = decks.filter((d) => d.id !== draft.id);
+    return (
+      <div className="chain-picker">
+        <strong className="muted">Chain into this result</strong>
+        {otherTables.length > 0 && (
+          <div className="chain-group">
+            <span className="muted">🎲</span>
+            {otherTables.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                className={row.nestedTableIds.includes(t.id) ? 'chain-chip on' : 'chain-chip'}
+                onClick={() => toggleNested(key, 'nestedTableIds', t.id)}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        )}
+        {otherDecks.length > 0 && (
+          <div className="chain-group">
+            <span className="muted">🃏</span>
+            {otherDecks.map((d) => (
+              <button
+                type="button"
+                key={d.id}
+                className={row.nestedDeckIds.includes(d.id) ? 'chain-chip on' : 'chain-chip'}
+                onClick={() => toggleNested(key, 'nestedDeckIds', d.id)}
+              >
+                {d.title}
+              </button>
+            ))}
+          </div>
+        )}
+        {otherTables.length === 0 && otherDecks.length === 0 && (
+          <small className="muted">Nothing to chain yet — create another table or deck first.</small>
+        )}
+      </div>
+    );
+  }
+
   async function save(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -338,6 +495,8 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           minResult: entry.minResult === '' ? null : Number(entry.minResult),
           maxResult: entry.maxResult === '' ? null : Number(entry.maxResult),
           body: entry.body,
+          nestedTableIds: entry.nestedTableIds,
+          nestedDeckIds: entry.nestedDeckIds,
         })),
       };
       try {
@@ -360,7 +519,12 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       const body = {
         title: draft.title,
         description: draft.description || undefined,
-        cards: draft.cards.map((c) => ({ title: c.title || undefined, body: c.body })),
+        cards: draft.cards.map((c) => ({
+          title: c.title || undefined,
+          body: c.body,
+          nestedTableIds: c.nestedTableIds,
+          nestedDeckIds: c.nestedDeckIds,
+        })),
       };
       try {
         const saved =
@@ -393,7 +557,11 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       <aside className="wiki-sidebar">
         <Button
           onClick={() => {
-            setDraft({ ...EMPTY_DRAFT, kind: 'table', entries: [{ minResult: '', maxResult: '', body: '' }] });
+            setDraft({
+              ...EMPTY_DRAFT,
+              kind: 'table',
+              entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
+            });
             setRoll(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
@@ -422,7 +590,12 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         </ul>
         <Button
           onClick={() => {
-            setDraft({ ...EMPTY_DRAFT, kind: 'deck', entries: [], cards: [{ title: '', body: '' }] });
+            setDraft({
+              ...EMPTY_DRAFT,
+              kind: 'deck',
+              entries: [],
+              cards: [{ title: '', body: '', ...emptyChains }],
+            });
             setDrawnIndex(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
@@ -491,6 +664,34 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                   </small>
                 )}
               </div>
+              {landedEntry &&
+                (landedEntry.nestedTableIds.length > 0 ||
+                  landedEntry.nestedDeckIds.length > 0) && (
+                <div className="chain-children">
+                  {landedEntry.nestedTableIds.map((id) => (
+                    <ChainNode
+                      key={`t-${id}`}
+                      kind="table"
+                      entityId={id}
+                      tables={tables}
+                      decks={decks}
+                      depth={1}
+                      onError={handleError}
+                    />
+                  ))}
+                  {landedEntry.nestedDeckIds.map((id) => (
+                    <ChainNode
+                      key={`d-${id}`}
+                      kind="deck"
+                      entityId={id}
+                      tables={tables}
+                      decks={decks}
+                      depth={1}
+                      onError={handleError}
+                    />
+                  ))}
+                </div>
+              )}
 
               <div className="editor-actions">
                 <strong className="muted">Entries</strong>
@@ -532,15 +733,30 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       style={{ width: '5rem' }}
                     />
                   </div>
-                  <Textarea
-                    ref={(el) => {
-                      textareas.current[`entry-${i}`] = el;
-                    }}
-                    placeholder={`Outcome on ${entry.minResult || '?'}–${entry.maxResult || '?'} — [[wiki-links]] allowed`}
-                    value={entry.body}
-                    onChange={(e) => setEntry(i, { body: e.target.value })}
-                  />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <Textarea
+                      ref={(el) => {
+                        textareas.current[`entry-${i}`] = el;
+                      }}
+                      placeholder={`Outcome on ${entry.minResult || '?'}–${entry.maxResult || '?'} — [[wiki-links]] allowed`}
+                      value={entry.body}
+                      onChange={(e) => setEntry(i, { body: e.target.value })}
+                    />
+                    {chainOpen === `entry-${i}` && chainPicker(`entry-${i}`)}
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <Button
+                      type="button"
+                      variant="link"
+                      title="Chain other tables/decks into this outcome"
+                      onClick={() =>
+                        setChainOpen(chainOpen === `entry-${i}` ? null : `entry-${i}`)
+                      }
+                    >
+                      ⛓{entry.nestedTableIds.length + entry.nestedDeckIds.length > 0
+                        ? ` ${entry.nestedTableIds.length + entry.nestedDeckIds.length}`
+                        : ''}
+                    </Button>
                     <Button type="button" variant="link" onClick={() => setLinkTarget(`entry-${i}`)}>
                       [[link]]
                     </Button>
@@ -563,7 +779,10 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 onClick={() =>
                   setDraft((d) => ({
                     ...d,
-                    entries: [...d.entries, { minResult: '', maxResult: '', body: '' }],
+                    entries: [
+                      ...d.entries,
+                      { minResult: '', maxResult: '', body: '', ...emptyChains },
+                    ],
                   }))
                 }
               >
@@ -602,6 +821,34 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                   </small>
                 )}
               </div>
+              {drawnCard &&
+                (drawnCard.nestedTableIds.length > 0 ||
+                  drawnCard.nestedDeckIds.length > 0) && (
+                <div className="chain-children">
+                  {drawnCard.nestedTableIds.map((id) => (
+                    <ChainNode
+                      key={`t-${id}`}
+                      kind="table"
+                      entityId={id}
+                      tables={tables}
+                      decks={decks}
+                      depth={1}
+                      onError={handleError}
+                    />
+                  ))}
+                  {drawnCard.nestedDeckIds.map((id) => (
+                    <ChainNode
+                      key={`d-${id}`}
+                      kind="deck"
+                      entityId={id}
+                      tables={tables}
+                      decks={decks}
+                      depth={1}
+                      onError={handleError}
+                    />
+                  ))}
+                </div>
+              )}
               {draft.cards.map((card, i) => (
                 <div
                   key={i}
@@ -652,8 +899,21 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                         }))
                       }
                     />
+                    {chainOpen === `card-${i}` && chainPicker(`card-${i}`)}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <Button
+                      type="button"
+                      variant="link"
+                      title="Chain other tables/decks into this card"
+                      onClick={() =>
+                        setChainOpen(chainOpen === `card-${i}` ? null : `card-${i}`)
+                      }
+                    >
+                      ⛓{card.nestedTableIds.length + card.nestedDeckIds.length > 0
+                        ? ` ${card.nestedTableIds.length + card.nestedDeckIds.length}`
+                        : ''}
+                    </Button>
                     <Button type="button" variant="link" onClick={() => setLinkTarget(`card-${i}`)}>
                       [[link]]
                     </Button>
@@ -675,7 +935,10 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 type="button"
                 variant="link"
                 onClick={() =>
-                  setDraft((d) => ({ ...d, cards: [...d.cards, { title: '', body: '' }] }))
+                  setDraft((d) => ({
+                    ...d,
+                    cards: [...d.cards, { title: '', body: '', ...emptyChains }],
+                  }))
                 }
               >
                 + Add card
@@ -780,9 +1043,195 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 </div>
               </section>
             )}
+
+            {chainedForPrint.tables.map((t) => (
+              <section key={t.id} className="print-roll-table">
+                <h2>{t.title}</h2>
+                <p className="print-kicker">
+                  {t.diceExpression} ({t.minResult}–{t.maxResult})
+                </p>
+                <table className="print-table-grid">
+                  <tbody>
+                    {t.entries.map((e) => (
+                      <tr key={e.id}>
+                        <td className="print-table-range">
+                          {e.minResult != null && e.maxResult != null
+                            ? `${e.minResult}–${e.maxResult}`
+                            : 'else'}
+                        </td>
+                        {/* eslint-disable-next-line react/no-danger */}
+                        <td
+                          dangerouslySetInnerHTML={{
+                            __html: renderLinkedMarkdown(e.body, titleLookup),
+                          }}
+                        />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ))}
+            {chainedForPrint.decks.length > 0 && (
+              <section className="print-map-section">
+                {chainedForPrint.decks.map((d) => (
+                  <div key={d.id} style={{ marginBottom: '1rem' }}>
+                    <h2>{d.title}</h2>
+                    <div className="card-sheet">
+                      {d.cards.map((c) => (
+                        <div key={c.id} className="deck-card">
+                          {c.title && <div className="deck-card-name">{c.title}</div>}
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: renderLinkedMarkdown(c.body, titleLookup),
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
           </div>
         </NewWindowPortal>
       )}
+    </div>
+  );
+}
+
+/** Stored chains may form cycles, so live rolling stops at this depth. */
+const MAX_CHAIN_DEPTH = 8;
+
+interface ChainNodeProps {
+  kind: 'table' | 'deck';
+  entityId: string;
+  tables: RollTable[];
+  decks: CardDeck[];
+  depth: number;
+  onError: (err: unknown) => void;
+}
+
+/**
+ * One chained table/deck as a live sub-roller (FR-41): a roll lands on a row,
+ * a draw picks a card, and whatever that row/card chains in recurses below.
+ * Cycles are cut by the depth cap; deleted targets render as a note.
+ */
+function ChainNode({ kind, entityId, tables, decks, depth, onError }: ChainNodeProps) {
+  const [roll, setRoll] = useState<{ total: number; breakdown: string } | null>(null);
+  const [drawnIndex, setDrawnIndex] = useState<number | null>(null);
+
+  const table = kind === 'table' ? tables.find((t) => t.id === entityId) : undefined;
+  const deck = kind === 'deck' ? decks.find((d) => d.id === entityId) : undefined;
+
+  if (!table && !deck) {
+    return <div className="chain-node chain-missing">Chained content was deleted.</div>;
+  }
+  if (depth > MAX_CHAIN_DEPTH) {
+    return <div className="chain-node chain-muted">…</div>;
+  }
+
+  const children = (
+    nestedTableIds: string[],
+    nestedDeckIds: string[],
+    keyPrefix: string,
+  ) => (
+    <div className="chain-children">
+      {nestedTableIds.map((id) => (
+        <ChainNode
+          key={`${keyPrefix}-t-${id}`}
+          kind="table"
+          entityId={id}
+          tables={tables}
+          decks={decks}
+          depth={depth + 1}
+          onError={onError}
+        />
+      ))}
+      {nestedDeckIds.map((id) => (
+        <ChainNode
+          key={`${keyPrefix}-d-${id}`}
+          kind="deck"
+          entityId={id}
+          tables={tables}
+          decks={decks}
+          depth={depth + 1}
+          onError={onError}
+        />
+      ))}
+    </div>
+  );
+
+  if (table) {
+    const landed =
+      roll != null
+        ? table.entries.find(
+            (e) =>
+              e.minResult != null &&
+              e.maxResult != null &&
+              e.minResult <= roll.total &&
+              roll.total <= e.maxResult,
+          ) ?? table.entries.find((e) => e.minResult == null && e.maxResult == null)
+        : undefined;
+    const hasChains =
+      landed != null && (landed.nestedTableIds.length > 0 || landed.nestedDeckIds.length > 0);
+    return (
+      <div className="chain-node">
+        <div className="editor-actions">
+          <span>
+            🎲 <strong>{table.title}</strong>{' '}
+            <small className="muted">{table.diceExpression}</small>
+          </span>
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => {
+              diceApi
+                .roll(table.diceExpression)
+                .then((result) => setRoll({ total: result.total, breakdown: result.breakdown }))
+                .catch(onError);
+            }}
+          >
+            Roll
+          </Button>
+          {roll && (
+            <small className="muted">
+              → <strong>{roll.total}</strong> ({roll.breakdown})
+            </small>
+          )}
+        </div>
+        {landed && <p className="chain-outcome">{landed.body}</p>}
+        {hasChains &&
+          children(landed!.nestedTableIds, landed!.nestedDeckIds, `r${table.id}`)}
+      </div>
+    );
+  }
+
+  // Deck branch.
+  const card = drawnIndex != null ? deck!.cards[drawnIndex] : undefined;
+  return (
+    <div className="chain-node">
+      <div className="editor-actions">
+        <span>
+          🃏 <strong>{deck!.title}</strong>
+        </span>
+        <Button
+          type="button"
+          variant="link"
+          disabled={deck!.cards.length === 0}
+          onClick={() => setDrawnIndex(Math.floor(Math.random() * deck!.cards.length))}
+        >
+          Draw
+        </Button>
+        {card && (
+          <small className="muted">
+            → {card.title ? <strong>{card.title}</strong> : 'Card'}
+          </small>
+        )}
+      </div>
+      {card && <p className="chain-outcome">{card.body}</p>}
+      {card && (card.nestedTableIds.length > 0 || card.nestedDeckIds.length > 0) &&
+        children(card.nestedTableIds, card.nestedDeckIds, `c${card.id}`)}
     </div>
   );
 }

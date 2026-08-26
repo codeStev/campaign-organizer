@@ -1060,6 +1060,8 @@ export interface RollTableEntryInput {
   minResult?: number | null;
   maxResult?: number | null;
   body: string;
+  nestedTableIds?: string[];
+  nestedDeckIds?: string[];
 }
 
 export interface RollTableEntry {
@@ -1067,6 +1069,8 @@ export interface RollTableEntry {
   minResult?: number | null;
   maxResult?: number | null;
   body: string;
+  nestedTableIds: string[];
+  nestedDeckIds: string[];
 }
 
 export interface RollTable {
@@ -1104,12 +1108,16 @@ export function rollTablesApi(worldId: string) {
 export interface DeckCardInput {
   title?: string;
   body: string;
+  nestedTableIds?: string[];
+  nestedDeckIds?: string[];
 }
 
 export interface DeckCard {
   id: string;
   title?: string | null;
   body: string;
+  nestedTableIds: string[];
+  nestedDeckIds: string[];
 }
 
 export interface CardDeck {
