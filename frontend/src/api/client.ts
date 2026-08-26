@@ -212,6 +212,32 @@ export function consistencyApi(worldId: string) {
   };
 }
 
+export type HandoutPreset = 'PARCHMENT' | 'NEWSPAPER' | 'POSTER' | 'LETTER';
+
+export interface Handout {
+  id: string;
+  worldId: string;
+  title: string;
+  preset: HandoutPreset;
+  body?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** FR-46: player-facing styled one-page printables. */
+export function handoutsApi(worldId: string) {
+  const base = `/worlds/${worldId}/handouts`;
+  return {
+    list: () => request<Handout[]>(base),
+    get: (id: string) => request<Handout>(`${base}/${id}`),
+    create: (body: { title: string; preset: HandoutPreset; body?: string | null }) =>
+      request<Handout>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: { title: string; preset: HandoutPreset; body?: string | null }) =>
+      request<Handout>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 export interface ArticleTemplateSection {
   heading: string;
   hint: string;

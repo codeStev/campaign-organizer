@@ -1171,6 +1171,98 @@ button:disabled {
   }
 }
 
+/* Handouts (FR-46): styled one-page printables. The base is a paper page;
+   each preset re-skins it. Screen preview uses .preview-<preset> at reduced
+   size; the printed window uses .handout-print > .handout-doc as the page. */
+.handout-doc {
+  padding: 3rem 2.5rem;
+  color: #1a1a1a;
+  background: #fff;
+  min-height: 8rem;
+}
+
+.handout-doc .handout-title {
+  margin-top: 0;
+}
+
+.handout-print {
+  max-width: 21cm;
+  margin: 0 auto;
+}
+
+.handout-print .handout-doc {
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Parchment note */
+.handout-doc.parchment,
+.preview-parchment {
+  background: #f2e6c9;
+  border: 1px solid #b49b6b;
+  outline: 3px double #b49b6b;
+  outline-offset: -8px;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #3d2f1e;
+}
+
+/* Newspaper page */
+.handout-doc.newspaper,
+.preview-newspaper {
+  background: #f7f5ef;
+  border: 1px solid #444;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.handout-doc.newspaper .handout-title,
+.preview-newspaper .handout-title {
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  border-top: 3px solid #111;
+  border-bottom: 1px solid #111;
+  padding: 0.4rem 0;
+}
+
+.handout-doc.newspaper {
+  column-count: 2;
+  column-gap: 1.6rem;
+  column-rule: 1px solid #999;
+  text-align: justify;
+}
+
+/* Wanted poster */
+.handout-doc.poster,
+.preview-poster {
+  background: #f4ecd8;
+  border: 6px double #2b2b2b;
+  font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+  text-align: center;
+}
+
+.handout-doc.poster .handout-title,
+.preview-poster .handout-title {
+  font-size: 1.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+/* Personal letter */
+.handout-doc.letter,
+.preview-letter {
+  background: #fbfaf6;
+  border: 1px solid #cfc9bb;
+  font-family: Georgia, serif;
+  font-style: italic;
+  line-height: 1.75;
+}
+
+.handout-doc.letter p,
+.preview-letter p {
+  text-indent: 1.5rem;
+}
+
 /* Statblock reference on a beat (row label + editor chip). */
 .beat-statblock {
   font-size: 0.8rem;
