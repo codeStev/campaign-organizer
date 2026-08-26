@@ -16,6 +16,7 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
@@ -91,6 +92,8 @@ class ImportServiceTest {
     private RollTableImportPort rollTableImportPort;
     @Mock
     private CardDeckImportPort cardDeckImportPort;
+    @Mock
+    private HandoutImportPort handoutImportPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -103,7 +106,7 @@ class ImportServiceTest {
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, sessionImportPort,
                 arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
-                cardDeckImportPort);
+                cardDeckImportPort, handoutImportPort);
     }
 
     @Test

@@ -34,6 +34,7 @@ import { CampaignsView } from './CampaignsView';
 import { SheetsView } from './SheetsView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { TablesView } from './TablesView';
+import { HandoutsView } from './HandoutsView';
 import { ConsistencyView } from './ConsistencyView';
 
 /** True when the Markdown has no meaningful text content. */
@@ -75,6 +76,7 @@ type Tab =
   | 'sheets'
   | 'whiteboards'
   | 'tables'
+  | 'handouts'
   | 'consistency';
 
 /** Route path segments, in nav order. */
@@ -88,6 +90,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'sheets', label: 'Sheets' },
   { key: 'whiteboards', label: 'Whiteboards' },
   { key: 'tables', label: 'Tables & Decks' },
+  { key: 'handouts', label: 'Handouts' },
   { key: 'consistency', label: 'Consistency' },
 ];
 
@@ -775,6 +778,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         <Route path="tables" element={tablesPane} />
         <Route path="tables/:kind" element={tablesPane} />
         <Route path="tables/:kind/:entityId" element={tablesPane} />
+        <Route
+          path="handouts"
+          element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+        />
+        <Route
+          path="handouts/:handoutId"
+          element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+        />
         <Route path="consistency" element={consistencyPane} />
         <Route path="*" element={<Navigate to="articles" replace />} />
       </Routes>
