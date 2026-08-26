@@ -141,13 +141,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   and in-app import of that ZIP, either additive (new worlds alongside
   existing ones) or full-overwrite (replaces everything). (ADR-0061,
   supersedes ADR-0055)
-- **FR-37 Session cheat sheet.** *(Proposed, optional — not committed to a
-  phase, not built.)* A condensed, one-page print view separate from the full
-  session packet (FR-28): active NPCs as name + one-line hook + key stat,
-  open plot threads, and faction standings, in large-enough type to scan at a
-  glance. Refined 2026-08-25 into a composer: the sheet is assembled from
-  pinned fragments — arbitrary snippets such as roll-table rows, rule
-  reminders, or a statblock — ordered by drag, not fixed sections only.
+- **FR-37 Session cheat sheet.** A condensed, one-page print view separate
+  from the full session packet (FR-28): a hand-curated, ordered list of
+  fragments per session — freeform snippets plus live references to existing
+  content (statblocks, single roll-table rows, single deck cards), rendered
+  fresh from their sources at print time. Built as a per-session composer
+  with explicit ordering and one-dense-page output (ADR-0071).
   Goal: cut mid-session lookups — which currently compete with the
   GM's own attention to take notes on what's happening at the table — down to
   a glance instead of flipping through the full packet. Live voice-note
@@ -267,4 +266,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
 | 8 | AI-assisted drafting | FR-38, FR-39 |
 | 9 | Randomizers (tables & decks) | FR-40, FR-41 |
-| Proposed | Optional, unscheduled | FR-37 (cheat-sheet composer), FR-42, FR-44 … FR-46 |
+| 10 | Consistency & print tooling | FR-43 (consistency report), FR-45 (recap builder), FR-44 (encounter sheet), FR-46 (handouts), FR-37 (cheat sheet) |
+| Proposed | Optional, unscheduled | FR-42 |
