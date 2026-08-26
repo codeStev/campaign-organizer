@@ -35,11 +35,17 @@ final class IdRemap {
         return oldId == null ? null : map.get(oldId);
     }
 
-    /** Remaps a whole id list (FR-41 nested chains); null becomes empty. */
+    /**
+     * Remaps a whole id list of FR-41 nested chain references; null becomes
+     * empty. Unresolvable ids are dropped, not an error: chains live in JSONB
+     * without foreign keys, so deleting a chained table/deck leaves dangling
+     * ids behind — and every other resolver (packet BFS, frontend roller)
+     * skips those silently too.
+     */
     List<UUID> all(List<UUID> oldIds) {
         if (oldIds == null) {
             return List.of();
         }
-        return oldIds.stream().map(this::get).toList();
+        return oldIds.stream().filter(map::containsKey).map(map::get).toList();
     }
 }

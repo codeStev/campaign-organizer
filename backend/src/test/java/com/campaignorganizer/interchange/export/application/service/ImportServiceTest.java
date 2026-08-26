@@ -18,7 +18,11 @@ import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
@@ -175,5 +179,44 @@ class ImportServiceTest {
 
         assertThatThrownBy(() -> service.importWorld(json, Map.of()))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    /** Chains live in JSONB without FKs — dangling ids import as dropped refs. */
+    @Test
+    void dropsDanglingNestedChainIdsWhenImportingTablesAndDecks() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldTableId = UUID.randomUUID();
+        UUID danglingTableId = UUID.randomUUID();
+        UUID oldDeckId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, "Ambush", null,
+                "1d1", 1, 1,
+                List.of(new RollTableEntryView(UUID.randomUUID(), 1, 1, "Bandits",
+                        List.of(danglingTableId), List.of())),
+                now, now)));
+        bundle.put("cardDecks", List.of(new CardDeckView(oldDeckId, oldWorldId, "Twists", null,
+                List.of(new DeckCardView(UUID.randomUUID(), "Ambush", "More foes",
+                        List.of(), List.of(danglingTableId))),
+                now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "campaigns", "sessions", "arcs",
+                "beats", "fieldTemplates", "characterSheets", "statblocks", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<RollTableView> tableCaptor = ArgumentCaptor.forClass(RollTableView.class);
+        verify(rollTableImportPort).importRollTable(tableCaptor.capture());
+        assertThat(tableCaptor.getValue().entries().get(0).nestedTableIds()).isEmpty();
+
+        ArgumentCaptor<CardDeckView> deckCaptor = ArgumentCaptor.forClass(CardDeckView.class);
+        verify(cardDeckImportPort).importCardDeck(deckCaptor.capture());
+        assertThat(deckCaptor.getValue().cards().get(0).nestedDeckIds()).isEmpty();
     }
 }
