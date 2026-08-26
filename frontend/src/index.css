@@ -1999,6 +1999,61 @@ button:disabled {
   }
 }
 
+/* Chained roll tables / card decks (FR-41) */
+.chain-picker {
+  border: 1px dashed var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.chain-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.chain-chip {
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.6rem;
+  cursor: pointer;
+}
+.chain-chip.on {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.chain-children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+}
+.chain-node {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.chain-outcome {
+  font-size: 0.875rem;
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  white-space: pre-wrap;
+}
+.chain-missing,
+.chain-muted {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
 /* Command palette */
 .palette-overlay {
   position: fixed;

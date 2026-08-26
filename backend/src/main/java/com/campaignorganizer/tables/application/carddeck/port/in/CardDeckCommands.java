@@ -8,7 +8,8 @@ public final class CardDeckCommands {
     private CardDeckCommands() {
     }
 
-    public record CardInput(String title, String body) {
+    public record CardInput(String title, String body,
+                            List<UUID> nestedTableIds, List<UUID> nestedDeckIds) {
     }
 
     public record CreateCardDeckCommand(UUID worldId, String title, String description,

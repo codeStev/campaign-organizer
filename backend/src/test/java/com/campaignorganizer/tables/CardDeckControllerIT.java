@@ -86,6 +86,58 @@ class CardDeckControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void validatesNestedChains() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String table = mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Weather\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Rain\"}]}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String tableId = JsonPath.read(table, "$.id");
+
+        // A card chaining an existing table round-trips.
+        mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Omens\",\"cards\":[{\"title\":\"The Tower\","
+                                + "\"body\":\"Disaster\",\"nestedTableIds\":[\"" + tableId
+                                + "\"]}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.cards[0].nestedTableIds[0]").value(tableId));
+
+        // Unknown nested ids are rejected.
+        mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"cards\":[{\"body\":\"x\",\""
+                                + "nestedTableIds\":[\"" + UUID.randomUUID() + "\"]}]}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad deck ref\",\"cards\":[{\"body\":\"x\",\""
+                                + "nestedDeckIds\":[\"" + UUID.randomUUID() + "\"]}]}"))
+                .andExpect(status().isBadRequest());
+
+        // A deck cannot nest itself.
+        String deck = mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Plain\",\"cards\":[{\"body\":\"x\"}]}"))
+                .andReturn().getResponse().getContentAsString();
+        String deckId = JsonPath.read(deck, "$.id");
+        mockMvc.perform(put("/api/worlds/{w}/card-decks/{d}", worldId, deckId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Plain\",\"cards\":[{\"body\":\"Self\",\""
+                                + "nestedDeckIds\":[\"" + deckId + "\"}]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void unknownDeckReturns404() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);

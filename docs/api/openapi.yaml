@@ -3495,6 +3495,18 @@ components:
         body:
           type: string
           description: Outcome text as Markdown; supports [[wiki-links]] (ADR-0014).
+        nestedTableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Roll tables chained after this row resolves (FR-41); each must exist in this world.
+        nestedDeckIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Card decks chained after this row resolves (FR-41); each must exist in this world.
 
     RollTableEntry:
       type: object
@@ -3509,6 +3521,16 @@ components:
           type: [integer, "null"]
         body:
           type: string
+        nestedTableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        nestedDeckIds:
+          type: array
+          items:
+            type: string
+            format: uuid
 
     RollTableRequest:
       type: object
@@ -3576,6 +3598,18 @@ components:
         body:
           type: string
           description: Card text as Markdown; supports [[wiki-links]] (ADR-0014).
+        nestedTableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Roll tables chained when this card is drawn (FR-41); each must exist in this world.
+        nestedDeckIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Card decks chained when this card is drawn (FR-41); each must exist in this world.
 
     CardDeckRequest:
       type: object
@@ -3604,6 +3638,16 @@ components:
           type: [string, "null"]
         body:
           type: string
+        nestedTableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        nestedDeckIds:
+          type: array
+          items:
+            type: string
+            format: uuid
 
     CardDeck:
       type: object

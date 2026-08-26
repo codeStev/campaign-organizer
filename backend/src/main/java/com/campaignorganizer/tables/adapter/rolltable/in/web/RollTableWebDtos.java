@@ -17,7 +17,9 @@ public final class RollTableWebDtos {
     public record EntryDto(
             Integer minResult,
             Integer maxResult,
-            @NotBlank String body) {
+            @NotBlank String body,
+            List<UUID> nestedTableIds,
+            List<UUID> nestedDeckIds) {
     }
 
     public record RollTableRequest(
@@ -27,7 +29,8 @@ public final class RollTableWebDtos {
             @NotNull @Valid List<EntryDto> entries) {
     }
 
-    public record EntryResponse(UUID id, Integer minResult, Integer maxResult, String body) {
+    public record EntryResponse(UUID id, Integer minResult, Integer maxResult, String body,
+                                List<UUID> nestedTableIds, List<UUID> nestedDeckIds) {
     }
 
     public record RollTableResponse(

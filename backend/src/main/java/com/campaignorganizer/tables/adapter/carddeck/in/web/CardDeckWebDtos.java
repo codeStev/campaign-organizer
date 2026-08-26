@@ -14,7 +14,8 @@ public final class CardDeckWebDtos {
     private CardDeckWebDtos() {
     }
 
-    public record CardDto(@Size(max = 200) String title, @NotBlank String body) {
+    public record CardDto(@Size(max = 200) String title, @NotBlank String body,
+                          List<UUID> nestedTableIds, List<UUID> nestedDeckIds) {
     }
 
     public record CardDeckRequest(
@@ -23,7 +24,8 @@ public final class CardDeckWebDtos {
             @NotNull @Valid List<CardDto> cards) {
     }
 
-    public record CardResponse(UUID id, String title, String body) {
+    public record CardResponse(UUID id, String title, String body,
+                               List<UUID> nestedTableIds, List<UUID> nestedDeckIds) {
     }
 
     public record CardDeckResponse(

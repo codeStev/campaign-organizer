@@ -2,6 +2,7 @@ package com.campaignorganizer.campaign;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -137,6 +138,47 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.cardDecks[0].title").value("Omens"))
                 .andExpect(jsonPath("$.cardDecks[0].cards[0].title").value("The Tower"))
                 .andExpect(jsonPath("$.cardDecks[0].cards[0].bodyHtml").value(Matchers.containsString("Disaster.")));
+    }
+
+    @Test
+    void chainsNestedTablesAndDecksIntoThePacketAndCutsCycles() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        // A is the beat's direct reference; B's row chains A, then A is updated
+        // to chain B back (a stored cycle), and deck C's cards both chain B.
+        String tableA = create("/api/worlds/" + worldId + "/roll-tables",
+                "{\"title\":\"Encounter\",\"diceExpression\":\"1d1\",\"entries\":"
+                        + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Bandits\"}]}");
+        String tableB = create("/api/worlds/" + worldId + "/roll-tables",
+                "{\"title\":\"Loot\",\"diceExpression\":\"1d1\",\"entries\":"
+                        + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Coins\","
+                        + "\"nestedTableIds\":[\"" + tableA + "\"]}]}");
+        mockMvc.perform(put("/api/worlds/{w}/roll-tables/{t}", worldId, tableA)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Encounter\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Bandits\","
+                                + "\"nestedTableIds\":[\"" + tableB + "\"]}]}"))
+                .andExpect(status().isOk());
+        String deckC = create("/api/worlds/" + worldId + "/card-decks",
+                "{\"title\":\"Twists\",\"cards\":[{\"title\":\"Ambush\",\"body\":\"More foes\","
+                        + "\"nestedTableIds\":[\"" + tableB + "\"]},"
+                        + "{\"body\":\"Second twist\",\"nestedTableIds\":[\"" + tableB + "\"]}]}");
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
+                "{\"title\":\"On the road\",\"sessionId\":\"" + sessionId + "\","
+                        + "\"tableIds\":[\"" + tableA + "\"],\"deckIds\":[\"" + deckC + "\"]}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                // Both chained tables arrive, each exactly once despite the cycle.
+                .andExpect(jsonPath("$.rollTables.length()").value(2))
+                .andExpect(jsonPath("$.rollTables[*].title",
+                        Matchers.containsInAnyOrder("Encounter", "Loot")))
+                .andExpect(jsonPath("$.cardDecks.length()").value(1))
+                .andExpect(jsonPath("$.cardDecks[0].title").value("Twists"));
     }
 
     @Test
