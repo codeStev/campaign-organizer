@@ -32,6 +32,8 @@ import com.campaignorganizer.worldbuilding.application.map.port.published.MapVie
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -113,22 +115,45 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .forEach(s -> sbById.putIfAbsent(s.id(), s));
         List<StatblockView> packetStatblocks = List.copyOf(sbById.values());
 
-        // Tables and decks referenced by the session's beats (FR-40), first-seen order.
+        // Tables and decks referenced by the session's beats (FR-40), then
+        // everything their rows/cards chain in (FR-41), first-seen order. The
+        // visited sets double as cycle detection: a chained loop is printed
+        // once and never walked again.
         LinkedHashSet<UUID> tableIds = sessionBeats.stream()
                 .flatMap(b -> b.tableIds().stream())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        List<RollTableView> tables = tableIds.stream()
-                .map(id -> rollTables.findByIdInWorld(id, worldId).orElse(null))
-                .filter(t -> t != null)
-                .toList();
-
         LinkedHashSet<UUID> deckIds = sessionBeats.stream()
                 .flatMap(b -> b.deckIds().stream())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        List<CardDeckView> decks = deckIds.stream()
-                .map(id -> cardDecks.findByIdInWorld(id, worldId).orElse(null))
-                .filter(d -> d != null)
-                .toList();
+
+        Map<UUID, RollTableView> tablesById = new LinkedHashMap<>();
+        Map<UUID, CardDeckView> decksById = new LinkedHashMap<>();
+        Deque<UUID> tableQueue = new ArrayDeque<>(tableIds);
+        Deque<UUID> deckQueue = new ArrayDeque<>(deckIds);
+        while (!tableQueue.isEmpty() || !deckQueue.isEmpty()) {
+            UUID tableId = tableQueue.poll();
+            if (tableId != null && !tablesById.containsKey(tableId)) {
+                rollTables.findByIdInWorld(tableId, worldId).ifPresent(t -> {
+                    tablesById.put(tableId, t);
+                    t.entries().forEach(e -> {
+                        tableQueue.addAll(e.nestedTableIds());
+                        deckQueue.addAll(e.nestedDeckIds());
+                    });
+                });
+            }
+            UUID deckId = deckQueue.poll();
+            if (deckId != null && !decksById.containsKey(deckId)) {
+                cardDecks.findByIdInWorld(deckId, worldId).ifPresent(d -> {
+                    decksById.put(deckId, d);
+                    d.cards().forEach(c -> {
+                        tableQueue.addAll(c.nestedTableIds());
+                        deckQueue.addAll(c.nestedDeckIds());
+                    });
+                });
+            }
+        }
+        List<RollTableView> tables = List.copyOf(tablesById.values());
+        List<CardDeckView> decks = List.copyOf(decksById.values());
 
         // Global print-once rule: articles referenced from roll-table outcomes
         // or deck cards join the same articles section — each id prints once,
