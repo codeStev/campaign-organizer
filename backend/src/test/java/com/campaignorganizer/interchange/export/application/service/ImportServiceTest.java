@@ -9,6 +9,7 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImpo
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
@@ -98,6 +99,8 @@ class ImportServiceTest {
     private CardDeckImportPort cardDeckImportPort;
     @Mock
     private HandoutImportPort handoutImportPort;
+    @Mock
+    private CheatSheetImportPort cheatSheetImportPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -110,7 +113,8 @@ class ImportServiceTest {
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, sessionImportPort,
                 arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
-                cardDeckImportPort, handoutImportPort);
+                cardDeckImportPort, handoutImportPort,
+                cheatSheetImportPort);
     }
 
     @Test

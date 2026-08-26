@@ -1119,6 +1119,64 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/cheat-sheet:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [campaigns]
+      summary: The session's cheat sheet (id is null when none was saved yet)
+      operationId: getSessionCheatSheet
+      responses:
+        '200':
+          description: The cheat sheet, or a fragment-less view with null id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheatSheet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [campaigns]
+      summary: Create or replace the session's cheat sheet
+      description: >
+        Upsert. Fragment references are validated: statblocks, tables, entries
+        and decks/cards must exist in the world.
+      operationId: putSessionCheatSheet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheatSheetRequest'
+      responses:
+        '200':
+          description: The saved cheat sheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheatSheet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [campaigns]
+      summary: Delete the session's cheat sheet
+      operationId: deleteSessionCheatSheet
+      responses:
+        '204':
+          description: Cheat sheet deleted (or nothing to delete).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /dice/roll:
     post:
       tags: [dice]
@@ -3350,6 +3408,94 @@ components:
           type: [string, "null"]
           maxLength: 20000
           description: Private GM notes for the session (Markdown, see ADR-0054).
+
+    CheatSheetFragmentInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [FREEFORM, STATBLOCK, TABLE_ROW, DECK_CARD]
+        text:
+          type: [string, "null"]
+          description: Freeform Markdown; required for FREEFORM.
+        statblockId:
+          type: [string, "null"]
+          format: uuid
+          description: Required for STATBLOCK.
+        tableId:
+          type: [string, "null"]
+          format: uuid
+        entryId:
+          type: [string, "null"]
+          format: uuid
+          description: Required for TABLE_ROW (with tableId).
+        deckId:
+          type: [string, "null"]
+          format: uuid
+        cardId:
+          type: [string, "null"]
+          format: uuid
+          description: Required for DECK_CARD (with deckId).
+
+    CheatSheetRequest:
+      type: object
+      required: [fragments]
+      properties:
+        fragments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheatSheetFragmentInput'
+
+    CheatSheetFragment:
+      type: object
+      required: [id, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [FREEFORM, STATBLOCK, TABLE_ROW, DECK_CARD]
+        text:
+          type: [string, "null"]
+        statblockId:
+          type: [string, "null"]
+          format: uuid
+        tableId:
+          type: [string, "null"]
+          format: uuid
+        entryId:
+          type: [string, "null"]
+          format: uuid
+        deckId:
+          type: [string, "null"]
+          format: uuid
+        cardId:
+          type: [string, "null"]
+          format: uuid
+
+    CheatSheet:
+      type: object
+      required: [id, sessionId, fragments, createdAt, updatedAt]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+          description: Null when no cheat sheet has been saved for the session yet.
+        sessionId:
+          type: string
+          format: uuid
+        fragments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheatSheetFragment'
+        createdAt:
+          type: [string, "null"]
+          format: date-time
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
 
     Session:
       type: object
