@@ -30,6 +30,8 @@ services:
       APP_MEDIA_DIR: /data/media
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      APP_BACKUP_CRON: ${APP_BACKUP_CRON:-0 37 3 * * *}
+      APP_BACKUP_KEEP: ${APP_BACKUP_KEEP:-7}
     volumes:
       - media-data:/data/media
     depends_on:
