@@ -203,12 +203,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   story so far" from completed beats and past sessions' summaries as a
   printable recap to open the next session with — read-only over existing
   data; session GM notes are deliberately excluded. (ADR-0068)
-- **FR-46 Handout designer.** *(Proposed — recorded 2026-08-25, not
-  committed to a phase, not built.)* Player-facing props — letters, wanted
+- **FR-46 Handout designer.** Player-facing props — letters, wanted
   posters, in-world newspaper pages — as styled one-page printables with
-  font/border presets. Deliberately separate from GM-only content: handouts
-  are meant to leave the table in the players' hands. Reuses the standalone
-  print-window pattern (ADR-0038).
+  fixed presets (parchment, newspaper, poster, letter). Deliberately
+  separate from GM-only content: handouts are meant to leave the table in
+  the players' hands. Own bounded context; ships in world backups; reuses
+  the standalone print-window pattern (ADR-0038). (ADR-0070)
 
 ---
 
