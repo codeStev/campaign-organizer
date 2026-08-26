@@ -1565,6 +1565,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/handouts:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [handouts]
+      summary: List a world's handouts
+      operationId: listHandouts
+      responses:
+        '200':
+          description: Handouts in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Handout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [handouts]
+      summary: Create a handout
+      operationId: createHandout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoutRequest'
+      responses:
+        '201':
+          description: Handout created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Handout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/handouts/{handoutId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/HandoutId'
+    get:
+      tags: [handouts]
+      summary: Get a handout
+      operationId: getHandout
+      responses:
+        '200':
+          description: The handout.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Handout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [handouts]
+      summary: Update a handout
+      operationId: updateHandout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoutRequest'
+      responses:
+        '200':
+          description: Handout updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Handout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [handouts]
+      summary: Delete a handout
+      operationId: deleteHandout
+      responses:
+        '204':
+          description: Handout deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/export:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -2529,6 +2627,14 @@ components:
       in: path
       required: true
       description: Identifier of the card deck.
+      schema:
+        type: string
+        format: uuid
+    HandoutId:
+      name: handoutId
+      in: path
+      required: true
+      description: Identifier of the handout.
       schema:
         type: string
         format: uuid
@@ -3517,6 +3623,46 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeckCard'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    HandoutRequest:
+      type: object
+      required: [title, preset]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        preset:
+          type: string
+          enum: [PARCHMENT, NEWSPAPER, POSTER, LETTER]
+          description: Visual style applied to the printed handout.
+        body:
+          type: [string, "null"]
+          description: Markdown body (wiki-links render as anchors).
+
+    Handout:
+      type: object
+      required: [id, worldId, title, preset, body, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        preset:
+          type: string
+          enum: [PARCHMENT, NEWSPAPER, POSTER, LETTER]
+        body:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
