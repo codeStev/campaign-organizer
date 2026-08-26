@@ -17,6 +17,8 @@ import com.campaignorganizer.characters.application.template.port.published.Fiel
 import com.campaignorganizer.interchange.export.application.port.in.ImportBackupUseCase;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
@@ -90,6 +92,7 @@ public class ImportService implements ImportBackupUseCase {
     private final RollTableImportPort rollTableImportPort;
     private final CardDeckImportPort cardDeckImportPort;
     private final HandoutImportPort handoutImportPort;
+    private final CheatSheetImportPort cheatSheetImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -101,7 +104,8 @@ public class ImportService implements ImportBackupUseCase {
             CharacterSheetImportPort characterSheetImportPort, StatblockImportPort statblockImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
-            CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort) {
+            CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
+            CheatSheetImportPort cheatSheetImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -124,6 +128,7 @@ public class ImportService implements ImportBackupUseCase {
         this.rollTableImportPort = rollTableImportPort;
         this.cardDeckImportPort = cardDeckImportPort;
         this.handoutImportPort = handoutImportPort;
+        this.cheatSheetImportPort = cheatSheetImportPort;
     }
 
     @Override
@@ -163,6 +168,7 @@ public class ImportService implements ImportBackupUseCase {
         List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
         List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
         List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
+        List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -188,6 +194,7 @@ public class ImportService implements ImportBackupUseCase {
         rollTables.forEach(t -> remap.assign(t.id()));
         cardDecks.forEach(d -> remap.assign(d.id()));
         handouts.forEach(h -> remap.assign(h.id()));
+        cheatSheets.forEach(cs -> remap.assign(cs.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -301,6 +308,13 @@ public class ImportService implements ImportBackupUseCase {
         for (HandoutView h : handouts) {
             handoutImportPort.importHandout(new HandoutView(remap.get(h.id()), newWorldId,
                     h.title(), h.preset(), h.body(), h.createdAt(), h.updatedAt()));
+        }
+
+        // Cheat sheets (FR-37) after sessions: their session id is remapped.
+        // Fragment references were validated on export and carry no ids.
+        for (CheatSheetView cs : cheatSheets) {
+            cheatSheetImportPort.importCheatSheet(new CheatSheetView(remap.get(cs.id()),
+                    remap.get(cs.sessionId()), cs.fragments(), cs.createdAt(), cs.updatedAt()));
         }
 
         // Beats last among campaign data: they reference statblocks, which must exist first.

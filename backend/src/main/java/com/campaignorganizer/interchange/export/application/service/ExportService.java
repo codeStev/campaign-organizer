@@ -3,7 +3,10 @@ package com.campaignorganizer.interchange.export.application.service;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -65,6 +68,7 @@ public class ExportService implements ExportWorldUseCase {
     private final RollTableQueryPort rollTables;
     private final CardDeckQueryPort cardDecks;
     private final HandoutQueryPort handouts;
+    private final CheatSheetQueryPort cheatSheets;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
@@ -74,7 +78,7 @@ public class ExportService implements ExportWorldUseCase {
                          FieldTemplateQueryPort fieldTemplates, CharacterSheetQueryPort characterSheets,
                          StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
-                         HandoutQueryPort handouts) {
+                         HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -95,6 +99,7 @@ public class ExportService implements ExportWorldUseCase {
         this.rollTables = rollTables;
         this.cardDecks = cardDecks;
         this.handouts = handouts;
+        this.cheatSheets = cheatSheets;
     }
 
     @Override
@@ -142,6 +147,12 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("sessions", allSessions);
         bundle.put("arcs", allArcs);
         bundle.put("beats", allBeats);
+        // Session cheat sheets (FR-37): one per session, when present.
+        List<CheatSheetView> cheatSheetViews = new ArrayList<>();
+        for (Object s : allSessions) {
+            cheatSheets.findBySession(((SessionView) s).id()).ifPresent(cheatSheetViews::add);
+        }
+        bundle.put("cheatSheets", cheatSheetViews);
 
         bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));
