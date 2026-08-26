@@ -176,12 +176,13 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   it. Wiki-links in printed bodies stay anchors-only; deck draws are
   stateless (print-first). Tables/decks appear in usage backlinks and world
   backups like every other content type. (ADR-0066)
-- **FR-41 Roll-table chaining.** *(Proposed — recorded 2026-08-25, not
-  committed to a phase, not built.)* A table or deck outcome can reference
-  another roll table ("roll on Weather"), resolved recursively when rolling
-  and when printed in packets — with cycle detection, and the nested
-  targets folded into the print-once dedup set of FR-40. (Extends FR-40;
-  will need its own ADR for the resolution/dedup order.)
+- **FR-41 Roll-table chaining.** A table entry or deck card can chain other
+  roll tables and card decks ("roll on Weather"), resolved recursively.
+  Save-time validation rejects self-nesting and references outside the
+  world; indirect cycles stay storable, and every resolution point cuts
+  them (packet BFS, print closure, depth-capped live roller). Chained
+  targets join session packets and standalone printouts under FR-40's
+  print-once rule, and survive export/import with remapped ids. (ADR-0072)
 - **FR-42 Scheduled backup snapshots.** *(Proposed — recorded 2026-08-25,
   not committed to a phase, not built.)* The deployment writes timestamped
   instance backups (the FR-36 ZIP bundle) to the media volume on a schedule
@@ -265,5 +266,5 @@ multi-user collaboration. Rationale in ADR-0005.
 | 7 | Ops (self-hosting readiness) | FR-36 |
 | Later | Interoperability (non-core) | FR-23 (Obsidian), FR-24 (Foundry) |
 | 8 | AI-assisted drafting | FR-38, FR-39 |
-| 9 | Randomizers (tables & decks) | FR-40 |
-| Proposed | Optional, unscheduled | FR-37 (cheat-sheet composer), FR-41 … FR-42, FR-44 … FR-46 |
+| 9 | Randomizers (tables & decks) | FR-40, FR-41 |
+| Proposed | Optional, unscheduled | FR-37 (cheat-sheet composer), FR-42, FR-44 … FR-46 |
