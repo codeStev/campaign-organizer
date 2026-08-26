@@ -199,11 +199,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   tick-boxes, an initiative column, and key defenses cribbed from the
   statblock — pure assembly over existing content, run from paper like the
   rest of the session material.
-- **FR-45 Session chronicle / recap builder.** *(Proposed — recorded
-  2026-08-25, not committed to a phase, not built.)* One click renders "the
-  story so far" from completed beats and past sessions' summaries/notes as
-  a printable recap to open the next session with — read-only over existing
-  data.
+- **FR-45 Session chronicle / recap builder.** One click renders "the
+  story so far" from completed beats and past sessions' summaries as a
+  printable recap to open the next session with — read-only over existing
+  data; session GM notes are deliberately excluded. (ADR-0068)
 - **FR-46 Handout designer.** *(Proposed — recorded 2026-08-25, not
   committed to a phase, not built.)* Player-facing props — letters, wanted
   posters, in-world newspaper pages — as styled one-page printables with
