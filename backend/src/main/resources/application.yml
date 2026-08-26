@@ -39,6 +39,12 @@ app:
   media:
     # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
     dir: ${APP_MEDIA_DIR:./data/media}
+  backup:
+    # Nightly snapshot schedule (see docs/adr/0073-scheduled-backups.md):
+    # Spring cron "sec min hour dom mon dow", default 03:37 UTC. Snapshots
+    # land in {app.media.dir}/backups; keep controls how many survive.
+    cron: ${APP_BACKUP_CRON:0 37 3 * * *}
+    keep: ${APP_BACKUP_KEEP:7}
   ai:
     # AI-assisted drafting (see docs/adr/0064-ai-text-drafting.md). Both are
     # optional and free-tier; blank means that provider is skipped. Model
