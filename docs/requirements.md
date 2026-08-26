@@ -182,11 +182,13 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   them (packet BFS, print closure, depth-capped live roller). Chained
   targets join session packets and standalone printouts under FR-40's
   print-once rule, and survive export/import with remapped ids. (ADR-0072)
-- **FR-42 Scheduled backup snapshots.** *(Proposed — recorded 2026-08-25,
-  not committed to a phase, not built.)* The deployment writes timestamped
-  instance backups (the FR-36 ZIP bundle) to the media volume on a schedule
-  (small sidecar container), keeping the last N, so having a recent backup
-  stops depending on remembering to click download.
+- **FR-42 Scheduled backup snapshots.** Nightly in-app snapshots of the
+  full FR-36 instance ZIP into `{media}/backups/`, keeping the most recent
+  N (default 7); cron and retention are env-overridable. An in-app
+  `@Scheduled` job replaces the originally sketched sidecar container;
+  a failed night logs and skips instead of breaking the schedule, so
+  having a recent backup stops depending on remembering to click
+  download. (ADR-0073)
 - **FR-43 Consistency report.** A per-world lint page (Consistency tab):
   broken `[[wiki-links]]` everywhere the wiki pipeline renders (articles,
   beats, roll-table entries, deck cards), orphaned articles (no inbound
