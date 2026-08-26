@@ -2,6 +2,7 @@ package com.campaignorganizer.tables.application.carddeck.service;
 
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.tables.application.carddeck.port.in.CardDeckCommands.CreateCardDeckCommand;
 import com.campaignorganizer.tables.application.carddeck.port.in.CardDeckCommands.CardInput;
 import com.campaignorganizer.tables.application.carddeck.port.in.CardDeckCommands.UpdateCardDeckCommand;
@@ -12,6 +13,7 @@ import com.campaignorganizer.tables.application.carddeck.port.in.ListCardDecksUs
 import com.campaignorganizer.tables.application.carddeck.port.in.UpdateCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.out.CardDeckRepositoryPort;
 import com.campaignorganizer.tables.application.carddeck.port.out.WorldExistsPort;
+import com.campaignorganizer.tables.application.rolltable.port.out.RollTableRepositoryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
@@ -32,14 +34,17 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
         CardDeckQueryPort, CardDeckImportPort {
 
     private final CardDeckRepositoryPort decks;
+    private final RollTableRepositoryPort rollTables;
     private final WorldExistsPort worlds;
     private final CardDeckViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
-    public CardDeckService(CardDeckRepositoryPort decks, WorldExistsPort worlds,
+    public CardDeckService(CardDeckRepositoryPort decks, RollTableRepositoryPort rollTables,
+                           WorldExistsPort worlds,
                            CardDeckViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.decks = decks;
+        this.rollTables = rollTables;
         this.worlds = worlds;
         this.viewMapper = viewMapper;
         this.ids = ids;
@@ -50,8 +55,11 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     @Transactional
     public CardDeckView create(CreateCardDeckCommand command) {
         requireWorld(command.worldId());
-        CardDeck created = CardDeck.create(ids.newId(), command.worldId(), command.title(),
-                command.description(), toCards(command.cards()), clock.instant());
+        UUID deckId = ids.newId();
+        List<DeckCard> cards = toCards(command.cards());
+        validateNestedRefs(deckId, cards, command.worldId());
+        CardDeck created = CardDeck.create(deckId, command.worldId(), command.title(),
+                command.description(), cards, clock.instant());
         return viewMapper.toView(decks.save(created));
     }
 
@@ -59,7 +67,9 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     @Transactional
     public CardDeckView update(UpdateCardDeckCommand command) {
         CardDeck deck = require(command.worldId(), command.deckId());
-        deck.update(command.title(), command.description(), toCards(command.cards()), clock.instant());
+        List<DeckCard> cards = toCards(command.cards());
+        validateNestedRefs(command.deckId(), cards, command.worldId());
+        deck.update(command.title(), command.description(), cards, clock.instant());
         return viewMapper.toView(decks.save(deck));
     }
 
@@ -114,7 +124,10 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     @Transactional
     public CardDeckView importCardDeck(CardDeckView view) {
         List<DeckCard> cards = view.cards() == null ? List.of()
-                : view.cards().stream().map(c -> new DeckCard(c.id(), c.title(), c.body())).toList();
+                : view.cards().stream()
+                        .map(c -> new DeckCard(c.id(), c.title(), c.body(),
+                                c.nestedTableIds(), c.nestedDeckIds()))
+                        .toList();
         CardDeck deck = CardDeck.reconstitute(view.id(), view.worldId(), view.title(),
                 view.description(), cards, view.createdAt(), view.updatedAt());
         return viewMapper.toView(decks.save(deck));
@@ -122,7 +135,35 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
 
     private List<DeckCard> toCards(List<CardInput> inputs) {
         return inputs == null ? List.of()
-                : inputs.stream().map(c -> new DeckCard(ids.newId(), c.title(), c.body())).toList();
+                : inputs.stream()
+                        .map(c -> new DeckCard(ids.newId(), c.title(), c.body(),
+                                c.nestedTableIds(), c.nestedDeckIds()))
+                        .toList();
+    }
+
+    /**
+     * Chained tables/decks (FR-41) must exist in this world; a deck may not
+     * nest itself. Indirect cycles stay legal — every resolution point cuts
+     * them with a visited set.
+     */
+    private void validateNestedRefs(UUID ownId, List<DeckCard> cards, UUID worldId) {
+        for (int i = 0; i < cards.size(); i++) {
+            DeckCard card = cards.get(i);
+            String where = " (card " + i + ")";
+            if (card.nestedDeckIds().contains(ownId)) {
+                throw new ValidationException("A card deck cannot nest itself" + where);
+            }
+            for (UUID nested : card.nestedTableIds()) {
+                if (!rollTables.existsInWorld(nested, worldId)) {
+                    throw new ValidationException("Nested roll table not found in world" + where);
+                }
+            }
+            for (UUID nested : card.nestedDeckIds()) {
+                if (!decks.existsInWorld(nested, worldId)) {
+                    throw new ValidationException("Nested card deck not found in world" + where);
+                }
+            }
+        }
     }
 
     private CardDeck require(UUID worldId, UUID deckId) {
