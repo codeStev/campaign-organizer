@@ -1,6 +1,7 @@
 package com.campaignorganizer.interchange.export.application.service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,5 +33,13 @@ final class IdRemap {
     /** The new id for an optional reference, or null if {@code oldId} is null or unresolved. */
     UUID getOrNull(UUID oldId) {
         return oldId == null ? null : map.get(oldId);
+    }
+
+    /** Remaps a whole id list (FR-41 nested chains); null becomes empty. */
+    List<UUID> all(List<UUID> oldIds) {
+        if (oldIds == null) {
+            return List.of();
+        }
+        return oldIds.stream().map(this::get).toList();
     }
 }

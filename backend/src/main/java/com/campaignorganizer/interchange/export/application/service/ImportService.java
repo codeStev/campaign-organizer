@@ -21,6 +21,8 @@ import com.campaignorganizer.handouts.application.port.published.HandoutImportPo
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
@@ -280,17 +282,19 @@ public class ImportService implements ImportBackupUseCase {
                     s.updatedAt()));
         }
 
-        // Tables and decks before beats: beats reference them (FR-40). Their
-        // bodies carry no id-based links, so only the world id is remapped.
+        // Tables and decks before beats: beats reference them (FR-40). Nested
+        // chains (FR-41) are rewritten to the new ids; bodies carry no other
+        // id-based links.
         for (RollTableView t : rollTables) {
             rollTableImportPort.importRollTable(new RollTableView(remap.get(t.id()), newWorldId,
                     t.title(), t.description(), t.diceExpression(), t.minResult(), t.maxResult(),
-                    t.entries(), t.createdAt(), t.updatedAt()));
+                    remapEntries(t.entries(), remap), t.createdAt(), t.updatedAt()));
         }
 
         for (CardDeckView d : cardDecks) {
             cardDeckImportPort.importCardDeck(new CardDeckView(remap.get(d.id()), newWorldId,
-                    d.title(), d.description(), d.cards(), d.createdAt(), d.updatedAt()));
+                    d.title(), d.description(), remapCards(d.cards(), remap), d.createdAt(),
+                    d.updatedAt()));
         }
 
         // Handouts (FR-46): standalone props, only the world id is remapped.
@@ -343,5 +347,22 @@ public class ImportService implements ImportBackupUseCase {
         }
         CollectionType listType = objectMapper.getTypeFactory().constructCollectionType(List.class, type);
         return objectMapper.convertValue(node, listType);
+    }
+
+    /** Rewrites the nested chains (FR-41) of imported roll-table rows to new ids. */
+    private static List<RollTableEntryView> remapEntries(List<RollTableEntryView> entries,
+                                                         IdRemap remap) {
+        return entries == null ? List.of() : entries.stream()
+                .map(e -> new RollTableEntryView(e.id(), e.minResult(), e.maxResult(), e.body(),
+                        remap.all(e.nestedTableIds()), remap.all(e.nestedDeckIds())))
+                .toList();
+    }
+
+    /** Rewrites the nested chains (FR-41) of imported deck cards to new ids. */
+    private static List<DeckCardView> remapCards(List<DeckCardView> cards, IdRemap remap) {
+        return cards == null ? List.of() : cards.stream()
+                .map(c -> new DeckCardView(c.id(), c.title(), c.body(),
+                        remap.all(c.nestedTableIds()), remap.all(c.nestedDeckIds())))
+                .toList();
     }
 }
