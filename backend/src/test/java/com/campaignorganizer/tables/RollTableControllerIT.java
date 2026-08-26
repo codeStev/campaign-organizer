@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.campaignorganizer.AbstractIntegrationTest;
+import com.jayway.jsonpath.JsonPath;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -114,6 +115,78 @@ class RollTableControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\" \",\"diceExpression\":\"1d6\",\"entries\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void validatesNestedChains() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String target = mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Loot","diceExpression":"1d6",
+                                 "entries":[{"minResult":1,"maxResult":6,"body":"Coins"}]}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String targetId = JsonPath.read(target, "$.id");
+
+        // Chaining an existing table is accepted and round-trips.
+        String chained = mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Ambush","diceExpression":"1d1",
+                                 "entries":[{"minResult":1,"maxResult":1,"body":"Bandits",
+                                  "nestedTableIds":["%s"]}]}
+                                """.formatted(targetId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.entries[0].nestedTableIds[0]").value(targetId))
+                .andReturn().getResponse().getContentAsString();
+        String chainedId = JsonPath.read(chained, "$.id");
+
+        // Unknown nested ids are rejected.
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"body\":\"x\",\"nestedTableIds\":[\""
+                                + UUID.randomUUID() + "\"]}]}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad deck\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"body\":\"x\",\"nestedDeckIds\":[\""
+                                + UUID.randomUUID() + "\"]}]}"))
+                .andExpect(status().isBadRequest());
+
+        // A table cannot nest itself.
+        mockMvc.perform(put("/api/worlds/{w}/roll-tables/{t}", worldId, chainedId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Ambush\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"body\":\"Self\",\"nestedTableIds\":[\"" + chainedId
+                                + "\"}]}"))
+                .andExpect(status().isBadRequest());
+
+        // Nested ids from another world are rejected too.
+        String otherAuth = authHeader();
+        String otherWorld = createWorld(otherAuth);
+        String foreign = mockMvc.perform(post("/api/worlds/{w}/roll-tables", otherWorld)
+                        .header(HttpHeaders.AUTHORIZATION, otherAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Elsewhere\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"body\":\"x\"}]}"))
+                .andReturn().getResponse().getContentAsString();
+        String foreignId = JsonPath.read(foreign, "$.id");
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Cross-world\",\"diceExpression\":\"1d1\",\"entries\":"
+                                + "[{\"body\":\"x\",\"nestedTableIds\":[\"" + foreignId + "\"]}]}"))
                 .andExpect(status().isBadRequest());
     }
 
