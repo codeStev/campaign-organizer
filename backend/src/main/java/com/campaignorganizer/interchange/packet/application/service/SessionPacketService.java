@@ -176,7 +176,7 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         List<PacketMap> packetMaps = mapIds.stream()
                 .map(id -> maps.findByIdInWorld(id, worldId).orElse(null))
                 .filter(m -> m != null)
-                .map(this::toPacketMap)
+                .map(m -> toPacketMap(m, worldId))
                 .toList();
 
         List<PacketRollTable> packetTables = tables.stream().map(this::toPacketRollTable).toList();
@@ -203,19 +203,19 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         return new PacketCardDeck(d.id(), d.title(), cards);
     }
 
-    private PacketMap toPacketMap(MapView map) {
+    private PacketMap toPacketMap(MapView map, UUID worldId) {
         String imageUrl = map.mediaId() == null ? null : "/api/media/" + map.mediaId() + "/content";
         List<PacketPin> packetPins = pins.findByMap(map.id()).stream()
-                .map(this::toPacketPin)
+                .map(p -> toPacketPin(p, worldId))
                 .toList();
         return new PacketMap(map.id(), map.name(), imageUrl, packetPins);
     }
 
-    /** Resolve a pin's label: its own, else the linked article's title. */
-    private PacketPin toPacketPin(MapPinView pin) {
+    /** Resolve a pin's label: its own, else the linked article's title (scoped to world). */
+    private PacketPin toPacketPin(MapPinView pin, UUID worldId) {
         String label = pin.label();
         if ((label == null || label.isBlank()) && pin.articleId() != null) {
-            label = articles.findById(pin.articleId()).map(ArticleView::title).orElse(null);
+            label = articles.findByIdInWorld(pin.articleId(), worldId).map(ArticleView::title).orElse(null);
         }
         return new PacketPin(pin.x(), pin.y(), label);
     }
