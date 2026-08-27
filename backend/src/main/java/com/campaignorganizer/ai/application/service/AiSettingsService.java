@@ -38,7 +38,8 @@ public class AiSettingsService implements GetAiSettingsUseCase, UpdateAiSettings
             settings.add(new ProviderSetting(input.providerId(), input.model(), priority++));
         }
         repository.replaceAll(settings);
-        return toViews(settings);
+        // Return the persisted state (includes any defaults applied by the repository)
+        return toViews(repository.findAllOrderedByPriority());
     }
 
     private List<ProviderSettingView> toViews(List<ProviderSetting> settings) {

@@ -114,7 +114,7 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     @Transactional
     public HandoutView importHandout(HandoutView view) {
         Handout handout = Handout.reconstitute(view.id(), view.worldId(), view.title(),
-                Preset.valueOf(view.preset()), view.body(), view.createdAt(), view.updatedAt());
+                toPreset(view.preset()), view.body(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(handouts.save(handout));
     }
 

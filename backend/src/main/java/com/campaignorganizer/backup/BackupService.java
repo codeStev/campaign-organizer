@@ -11,6 +11,7 @@ import com.campaignorganizer.worldbuilding.application.world.port.published.Worl
 import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,14 +38,17 @@ public class BackupService {
     private final ListMediaUseCase listMedia;
     private final LoadMediaContentUseCase loadMedia;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     public BackupService(ListWorldsUseCase worlds, ExportWorldUseCase exportUseCase,
-            ListMediaUseCase listMedia, LoadMediaContentUseCase loadMedia, ObjectMapper objectMapper) {
+            ListMediaUseCase listMedia, LoadMediaContentUseCase loadMedia, ObjectMapper objectMapper,
+            Clock clock) {
         this.worlds = worlds;
         this.exportUseCase = exportUseCase;
         this.listMedia = listMedia;
         this.loadMedia = loadMedia;
         this.objectMapper = objectMapper;
+        this.clock = clock;
     }
 
     public void writeBackup(OutputStream out) throws IOException {
@@ -75,7 +79,7 @@ public class BackupService {
 
     private void writeManifest(ZipOutputStream zip, List<WorldView> allWorlds) throws IOException {
         Map<String, Object> manifest = new LinkedHashMap<>();
-        manifest.put("exportedAt", Instant.now().toString());
+        manifest.put("exportedAt", clock.instant().toString());
         manifest.put("worldIds", allWorlds.stream().map(WorldView::id).toList());
         writeJsonEntry(zip, "manifest.json", manifest);
     }

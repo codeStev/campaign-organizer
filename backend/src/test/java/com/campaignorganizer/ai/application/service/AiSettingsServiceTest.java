@@ -86,13 +86,16 @@ class AiSettingsServiceTest {
     }
 
     @Test
-    void update_returnsViewsReflectingTheNewSettings() {
+    void update_returnsViewsReflectingTheNewPersistedSettings() {
+        when(repository.findAllOrderedByPriority()).thenReturn(List.of(
+                new ProviderSetting("groq", "custom-model", 0),
+                new ProviderSetting("openrouter", null, 1)));
         var command = new UpdateAiSettingsCommand(List.of(new ProviderSettingInput("groq", "custom-model")));
 
         List<ProviderSettingView> views = service.update(command);
 
-        assertThat(views).extracting(ProviderSettingView::providerId).containsExactly("groq");
-        assertThat(views).extracting(ProviderSettingView::model).containsExactly("custom-model");
+        assertThat(views).extracting(ProviderSettingView::providerId).containsExactly("groq", "openrouter");
+        assertThat(views).extracting(ProviderSettingView::model).containsExactly("custom-model", null);
         verify(repository).replaceAll(anyList());
     }
 }

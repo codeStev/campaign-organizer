@@ -10,8 +10,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -51,24 +53,42 @@ public class BackupImportService {
         try {
             Files.copy(zipStream, temp, StandardCopyOption.REPLACE_EXISTING);
             try (ZipFile zip = new ZipFile(temp.toFile())) {
-                requireAtLeastOneWorld(zip);
+                // Validation-first: verify the ZIP structure is sound before any
+                // destructive operation (OVERWRITE deletes existing worlds).
+                List<String> worldIdsInZip = collectWorldIds(zip);
+                if (worldIdsInZip.isEmpty()) {
+                    throw new ValidationException("Backup contains no worlds");
+                }
+
                 if (mode == ImportMode.OVERWRITE) {
                     for (WorldView world : listWorlds.list()) {
                         deleteWorld.delete(world.id());
                     }
                 }
-                Enumeration<? extends ZipEntry> entries = zip.entries();
-                while (entries.hasMoreElements()) {
-                    ZipEntry entry = entries.nextElement();
-                    Matcher matcher = WORLD_ENTRY.matcher(entry.getName());
-                    if (matcher.matches()) {
-                        importWorldEntry(zip, entry, matcher.group(1));
+
+                for (String worldId : worldIdsInZip) {
+                    ZipEntry entry = zip.getEntry("worlds/" + worldId + ".json");
+                    if (entry != null) {
+                        importWorldEntry(zip, entry, worldId);
                     }
                 }
             }
         } finally {
             Files.deleteIfExists(temp);
         }
+    }
+
+    private List<String> collectWorldIds(ZipFile zip) {
+        List<String> ids = new ArrayList<>();
+        Enumeration<? extends ZipEntry> entries = zip.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            Matcher matcher = WORLD_ENTRY.matcher(entry.getName());
+            if (matcher.matches()) {
+                ids.add(matcher.group(1));
+            }
+        }
+        return ids;
     }
 
     private void importWorldEntry(ZipFile zip, ZipEntry entry, String worldId) throws IOException {
@@ -89,7 +109,14 @@ public class BackupImportService {
             if (entry.isDirectory() || !entry.getName().startsWith(prefix)) {
                 continue;
             }
-            UUID mediaId = UUID.fromString(entry.getName().substring(prefix.length()));
+            String idPart = entry.getName().substring(prefix.length());
+            UUID mediaId;
+            try {
+                mediaId = UUID.fromString(idPart);
+            } catch (IllegalArgumentException e) {
+                // Skip malformed media entries (not a UUID)
+                continue;
+            }
             try (InputStream in = zip.getInputStream(entry)) {
                 media.put(mediaId, in.readAllBytes());
             }

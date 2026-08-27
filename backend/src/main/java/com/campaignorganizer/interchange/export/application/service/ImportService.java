@@ -146,6 +146,10 @@ public class ImportService implements ImportBackupUseCase {
                     + ", this app expects " + ExportService.EXPORT_VERSION);
         }
 
+        JsonNode worldNode = root.get("world");
+        if (worldNode == null || worldNode.isNull()) {
+            throw new ValidationException("Backup bundle missing required 'world' object");
+        }
         WorldView world = read(root, "world", WorldView.class);
         List<MediaBundleEntry> media = readList(root, "media", MediaBundleEntry.class);
         List<CategoryView> categories = readList(root, "categories", CategoryView.class);

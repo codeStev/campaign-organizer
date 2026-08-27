@@ -111,7 +111,7 @@ public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
 
         for (RelationshipView r : relationships.findTouchingArticle(worldId, articleId)) {
             UUID other = r.fromArticleId().equals(articleId) ? r.toArticleId() : r.fromArticleId();
-            String otherTitle = articles.findById(other).map(ArticleView::title).orElse("article");
+            String otherTitle = articles.findByIdInWorld(other, worldId).map(ArticleView::title).orElse("article");
             String label = r.label() != null && !r.label().isBlank() ? r.label() : "related to";
             out.add(new Usage("RELATIONSHIP", label + " " + otherTitle, other, null, null));
         }
