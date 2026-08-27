@@ -1,7 +1,9 @@
 package com.campaignorganizer.ai.adapter.out.llm;
 
 import com.campaignorganizer.ai.application.port.out.TextGenerationFailedException;
+import java.time.Duration;
 import java.util.List;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -12,12 +14,19 @@ import org.springframework.web.client.RestClientException;
  */
 final class ChatCompletionClient {
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(60);
+
     private final RestClient restClient;
 
     ChatCompletionClient(String baseUrl, String apiKey) {
         this(RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
+                .requestFactory(new SimpleClientHttpRequestFactory() {{
+                    setConnectTimeout((int) CONNECT_TIMEOUT.toMillis());
+                    setReadTimeout((int) READ_TIMEOUT.toMillis());
+                }})
                 .build());
     }
 
