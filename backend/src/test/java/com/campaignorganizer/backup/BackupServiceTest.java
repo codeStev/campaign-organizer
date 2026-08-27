@@ -16,7 +16,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,9 +45,10 @@ class BackupServiceTest {
     private LoadMediaContentUseCase loadMedia;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     private BackupService service() {
-        return new BackupService(listWorlds, exportUseCase, listMedia, loadMedia, objectMapper);
+        return new BackupService(listWorlds, exportUseCase, listMedia, loadMedia, objectMapper, clock);
     }
 
     private Map<String, byte[]> readZip(byte[] zipBytes) throws IOException {
