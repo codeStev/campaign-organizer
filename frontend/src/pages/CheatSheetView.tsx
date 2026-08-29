@@ -235,7 +235,7 @@ export function CheatSheetView({
   function fragmentBody(f: CheatSheetFragment) {
     switch (f.type) {
       case 'FREEFORM':
-        return <div dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text ?? '') }} />;
+        return <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text ?? '') }} />;
       case 'STATBLOCK': {
         const sb = f.statblockId ? statblockById.get(f.statblockId) : undefined;
         if (!sb) return <span className="cheatsheet-missing">Missing statblock</span>;
@@ -256,7 +256,7 @@ export function CheatSheetView({
             <span className="cheatsheet-ref">
               {t.title} · {entryRange(entry)}
             </span>
-            <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(entry.body, linkLookup) }} />
+            <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(entry.body, linkLookup) }} />
           </>
         );
       }
@@ -269,7 +269,7 @@ export function CheatSheetView({
             <span className="cheatsheet-ref">
               {d.title} · {cardLabel(card)}
             </span>
-            <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(card.body, linkLookup) }} />
+            <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(card.body, linkLookup) }} />
           </>
         );
       }

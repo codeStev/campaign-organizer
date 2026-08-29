@@ -1019,6 +1019,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                         </td>
                         {/* eslint-disable-next-line react/no-danger */}
                         <td
+                          className="preview-body"
                           dangerouslySetInnerHTML={{
                             __html: renderLinkedMarkdown(e.body, titleLookup),
                           }}
@@ -1037,7 +1038,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                     <div key={c.id} className="deck-card">
                       {c.title && <div className="deck-card-name">{c.title}</div>}
                       {/* eslint-disable-next-line react/no-danger */}
-                      <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
+                      <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
                     </div>
                   ))}
                 </div>
@@ -1061,6 +1062,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                         </td>
                         {/* eslint-disable-next-line react/no-danger */}
                         <td
+                          className="preview-body"
                           dangerouslySetInnerHTML={{
                             __html: renderLinkedMarkdown(e.body, titleLookup),
                           }}
@@ -1082,6 +1084,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                           {c.title && <div className="deck-card-name">{c.title}</div>}
                           {/* eslint-disable-next-line react/no-danger */}
                           <div
+                            className="preview-body"
                             dangerouslySetInnerHTML={{
                               __html: renderLinkedMarkdown(c.body, titleLookup),
                             }}
