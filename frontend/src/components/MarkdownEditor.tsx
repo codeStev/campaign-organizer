@@ -22,6 +22,7 @@ import { callCommand, insert, replaceAll } from '@milkdown/kit/utils';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import '@milkdown/kit/prose/view/style/prosemirror.css';
 import { Button } from './ui/button';
+import { Toggle } from './ui/toggle';
 
 interface Props {
   value: string;
@@ -204,46 +205,46 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
           keystroke (it lands on the button, not the editor). Blocking focus
           on mousedown keeps the editor focused through the whole click. */}
       <div className="editor-toolbar" onMouseDown={(e) => e.preventDefault()}>
-        <Button
+        <Toggle
           type="button"
-          variant={active.bold ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
-          aria-pressed={active.bold}
-          onClick={toggleBold}
+          pressed={active.bold}
+          onPressedChange={toggleBold}
           data-testid="md-toolbar-bold"
         >
           B
-        </Button>
-        <Button
+        </Toggle>
+        <Toggle
           type="button"
-          variant={active.italic ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
-          aria-pressed={active.italic}
-          onClick={toggleItalic}
+          pressed={active.italic}
+          onPressedChange={toggleItalic}
           data-testid="md-toolbar-italic"
         >
           i
-        </Button>
-        <Button
+        </Toggle>
+        <Toggle
           type="button"
-          variant={active.heading ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
-          aria-pressed={active.heading}
-          onClick={toggleHeading}
+          pressed={active.heading}
+          onPressedChange={toggleHeading}
           data-testid="md-toolbar-h2"
         >
           H2
-        </Button>
-        <Button
+        </Toggle>
+        <Toggle
           type="button"
-          variant={active.bulletList ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
-          aria-pressed={active.bulletList}
-          onClick={toggleBulletList}
+          pressed={active.bulletList}
+          onPressedChange={toggleBulletList}
           data-testid="md-toolbar-bullet-list"
         >
           • List
-        </Button>
+        </Toggle>
         {onUploadImage && (
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             🖼 Image
