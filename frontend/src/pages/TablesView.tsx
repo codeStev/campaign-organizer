@@ -291,6 +291,17 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     return { tables: outTables, decks: outDecks };
   }, [printTable, printDeck, tables, decks]);
 
+  // Chained sections print appended at the end, so a row that chains
+  // somewhere needs its own note naming the target(s) — otherwise there's
+  // no way to tell, on paper, which appended table/deck a result leads to.
+  function chainNote(nestedTableIds: string[], nestedDeckIds: string[]): string | null {
+    const names = [
+      ...nestedTableIds.map((id) => tables.find((t) => t.id === id)?.title),
+      ...nestedDeckIds.map((id) => decks.find((d) => d.id === id)?.title),
+    ].filter((n): n is string => !!n);
+    return names.length > 0 ? names.join(', ') : null;
+  }
+
   useEffect(() => {
     if (!printing || linkTitles.size > 0) return;
     articlesApi(worldId)
@@ -1017,12 +1028,19 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                             ? `${e.minResult}–${e.maxResult}`
                             : 'else'}
                         </td>
-                        {/* eslint-disable-next-line react/no-danger */}
-                        <td
-                          dangerouslySetInnerHTML={{
-                            __html: renderLinkedMarkdown(e.body, titleLookup),
-                          }}
-                        />
+                        <td>
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: renderLinkedMarkdown(e.body, titleLookup),
+                            }}
+                          />
+                          {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
+                            <p className="print-chain-note">
+                              ↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}
+                            </p>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1038,6 +1056,11 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       {c.title && <div className="deck-card-name">{c.title}</div>}
                       {/* eslint-disable-next-line react/no-danger */}
                       <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
+                      {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
+                        <p className="print-chain-note">
+                          ↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1059,12 +1082,19 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                             ? `${e.minResult}–${e.maxResult}`
                             : 'else'}
                         </td>
-                        {/* eslint-disable-next-line react/no-danger */}
-                        <td
-                          dangerouslySetInnerHTML={{
-                            __html: renderLinkedMarkdown(e.body, titleLookup),
-                          }}
-                        />
+                        <td>
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: renderLinkedMarkdown(e.body, titleLookup),
+                            }}
+                          />
+                          {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
+                            <p className="print-chain-note">
+                              ↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}
+                            </p>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1086,6 +1116,11 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                               __html: renderLinkedMarkdown(c.body, titleLookup),
                             }}
                           />
+                          {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
+                            <p className="print-chain-note">
+                              ↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
