@@ -35,7 +35,6 @@ import {
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { ArticleTemplate, ARTICLE_TEMPLATES, DraftLevel } from '../api/client';
@@ -348,34 +347,19 @@ function MarkdownEditorInner({
 
               {showKindPicker && (
                 <div className="ai-draft-field">
-                  <Label htmlFor="ai-draft-kind">Article kind</Label>
-                  <Select
+                  <Label>Article kind</Label>
+                  <RadioGroup
+                    className="ai-draft-kind-grid"
                     value={articleTemplate}
                     onValueChange={(v) => onArticleTemplateChange?.(v as ArticleTemplate)}
-                    onOpenChange={(open) => {
-                      if (open) return;
-                      // Radix Select nested inside a Dialog can leave
-                      // `pointer-events: none` stuck on <body> after closing
-                      // (a known upstream interaction between the two
-                      // layers), which silently disables the rest of the
-                      // dialog. Clear it once the close has had a tick to
-                      // settle on its own.
-                      setTimeout(() => {
-                        document.body.style.pointerEvents = '';
-                      }, 0);
-                    }}
                   >
-                    <SelectTrigger id="ai-draft-kind">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ARTICLE_TEMPLATES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {templateLabel(t)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {ARTICLE_TEMPLATES.map((t) => (
+                      <div key={t} className="ai-draft-level-option">
+                        <RadioGroupItem value={t} id={`ai-draft-kind-${t}`} />
+                        <Label htmlFor={`ai-draft-kind-${t}`}>{templateLabel(t)}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
                 </div>
               )}
 

@@ -314,6 +314,10 @@ button:disabled {
   gap: 0.5rem;
 }
 
+.ai-draft-kind-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .worlds-head {
   display: flex;
   align-items: center;
