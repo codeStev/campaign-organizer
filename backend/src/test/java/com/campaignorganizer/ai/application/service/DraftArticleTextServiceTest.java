@@ -128,6 +128,18 @@ class DraftArticleTextServiceTest {
     }
 
     @Test
+    void readAloudLevel_usesTheBoxedTextPrompt() {
+        ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+        when(groq.generate(systemPrompt.capture(), anyString(), anyString()))
+                .thenReturn(new DraftResult("you see...", "groq"));
+
+        service.draft(new DraftArticleTextCommand(
+                "a gruff dockmaster", "", DraftLevel.READ_ALOUD, ArticleKind.GENERIC));
+
+        assertThat(systemPrompt.getValue()).contains("read-aloud/boxed text");
+    }
+
+    @Test
     void basicInfoLevel_forbidsInventingNewEntities() {
         ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
         when(groq.generate(systemPrompt.capture(), anyString(), anyString()))

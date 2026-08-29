@@ -76,6 +76,11 @@ const LEVEL_OPTIONS: { value: DraftLevel; label: string; description: string }[]
     description: 'A short spark to get the idea going — a few evocative sentences, nothing more.',
   },
   {
+    value: 'READ_ALOUD',
+    label: 'Read-aloud snippet',
+    description: 'A short passage to read straight to your players at the table.',
+  },
+  {
     value: 'BASIC_INFO',
     label: 'Basic info',
     description:

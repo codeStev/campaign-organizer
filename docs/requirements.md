@@ -160,7 +160,8 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   a free-tier cloud LLM API (Groq, falling back to OpenRouter), since the
   owner's self-hosting hardware can't run a usable model locally.
   (ADR-0064) A dialog lets the owner pick a generation level — a short
-  quick-inspiration teaser, essentials-only basic info (no invented places/
+  quick-inspiration teaser, a read-aloud/boxed-text snippet to speak
+  straight to players, essentials-only basic info (no invented places/
   characters), or a full draft — and the kind of article being drafted,
   both shaping the generated text. (ADR-0075; refines FR-38)
 - **FR-39 Settings menu.** An instance-level settings page (not nested

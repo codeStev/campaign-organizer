@@ -878,9 +878,14 @@ export const diceApi = {
     request<DiceRollResult>('/dice/roll', { method: 'POST', body: JSON.stringify({ expression }) }),
 };
 
-export type DraftLevel = 'QUICK_INSPIRATION' | 'BASIC_INFO' | 'FULL_DRAFT';
+export type DraftLevel = 'QUICK_INSPIRATION' | 'READ_ALOUD' | 'BASIC_INFO' | 'FULL_DRAFT';
 
-export const DRAFT_LEVELS: DraftLevel[] = ['QUICK_INSPIRATION', 'BASIC_INFO', 'FULL_DRAFT'];
+export const DRAFT_LEVELS: DraftLevel[] = [
+  'QUICK_INSPIRATION',
+  'READ_ALOUD',
+  'BASIC_INFO',
+  'FULL_DRAFT',
+];
 
 export interface DraftArticleTextResult {
   text: string;

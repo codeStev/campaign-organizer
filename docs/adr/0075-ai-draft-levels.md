@@ -21,12 +21,18 @@ those are the same category of jarring, undiscoverable, unstyled browser
 chrome the AI-draft dialog was already replacing.
 
 ## Decision
-- **`DraftLevel`** (`QUICK_INSPIRATION`, `BASIC_INFO`, `FULL_DRAFT`) is a new
-  domain enum in the `ai` context, threaded through
+- **`DraftLevel`** (`QUICK_INSPIRATION`, `READ_ALOUD`, `BASIC_INFO`,
+  `FULL_DRAFT`) is a new domain enum in the `ai` context, threaded through
   `DraftInstructions`/`DraftArticleTextCommand`/`DraftArticleTextRequest`.
   Optional on the request, defaulting to `FULL_DRAFT` — today's only
   behavior — so the one existing caller keeps working unchanged if it (or a
-  mid-deploy stale build of it) omits the field.
+  mid-deploy stale build of it) omits the field. `READ_ALOUD` was added
+  after the first three shipped: it isn't another point on the same
+  "how much" ladder as the other three, but a distinct *register* (short,
+  second-person, table-ready boxed text) — kept as one more flat option
+  rather than a second axis crossed with level, since read-aloud text has
+  an inherent natural length (spoken aloud in one breath) that doesn't
+  benefit from being combined with "quick" vs "full."
 - **`ArticleKind`** (`GENERIC`, `CHARACTER`, `LOCATION`, `ORGANIZATION`,
   `SPECIES`, `ITEM`, `EVENT`) is a second new domain enum in `ai`, deliberately
   *not* a reference to `worldbuilding.domain.wiki.ArticleTemplate` — the

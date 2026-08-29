@@ -2801,7 +2801,7 @@ components:
     DraftLevel:
       type: string
       description: How much to generate, from a short teaser up to a full first draft.
-      enum: [QUICK_INSPIRATION, BASIC_INFO, FULL_DRAFT]
+      enum: [QUICK_INSPIRATION, READ_ALOUD, BASIC_INFO, FULL_DRAFT]
 
     DraftArticleTextResult:
       type: object

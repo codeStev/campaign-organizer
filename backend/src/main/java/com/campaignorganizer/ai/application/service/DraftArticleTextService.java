@@ -42,6 +42,14 @@ public class DraftArticleTextService implements DraftArticleTextUseCase {
                     Prefer suggestion over specification: it's fine to leave \
                     names, appearances, and backstory open for the owner to \
                     invent.""",
+            DraftLevel.READ_ALOUD, """
+                    Write a short passage of read-aloud/boxed text (3-6 \
+                    sentences) meant to be spoken directly to the players at \
+                    the table the moment they arrive somewhere or meet \
+                    someone - second person ("you see/hear/smell..."), \
+                    present tense, vivid sensory detail, no headings, no \
+                    meta-commentary or GM-only asides, and nothing beyond \
+                    what the players themselves would immediately perceive.""",
             DraftLevel.BASIC_INFO, """
                     Write only the essential factual information the owner's \
                     instructions (and any existing article content shown to \
