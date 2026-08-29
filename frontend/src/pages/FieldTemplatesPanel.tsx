@@ -13,6 +13,7 @@ import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { Spinner } from '../components/ui/spinner';
 
 interface Props {
   worldId: string;
@@ -186,7 +187,11 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             />
           </li>
         ))}
-        {loading && <li className="muted">Loading…</li>}
+        {loading && (
+          <li className="muted loading-row">
+            <Spinner /> Loading…
+          </li>
+        )}
         {!loading && templates.length === 0 && (
           <li className="muted">No templates yet. Add a starter or build one.</li>
         )}

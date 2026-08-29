@@ -92,14 +92,16 @@ textarea {
   resize: vertical;
 }
 
-/* Baseline reset for the few native <button>s still left after the shadcn
-   Button conversion (custom clickable rows/toggles: .article-link,
-   .world-open, .arc-toggle, .pin-legend-btn, .tab, .type-chip, .pip — each
-   sets its own background/color/padding). No background/color/padding here
-   anymore: this is unlayered CSS, so it used to outrank shadcn Button's
-   @layer-utilities classes (bg-primary, text-*, px-*) for every variant that
-   doesn't set its own background (link/ghost/outline), forcing them all to
-   render as filled purple pills regardless of variant. */
+/* Baseline reset for every <button> the app renders, including shadcn
+   Button/Toggle (both render a native <button> underneath): custom
+   clickable rows/toggles (.article-link, .world-open, .arc-toggle,
+   .pin-legend-btn, .tab, .type-chip, .pip — the last two now rendered via
+   shadcn Toggle) each set their own background/color/padding. No
+   background/color/padding here anymore: this is unlayered CSS, so it used
+   to outrank shadcn Button's @layer-utilities classes (bg-primary, text-*,
+   px-*) for every variant that doesn't set its own background
+   (link/ghost/outline), forcing them all to render as filled purple pills
+   regardless of variant. */
 button {
   border: none;
   border-radius: 6px;
@@ -137,6 +139,12 @@ button:disabled {
 .muted {
   color: var(--muted-foreground);
   margin: 0.25rem 0 0;
+}
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .error {

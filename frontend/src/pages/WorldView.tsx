@@ -18,7 +18,9 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
+import { Toggle } from '../components/ui/toggle';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -449,15 +451,16 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
 
           <div className="type-filters">
             {ARTICLE_TEMPLATES.map((t) => (
-              <button
+              <Toggle
                 key={t}
                 type="button"
                 className={typeFilter.has(t) ? 'type-chip active' : 'type-chip'}
-                onClick={() => toggleType(t)}
+                pressed={typeFilter.has(t)}
+                onPressedChange={() => toggleType(t)}
                 title={`Filter by ${templateLabel(t)}`}
               >
                 {templateLabel(t)}
-              </button>
+              </Toggle>
             ))}
           </div>
 
@@ -493,7 +496,11 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   </button>
                 </li>
               ))}
-              {articlesLoading && <li className="muted">Loading…</li>}
+              {articlesLoading && (
+                <li className="muted loading-row">
+                  <Spinner /> Loading…
+                </li>
+              )}
               {!articlesLoading && visibleArticles.length === 0 && (
                 <li className="muted">
                   {articles.length === 0 ? 'No articles yet.' : 'No articles match the filter.'}

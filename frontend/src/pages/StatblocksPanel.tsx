@@ -11,6 +11,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (it's reserved for "no selection"),
@@ -276,7 +277,11 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
               </button>
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && list.length === 0 && <li className="muted">No statblocks yet.</li>}
         </ul>
       </div>

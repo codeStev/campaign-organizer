@@ -8,6 +8,7 @@ import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
@@ -212,7 +213,11 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
             </div>
           </li>
         ))}
-        {loading && <li className="muted">Loading…</li>}
+        {loading && (
+          <li className="muted loading-row">
+            <Spinner /> Loading…
+          </li>
+        )}
         {!loading && sessions.length === 0 && (
           <li className="muted">No sessions logged yet.</li>
         )}

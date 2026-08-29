@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -195,7 +196,9 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
       />
 
       {loading ? (
-        <p>Loading…</p>
+        <p className="muted loading-row">
+          <Spinner /> Loading…
+        </p>
       ) : worlds.length === 0 ? (
         <p className="muted">No worlds yet. Create your first one above.</p>
       ) : (
