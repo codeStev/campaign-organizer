@@ -48,6 +48,25 @@ test('creating a table saves successfully and the button settles back to normal'
   await expect(saveBtn).toHaveText(/save table/i, { timeout: 3000 });
 });
 
+// Regression test for: the button's own "Saved" state reverts almost
+// immediately (fast round-trips), which is easy to miss entirely — a toast
+// is meant to be the feedback that actually lingers long enough to notice.
+test('saving shows a toast that lingers, not just an instant button flip', async ({ page }) => {
+  await page.getByTestId('new-table-button').click();
+  await page.getByTestId('table-title-input').fill('Toast Lingers Table');
+  await page.getByTestId('table-dice-input').fill('1d4');
+  await page.getByTestId('table-entry-body-0').fill('Something happens');
+
+  await page.getByTestId('table-save-button').click();
+
+  const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Toast Lingers Table' });
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText(/saved/i);
+  // Still there well after the button's own "Saved" state (1.5s) has reverted.
+  await page.waitForTimeout(1800);
+  await expect(toast).toBeVisible();
+});
+
 test('save button shows a disabled "Saving…" state while the request is in flight', async ({ page }) => {
   await page.getByTestId('new-table-button').click();
   await page.getByTestId('table-title-input').fill('Slow Save Table');
