@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 interface Props {
   worldId: string;
@@ -134,7 +135,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
                 className={c.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/calendars/${c.id}`)}
               >
-                <span title={c.name}>{c.name}</span>
+                <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
                 <small className="muted">{c.months.length} months</small>
               </button>
             </li>

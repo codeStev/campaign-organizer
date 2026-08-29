@@ -15,6 +15,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -216,7 +217,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 className={t.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/timelines/${t.id}`)}
               >
-                <span title={t.name}>{t.name}</span>
+                <TruncatedLabel label={t.name}>{t.name}</TruncatedLabel>
               </button>
             </li>
           ))}

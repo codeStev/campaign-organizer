@@ -13,6 +13,7 @@ import { SessionLog } from './SessionLog';
 import { ArcBoard } from './ArcBoard';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 interface Props {
   worldId: string;
@@ -125,7 +126,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 className={c.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/campaigns/${c.id}`)}
               >
-                <span title={c.name}>{c.name}</span>
+                <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
               </button>
             </li>
           ))}

@@ -9,6 +9,7 @@ import {
 } from '../api/client';
 import { WhiteboardCanvas } from '../components/WhiteboardCanvas';
 import { Button } from '../components/ui/button';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 interface Props {
   worldId: string;
@@ -118,7 +119,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
                 className={b.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/whiteboards/${b.id}`)}
               >
-                <span title={b.name}>{b.name}</span>
+                <TruncatedLabel label={b.name}>{b.name}</TruncatedLabel>
               </button>
             </li>
           ))}

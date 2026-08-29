@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 // Radix Select can't use "" as an item value (it's reserved for "no selection"),
 // so options that mean a real, persistently-selectable "none" state (as opposed
@@ -268,7 +269,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                 className={sb.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/sheets/statblocks/${sb.id}`)}
               >
-                <span title={sb.name}>{sb.name}</span>
+                <TruncatedLabel label={sb.name}>{sb.name}</TruncatedLabel>
               </button>
             </li>
           ))}
