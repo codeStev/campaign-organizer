@@ -1,11 +1,18 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/kit/core';
+import { Editor, rootCtx, defaultValueCtx, commandsCtx } from '@milkdown/kit/core';
+import type { Ctx } from '@milkdown/kit/ctx';
 import {
   commonmark,
   toggleStrongCommand,
   toggleEmphasisCommand,
   wrapInHeadingCommand,
   wrapInBulletListCommand,
+  isMarkSelectedCommand,
+  isNodeSelectedCommand,
+  strongSchema,
+  emphasisSchema,
+  headingSchema,
+  bulletListSchema,
 } from '@milkdown/kit/preset/commonmark';
 import { gfm } from '@milkdown/kit/preset/gfm';
 import { history } from '@milkdown/kit/plugin/history';
@@ -43,10 +50,24 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
   const aiDraftRef = useRef(onAiDraft);
   aiDraftRef.current = onAiDraft;
   const [drafting, setDrafting] = useState(false);
+  // Which toolbar formatting is active at the current cursor/selection, so
+  // the toolbar buttons can show a pressed state (else there's no way to
+  // tell whether e.g. bold is already on without selecting the text).
+  const [active, setActive] = useState({ bold: false, italic: false, heading: false, bulletList: false });
   // Tracks the last markdown string this component itself produced or applied,
   // so the external-sync effect below only replaces content on a genuine
   // outside change (switching articles/beats/…), not on every re-render.
   const lastValueRef = useRef(value);
+
+  function readActiveMarks(ctx: Ctx) {
+    const commands = ctx.get(commandsCtx);
+    setActive({
+      bold: commands.call(isMarkSelectedCommand.key, strongSchema.type(ctx)),
+      italic: commands.call(isMarkSelectedCommand.key, emphasisSchema.type(ctx)),
+      heading: commands.call(isNodeSelectedCommand.key, headingSchema.type(ctx)),
+      bulletList: commands.call(isNodeSelectedCommand.key, bulletListSchema.type(ctx)),
+    });
+  }
 
   const { get } = useEditor(
     (root) =>
@@ -60,6 +81,7 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
               onChangeRef.current(markdown);
             }
           });
+          ctx.get(listenerCtx).selectionUpdated((selCtx) => readActiveMarks(selCtx));
         })
         .use(commonmark)
         .use(gfm)
@@ -77,20 +99,35 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
     }
   }, [value, get]);
 
+  // Toggling a mark on an existing selection doesn't move the selection, so
+  // Milkdown's selectionUpdated listener won't fire on its own; re-read the
+  // active state explicitly so the button highlights immediately.
   function toggleBold() {
-    get()?.action(callCommand(toggleStrongCommand.key));
+    get()?.action((ctx) => {
+      callCommand(toggleStrongCommand.key)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
   function toggleItalic() {
-    get()?.action(callCommand(toggleEmphasisCommand.key));
+    get()?.action((ctx) => {
+      callCommand(toggleEmphasisCommand.key)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
   function toggleHeading() {
-    get()?.action(callCommand(wrapInHeadingCommand.key, 2));
+    get()?.action((ctx) => {
+      callCommand(wrapInHeadingCommand.key, 2)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
   function toggleBulletList() {
-    get()?.action(callCommand(wrapInBulletListCommand.key));
+    get()?.action((ctx) => {
+      callCommand(wrapInBulletListCommand.key)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
   async function insertImage(file: File) {
@@ -147,16 +184,40 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
   return (
     <div className="editor md-editor">
       <div className="editor-toolbar">
-        <Button type="button" variant="outline" size="sm" onClick={toggleBold}>
+        <Button
+          type="button"
+          variant={active.bold ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={active.bold}
+          onClick={toggleBold}
+        >
           B
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={toggleItalic}>
+        <Button
+          type="button"
+          variant={active.italic ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={active.italic}
+          onClick={toggleItalic}
+        >
           i
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={toggleHeading}>
+        <Button
+          type="button"
+          variant={active.heading ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={active.heading}
+          onClick={toggleHeading}
+        >
           H2
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={toggleBulletList}>
+        <Button
+          type="button"
+          variant={active.bulletList ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={active.bulletList}
+          onClick={toggleBulletList}
+        >
           • List
         </Button>
         {onUploadImage && (
