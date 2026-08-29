@@ -146,7 +146,11 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
 
   return (
     <div className="editor md-editor">
-      <div className="editor-toolbar">
+      {/* Buttons steal focus from the ProseMirror content on click by default,
+          which drops the text selection a toggle needs and swallows the next
+          keystroke (it lands on the button, not the editor). Blocking focus
+          on mousedown keeps the editor focused through the whole click. */}
+      <div className="editor-toolbar" onMouseDown={(e) => e.preventDefault()}>
         <Button type="button" variant="outline" size="sm" onClick={toggleBold}>
           B
         </Button>
