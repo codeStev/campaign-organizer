@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (it's reserved for "no selection"),
 // so options that mean a real, persistently-selectable "none" state (as opposed
@@ -173,6 +174,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       setDraft({ ...EMPTY, campaignId: filterCampaign });
       navigate(`/worlds/${worldId}/sheets/statblocks`);
       await refresh();
+      toast.success(`Statblock "${body.name}" saved`);
     } catch (err) {
       onError(err);
     }

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -98,6 +99,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       setDraft(EMPTY_DRAFT);
       navigate(`/worlds/${worldId}/calendars`);
       await refresh();
+      toast.success(`Calendar "${body.name}" saved`);
     } catch (err) {
       handleError(err);
     }

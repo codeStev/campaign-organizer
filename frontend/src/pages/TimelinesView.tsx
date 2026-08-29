@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { toast } from 'sonner';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
@@ -136,6 +137,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       setList(await api.list());
       await selectTimeline(created);
       navigate(`/worlds/${worldId}/timelines/${created.id}`);
+      toast.success(`Timeline "${created.name}" created`);
     } catch (err) {
       handleError(err);
     }
@@ -177,6 +179,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       else await events.create(body);
       setDraft(EMPTY_EVENT);
       await loadEvents(selected.id);
+      toast.success(`Event "${body.title}" saved`);
     } catch (err) {
       handleError(err);
     }

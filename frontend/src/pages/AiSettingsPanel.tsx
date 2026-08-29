@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { aiSettingsApi, AiProviderSetting, ApiError, AiProviderTestResult } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { toast } from 'sonner';
 
 const PROVIDER_LABEL: Record<string, string> = {
   groq: 'Groq',
@@ -75,6 +76,7 @@ export function AiSettingsPanel({ onAuthExpired }: Props) {
       );
       setProviders(result);
       setSaved(true);
+      toast.success('AI settings saved');
     } catch (err) {
       handleError(err);
     } finally {

@@ -18,6 +18,7 @@ import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { toast } from 'sonner';
 import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -128,6 +129,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       setList(await maps.list());
       await selectMap(map);
       navigate(`/worlds/${worldId}/maps/${map.id}`);
+      toast.success(`Map "${map.name}" added`);
     } catch (err) {
       handleError(err);
     }
@@ -156,6 +158,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
         articleId: fields.articleId || null,
       });
       await loadPins(selected.id);
+      toast.success('Pin saved');
     } catch (err) {
       handleError(err);
     }

@@ -7,6 +7,7 @@ import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -88,6 +89,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
         navigate(`/worlds/${worldId}/handouts/${created.id}`);
       }
       await refresh();
+      toast.success(`Handout "${draft.title}" saved`);
     } catch (err) {
       handleError(err);
     }

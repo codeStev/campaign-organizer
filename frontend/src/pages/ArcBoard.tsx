@@ -17,6 +17,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -265,6 +266,7 @@ function ArcCard({
       });
       setEditingId(null);
       await refresh();
+      toast.success('Beat saved');
     } catch (err) {
       onError(err);
     }

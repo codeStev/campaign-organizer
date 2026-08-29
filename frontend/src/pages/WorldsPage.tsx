@@ -3,6 +3,7 @@ import { worldsApi, downloadBackup, importBackup, World, ApiError } from '../api
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
+import { toast } from 'sonner';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -43,6 +44,7 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
       setName('');
       setDescription('');
       await refresh();
+      toast.success(`World "${name}" created`);
     } catch (err) {
       handleError(err);
     }
