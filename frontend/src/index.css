@@ -399,6 +399,18 @@ button:disabled {
   padding-left: 1.4rem;
 }
 
+/* Tailwind's preflight resets list-style to none on every ul/ol; restore
+   real markers here or a "bullet list" renders as indented plain text. */
+.editor-content .ProseMirror ul,
+.preview-body ul {
+  list-style: disc;
+}
+
+.editor-content .ProseMirror ol,
+.preview-body ol {
+  list-style: decimal;
+}
+
 .editor-content .ProseMirror blockquote,
 .preview-body blockquote {
   margin: 0.5em 0;

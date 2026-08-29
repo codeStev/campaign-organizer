@@ -7,6 +7,7 @@ import {
   toggleEmphasisCommand,
   wrapInHeadingCommand,
   wrapInBulletListCommand,
+  liftListItemCommand,
   isNodeSelectedCommand,
   strongSchema,
   emphasisSchema,
@@ -133,9 +134,14 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
     });
   }
 
+  // wrapInBulletListCommand only ever wraps — there's no matching unwrap
+  // behind the same button, unlike Bold/Italic which are real toggles.
+  // Lift the current item back out when it's already a list.
   function toggleBulletList() {
     get()?.action((ctx) => {
-      callCommand(wrapInBulletListCommand.key)(ctx);
+      const commands = ctx.get(commandsCtx);
+      const alreadyList = commands.call(isNodeSelectedCommand.key, bulletListSchema.type(ctx));
+      commands.call(alreadyList ? liftListItemCommand.key : wrapInBulletListCommand.key);
       readActiveMarks(ctx);
     });
   }
