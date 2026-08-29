@@ -159,7 +159,10 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   printing. Prep-time only — nothing calls out during a session. Backed by
   a free-tier cloud LLM API (Groq, falling back to OpenRouter), since the
   owner's self-hosting hardware can't run a usable model locally.
-  (ADR-0064)
+  (ADR-0064) A dialog lets the owner pick a generation level — a short
+  quick-inspiration teaser, essentials-only basic info (no invented places/
+  characters), or a full draft — and the kind of article being drafted,
+  both shaping the generated text. (ADR-0075; refines FR-38)
 - **FR-39 Settings menu.** An instance-level settings page (not nested
   under any world), structured for multiple categories though only "AI"
   exists so far: per-provider model choice and provider try-order,
