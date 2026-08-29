@@ -7,6 +7,7 @@ import { WorldView } from './pages/WorldView';
 import { SettingsPage } from './pages/SettingsPage';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
+import { Toaster } from './components/ui/sonner';
 
 export function App() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
@@ -49,6 +50,7 @@ export function App() {
           </Routes>
         )}
       </main>
+      <Toaster position="bottom-left" />
     </div>
   );
 }

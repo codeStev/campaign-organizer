@@ -15,6 +15,7 @@ import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { Spinner } from '../components/ui/spinner';
+import { toast } from 'sonner';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 
@@ -165,10 +166,14 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   useEffect(() => () => {
     if (savedTimeout.current) clearTimeout(savedTimeout.current);
   }, []);
-  function markSaved() {
+  function markSaved(message: string) {
     setSaveState('saved');
     if (savedTimeout.current) clearTimeout(savedTimeout.current);
     savedTimeout.current = setTimeout(() => setSaveState('idle'), 1500);
+    // The button's own "Saved" state reverts almost immediately (round-trips
+    // are fast), which is easy to miss entirely — the toast is the feedback
+    // that's actually meant to be noticed.
+    toast.success(message);
   }
   // Roll result for the table editor; matchedIndex points at the hit entry row.
   const [roll, setRoll] = useState<{ total: number; breakdown: string; matchedIndex: number | null } | null>(null);
@@ -519,7 +524,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           draft.id != null ? await tablesApi.update(draft.id, body) : await tablesApi.create(body);
         navigate(`/worlds/${worldId}/tables/table/${saved.id}`);
         await refresh();
-        markSaved();
+        markSaved(`Table "${saved.title}" saved`);
       } catch (err) {
         setSaveState('idle');
         handleError(err);
@@ -549,7 +554,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           draft.id != null ? await decksApi.update(draft.id, body) : await decksApi.create(body);
         navigate(`/worlds/${worldId}/tables/deck/${saved.id}`);
         await refresh();
-        markSaved();
+        markSaved(`Deck "${saved.title}" saved`);
       } catch (err) {
         setSaveState('idle');
         handleError(err);
