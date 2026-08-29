@@ -584,6 +584,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             setRoll(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
+          data-testid="new-table-button"
         >
           + New roll table
         </Button>
@@ -618,6 +619,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             setDrawnIndex(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
+          data-testid="new-deck-button"
         >
           + New card deck
         </Button>
@@ -650,6 +652,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 required
+                data-testid="table-title-input"
               />
               <Input
                 placeholder="Description (optional)"
@@ -663,6 +666,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                   value={draft.diceExpression}
                   onChange={(e) => setDraft({ ...draft, diceExpression: e.target.value })}
                   required
+                  data-testid="table-dice-input"
                 />
               </label>
               <small className="muted">
@@ -760,6 +764,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       placeholder={`Outcome on ${entry.minResult || '?'}–${entry.maxResult || '?'} — [[wiki-links]] allowed`}
                       value={entry.body}
                       onChange={(e) => setEntry(i, { body: e.target.value })}
+                      data-testid={`table-entry-body-${i}`}
                     />
                     {chainOpen === `entry-${i}` && chainPicker(`entry-${i}`)}
                   </div>
@@ -966,7 +971,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           )}
 
           <div className="editor-actions">
-            <Button type="submit" disabled={saveState === 'saving'}>
+            <Button type="submit" disabled={saveState === 'saving'} data-testid="table-save-button">
               {saveState === 'saving'
                 ? 'Saving…'
                 : saveState === 'saved'

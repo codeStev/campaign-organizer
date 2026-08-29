@@ -268,7 +268,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 className={m.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/maps/${m.id}`)}
               >
-                <span title={m.name}>{m.name}</span>
+                <span title={m.name} data-testid="map-name">{m.name}</span>
               </button>
             </li>
           ))}

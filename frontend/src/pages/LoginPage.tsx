@@ -36,9 +36,10 @@ export function LoginPage({ onLoggedIn }: Props) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         autoFocus
+        data-testid="login-password"
       />
       {error && <p className="error">{error}</p>}
-      <Button type="submit" disabled={busy || password.length === 0}>
+      <Button type="submit" disabled={busy || password.length === 0} data-testid="login-submit">
         {busy ? 'Signing in…' : 'Sign in'}
       </Button>
     </form>

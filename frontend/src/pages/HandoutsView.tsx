@@ -114,6 +114,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             setDraft(EMPTY_DRAFT);
             navigate(`/worlds/${worldId}/handouts`);
           }}
+          data-testid="new-handout-button"
         >
           + New handout
         </Button>
@@ -145,6 +146,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             required
+            data-testid="handout-title-input"
           />
           <div className="editor-actions">
             <Select value={draft.preset} onValueChange={(v) => setDraft({ ...draft, preset: v as HandoutPreset })}>

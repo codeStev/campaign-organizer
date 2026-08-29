@@ -115,14 +115,20 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
       <form className="card" onSubmit={handleCreate}>
         <h2>New world</h2>
         <label htmlFor="name">Name</label>
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          data-testid="new-world-name"
+        />
         <label htmlFor="description">Description</label>
         <Textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <Button type="submit" disabled={name.length === 0}>
+        <Button type="submit" disabled={name.length === 0} data-testid="create-world-submit">
           Create world
         </Button>
       </form>
@@ -181,7 +187,12 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
         <ul className="world-list">
           {worlds.map((world) => (
             <li key={world.id} className="card world-item">
-              <button className="world-open" onClick={() => onOpenWorld(world)}>
+              <button
+                className="world-open"
+                onClick={() => onOpenWorld(world)}
+                data-testid="world-open"
+                data-world-name={world.name}
+              >
                 <strong>{world.name}</strong>
                 {world.description && <p className="muted">{world.description}</p>}
               </button>

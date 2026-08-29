@@ -190,6 +190,7 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
           size="sm"
           aria-pressed={active.bold}
           onClick={toggleBold}
+          data-testid="md-toolbar-bold"
         >
           B
         </Button>
@@ -199,6 +200,7 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
           size="sm"
           aria-pressed={active.italic}
           onClick={toggleItalic}
+          data-testid="md-toolbar-italic"
         >
           i
         </Button>
@@ -208,6 +210,7 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
           size="sm"
           aria-pressed={active.heading}
           onClick={toggleHeading}
+          data-testid="md-toolbar-h2"
         >
           H2
         </Button>
@@ -217,6 +220,7 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
           size="sm"
           aria-pressed={active.bulletList}
           onClick={toggleBulletList}
+          data-testid="md-toolbar-bullet-list"
         >
           • List
         </Button>
@@ -238,7 +242,12 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
         )}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileSelected} />
-      <div className="editor-content" onPaste={handlePaste} onDrop={handleDrop}>
+      <div
+        className="editor-content"
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        data-testid="md-content"
+      >
         <Milkdown />
       </div>
       {onUploadImage && (
