@@ -13,6 +13,9 @@ frontend/dist/
 frontend/.vite/
 frontend/src/api/schema.ts
 scripts/node_modules/
+frontend/test-results/
+frontend/playwright-report/
+frontend/playwright/.cache/
 
 # Local runtime data
 data/
