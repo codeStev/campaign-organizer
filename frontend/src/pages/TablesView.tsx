@@ -157,6 +157,18 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  // Save button feedback: "saved" auto-reverts after a beat so it doesn't
+  // linger indefinitely once the user starts editing again.
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (savedTimeout.current) clearTimeout(savedTimeout.current);
+  }, []);
+  function markSaved() {
+    setSaveState('saved');
+    if (savedTimeout.current) clearTimeout(savedTimeout.current);
+    savedTimeout.current = setTimeout(() => setSaveState('idle'), 1500);
+  }
   // Roll result for the table editor; matchedIndex points at the hit entry row.
   const [roll, setRoll] = useState<{ total: number; breakdown: string; matchedIndex: number | null } | null>(null);
   // Stateless deck draw (ADR-0066): just a highlighted random card.
@@ -199,6 +211,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     setDraft(kind === 'table' ? draftFromTable(entity as RollTable) : draftFromDeck(entity as CardDeck));
     setRoll(null);
     setDrawnIndex(null);
+    setSaveState('idle');
   }
 
   // The URL is the source of truth for what's open (ADR-0053): /tables/table/:id
@@ -499,12 +512,15 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           nestedDeckIds: entry.nestedDeckIds,
         })),
       };
+      setSaveState('saving');
       try {
         const saved =
           draft.id != null ? await tablesApi.update(draft.id, body) : await tablesApi.create(body);
         navigate(`/worlds/${worldId}/tables/table/${saved.id}`);
         await refresh();
+        markSaved();
       } catch (err) {
+        setSaveState('idle');
         handleError(err);
       }
     } else {
@@ -526,12 +542,15 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           nestedDeckIds: c.nestedDeckIds,
         })),
       };
+      setSaveState('saving');
       try {
         const saved =
           draft.id != null ? await decksApi.update(draft.id, body) : await decksApi.create(body);
         navigate(`/worlds/${worldId}/tables/deck/${saved.id}`);
         await refresh();
+        markSaved();
       } catch (err) {
+        setSaveState('idle');
         handleError(err);
       }
     }
@@ -947,14 +966,18 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           )}
 
           <div className="editor-actions">
-            <Button type="submit">
-              {editingExisting
-                ? draft.kind === 'table'
-                  ? 'Save table'
-                  : 'Save deck'
-                : draft.kind === 'table'
-                  ? 'Create table'
-                  : 'Create deck'}
+            <Button type="submit" disabled={saveState === 'saving'}>
+              {saveState === 'saving'
+                ? 'Saving…'
+                : saveState === 'saved'
+                  ? 'Saved'
+                  : editingExisting
+                    ? draft.kind === 'table'
+                      ? 'Save table'
+                      : 'Save deck'
+                    : draft.kind === 'table'
+                      ? 'Create table'
+                      : 'Create deck'}
             </Button>
             {(printTable || printDeck) && (
               <Button type="button" variant="outline" onClick={() => setPrinting(true)}>
