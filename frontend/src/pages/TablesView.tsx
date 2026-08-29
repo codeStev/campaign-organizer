@@ -14,6 +14,7 @@ import { renderLinkedMarkdown } from '../lib/markdown';
 import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
+import { Spinner } from '../components/ui/spinner';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 
@@ -967,6 +968,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
 
           <div className="editor-actions">
             <Button type="submit" disabled={saveState === 'saving'}>
+              {saveState === 'saving' && <Spinner data-icon="inline-start" />}
               {saveState === 'saving'
                 ? 'Saving…'
                 : saveState === 'saved'
