@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
 import { PrintView } from './PrintView';
@@ -484,7 +485,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     className={a.id === draft.id ? 'article-link active' : 'article-link'}
                     onClick={() => openArticle(a.id)}
                   >
-                    <span title={a.title}>{a.title}</span>
+                    <TruncatedLabel label={a.title}>{a.title}</TruncatedLabel>
                     <small className="muted">{a.template.toLowerCase()}</small>
                   </button>
                 </li>

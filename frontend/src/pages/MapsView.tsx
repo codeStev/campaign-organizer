@@ -14,6 +14,7 @@ import {
 } from '../api/client';
 import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -268,7 +269,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 className={m.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/maps/${m.id}`)}
               >
-                <span title={m.name}>{m.name}</span>
+                <TruncatedLabel label={m.name}>{m.name}</TruncatedLabel>
               </button>
             </li>
           ))}

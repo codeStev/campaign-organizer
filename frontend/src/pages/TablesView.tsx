@@ -13,6 +13,7 @@ import { diceRange, DiceRange } from '../lib/dice';
 import { renderLinkedMarkdown } from '../lib/markdown';
 import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal } from '../components/NewWindowPortal';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -577,9 +578,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 }
                 onClick={() => navigate(`/worlds/${worldId}/tables/table/${t.id}`)}
               >
-                <span title={t.title}>
-                  🎲 {t.title}
-                </span>
+                <TruncatedLabel label={t.title}>🎲 {t.title}</TruncatedLabel>
                 <small className="muted">
                   {t.diceExpression} · {t.entries.length} entries
                 </small>
@@ -611,7 +610,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 }
                 onClick={() => navigate(`/worlds/${worldId}/tables/deck/${d.id}`)}
               >
-                <span title={d.title}>🃏 {d.title}</span>
+                <TruncatedLabel label={d.title}>🃏 {d.title}</TruncatedLabel>
                 <small className="muted">{d.cards.length} cards</small>
               </button>
             </li>

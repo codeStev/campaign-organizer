@@ -12,6 +12,7 @@ import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -181,7 +182,7 @@ export function CharacterSheetsPanel({
                 className={s.id === draft?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/sheets/characters/${s.id}`)}
               >
-                <span title={s.name}>{s.name}</span>
+                <TruncatedLabel label={s.name}>{s.name}</TruncatedLabel>
               </button>
             </li>
           ))}

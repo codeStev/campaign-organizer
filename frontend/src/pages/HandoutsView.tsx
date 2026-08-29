@@ -7,6 +7,7 @@ import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 
 interface Props {
   worldId: string;
@@ -124,7 +125,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
                 className={h.id === urlHandoutId ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/handouts/${h.id}`)}
               >
-                <span title={h.title}>{h.title}</span>
+                <TruncatedLabel label={h.title}>{h.title}</TruncatedLabel>
                 <small className="muted">
                   {PRESETS.find((p) => p.value === h.preset)?.label ?? h.preset}
                 </small>
