@@ -69,27 +69,42 @@ function templateLabel(t: ArticleTemplate) {
   return t.charAt(0) + t.slice(1).toLowerCase();
 }
 
-const LEVEL_OPTIONS: { value: DraftLevel; label: string; description: string }[] = [
+const LEVEL_OPTIONS: {
+  value: DraftLevel;
+  label: string;
+  description: string;
+  /** Shown as the instructions field's placeholder and hint when selected. */
+  example: string;
+  hint: string;
+}[] = [
   {
     value: 'QUICK_INSPIRATION',
     label: 'Quick inspiration',
     description: 'A short spark to get the idea going — a few evocative sentences, nothing more.',
+    example: 'a gruff dockmaster who hides a smuggling habit',
+    hint: "Tip: a mood or image is enough — you don't need the details yet.",
   },
   {
     value: 'READ_ALOUD',
     label: 'Read-aloud snippet',
     description: 'A short passage to read straight to your players at the table.',
+    example: 'the party enters the foggy, abandoned lighthouse for the first time',
+    hint: 'Tip: phrase it as a moment ("the party arrives at…"), not just a subject.',
   },
   {
     value: 'BASIC_INFO',
     label: 'Basic info',
     description:
       "Just the essential facts you've already given — won't invent new places, characters, or other proper nouns.",
+    example: 'he works the north pier, has a scar on his jaw, distrusts elves',
+    hint: "Tip: give it facts you've already decided — it won't invent new names.",
   },
   {
     value: 'FULL_DRAFT',
     label: 'Full draft',
     description: 'A complete first-draft article, ready to edit.',
+    example: 'a coastal trade city ruled by a council of merchant princes',
+    hint: 'Tip: a short premise is enough — the model fills in supporting details.',
   },
 ];
 
@@ -278,6 +293,7 @@ function MarkdownEditorInner({
   }
 
   const showKindPicker = Boolean(onAiDraft && articleTemplate && onArticleTemplateChange);
+  const selectedLevelOption = LEVEL_OPTIONS.find((opt) => opt.value === level);
 
   return (
     <div className="editor md-editor">
@@ -378,11 +394,12 @@ function MarkdownEditorInner({
               <Label htmlFor="ai-draft-instructions">What should I draft?</Label>
               <Textarea
                 id="ai-draft-instructions"
-                placeholder="Keywords/instructions…"
+                placeholder={selectedLevelOption ? `e.g. ${selectedLevelOption.example}` : 'Keywords/instructions…'}
                 value={instructionsInput}
                 onChange={(e) => setInstructionsInput(e.target.value)}
                 autoFocus
               />
+              {selectedLevelOption && <p className="muted hint">{selectedLevelOption.hint}</p>}
             </div>
 
             <div className="ai-draft-field">
