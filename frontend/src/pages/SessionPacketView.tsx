@@ -131,7 +131,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                 <p className="print-kicker">{a.template.toLowerCase()}</p>
                 {/* eslint-disable-next-line react/no-danger */}
                 <div
-                  className="print-body"
+                  className="print-body preview-body"
                   dangerouslySetInnerHTML={{ __html: a.bodyHtml || '<p><em>(empty)</em></p>' }}
                 />
               </article>
@@ -215,7 +215,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                                 : 'else'}
                             </td>
                             {/* eslint-disable-next-line react/no-danger */}
-                            <td dangerouslySetInnerHTML={{ __html: e.bodyHtml }} />
+                            <td className="preview-body" dangerouslySetInnerHTML={{ __html: e.bodyHtml }} />
                           </tr>
                         ))}
                       </tbody>
@@ -236,7 +236,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                         <div key={i} className="deck-card">
                           {c.title && <div className="deck-card-name">{c.title}</div>}
                           {/* eslint-disable-next-line react/no-danger */}
-                          <div dangerouslySetInnerHTML={{ __html: c.bodyHtml }} />
+                          <div className="preview-body" dangerouslySetInnerHTML={{ __html: c.bodyHtml }} />
                         </div>
                       ))}
                     </div>

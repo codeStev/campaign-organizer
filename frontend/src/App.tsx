@@ -7,6 +7,8 @@ import { WorldView } from './pages/WorldView';
 import { SettingsPage } from './pages/SettingsPage';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
+import { TooltipProvider } from './components/ui/tooltip';
+import { Toaster } from './components/ui/sonner';
 
 export function App() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
@@ -17,39 +19,42 @@ export function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Campaign Organizer</h1>
-        <div className="app-header-actions">
-          <ThemeToggle />
-          {authed && (
-            <Button variant="link" asChild>
-              <Link to="/settings" title="Settings">
-                ⚙ Settings
-              </Link>
-            </Button>
+    <TooltipProvider>
+      <div className="app">
+        <header className="app-header">
+          <h1>Campaign Organizer</h1>
+          <div className="app-header-actions">
+            <ThemeToggle />
+            {authed && (
+              <Button variant="link" asChild>
+                <Link to="/settings" title="Settings">
+                  ⚙ Settings
+                </Link>
+              </Button>
+            )}
+            {authed && (
+              <Button variant="link" onClick={handleLogout}>
+                Log out
+              </Button>
+            )}
+          </div>
+        </header>
+        <main>
+          {!authed ? (
+            <LoginPage onLoggedIn={() => setAuthed(true)} />
+          ) : (
+            <Routes>
+              <Route path="/" element={<Navigate to="/worlds" replace />} />
+              <Route path="/worlds" element={<WorldsPageRoute onAuthExpired={handleLogout} />} />
+              <Route path="/worlds/:worldId/*" element={<WorldViewRoute onAuthExpired={handleLogout} />} />
+              <Route path="/settings/*" element={<SettingsPage onAuthExpired={handleLogout} />} />
+              <Route path="*" element={<Navigate to="/worlds" replace />} />
+            </Routes>
           )}
-          {authed && (
-            <Button variant="link" onClick={handleLogout}>
-              Log out
-            </Button>
-          )}
-        </div>
-      </header>
-      <main>
-        {!authed ? (
-          <LoginPage onLoggedIn={() => setAuthed(true)} />
-        ) : (
-          <Routes>
-            <Route path="/" element={<Navigate to="/worlds" replace />} />
-            <Route path="/worlds" element={<WorldsPageRoute onAuthExpired={handleLogout} />} />
-            <Route path="/worlds/:worldId/*" element={<WorldViewRoute onAuthExpired={handleLogout} />} />
-            <Route path="/settings/*" element={<SettingsPage onAuthExpired={handleLogout} />} />
-            <Route path="*" element={<Navigate to="/worlds" replace />} />
-          </Routes>
-        )}
-      </main>
-    </div>
+        </main>
+        <Toaster position="bottom-right" />
+      </div>
+    </TooltipProvider>
   );
 }
 

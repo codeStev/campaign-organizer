@@ -203,6 +203,7 @@ button:disabled {
 
 .article-link {
   width: 100%;
+  min-width: 0;
   background: var(--card);
   color: inherit;
   text-align: left;
@@ -210,6 +211,16 @@ button:disabled {
   flex-direction: column;
   border: 1px solid var(--border);
   padding: 0.5rem 1rem;
+}
+
+/* Long names truncate with an ellipsis instead of overflowing the sidebar;
+   the full text shows on hover/focus via the shadcn Tooltip wrapping this
+   span (see components/TruncatedLabel.tsx). */
+.article-link > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .article-link.active {
@@ -387,6 +398,18 @@ button:disabled {
 .preview-body ul,
 .preview-body ol {
   padding-left: 1.4rem;
+}
+
+/* Tailwind's preflight resets list-style to none on every ul/ol; restore
+   real markers here or a "bullet list" renders as indented plain text. */
+.editor-content .ProseMirror ul,
+.preview-body ul {
+  list-style: disc;
+}
+
+.editor-content .ProseMirror ol,
+.preview-body ol {
+  list-style: decimal;
 }
 
 .editor-content .ProseMirror blockquote,
@@ -1719,6 +1742,15 @@ button:disabled {
   font-size: 0.75rem;
   color: #666;
   margin: 0 0 1rem;
+}
+
+/* Points a printed row/card at the appended section its chain leads to —
+   otherwise there's no way to tell which result a chain resolves into. */
+.print-chain-note {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #666;
+  margin: 0.25rem 0 0;
 }
 
 .print-body img {

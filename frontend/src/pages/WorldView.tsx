@@ -18,11 +18,14 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
 import { PrintView } from './PrintView';
@@ -397,6 +400,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setMode('read');
       if (wasNew) navigate(`/worlds/${worldId}/articles/${saved.id}`);
       await refresh(query, campaignFilter);
+      toast.success(`Article "${saved.title}" saved`);
     } catch (err) {
       handleError(err);
     }
@@ -484,7 +488,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     className={a.id === draft.id ? 'article-link active' : 'article-link'}
                     onClick={() => openArticle(a.id)}
                   >
-                    <span>{a.title}</span>
+                    <TruncatedLabel label={a.title}>{a.title}</TruncatedLabel>
                     <small className="muted">{a.template.toLowerCase()}</small>
                   </button>
                 </li>
@@ -540,14 +544,20 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     </Button>
                   )}
                   {draft.id && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="text-destructive hover:text-destructive"
-                      onClick={handleDelete}
-                    >
-                      Delete
-                    </Button>
+                    <ConfirmDeleteDialog
+                      trigger={
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Delete
+                        </Button>
+                      }
+                      title="Delete article?"
+                      description={`This permanently deletes "${draft.title}" and cannot be undone.`}
+                      onConfirm={handleDelete}
+                    />
                   )}
                 </div>
                 <p className="muted hint">
@@ -582,14 +592,16 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   <Button type="button" variant="link" onClick={toggleHistory}>
                     History
                   </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="text-destructive hover:text-destructive"
-                    onClick={handleDelete}
-                  >
-                    Delete
-                  </Button>
+                  <ConfirmDeleteDialog
+                    trigger={
+                      <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                        Delete
+                      </Button>
+                    }
+                    title="Delete article?"
+                    description={`This permanently deletes "${draft.title}" and cannot be undone.`}
+                    onConfirm={handleDelete}
+                  />
                 </div>
               </div>
 

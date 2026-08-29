@@ -209,7 +209,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
               <p className="print-kicker">{a.template.toLowerCase()}</p>
               {/* eslint-disable-next-line react/no-danger */}
               <div
-                className="print-body"
+                className="print-body preview-body"
                 dangerouslySetInnerHTML={{ __html: a.bodyHtml || '<p><em>(empty)</em></p>' }}
               />
             </article>
@@ -271,6 +271,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
                         </td>
                         {/* eslint-disable-next-line react/no-danger */}
                         <td
+                          className="preview-body"
                           dangerouslySetInnerHTML={{
                             __html: renderLinkedMarkdown(e.body, linkLookup),
                           }}
@@ -295,7 +296,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
                     <div key={c.id} className="deck-card">
                       {c.title && <div className="deck-card-name">{c.title}</div>}
                       {/* eslint-disable-next-line react/no-danger */}
-                      <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, linkLookup) }} />
+                      <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, linkLookup) }} />
                     </div>
                   ))}
                 </div>

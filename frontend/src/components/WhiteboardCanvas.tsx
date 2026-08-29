@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { WhiteboardNode, WhiteboardEdge } from '../api/client';
 import { Button } from './ui/button';
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 
 interface Props {
   nodes: WhiteboardNode[];
@@ -126,16 +127,20 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
             onDoubleClick={() => editNode(n)}
           >
             <span>{n.text}</span>
-            <Button
-              variant="link"
-              className="node-del text-destructive hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteNode(n.id);
-              }}
-            >
-              ✕
-            </Button>
+            <ConfirmDeleteDialog
+              trigger={
+                <Button
+                  variant="link"
+                  className="node-del text-destructive hover:text-destructive"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  ✕
+                </Button>
+              }
+              title="Delete node?"
+              description={`This removes "${n.text}" and any edges connected to it from the board.`}
+              onConfirm={() => deleteNode(n.id)}
+            />
           </div>
         ))}
         {nodes.length === 0 && <p className="muted whiteboard-empty">Add a node to start plotting.</p>}

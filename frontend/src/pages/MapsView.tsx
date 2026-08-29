@@ -14,10 +14,13 @@ import {
 } from '../api/client';
 import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { toast } from 'sonner';
 import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -128,6 +131,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       setList(await maps.list());
       await selectMap(map);
       navigate(`/worlds/${worldId}/maps/${map.id}`);
+      toast.success(`Map "${map.name}" added`);
     } catch (err) {
       handleError(err);
     }
@@ -156,6 +160,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
         articleId: fields.articleId || null,
       });
       await loadPins(selected.id);
+      toast.success('Pin saved');
     } catch (err) {
       handleError(err);
     }
@@ -268,7 +273,9 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 className={m.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/maps/${m.id}`)}
               >
-                <span>{m.name}</span>
+                <TruncatedLabel label={m.name} data-testid="map-name">
+                  {m.name}
+                </TruncatedLabel>
               </button>
             </li>
           ))}
@@ -335,13 +342,16 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
               <Button variant="link" onClick={() => setPrintOpen(true)} title="Print or save as PDF">
                 🖨 Print map
               </Button>
-              <Button
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => deleteMap(selected)}
-              >
-                Delete map
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    Delete map
+                  </Button>
+                }
+                title="Delete map?"
+                description={`This permanently deletes "${selected.name}" and its pins. This cannot be undone.`}
+                onConfirm={() => deleteMap(selected)}
+              />
             </div>
             {selected.imageUrl ? (
               <MapCanvas
@@ -486,9 +496,16 @@ function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEdito
             Open article
           </Button>
         )}
-        <Button variant="link" className="text-destructive hover:text-destructive" onClick={onDelete}>
-          Delete pin
-        </Button>
+        <ConfirmDeleteDialog
+          trigger={
+            <Button variant="link" className="text-destructive hover:text-destructive">
+              Delete pin
+            </Button>
+          }
+          title="Delete pin?"
+          description="This permanently removes this pin from the map. This cannot be undone."
+          onConfirm={onDelete}
+        />
       </div>
     </div>
   );

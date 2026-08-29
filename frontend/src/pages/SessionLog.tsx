@@ -7,6 +7,8 @@ import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -70,6 +72,7 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
       else await api.create(body);
       setDraft(EMPTY);
       await refresh();
+      toast.success(`Session "${body.title}" saved`);
     } catch (err) {
       onError(err);
     }
@@ -195,13 +198,16 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
                 >
                   🖨 Packet
                 </Button>
-                <Button
-                  variant="link"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => remove(s.id)}
-                >
-                  Delete
-                </Button>
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      Delete
+                    </Button>
+                  }
+                  title="Delete session?"
+                  description={`This permanently deletes "${s.title}" and cannot be undone.`}
+                  onConfirm={() => remove(s.id)}
+                />
               </div>
             </div>
           </li>

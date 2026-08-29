@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Textarea } from '../components/ui/textarea';
 import {
   Select,
@@ -26,6 +27,7 @@ import {
 } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
 import { renderLinkedMarkdown, renderMarkdown } from '../lib/markdown';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -224,6 +226,7 @@ export function CheatSheetView({
       );
       setFragments(sheet.fragments);
       setDirty(false);
+      toast.success('Cheat sheet saved');
     } catch (err) {
       onError(err);
     } finally {
@@ -235,7 +238,7 @@ export function CheatSheetView({
   function fragmentBody(f: CheatSheetFragment) {
     switch (f.type) {
       case 'FREEFORM':
-        return <div dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text ?? '') }} />;
+        return <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text ?? '') }} />;
       case 'STATBLOCK': {
         const sb = f.statblockId ? statblockById.get(f.statblockId) : undefined;
         if (!sb) return <span className="cheatsheet-missing">Missing statblock</span>;
@@ -256,7 +259,7 @@ export function CheatSheetView({
             <span className="cheatsheet-ref">
               {t.title} · {entryRange(entry)}
             </span>
-            <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(entry.body, linkLookup) }} />
+            <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(entry.body, linkLookup) }} />
           </>
         );
       }
@@ -269,7 +272,7 @@ export function CheatSheetView({
             <span className="cheatsheet-ref">
               {d.title} · {cardLabel(card)}
             </span>
-            <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(card.body, linkLookup) }} />
+            <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(card.body, linkLookup) }} />
           </>
         );
       }
@@ -320,14 +323,20 @@ export function CheatSheetView({
                 </span>
                 {fragmentBody(f)}
               </div>
-              <Button
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => removeAt(i)}
-                title="Remove fragment"
-              >
-                ✕
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button
+                    variant="link"
+                    className="text-destructive hover:text-destructive"
+                    title="Remove fragment"
+                  >
+                    ✕
+                  </Button>
+                }
+                title="Remove fragment?"
+                description="This removes this fragment from the cheat sheet."
+                onConfirm={() => removeAt(i)}
+              />
             </li>
           ))}
           {loaded && fragments.length === 0 && (

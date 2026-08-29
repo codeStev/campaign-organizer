@@ -7,6 +7,9 @@ import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -88,6 +91,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
         navigate(`/worlds/${worldId}/handouts/${created.id}`);
       }
       await refresh();
+      toast.success(`Handout "${draft.title}" saved`);
     } catch (err) {
       handleError(err);
     }
@@ -114,6 +118,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             setDraft(EMPTY_DRAFT);
             navigate(`/worlds/${worldId}/handouts`);
           }}
+          data-testid="new-handout-button"
         >
           + New handout
         </Button>
@@ -124,7 +129,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
                 className={h.id === urlHandoutId ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/handouts/${h.id}`)}
               >
-                <span>{h.title}</span>
+                <TruncatedLabel label={h.title}>{h.title}</TruncatedLabel>
                 <small className="muted">
                   {PRESETS.find((p) => p.value === h.preset)?.label ?? h.preset}
                 </small>
@@ -145,6 +150,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             required
+            data-testid="handout-title-input"
           />
           <div className="editor-actions">
             <Select value={draft.preset} onValueChange={(v) => setDraft({ ...draft, preset: v as HandoutPreset })}>
@@ -171,14 +177,16 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
               </Button>
             )}
             {editingExisting && (
-              <Button
-                type="button"
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => void remove()}
-              >
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title="Delete handout?"
+                description={`This permanently deletes "${draft.title}" and cannot be undone.`}
+                onConfirm={() => void remove()}
+              />
             )}
           </div>
         </form>
@@ -187,7 +195,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
         <article className={`handout-doc preview-${draft.preset.toLowerCase()}`}>
           <h2 className="handout-title">{draft.title || '(untitled)'}</h2>
           {/* eslint-disable-next-line react/no-danger */}
-          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
+          <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
         </article>
       </div>
 
@@ -205,7 +213,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             <article className={`handout-doc ${draft.preset.toLowerCase()}`}>
               <h2 className="handout-title">{draft.title}</h2>
               {/* eslint-disable-next-line react/no-danger */}
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
+              <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
             </article>
           </div>
         </NewWindowPortal>

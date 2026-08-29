@@ -104,7 +104,7 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
               {s.date && <span className="print-kicker"> — {s.date}</span>}
             </h3>
             {/* Summary only; GM notes are private and never rendered here. */}
-            {s.summary && <div dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }} />}
+            {s.summary && <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }} />}
           </section>
         ))}
 
@@ -122,7 +122,7 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
                     <li key={b.id}>
                       <strong>{b.title}</strong>
                       {b.body && (
-                        <div dangerouslySetInnerHTML={{ __html: renderMarkdown(b.body) }} />
+                        <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(b.body) }} />
                       )}
                     </li>
                   ))}

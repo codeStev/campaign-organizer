@@ -13,7 +13,11 @@ import { diceRange, DiceRange } from '../lib/dice';
 import { renderLinkedMarkdown } from '../lib/markdown';
 import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal } from '../components/NewWindowPortal';
+import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Button } from '../components/ui/button';
+import { Spinner } from '../components/ui/spinner';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 
@@ -157,6 +161,22 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  // Save button feedback: "saved" auto-reverts after a beat so it doesn't
+  // linger indefinitely once the user starts editing again.
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (savedTimeout.current) clearTimeout(savedTimeout.current);
+  }, []);
+  function markSaved(message: string) {
+    setSaveState('saved');
+    if (savedTimeout.current) clearTimeout(savedTimeout.current);
+    savedTimeout.current = setTimeout(() => setSaveState('idle'), 1500);
+    // The button's own "Saved" state reverts almost immediately (round-trips
+    // are fast), which is easy to miss entirely — the toast is the feedback
+    // that's actually meant to be noticed.
+    toast.success(message);
+  }
   // Roll result for the table editor; matchedIndex points at the hit entry row.
   const [roll, setRoll] = useState<{ total: number; breakdown: string; matchedIndex: number | null } | null>(null);
   // Stateless deck draw (ADR-0066): just a highlighted random card.
@@ -199,6 +219,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     setDraft(kind === 'table' ? draftFromTable(entity as RollTable) : draftFromDeck(entity as CardDeck));
     setRoll(null);
     setDrawnIndex(null);
+    setSaveState('idle');
   }
 
   // The URL is the source of truth for what's open (ADR-0053): /tables/table/:id
@@ -290,6 +311,17 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     }
     return { tables: outTables, decks: outDecks };
   }, [printTable, printDeck, tables, decks]);
+
+  // Chained sections print appended at the end, so a row that chains
+  // somewhere needs its own note naming the target(s) — otherwise there's
+  // no way to tell, on paper, which appended table/deck a result leads to.
+  function chainNote(nestedTableIds: string[], nestedDeckIds: string[]): string | null {
+    const names = [
+      ...nestedTableIds.map((id) => tables.find((t) => t.id === id)?.title),
+      ...nestedDeckIds.map((id) => decks.find((d) => d.id === id)?.title),
+    ].filter((n): n is string => !!n);
+    return names.length > 0 ? names.join(', ') : null;
+  }
 
   useEffect(() => {
     if (!printing || linkTitles.size > 0) return;
@@ -499,12 +531,15 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           nestedDeckIds: entry.nestedDeckIds,
         })),
       };
+      setSaveState('saving');
       try {
         const saved =
           draft.id != null ? await tablesApi.update(draft.id, body) : await tablesApi.create(body);
         navigate(`/worlds/${worldId}/tables/table/${saved.id}`);
         await refresh();
+        markSaved(`Table "${saved.title}" saved`);
       } catch (err) {
+        setSaveState('idle');
         handleError(err);
       }
     } else {
@@ -526,12 +561,15 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           nestedDeckIds: c.nestedDeckIds,
         })),
       };
+      setSaveState('saving');
       try {
         const saved =
           draft.id != null ? await decksApi.update(draft.id, body) : await decksApi.create(body);
         navigate(`/worlds/${worldId}/tables/deck/${saved.id}`);
         await refresh();
+        markSaved(`Deck "${saved.title}" saved`);
       } catch (err) {
+        setSaveState('idle');
         handleError(err);
       }
     }
@@ -565,6 +603,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             setRoll(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
+          data-testid="new-table-button"
         >
           + New roll table
         </Button>
@@ -577,9 +616,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 }
                 onClick={() => navigate(`/worlds/${worldId}/tables/table/${t.id}`)}
               >
-                <span>
-                  🎲 {t.title}
-                </span>
+                <TruncatedLabel label={t.title}>🎲 {t.title}</TruncatedLabel>
                 <small className="muted">
                   {t.diceExpression} · {t.entries.length} entries
                 </small>
@@ -599,6 +636,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             setDrawnIndex(null);
             navigate(`/worlds/${worldId}/tables`);
           }}
+          data-testid="new-deck-button"
         >
           + New card deck
         </Button>
@@ -611,7 +649,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 }
                 onClick={() => navigate(`/worlds/${worldId}/tables/deck/${d.id}`)}
               >
-                <span>🃏 {d.title}</span>
+                <TruncatedLabel label={d.title}>🃏 {d.title}</TruncatedLabel>
                 <small className="muted">{d.cards.length} cards</small>
               </button>
             </li>
@@ -631,6 +669,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 required
+                data-testid="table-title-input"
               />
               <Input
                 placeholder="Description (optional)"
@@ -644,6 +683,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                   value={draft.diceExpression}
                   onChange={(e) => setDraft({ ...draft, diceExpression: e.target.value })}
                   required
+                  data-testid="table-dice-input"
                 />
               </label>
               <small className="muted">
@@ -741,6 +781,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       placeholder={`Outcome on ${entry.minResult || '?'}–${entry.maxResult || '?'} — [[wiki-links]] allowed`}
                       value={entry.body}
                       onChange={(e) => setEntry(i, { body: e.target.value })}
+                      data-testid={`table-entry-body-${i}`}
                     />
                     {chainOpen === `entry-${i}` && chainPicker(`entry-${i}`)}
                   </div>
@@ -947,29 +988,41 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           )}
 
           <div className="editor-actions">
-            <Button type="submit">
-              {editingExisting
-                ? draft.kind === 'table'
-                  ? 'Save table'
-                  : 'Save deck'
-                : draft.kind === 'table'
-                  ? 'Create table'
-                  : 'Create deck'}
+            <Button type="submit" disabled={saveState === 'saving'} data-testid="table-save-button">
+              {saveState === 'saving' && <Spinner data-icon="inline-start" />}
+              {saveState === 'saving'
+                ? 'Saving…'
+                : saveState === 'saved'
+                  ? 'Saved'
+                  : editingExisting
+                    ? draft.kind === 'table'
+                      ? 'Save table'
+                      : 'Save deck'
+                    : draft.kind === 'table'
+                      ? 'Create table'
+                      : 'Create deck'}
             </Button>
             {(printTable || printDeck) && (
-              <Button type="button" variant="outline" onClick={() => setPrinting(true)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPrinting(true)}
+                data-testid="table-print-button"
+              >
                 🖨 Print
               </Button>
             )}
             {editingExisting && (
-              <Button
-                type="button"
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => void remove()}
-              >
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title={draft.kind === 'table' ? 'Delete table?' : 'Delete deck?'}
+                description={`This permanently deletes "${draft.title}" and cannot be undone.`}
+                onConfirm={() => void remove()}
+              />
             )}
           </div>
         </form>
@@ -1017,12 +1070,20 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                             ? `${e.minResult}–${e.maxResult}`
                             : 'else'}
                         </td>
-                        {/* eslint-disable-next-line react/no-danger */}
-                        <td
-                          dangerouslySetInnerHTML={{
-                            __html: renderLinkedMarkdown(e.body, titleLookup),
-                          }}
-                        />
+                        <td>
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div
+                            className="preview-body"
+                            dangerouslySetInnerHTML={{
+                              __html: renderLinkedMarkdown(e.body, titleLookup),
+                            }}
+                          />
+                          {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
+                            <p className="print-chain-note">
+                              ↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}
+                            </p>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1037,7 +1098,12 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                     <div key={c.id} className="deck-card">
                       {c.title && <div className="deck-card-name">{c.title}</div>}
                       {/* eslint-disable-next-line react/no-danger */}
-                      <div dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
+                      <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
+                      {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
+                        <p className="print-chain-note">
+                          ↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1059,12 +1125,20 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                             ? `${e.minResult}–${e.maxResult}`
                             : 'else'}
                         </td>
-                        {/* eslint-disable-next-line react/no-danger */}
-                        <td
-                          dangerouslySetInnerHTML={{
-                            __html: renderLinkedMarkdown(e.body, titleLookup),
-                          }}
-                        />
+                        <td>
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div
+                            className="preview-body"
+                            dangerouslySetInnerHTML={{
+                              __html: renderLinkedMarkdown(e.body, titleLookup),
+                            }}
+                          />
+                          {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
+                            <p className="print-chain-note">
+                              ↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}
+                            </p>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1082,10 +1156,16 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                           {c.title && <div className="deck-card-name">{c.title}</div>}
                           {/* eslint-disable-next-line react/no-danger */}
                           <div
+                            className="preview-body"
                             dangerouslySetInnerHTML={{
                               __html: renderLinkedMarkdown(c.body, titleLookup),
                             }}
                           />
+                          {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
+                            <p className="print-chain-note">
+                              ↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>

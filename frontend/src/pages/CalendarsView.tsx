@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -98,6 +101,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       setDraft(EMPTY_DRAFT);
       navigate(`/worlds/${worldId}/calendars`);
       await refresh();
+      toast.success(`Calendar "${body.name}" saved`);
     } catch (err) {
       handleError(err);
     }
@@ -134,7 +138,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
                 className={c.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/calendars/${c.id}`)}
               >
-                <span>{c.name}</span>
+                <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
                 <small className="muted">{c.months.length} months</small>
               </button>
             </li>
@@ -201,14 +205,16 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
               {draft.id ? 'Save calendar' : 'Create calendar'}
             </Button>
             {draft.id && (
-              <Button
-                type="button"
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => remove(list.find((c) => c.id === draft.id)!)}
-              >
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title="Delete calendar?"
+                description={`This permanently deletes "${draft.name}" and cannot be undone.`}
+                onConfirm={() => remove(list.find((c) => c.id === draft.id)!)}
+              />
             )}
           </div>
         </form>

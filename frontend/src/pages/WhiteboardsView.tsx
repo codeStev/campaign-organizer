@@ -9,6 +9,9 @@ import {
 } from '../api/client';
 import { WhiteboardCanvas } from '../components/WhiteboardCanvas';
 import { Button } from '../components/ui/button';
+import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -71,6 +74,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       await refresh();
       select(created);
       navigate(`/worlds/${worldId}/whiteboards/${created.id}`);
+      toast.success(`Whiteboard "${created.name}" created`);
     } catch (err) {
       handleError(err);
     }
@@ -83,6 +87,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       setSelected(saved);
       setDirty(false);
       await refresh();
+      toast.success('Whiteboard saved');
     } catch (err) {
       handleError(err);
     }
@@ -118,7 +123,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
                 className={b.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/whiteboards/${b.id}`)}
               >
-                <span>{b.name}</span>
+                <TruncatedLabel label={b.name}>{b.name}</TruncatedLabel>
               </button>
             </li>
           ))}
@@ -138,13 +143,16 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
                 <Button onClick={save} disabled={!dirty}>
                   {dirty ? 'Save' : 'Saved'}
                 </Button>
-                <Button
-                  variant="link"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => removeBoard(selected)}
-                >
-                  Delete
-                </Button>
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      Delete
+                    </Button>
+                  }
+                  title="Delete whiteboard?"
+                  description={`This permanently deletes "${selected.name}" and cannot be undone.`}
+                  onConfirm={() => removeBoard(selected)}
+                />
               </div>
             </div>
             <p className="muted hint">Drag to move · double-click to edit · Connect to link nodes.</p>

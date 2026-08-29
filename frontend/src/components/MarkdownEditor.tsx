@@ -1,11 +1,18 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/kit/core';
+import { Editor, rootCtx, defaultValueCtx, commandsCtx, editorStateCtx } from '@milkdown/kit/core';
+import type { Ctx } from '@milkdown/kit/ctx';
 import {
   commonmark,
   toggleStrongCommand,
   toggleEmphasisCommand,
   wrapInHeadingCommand,
   wrapInBulletListCommand,
+  liftListItemCommand,
+  isNodeSelectedCommand,
+  strongSchema,
+  emphasisSchema,
+  headingSchema,
+  bulletListSchema,
 } from '@milkdown/kit/preset/commonmark';
 import { gfm } from '@milkdown/kit/preset/gfm';
 import { history } from '@milkdown/kit/plugin/history';
@@ -15,6 +22,7 @@ import { callCommand, insert, replaceAll } from '@milkdown/kit/utils';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import '@milkdown/kit/prose/view/style/prosemirror.css';
 import { Button } from './ui/button';
+import { Toggle } from './ui/toggle';
 
 interface Props {
   value: string;
@@ -43,10 +51,35 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
   const aiDraftRef = useRef(onAiDraft);
   aiDraftRef.current = onAiDraft;
   const [drafting, setDrafting] = useState(false);
+  // Which toolbar formatting is active at the current cursor/selection, so
+  // the toolbar buttons can show a pressed state (else there's no way to
+  // tell whether e.g. bold is already on without selecting the text).
+  const [active, setActive] = useState({ bold: false, italic: false, heading: false, bulletList: false });
   // Tracks the last markdown string this component itself produced or applied,
   // so the external-sync effect below only replaces content on a genuine
   // outside change (switching articles/beats/…), not on every re-render.
   const lastValueRef = useRef(value);
+
+  function readActiveMarks(ctx: Ctx) {
+    const state = ctx.get(editorStateCtx);
+    const { selection } = state;
+    // For a collapsed cursor, doc.rangeHasMark sees an empty range and always
+    // says "no" — the mark that toggling just set only exists in
+    // storedMarks (what the *next typed character* will get), not yet in the
+    // document. Mirror ProseMirror's own markActive idiom instead.
+    const markActive = (mark: ReturnType<typeof strongSchema.type>) =>
+      selection.empty
+        ? !!mark.isInSet(state.storedMarks ?? selection.$from.marks())
+        : state.doc.rangeHasMark(selection.from, selection.to, mark);
+
+    const commands = ctx.get(commandsCtx);
+    setActive({
+      bold: markActive(strongSchema.type(ctx)),
+      italic: markActive(emphasisSchema.type(ctx)),
+      heading: commands.call(isNodeSelectedCommand.key, headingSchema.type(ctx)),
+      bulletList: commands.call(isNodeSelectedCommand.key, bulletListSchema.type(ctx)),
+    });
+  }
 
   const { get } = useEditor(
     (root) =>
@@ -60,6 +93,7 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
               onChangeRef.current(markdown);
             }
           });
+          ctx.get(listenerCtx).selectionUpdated((selCtx) => readActiveMarks(selCtx));
         })
         .use(commonmark)
         .use(gfm)
@@ -77,20 +111,40 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
     }
   }, [value, get]);
 
+  // Toggling a mark on an existing selection doesn't move the selection, so
+  // Milkdown's selectionUpdated listener won't fire on its own; re-read the
+  // active state explicitly so the button highlights immediately.
   function toggleBold() {
-    get()?.action(callCommand(toggleStrongCommand.key));
+    get()?.action((ctx) => {
+      callCommand(toggleStrongCommand.key)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
   function toggleItalic() {
-    get()?.action(callCommand(toggleEmphasisCommand.key));
+    get()?.action((ctx) => {
+      callCommand(toggleEmphasisCommand.key)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
   function toggleHeading() {
-    get()?.action(callCommand(wrapInHeadingCommand.key, 2));
+    get()?.action((ctx) => {
+      callCommand(wrapInHeadingCommand.key, 2)(ctx);
+      readActiveMarks(ctx);
+    });
   }
 
+  // wrapInBulletListCommand only ever wraps — there's no matching unwrap
+  // behind the same button, unlike Bold/Italic which are real toggles.
+  // Lift the current item back out when it's already a list.
   function toggleBulletList() {
-    get()?.action(callCommand(wrapInBulletListCommand.key));
+    get()?.action((ctx) => {
+      const commands = ctx.get(commandsCtx);
+      const alreadyList = commands.call(isNodeSelectedCommand.key, bulletListSchema.type(ctx));
+      commands.call(alreadyList ? liftListItemCommand.key : wrapInBulletListCommand.key);
+      readActiveMarks(ctx);
+    });
   }
 
   async function insertImage(file: File) {
@@ -146,19 +200,51 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
 
   return (
     <div className="editor md-editor">
-      <div className="editor-toolbar">
-        <Button type="button" variant="outline" size="sm" onClick={toggleBold}>
+      {/* Buttons steal focus from the ProseMirror content on click by default,
+          which drops the text selection a toggle needs and swallows the next
+          keystroke (it lands on the button, not the editor). Blocking focus
+          on mousedown keeps the editor focused through the whole click. */}
+      <div className="editor-toolbar" onMouseDown={(e) => e.preventDefault()}>
+        <Toggle
+          type="button"
+          variant="outline"
+          size="sm"
+          pressed={active.bold}
+          onPressedChange={toggleBold}
+          data-testid="md-toolbar-bold"
+        >
           B
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={toggleItalic}>
+        </Toggle>
+        <Toggle
+          type="button"
+          variant="outline"
+          size="sm"
+          pressed={active.italic}
+          onPressedChange={toggleItalic}
+          data-testid="md-toolbar-italic"
+        >
           i
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={toggleHeading}>
+        </Toggle>
+        <Toggle
+          type="button"
+          variant="outline"
+          size="sm"
+          pressed={active.heading}
+          onPressedChange={toggleHeading}
+          data-testid="md-toolbar-h2"
+        >
           H2
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={toggleBulletList}>
+        </Toggle>
+        <Toggle
+          type="button"
+          variant="outline"
+          size="sm"
+          pressed={active.bulletList}
+          onPressedChange={toggleBulletList}
+          data-testid="md-toolbar-bullet-list"
+        >
           • List
-        </Button>
+        </Toggle>
         {onUploadImage && (
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             🖼 Image
@@ -177,7 +263,12 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
         )}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileSelected} />
-      <div className="editor-content" onPaste={handlePaste} onDrop={handleDrop}>
+      <div
+        className="editor-content"
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        data-testid="md-content"
+      >
         <Milkdown />
       </div>
       {onUploadImage && (

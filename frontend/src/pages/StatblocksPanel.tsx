@@ -6,9 +6,12 @@ import { EncounterSheetView } from './EncounterSheetView';
 import { TemplateForm } from '../components/TemplateForm';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (it's reserved for "no selection"),
 // so options that mean a real, persistently-selectable "none" state (as opposed
@@ -173,6 +176,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       setDraft({ ...EMPTY, campaignId: filterCampaign });
       navigate(`/worlds/${worldId}/sheets/statblocks`);
       await refresh();
+      toast.success(`Statblock "${body.name}" saved`);
     } catch (err) {
       onError(err);
     }
@@ -268,7 +272,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                 className={sb.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/sheets/statblocks/${sb.id}`)}
               >
-                <span>{sb.name}</span>
+                <TruncatedLabel label={sb.name}>{sb.name}</TruncatedLabel>
               </button>
             </li>
           ))}
@@ -365,13 +369,16 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
             {draft.id ? 'Save statblock' : 'Create statblock'}
           </Button>
           {draft.id && (
-            <Button
-              variant="link"
-              className="text-destructive hover:text-destructive"
-              onClick={() => remove(list.find((s) => s.id === draft.id)!)}
-            >
-              Delete
-            </Button>
+            <ConfirmDeleteDialog
+              trigger={
+                <Button variant="link" className="text-destructive hover:text-destructive">
+                  Delete
+                </Button>
+              }
+              title="Delete statblock?"
+              description={`This permanently deletes "${draft.name}" and cannot be undone.`}
+              onConfirm={() => remove(list.find((s) => s.id === draft.id)!)}
+            />
           )}
         </div>
       </div>
