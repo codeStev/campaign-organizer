@@ -21,6 +21,7 @@ import { callCommand, insert, replaceAll } from '@milkdown/kit/utils';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import '@milkdown/kit/prose/view/style/prosemirror.css';
 import { Button } from './ui/button';
+import { Toggle } from './ui/toggle';
 
 interface Props {
   value: string;
@@ -194,42 +195,24 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
   return (
     <div className="editor md-editor">
       <div className="editor-toolbar">
-        <Button
-          type="button"
-          variant={active.bold ? 'default' : 'outline'}
-          size="sm"
-          aria-pressed={active.bold}
-          onClick={toggleBold}
-        >
+        <Toggle type="button" variant="outline" size="sm" pressed={active.bold} onPressedChange={toggleBold}>
           B
-        </Button>
-        <Button
-          type="button"
-          variant={active.italic ? 'default' : 'outline'}
-          size="sm"
-          aria-pressed={active.italic}
-          onClick={toggleItalic}
-        >
+        </Toggle>
+        <Toggle type="button" variant="outline" size="sm" pressed={active.italic} onPressedChange={toggleItalic}>
           i
-        </Button>
-        <Button
-          type="button"
-          variant={active.heading ? 'default' : 'outline'}
-          size="sm"
-          aria-pressed={active.heading}
-          onClick={toggleHeading}
-        >
+        </Toggle>
+        <Toggle type="button" variant="outline" size="sm" pressed={active.heading} onPressedChange={toggleHeading}>
           H2
-        </Button>
-        <Button
+        </Toggle>
+        <Toggle
           type="button"
-          variant={active.bulletList ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
-          aria-pressed={active.bulletList}
-          onClick={toggleBulletList}
+          pressed={active.bulletList}
+          onPressedChange={toggleBulletList}
         >
           • List
-        </Button>
+        </Toggle>
         {onUploadImage && (
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             🖼 Image
