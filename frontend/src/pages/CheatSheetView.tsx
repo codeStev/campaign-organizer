@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Textarea } from '../components/ui/textarea';
 import {
   Select,
@@ -322,14 +323,20 @@ export function CheatSheetView({
                 </span>
                 {fragmentBody(f)}
               </div>
-              <Button
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => removeAt(i)}
-                title="Remove fragment"
-              >
-                ✕
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button
+                    variant="link"
+                    className="text-destructive hover:text-destructive"
+                    title="Remove fragment"
+                  >
+                    ✕
+                  </Button>
+                }
+                title="Remove fragment?"
+                description="This removes this fragment from the cheat sheet."
+                onConfirm={() => removeAt(i)}
+              />
             </li>
           ))}
           {loaded && fragments.length === 0 && (

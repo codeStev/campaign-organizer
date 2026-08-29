@@ -14,6 +14,7 @@ import {
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
@@ -292,9 +293,16 @@ function ArcCard({
             ))}
           </SelectContent>
         </Select>
-        <Button variant="link" className="text-destructive hover:text-destructive" onClick={onRemove}>
-          ✕
-        </Button>
+        <ConfirmDeleteDialog
+          trigger={
+            <Button variant="link" className="text-destructive hover:text-destructive">
+              ✕
+            </Button>
+          }
+          title="Delete arc?"
+          description={`This permanently deletes "${arc.title}" and its beats. This cannot be undone.`}
+          onConfirm={onRemove}
+        />
       </div>
 
       {open && (
@@ -328,9 +336,16 @@ function ArcCard({
                   <Button variant="link" onClick={() => (editingId === b.id ? setEditingId(null) : startEdit(b))}>
                     {editingId === b.id ? 'Close' : 'Edit'}
                   </Button>
-                  <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => removeBeat(b)}>
-                    ✕
-                  </Button>
+                  <ConfirmDeleteDialog
+                    trigger={
+                      <Button variant="link" className="text-destructive hover:text-destructive">
+                        ✕
+                      </Button>
+                    }
+                    title="Delete beat?"
+                    description={`This permanently deletes "${b.title}" and cannot be undone.`}
+                    onConfirm={() => removeBeat(b)}
+                  />
                 </div>
 
                 {editingId !== b.id && b.body && (

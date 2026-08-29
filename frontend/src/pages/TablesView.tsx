@@ -17,6 +17,7 @@ import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Button } from '../components/ui/button';
 import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 
@@ -1012,14 +1013,16 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
               </Button>
             )}
             {editingExisting && (
-              <Button
-                type="button"
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => void remove()}
-              >
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title={draft.kind === 'table' ? 'Delete table?' : 'Delete deck?'}
+                description={`This permanently deletes "${draft.title}" and cannot be undone.`}
+                onConfirm={() => void remove()}
+              />
             )}
           </div>
         </form>

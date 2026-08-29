@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -198,9 +199,16 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
                 <strong>{world.name}</strong>
                 {world.description && <p className="muted">{world.description}</p>}
               </button>
-              <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => handleDelete(world.id)}>
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title="Delete world?"
+                description={`This permanently deletes "${world.name}" — every article, map, campaign, and everything else in it. This cannot be undone.`}
+                onConfirm={() => handleDelete(world.id)}
+              />
             </li>
           ))}
         </ul>

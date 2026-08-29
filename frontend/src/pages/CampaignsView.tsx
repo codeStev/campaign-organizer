@@ -15,6 +15,7 @@ import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -145,9 +146,16 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
           <>
             <div className="map-bar">
               <h2>{selected.name}</h2>
-              <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => removeCampaign(selected)}>
-                Delete campaign
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    Delete campaign
+                  </Button>
+                }
+                title="Delete campaign?"
+                description={`This permanently deletes "${selected.name}" — its sessions, arcs, and beats. This cannot be undone.`}
+                onConfirm={() => removeCampaign(selected)}
+              />
             </div>
             {selected.description && <p className="muted">{selected.description}</p>}
 

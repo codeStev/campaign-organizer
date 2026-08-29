@@ -8,6 +8,7 @@ import {
 } from '../api/client';
 import { RelationshipGraph } from '../components/RelationshipGraph';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
@@ -135,9 +136,16 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
                 <em className="muted">{r.label || (r.directed ? '→' : '—')}</em>{' '}
                 {labels.get(r.toArticleId) ?? '?'}
               </span>
-              <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => removeRelationship(r.id)}>
-                ✕
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    ✕
+                  </Button>
+                }
+                title="Delete relationship?"
+                description={`This removes the link between "${labels.get(r.fromArticleId) ?? '?'}" and "${labels.get(r.toArticleId) ?? '?'}". This cannot be undone.`}
+                onConfirm={() => removeRelationship(r.id)}
+              />
             </li>
           ))}
           {loading && <li className="muted">Loading…</li>}
