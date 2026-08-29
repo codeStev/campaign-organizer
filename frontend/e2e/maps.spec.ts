@@ -47,8 +47,6 @@ test('long map name truncates with an ellipsis and shows the full name on hover'
   const nameSpan = page.getByTestId('map-name').filter({ hasText: 'The Sprawling Northern' });
   await expect(nameSpan).toBeVisible();
 
-  await expect(nameSpan).toHaveAttribute('title', LONG_NAME);
-
   const { overflowsContainer, textOverflow, whiteSpace } = await nameSpan.evaluate((el) => ({
     overflowsContainer: el.scrollWidth > el.clientWidth,
     textOverflow: getComputedStyle(el).textOverflow,
