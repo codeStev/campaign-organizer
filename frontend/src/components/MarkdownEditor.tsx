@@ -30,7 +30,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from './ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
@@ -328,94 +327,100 @@ function MarkdownEditorInner({
           </Button>
         )}
         {onAiDraft && (
-          <Dialog open={draftDialogOpen} onOpenChange={setDraftDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={drafting}
-                onClick={openAiDraftDialog}
-              >
-                {drafting ? '✨ Drafting…' : '✨ AI draft'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>AI draft</DialogTitle>
-              </DialogHeader>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={drafting}
+            onClick={openAiDraftDialog}
+          >
+            {drafting ? '✨ Drafting…' : '✨ AI draft'}
+          </Button>
+        )}
+      </div>
+      {/* Deliberately NOT nested inside .editor-toolbar above: React bubbles
+          a portaled Dialog's synthetic events up through the React tree (not
+          the DOM tree) to that div's onMouseDown handler regardless of where
+          the DOM node actually lives, and preventDefault() there would kill
+          the browser's default focus-on-click behavior for every field in
+          this dialog - clicks stop focusing inputs, though Tab still works. */}
+      {onAiDraft && (
+        <Dialog open={draftDialogOpen} onOpenChange={setDraftDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>AI draft</DialogTitle>
+            </DialogHeader>
 
-              {showKindPicker && (
-                <div className="ai-draft-field">
-                  <Label>Article kind</Label>
-                  <RadioGroup
-                    className="ai-draft-kind-grid"
-                    value={articleTemplate}
-                    onValueChange={(v) => onArticleTemplateChange?.(v as ArticleTemplate)}
-                  >
-                    {ARTICLE_TEMPLATES.map((t) => (
-                      <div key={t} className="ai-draft-level-option">
-                        <RadioGroupItem value={t} id={`ai-draft-kind-${t}`} />
-                        <Label htmlFor={`ai-draft-kind-${t}`}>{templateLabel(t)}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              )}
-
+            {showKindPicker && (
               <div className="ai-draft-field">
-                <Label htmlFor="ai-draft-instructions">What should I draft?</Label>
-                <Textarea
-                  id="ai-draft-instructions"
-                  placeholder="Keywords/instructions…"
-                  value={instructionsInput}
-                  onChange={(e) => setInstructionsInput(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="ai-draft-field">
-                <Label>Level</Label>
-                <RadioGroup value={level} onValueChange={(v) => setLevel(v as DraftLevel)}>
-                  {LEVEL_OPTIONS.map((opt) => (
-                    <div key={opt.value} className="ai-draft-level-option">
-                      <RadioGroupItem value={opt.value} id={`ai-draft-level-${opt.value}`} />
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Label htmlFor={`ai-draft-level-${opt.value}`}>{opt.label}</Label>
-                        </TooltipTrigger>
-                        <TooltipContent>{opt.description}</TooltipContent>
-                      </Tooltip>
+                <Label>Article kind</Label>
+                <RadioGroup
+                  className="ai-draft-kind-grid"
+                  value={articleTemplate}
+                  onValueChange={(v) => onArticleTemplateChange?.(v as ArticleTemplate)}
+                >
+                  {ARTICLE_TEMPLATES.map((t) => (
+                    <div key={t} className="ai-draft-level-option">
+                      <RadioGroupItem value={t} id={`ai-draft-kind-${t}`} />
+                      <Label htmlFor={`ai-draft-kind-${t}`}>{templateLabel(t)}</Label>
                     </div>
                   ))}
                 </RadioGroup>
               </div>
+            )}
 
-              {draftError && (
-                <Alert variant="destructive">
-                  <AlertTitle>AI draft failed</AlertTitle>
-                  <AlertDescription>{draftError}</AlertDescription>
-                </Alert>
-              )}
+            <div className="ai-draft-field">
+              <Label htmlFor="ai-draft-instructions">What should I draft?</Label>
+              <Textarea
+                id="ai-draft-instructions"
+                placeholder="Keywords/instructions…"
+                value={instructionsInput}
+                onChange={(e) => setInstructionsInput(e.target.value)}
+                autoFocus
+              />
+            </div>
 
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="link">
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <Button
-                  type="button"
-                  disabled={!instructionsInput.trim() || drafting}
-                  onClick={() => void submitAiDraft()}
-                >
-                  {drafting ? 'Drafting…' : 'Draft'}
+            <div className="ai-draft-field">
+              <Label>Level</Label>
+              <RadioGroup value={level} onValueChange={(v) => setLevel(v as DraftLevel)}>
+                {LEVEL_OPTIONS.map((opt) => (
+                  <div key={opt.value} className="ai-draft-level-option">
+                    <RadioGroupItem value={opt.value} id={`ai-draft-level-${opt.value}`} />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Label htmlFor={`ai-draft-level-${opt.value}`}>{opt.label}</Label>
+                      </TooltipTrigger>
+                      <TooltipContent>{opt.description}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {draftError && (
+              <Alert variant="destructive">
+                <AlertTitle>AI draft failed</AlertTitle>
+                <AlertDescription>{draftError}</AlertDescription>
+              </Alert>
+            )}
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="link">
+                  Cancel
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+              </DialogClose>
+              <Button
+                type="button"
+                disabled={!instructionsInput.trim() || drafting}
+                onClick={() => void submitAiDraft()}
+              >
+                {drafting ? 'Drafting…' : 'Draft'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileSelected} />
       <div
         className="editor-content"
