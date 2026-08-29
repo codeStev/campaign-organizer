@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { PromptDialog } from '../components/PromptDialog';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { Textarea } from '../components/ui/textarea';
@@ -71,6 +72,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [draft, setDraft] = useState<EventDraft>(EMPTY_EVENT);
   const [error, setError] = useState<string | null>(null);
+  const [namePromptOpen, setNamePromptOpen] = useState(false);
 
   const calendarApi = useMemo(() => calendarsApi(worldId), [worldId]);
 
@@ -131,9 +133,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     await loadEvents(timeline.id);
   }
 
-  async function createTimeline() {
-    const name = window.prompt('Timeline name?');
-    if (!name) return;
+  async function createTimeline(name: string) {
     try {
       const created = await api.create({ name });
       setList(await api.list());
@@ -213,7 +213,14 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Button onClick={createTimeline}>+ New timeline</Button>
+        <Button onClick={() => setNamePromptOpen(true)}>+ New timeline</Button>
+        <PromptDialog
+          open={namePromptOpen}
+          onOpenChange={setNamePromptOpen}
+          title="New timeline"
+          label="Timeline name"
+          onSubmit={(name) => void createTimeline(name)}
+        />
         <ul className="article-list">
           {list.map((t) => (
             <li key={t.id}>

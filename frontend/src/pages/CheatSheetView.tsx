@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Textarea } from '../components/ui/textarea';
 import {
   Select,
@@ -104,6 +105,7 @@ export function CheatSheetView({
   const [saving, setSaving] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [add, setAdd] = useState(EMPTY_ADD);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
   const [statblocks, setStatblocks] = useState<Statblock[]>([]);
   const [tables, setTables] = useState<RollTable[]>([]);
@@ -166,7 +168,10 @@ export function CheatSheetView({
   );
 
   function close() {
-    if (dirty && !window.confirm('Discard unsaved cheat-sheet changes?')) return;
+    if (dirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
     onClose();
   }
 
@@ -295,6 +300,19 @@ export function CheatSheetView({
             Close
           </Button>
         </h3>
+
+        <ConfirmDialog
+          open={discardConfirmOpen}
+          onOpenChange={setDiscardConfirmOpen}
+          title="Discard unsaved changes?"
+          description="Your unsaved cheat-sheet changes will be lost."
+          confirmLabel="Discard"
+          destructive
+          onConfirm={() => {
+            setDiscardConfirmOpen(false);
+            onClose();
+          }}
+        />
 
         <ol className="cheatsheet-list">
           {fragments.map((f, i) => (
