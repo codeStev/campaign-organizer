@@ -147,3 +147,34 @@ test('a chained table is labeled on the row that leads to it, in print', async (
   await expect(mainRow.locator('.print-chain-note')).toHaveText(/Sub Table/);
   await expect(popup.getByRole('heading', { name: 'Sub Table' })).toBeVisible();
 });
+
+// Regression test for: every delete button in the app fired immediately on
+// click, with no way to back out of a misclick.
+test('deleting a table asks for confirmation, and Cancel backs out safely', async ({ page, request }) => {
+  const token = await apiLogin(request);
+  const table = await apiCreateTable(request, token, worldId, {
+    title: 'Delete Me Table',
+    diceExpression: '1d4',
+    entries: [{ minResult: null, maxResult: null, body: 'An outcome' }],
+  });
+
+  await page.goto(`/worlds/${worldId}/tables/table/${table.id}`);
+  const deleteTrigger = page.getByRole('button', { name: 'Delete', exact: true });
+
+  await deleteTrigger.click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Delete Me Table');
+
+  // Cancel must not delete anything.
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).not.toBeVisible();
+  await page.reload();
+  await expect(page.locator('.article-link').filter({ hasText: 'Delete Me Table' })).toBeVisible();
+
+  // Confirming does delete it.
+  await deleteTrigger.click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.getByRole('alertdialog')).not.toBeVisible();
+  await expect(page.locator('.article-link').filter({ hasText: 'Delete Me Table' })).toHaveCount(0);
+});
