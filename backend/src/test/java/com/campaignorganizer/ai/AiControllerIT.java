@@ -33,7 +33,8 @@ class AiControllerIT extends AbstractIntegrationTest {
     private TextGenerationPort openRouter;
 
     private String draftBody() {
-        return "{\"instructions\":\"a gruff dockmaster\",\"existingContent\":\"\"}";
+        return "{\"instructions\":\"a gruff dockmaster\",\"existingContent\":\"\","
+                + "\"level\":\"FULL_DRAFT\",\"template\":\"GENERIC\"}";
     }
 
     @Test
@@ -52,6 +53,21 @@ class AiControllerIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"instructions\":\"   \"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void draftWithoutLevelOrTemplate_defaultsAndStillSucceeds() throws Exception {
+        stubProviderIds();
+        Mockito.when(groq.configured()).thenReturn(true);
+        Mockito.when(groq.generate(anyString(), anyString(), anyString()))
+                .thenReturn(new com.campaignorganizer.ai.domain.DraftResult("Salt on the wind.", "groq"));
+
+        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"instructions\":\"a gruff dockmaster\",\"existingContent\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.text").value("Salt on the wind."));
     }
 
     @Test
