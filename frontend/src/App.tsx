@@ -50,7 +50,7 @@ export function App() {
           </Routes>
         )}
       </main>
-      <Toaster position="bottom-left" />
+      <Toaster position="bottom-right" />
     </div>
   );
 }
