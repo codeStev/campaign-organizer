@@ -203,6 +203,7 @@ button:disabled {
 
 .article-link {
   width: 100%;
+  min-width: 0;
   background: var(--card);
   color: inherit;
   text-align: left;
@@ -210,6 +211,15 @@ button:disabled {
   flex-direction: column;
   border: 1px solid var(--border);
   padding: 0.5rem 1rem;
+}
+
+/* Long names truncate with an ellipsis instead of overflowing the sidebar;
+   the title attribute on the element shows the full text on hover. */
+.article-link > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .article-link.active {
