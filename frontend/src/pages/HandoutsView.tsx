@@ -7,6 +7,7 @@ import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -171,14 +172,16 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
               </Button>
             )}
             {editingExisting && (
-              <Button
-                type="button"
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => void remove()}
-              >
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title="Delete handout?"
+                description={`This permanently deletes "${draft.title}" and cannot be undone.`}
+                onConfirm={() => void remove()}
+              />
             )}
           </div>
         </form>

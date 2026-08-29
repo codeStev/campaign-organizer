@@ -16,6 +16,7 @@ import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
@@ -335,13 +336,16 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
               <Button variant="link" onClick={() => setPrintOpen(true)} title="Print or save as PDF">
                 🖨 Print map
               </Button>
-              <Button
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => deleteMap(selected)}
-              >
-                Delete map
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    Delete map
+                  </Button>
+                }
+                title="Delete map?"
+                description={`This permanently deletes "${selected.name}" and its pins. This cannot be undone.`}
+                onConfirm={() => deleteMap(selected)}
+              />
             </div>
             {selected.imageUrl ? (
               <MapCanvas
@@ -486,9 +490,16 @@ function PinEditor({ pin, articles, layers, onSave, onOpen, onDelete }: PinEdito
             Open article
           </Button>
         )}
-        <Button variant="link" className="text-destructive hover:text-destructive" onClick={onDelete}>
-          Delete pin
-        </Button>
+        <ConfirmDeleteDialog
+          trigger={
+            <Button variant="link" className="text-destructive hover:text-destructive">
+              Delete pin
+            </Button>
+          }
+          title="Delete pin?"
+          description="This permanently removes this pin from the map. This cannot be undone."
+          onConfirm={onDelete}
+        />
       </div>
     </div>
   );

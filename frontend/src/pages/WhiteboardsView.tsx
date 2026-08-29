@@ -9,6 +9,7 @@ import {
 } from '../api/client';
 import { WhiteboardCanvas } from '../components/WhiteboardCanvas';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -138,13 +139,16 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
                 <Button onClick={save} disabled={!dirty}>
                   {dirty ? 'Save' : 'Saved'}
                 </Button>
-                <Button
-                  variant="link"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => removeBoard(selected)}
-                >
-                  Delete
-                </Button>
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      Delete
+                    </Button>
+                  }
+                  title="Delete whiteboard?"
+                  description={`This permanently deletes "${selected.name}" and cannot be undone.`}
+                  onConfirm={() => removeBoard(selected)}
+                />
               </div>
             </div>
             <p className="muted hint">Drag to move · double-click to edit · Connect to link nodes.</p>

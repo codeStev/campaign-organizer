@@ -11,6 +11,7 @@ import {
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -81,17 +82,18 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
   }
 
   async function remove(t: FieldTemplate) {
-    const consequence =
-      t.kind === 'CHARACTER'
-        ? 'Character sheets using it will be removed too.'
-        : 'Statblocks using it will fall back to freeform stats.';
-    if (!window.confirm(`Delete "${t.name}"? ${consequence}`)) return;
     try {
       await api.remove(t.id);
       onChanged();
     } catch (err) {
       onError(err);
     }
+  }
+
+  function deleteConsequence(t: FieldTemplate): string {
+    return t.kind === 'CHARACTER'
+      ? 'Character sheets using it will be removed too.'
+      : 'Statblocks using it will fall back to freeform stats.';
   }
 
   if (building) {
@@ -169,13 +171,16 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
                 {KIND_LABEL[t.kind]} · {t.system ?? 'custom'} · {t.sections.length} sections
               </small>
             </Button>
-            <Button
-              variant="link"
-              className="text-destructive hover:text-destructive"
-              onClick={() => remove(t)}
-            >
-              ✕
-            </Button>
+            <ConfirmDeleteDialog
+              trigger={
+                <Button variant="link" className="text-destructive hover:text-destructive">
+                  ✕
+                </Button>
+              }
+              title="Delete template?"
+              description={`This deletes "${t.name}". ${deleteConsequence(t)}`}
+              onConfirm={() => remove(t)}
+            />
           </li>
         ))}
         {loading && <li className="muted">Loading…</li>}

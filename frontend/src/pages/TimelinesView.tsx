@@ -12,6 +12,7 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -249,9 +250,16 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => deleteTimeline(selected)}>
-                  Delete timeline
-                </Button>
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      Delete timeline
+                    </Button>
+                  }
+                  title="Delete timeline?"
+                  description={`This permanently deletes "${selected.name}" and its events. This cannot be undone.`}
+                  onConfirm={() => deleteTimeline(selected)}
+                />
               </div>
             </div>
 
@@ -335,9 +343,16 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                           Open article
                         </Button>
                       )}
-                      <Button variant="link" className="text-destructive hover:text-destructive" onClick={() => deleteEvent(event)}>
-                        Delete
-                      </Button>
+                      <ConfirmDeleteDialog
+                        trigger={
+                          <Button variant="link" className="text-destructive hover:text-destructive">
+                            Delete
+                          </Button>
+                        }
+                        title="Delete event?"
+                        description={`This permanently deletes "${event.title}" and cannot be undone.`}
+                        onConfirm={() => deleteEvent(event)}
+                      />
                     </div>
                   </div>
                 </li>

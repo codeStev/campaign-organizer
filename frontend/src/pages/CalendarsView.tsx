@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
   worldId: string;
@@ -201,14 +202,16 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
               {draft.id ? 'Save calendar' : 'Create calendar'}
             </Button>
             {draft.id && (
-              <Button
-                type="button"
-                variant="link"
-                className="text-destructive hover:text-destructive"
-                onClick={() => remove(list.find((c) => c.id === draft.id)!)}
-              >
-                Delete
-              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                    Delete
+                  </Button>
+                }
+                title="Delete calendar?"
+                description={`This permanently deletes "${draft.name}" and cannot be undone.`}
+                onConfirm={() => remove(list.find((c) => c.id === draft.id)!)}
+              />
             )}
           </div>
         </form>

@@ -12,6 +12,7 @@ import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -286,9 +287,16 @@ export function CharacterSheetsPanel({
                 </Button>
               )}
               {draft.id && (
-                <Button variant="link" className="text-destructive hover:text-destructive" onClick={remove}>
-                  Delete
-                </Button>
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      Delete
+                    </Button>
+                  }
+                  title="Delete character sheet?"
+                  description={`This permanently deletes "${draft.name}" and cannot be undone.`}
+                  onConfirm={remove}
+                />
               )}
             </div>
           </>
