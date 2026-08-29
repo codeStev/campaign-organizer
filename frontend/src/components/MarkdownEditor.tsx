@@ -352,6 +352,18 @@ function MarkdownEditorInner({
                   <Select
                     value={articleTemplate}
                     onValueChange={(v) => onArticleTemplateChange?.(v as ArticleTemplate)}
+                    onOpenChange={(open) => {
+                      if (open) return;
+                      // Radix Select nested inside a Dialog can leave
+                      // `pointer-events: none` stuck on <body> after closing
+                      // (a known upstream interaction between the two
+                      // layers), which silently disables the rest of the
+                      // dialog. Clear it once the close has had a tick to
+                      // settle on its own.
+                      setTimeout(() => {
+                        document.body.style.pointerEvents = '';
+                      }, 0);
+                    }}
                   >
                     <SelectTrigger id="ai-draft-kind">
                       <SelectValue />
