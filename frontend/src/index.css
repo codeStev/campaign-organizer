@@ -1743,6 +1743,15 @@ button:disabled {
   margin: 0 0 1rem;
 }
 
+/* Points a printed row/card at the appended section its chain leads to —
+   otherwise there's no way to tell which result a chain resolves into. */
+.print-chain-note {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #666;
+  margin: 0.25rem 0 0;
+}
+
 .print-body img {
   max-width: 100%;
   height: auto;
