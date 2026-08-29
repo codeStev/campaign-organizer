@@ -985,7 +985,12 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       : 'Create deck'}
             </Button>
             {(printTable || printDeck) && (
-              <Button type="button" variant="outline" onClick={() => setPrinting(true)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPrinting(true)}
+                data-testid="table-print-button"
+              >
                 🖨 Print
               </Button>
             )}

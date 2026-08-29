@@ -56,3 +56,26 @@ test('save button shows a disabled "Saving…" state while the request is in fli
   await expect(saveBtn).toBeEnabled({ timeout: 5000 });
   await expect(saveBtn).not.toHaveText(/saving/i);
 });
+
+// Regression test for: markdown in a table entry (e.g. a bullet list) had no
+// styling at all in the printed output — same root cause as the preview-pane
+// bug, just a different render site (PrintView.tsx uses the same shared CSS).
+test('a markdown bullet list in a table entry is visibly marked in the print output', async ({ page }) => {
+  await page.getByTestId('new-table-button').click();
+  await page.getByTestId('table-title-input').fill('Print Styling Table');
+  await page.getByTestId('table-dice-input').fill('1d4');
+  await page.getByTestId('table-entry-body-0').fill('- printed item one\n- printed item two');
+
+  await page.getByTestId('table-save-button').click();
+  await page.waitForURL(/\/tables\/table\/[^/]+$/, { timeout: 5000 });
+
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByTestId('table-print-button').click(),
+  ]);
+  await popup.waitForLoadState();
+
+  const printedList = popup.locator('ul').filter({ hasText: 'printed item one' });
+  await expect(printedList).toBeVisible();
+  await expect(printedList).not.toHaveCSS('list-style-type', 'none');
+});
