@@ -1,11 +1,14 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/kit/core';
+import { Editor, rootCtx, defaultValueCtx, commandsCtx } from '@milkdown/kit/core';
 import {
   commonmark,
   toggleStrongCommand,
   toggleEmphasisCommand,
   wrapInHeadingCommand,
   wrapInBulletListCommand,
+  liftListItemCommand,
+  isNodeSelectedCommand,
+  bulletListSchema,
 } from '@milkdown/kit/preset/commonmark';
 import { gfm } from '@milkdown/kit/preset/gfm';
 import { history } from '@milkdown/kit/plugin/history';
@@ -89,8 +92,15 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
     get()?.action(callCommand(wrapInHeadingCommand.key, 2));
   }
 
+  // wrapInBulletListCommand only ever wraps — there's no matching unwrap
+  // behind the same button, unlike Bold/Italic which are real toggles.
+  // Lift the current item back out when it's already a list.
   function toggleBulletList() {
-    get()?.action(callCommand(wrapInBulletListCommand.key));
+    get()?.action((ctx) => {
+      const commands = ctx.get(commandsCtx);
+      const alreadyList = commands.call(isNodeSelectedCommand.key, bulletListSchema.type(ctx));
+      commands.call(alreadyList ? liftListItemCommand.key : wrapInBulletListCommand.key);
+    });
   }
 
   async function insertImage(file: File) {
