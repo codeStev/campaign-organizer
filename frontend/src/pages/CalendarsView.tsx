@@ -134,7 +134,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
                 className={c.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/calendars/${c.id}`)}
               >
-                <span>{c.name}</span>
+                <span title={c.name}>{c.name}</span>
                 <small className="muted">{c.months.length} months</small>
               </button>
             </li>

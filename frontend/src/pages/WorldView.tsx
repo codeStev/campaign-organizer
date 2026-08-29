@@ -484,7 +484,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     className={a.id === draft.id ? 'article-link active' : 'article-link'}
                     onClick={() => openArticle(a.id)}
                   >
-                    <span>{a.title}</span>
+                    <span title={a.title}>{a.title}</span>
                     <small className="muted">{a.template.toLowerCase()}</small>
                   </button>
                 </li>

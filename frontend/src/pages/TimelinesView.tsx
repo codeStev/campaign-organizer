@@ -216,7 +216,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 className={t.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/timelines/${t.id}`)}
               >
-                <span>{t.name}</span>
+                <span title={t.name}>{t.name}</span>
               </button>
             </li>
           ))}

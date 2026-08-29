@@ -125,7 +125,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
                 className={h.id === urlHandoutId ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/handouts/${h.id}`)}
               >
-                <span>{h.title}</span>
+                <span title={h.title}>{h.title}</span>
                 <small className="muted">
                   {PRESETS.find((p) => p.value === h.preset)?.label ?? h.preset}
                 </small>

@@ -125,7 +125,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 className={c.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/campaigns/${c.id}`)}
               >
-                <span>{c.name}</span>
+                <span title={c.name}>{c.name}</span>
               </button>
             </li>
           ))}
