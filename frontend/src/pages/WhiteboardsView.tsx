@@ -118,7 +118,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
                 className={b.id === selected?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/whiteboards/${b.id}`)}
               >
-                <span>{b.name}</span>
+                <span title={b.name}>{b.name}</span>
               </button>
             </li>
           ))}

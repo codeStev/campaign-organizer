@@ -181,7 +181,7 @@ export function CharacterSheetsPanel({
                 className={s.id === draft?.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/sheets/characters/${s.id}`)}
               >
-                <span>{s.name}</span>
+                <span title={s.name}>{s.name}</span>
               </button>
             </li>
           ))}

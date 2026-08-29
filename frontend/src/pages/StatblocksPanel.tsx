@@ -268,7 +268,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                 className={sb.id === draft.id ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/sheets/statblocks/${sb.id}`)}
               >
-                <span>{sb.name}</span>
+                <span title={sb.name}>{sb.name}</span>
               </button>
             </li>
           ))}

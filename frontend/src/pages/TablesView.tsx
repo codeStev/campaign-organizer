@@ -577,7 +577,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 }
                 onClick={() => navigate(`/worlds/${worldId}/tables/table/${t.id}`)}
               >
-                <span>
+                <span title={t.title}>
                   🎲 {t.title}
                 </span>
                 <small className="muted">
@@ -611,7 +611,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 }
                 onClick={() => navigate(`/worlds/${worldId}/tables/deck/${d.id}`)}
               >
-                <span>🃏 {d.title}</span>
+                <span title={d.title}>🃏 {d.title}</span>
                 <small className="muted">{d.cards.length} cards</small>
               </button>
             </li>

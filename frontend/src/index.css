@@ -213,13 +213,36 @@ button:disabled {
   padding: 0.5rem 1rem;
 }
 
-/* Long names truncate with an ellipsis instead of overflowing the sidebar;
-   the title attribute on the element shows the full text on hover. */
+/* Long names truncate with an ellipsis instead of overflowing the sidebar.
+   The native browser title-attribute tooltip is unreliable (slow, easy to
+   miss, can be suppressed by the OS), so the full text is also shown via a
+   real, screenshot-testable tooltip built from that same title attribute. */
 .article-link > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  position: relative;
+}
+
+.article-link > span[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 30;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: normal;
+  max-width: 20rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
 }
 
 .article-link.active {
