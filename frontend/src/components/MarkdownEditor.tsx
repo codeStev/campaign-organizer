@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Editor, rootCtx, defaultValueCtx, commandsCtx } from '@milkdown/kit/core';
+import { Editor, rootCtx, defaultValueCtx, commandsCtx, editorStateCtx } from '@milkdown/kit/core';
 import type { Ctx } from '@milkdown/kit/ctx';
 import {
   commonmark,
@@ -7,7 +7,6 @@ import {
   toggleEmphasisCommand,
   wrapInHeadingCommand,
   wrapInBulletListCommand,
-  isMarkSelectedCommand,
   isNodeSelectedCommand,
   strongSchema,
   emphasisSchema,
@@ -60,10 +59,21 @@ function MarkdownEditorInner({ value, onChange, onUploadImage, onAiDraft }: Prop
   const lastValueRef = useRef(value);
 
   function readActiveMarks(ctx: Ctx) {
+    const state = ctx.get(editorStateCtx);
+    const { selection } = state;
+    // For a collapsed cursor, doc.rangeHasMark sees an empty range and always
+    // says "no" — the mark that toggling just set only exists in
+    // storedMarks (what the *next typed character* will get), not yet in the
+    // document. Mirror ProseMirror's own markActive idiom instead.
+    const markActive = (mark: ReturnType<typeof strongSchema.type>) =>
+      selection.empty
+        ? !!mark.isInSet(state.storedMarks ?? selection.$from.marks())
+        : state.doc.rangeHasMark(selection.from, selection.to, mark);
+
     const commands = ctx.get(commandsCtx);
     setActive({
-      bold: commands.call(isMarkSelectedCommand.key, strongSchema.type(ctx)),
-      italic: commands.call(isMarkSelectedCommand.key, emphasisSchema.type(ctx)),
+      bold: markActive(strongSchema.type(ctx)),
+      italic: markActive(emphasisSchema.type(ctx)),
       heading: commands.call(isNodeSelectedCommand.key, headingSchema.type(ctx)),
       bulletList: commands.call(isNodeSelectedCommand.key, bulletListSchema.type(ctx)),
     });
