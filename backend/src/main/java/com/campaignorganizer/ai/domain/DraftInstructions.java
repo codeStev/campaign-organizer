@@ -6,7 +6,8 @@ import com.campaignorganizer.shared.domain.ValidationException;
  * What the owner asked to have drafted (aggregate root's only real invariant:
  * bounded, non-blank input). Pure domain — no framework. See ADR-0064.
  */
-public record DraftInstructions(String instructions, String existingContent) {
+public record DraftInstructions(
+        String instructions, String existingContent, DraftLevel level, ArticleKind kind) {
 
     private static final int MAX_INSTRUCTIONS = 2000;
     private static final int MAX_EXISTING_CONTENT = 20000;
@@ -22,5 +23,7 @@ public record DraftInstructions(String instructions, String existingContent) {
             throw new ValidationException("Existing content exceeds " + MAX_EXISTING_CONTENT + " characters");
         }
         existingContent = existingContent == null ? "" : existingContent;
+        level = level == null ? DraftLevel.FULL_DRAFT : level;
+        kind = kind == null ? ArticleKind.GENERIC : kind;
     }
 }

@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface Props {
   onOpenWorld: (world: World) => void;
@@ -20,6 +21,7 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
   const [backingUp, setBackingUp] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -104,13 +106,10 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
     void runImport('ADDITIVE');
   }
 
-  function handleImportOverwrite() {
-    const consequence =
-      worlds.length === 0
-        ? 'There are no existing worlds to lose, but this cannot be undone.'
-        : `This deletes all ${worlds.length} existing world(s) first. This cannot be undone.`;
-    if (!window.confirm(`Replace everything with this backup? ${consequence}`)) return;
-    void runImport('OVERWRITE');
+  function overwriteConsequence() {
+    return worlds.length === 0
+      ? 'There are no existing worlds to lose, but this cannot be undone.'
+      : `This deletes all ${worlds.length} existing world(s) first. This cannot be undone.`;
   }
 
   return (
@@ -171,7 +170,7 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
           <Button
             variant="link"
             className="text-destructive hover:text-destructive"
-            onClick={handleImportOverwrite}
+            onClick={() => setOverwriteConfirmOpen(true)}
             disabled={importing}
           >
             Replace everything
@@ -181,6 +180,19 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
           </Button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={overwriteConfirmOpen}
+        onOpenChange={setOverwriteConfirmOpen}
+        title="Replace everything with this backup?"
+        description={overwriteConsequence()}
+        confirmLabel="Replace everything"
+        destructive
+        onConfirm={() => {
+          setOverwriteConfirmOpen(false);
+          void runImport('OVERWRITE');
+        }}
+      />
 
       {loading ? (
         <p>Loading…</p>

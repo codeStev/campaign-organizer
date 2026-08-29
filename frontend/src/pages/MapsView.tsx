@@ -18,6 +18,7 @@ import { TruncatedLabel } from '../components/TruncatedLabel';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { PromptDialog } from '../components/PromptDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
@@ -70,6 +71,8 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   // with the export and across devices (ADR-0049).
   const [styles, setStyles] = useState<Record<string, LayerStyle>>({});
   const [error, setError] = useState<string | null>(null);
+  const [pendingMapFile, setPendingMapFile] = useState<File | null>(null);
+  const [mapNameOpen, setMapNameOpen] = useState(false);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -119,12 +122,17 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlMapId]);
 
-  async function handleNewMapFile(event: ChangeEvent<HTMLInputElement>) {
+  function handleNewMapFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    const name = window.prompt('Map name?', file.name.replace(/\.[^.]+$/, ''));
-    if (!name) return;
+    setPendingMapFile(file);
+    setMapNameOpen(true);
+  }
+
+  async function createMapWithName(name: string) {
+    const file = pendingMapFile;
+    if (!file) return;
     try {
       const asset = await media.upload(file);
       const map = await maps.create({ name, mediaId: asset.id });
@@ -134,6 +142,8 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       toast.success(`Map "${map.name}" added`);
     } catch (err) {
       handleError(err);
+    } finally {
+      setPendingMapFile(null);
     }
   }
 
@@ -266,6 +276,14 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       <aside className="wiki-sidebar">
         <Button onClick={() => fileInputRef.current?.click()}>+ New map</Button>
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleNewMapFile} />
+        <PromptDialog
+          open={mapNameOpen}
+          onOpenChange={setMapNameOpen}
+          title="Name this map"
+          label="Map name"
+          defaultValue={pendingMapFile ? pendingMapFile.name.replace(/\.[^.]+$/, '') : ''}
+          onSubmit={(name) => void createMapWithName(name)}
+        />
         <ul className="article-list">
           {list.map((m) => (
             <li key={m.id}>

@@ -2460,7 +2460,9 @@ paths:
         content to a cloud LLM (Groq, falling back to OpenRouter) and returns
         a draft the owner edits before saving/printing; nothing is persisted
         server-side. Unavailable (503) if no provider is configured or every
-        configured provider fails.
+        configured provider fails. `level` picks how much to generate and
+        `template` shapes it for the kind of article being drafted (ADR-0075);
+        both default to today's behavior when omitted.
       operationId: draftArticleText
       requestBody:
         required: true
@@ -2791,6 +2793,15 @@ components:
             The editor's current plain-text/markdown content, sent as context
             so the draft continues rather than contradicts what's already
             written. Empty for a blank article.
+        level:
+          $ref: '#/components/schemas/DraftLevel'
+        template:
+          $ref: '#/components/schemas/ArticleTemplate'
+
+    DraftLevel:
+      type: string
+      description: How much to generate, from a short teaser up to a full first draft.
+      enum: [QUICK_INSPIRATION, READ_ALOUD, BASIC_INFO, FULL_DRAFT]
 
     DraftArticleTextResult:
       type: object

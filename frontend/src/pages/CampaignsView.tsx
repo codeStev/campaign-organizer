@@ -16,6 +16,7 @@ import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { PromptDialog } from '../components/PromptDialog';
 
 interface Props {
   worldId: string;
@@ -37,6 +38,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [namePromptOpen, setNamePromptOpen] = useState(false);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -75,9 +77,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlCampaignId]);
 
-  async function createCampaign() {
-    const name = window.prompt('Campaign name?');
-    if (!name) return;
+  async function createCampaign(name: string) {
     try {
       const created = await api.create({ name });
       await refresh();
@@ -122,7 +122,14 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Button onClick={createCampaign}>+ New campaign</Button>
+        <Button onClick={() => setNamePromptOpen(true)}>+ New campaign</Button>
+        <PromptDialog
+          open={namePromptOpen}
+          onOpenChange={setNamePromptOpen}
+          title="New campaign"
+          label="Campaign name"
+          onSubmit={(name) => void createCampaign(name)}
+        />
         <ul className="article-list">
           {list.map((c) => (
             <li key={c.id}>

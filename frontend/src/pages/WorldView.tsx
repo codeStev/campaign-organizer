@@ -530,8 +530,10 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   value={draft.body}
                   onChange={(body) => setDraft({ ...draft, body })}
                   onUploadImage={async (file) => (await media.upload(file)).url}
-                  onAiDraft={async (instructions, existingContent) =>
-                    (await ai.draftArticleText(instructions, existingContent)).text
+                  articleTemplate={draft.template}
+                  onArticleTemplateChange={selectTemplate}
+                  onAiDraft={async (instructions, existingContent, level, template) =>
+                    (await ai.draftArticleText(instructions, existingContent, level, template)).text
                   }
                 />
                 <div className="editor-actions">

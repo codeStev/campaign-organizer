@@ -302,6 +302,22 @@ button:disabled {
   gap: 1rem;
 }
 
+.ai-draft-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ai-draft-level-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-draft-kind-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .worlds-head {
   display: flex;
   align-items: center;

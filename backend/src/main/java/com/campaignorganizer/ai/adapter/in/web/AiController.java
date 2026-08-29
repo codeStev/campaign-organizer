@@ -31,7 +31,8 @@ public class AiController {
     @PostMapping("/draft-article-text")
     public DraftArticleTextResponse draftArticleText(
             @PathVariable UUID worldId, @Valid @RequestBody DraftArticleTextRequest request) {
-        var command = new DraftArticleTextCommand(request.instructions(), request.existingContent());
+        var command = new DraftArticleTextCommand(
+                request.instructions(), request.existingContent(), request.level(), request.template());
         return mapper.toResponse(draftUseCase.draft(command));
     }
 }

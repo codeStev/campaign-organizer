@@ -878,19 +878,33 @@ export const diceApi = {
     request<DiceRollResult>('/dice/roll', { method: 'POST', body: JSON.stringify({ expression }) }),
 };
 
+export type DraftLevel = 'QUICK_INSPIRATION' | 'READ_ALOUD' | 'BASIC_INFO' | 'FULL_DRAFT';
+
+export const DRAFT_LEVELS: DraftLevel[] = [
+  'QUICK_INSPIRATION',
+  'READ_ALOUD',
+  'BASIC_INFO',
+  'FULL_DRAFT',
+];
+
 export interface DraftArticleTextResult {
   text: string;
   provider: string;
 }
 
-/** AI-assisted text drafting (ADR-0064). Stateless; worldId is path-only. */
+/** AI-assisted text drafting (ADR-0064, levels/kind per ADR-0075). Stateless; worldId is path-only. */
 export function aiApi(worldId: string) {
   const base = `/worlds/${worldId}/ai`;
   return {
-    draftArticleText: (instructions: string, existingContent: string) =>
+    draftArticleText: (
+      instructions: string,
+      existingContent: string,
+      level: DraftLevel,
+      template: ArticleTemplate,
+    ) =>
       request<DraftArticleTextResult>(`${base}/draft-article-text`, {
         method: 'POST',
-        body: JSON.stringify({ instructions, existingContent }),
+        body: JSON.stringify({ instructions, existingContent, level, template }),
       }),
   };
 }

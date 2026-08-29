@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,8 @@ import com.campaignorganizer.ai.application.port.out.AiProviderSettingsRepositor
 import com.campaignorganizer.ai.application.port.out.TextGenerationFailedException;
 import com.campaignorganizer.ai.application.port.out.TextGenerationPort;
 import com.campaignorganizer.ai.domain.AiUnavailableException;
+import com.campaignorganizer.ai.domain.ArticleKind;
+import com.campaignorganizer.ai.domain.DraftLevel;
 import com.campaignorganizer.ai.domain.DraftResult;
 import com.campaignorganizer.ai.domain.ProviderSetting;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -21,6 +24,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -59,7 +63,7 @@ class DraftArticleTextServiceTest {
         when(groq.generate(anyString(), anyString(), anyString()))
                 .thenReturn(new DraftResult("drafted text", "groq"));
 
-        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", ""));
+        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC));
 
         assertThat(result.text()).isEqualTo("drafted text");
         assertThat(result.provider()).isEqualTo("groq");
@@ -73,7 +77,7 @@ class DraftArticleTextServiceTest {
         when(openRouter.generate(anyString(), anyString(), anyString()))
                 .thenReturn(new DraftResult("fallback text", "openrouter"));
 
-        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", ""));
+        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC));
 
         assertThat(result.provider()).isEqualTo("openrouter");
     }
@@ -85,15 +89,80 @@ class DraftArticleTextServiceTest {
         when(openRouter.generate(anyString(), anyString(), anyString()))
                 .thenThrow(new TextGenerationFailedException("down"));
 
-        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "")))
+        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC)))
                 .isInstanceOf(AiUnavailableException.class);
     }
 
     @Test
     void blankInstructions_rejectedBeforeAnyProviderIsCalled() {
-        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("  ", "")))
+        assertThatThrownBy(() -> service.draft(
+                new DraftArticleTextCommand("  ", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC)))
                 .isInstanceOf(ValidationException.class);
         verify(groq, never()).generate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void nullLevelAndKind_defaultToFullDraftAndGeneric() {
+        when(groq.generate(anyString(), anyString(), anyString()))
+                .thenReturn(new DraftResult("drafted text", "groq"));
+
+        service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", null, null));
+        service.draft(new DraftArticleTextCommand(
+                "a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC));
+
+        ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+        verify(groq, times(2)).generate(systemPrompt.capture(), anyString(), anyString());
+        assertThat(systemPrompt.getAllValues().get(0)).isEqualTo(systemPrompt.getAllValues().get(1));
+    }
+
+    @Test
+    void quickInspirationLevel_usesTheTeaserPrompt() {
+        ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+        when(groq.generate(systemPrompt.capture(), anyString(), anyString()))
+                .thenReturn(new DraftResult("a teaser", "groq"));
+
+        service.draft(new DraftArticleTextCommand(
+                "a gruff dockmaster", "", DraftLevel.QUICK_INSPIRATION, ArticleKind.GENERIC));
+
+        assertThat(systemPrompt.getValue()).contains("a spark, not a finished article");
+    }
+
+    @Test
+    void readAloudLevel_usesTheBoxedTextPrompt() {
+        ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+        when(groq.generate(systemPrompt.capture(), anyString(), anyString()))
+                .thenReturn(new DraftResult("you see...", "groq"));
+
+        service.draft(new DraftArticleTextCommand(
+                "a gruff dockmaster", "", DraftLevel.READ_ALOUD, ArticleKind.GENERIC));
+
+        assertThat(systemPrompt.getValue()).contains("read-aloud/boxed text");
+    }
+
+    @Test
+    void basicInfoLevel_forbidsInventingNewEntities() {
+        ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+        when(groq.generate(systemPrompt.capture(), anyString(), anyString()))
+                .thenReturn(new DraftResult("the basics", "groq"));
+
+        service.draft(new DraftArticleTextCommand(
+                "a gruff dockmaster", "", DraftLevel.BASIC_INFO, ArticleKind.GENERIC));
+
+        assertThat(systemPrompt.getValue()).contains("Do not invent or name any new places");
+    }
+
+    @Test
+    void characterKind_addsCharacterFocusedGuidance() {
+        ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+        when(groq.generate(systemPrompt.capture(), anyString(), anyString()))
+                .thenReturn(new DraftResult("a character", "groq"));
+
+        service.draft(new DraftArticleTextCommand(
+                "a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.CHARACTER));
+
+        assertThat(systemPrompt.getValue())
+                .contains("This article is about a character")
+                .contains("personality, appearance, motivations");
     }
 
     @Test
@@ -104,7 +173,7 @@ class DraftArticleTextServiceTest {
         when(openRouter.generate(anyString(), anyString(), eq("custom-model")))
                 .thenReturn(new DraftResult("from openrouter first", "openrouter"));
 
-        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", ""));
+        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC));
 
         assertThat(result.provider()).isEqualTo("openrouter");
         verify(openRouter).generate(anyString(), anyString(), eq("custom-model"));
@@ -117,7 +186,7 @@ class DraftArticleTextServiceTest {
         when(openRouter.generate(anyString(), anyString(), anyString()))
                 .thenReturn(new DraftResult("fallback text", "openrouter"));
 
-        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", ""));
+        DraftResult result = service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC));
 
         assertThat(result.provider()).isEqualTo("openrouter");
         verify(groq, never()).generate(anyString(), anyString(), anyString());
@@ -129,7 +198,7 @@ class DraftArticleTextServiceTest {
         when(openRouter.generate(anyString(), anyString(), anyString()))
                 .thenThrow(new TextGenerationFailedException("503 upstream"));
 
-        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "")))
+        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC)))
                 .isInstanceOf(AiUnavailableException.class);
         verify(groq, never()).generate(anyString(), anyString(), anyString());
     }
@@ -139,7 +208,7 @@ class DraftArticleTextServiceTest {
         when(groq.configured()).thenReturn(false);
         when(openRouter.configured()).thenReturn(false);
 
-        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "")))
+        assertThatThrownBy(() -> service.draft(new DraftArticleTextCommand("a gruff dockmaster", "", DraftLevel.FULL_DRAFT, ArticleKind.GENERIC)))
                 .isInstanceOf(AiUnavailableException.class);
         verify(groq, never()).generate(anyString(), anyString(), anyString());
         verify(openRouter, never()).generate(anyString(), anyString(), anyString());

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { WhiteboardNode, WhiteboardEdge } from '../api/client';
 import { Button } from './ui/button';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { PromptDialog } from './PromptDialog';
 
 interface Props {
   nodes: WhiteboardNode[];
@@ -21,12 +22,30 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const drag = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  // null = the node-text dialog is closed, '' = adding a new node, an id =
+  // editing that node's existing text.
+  const [nodeDialogTarget, setNodeDialogTarget] = useState<string | null>(null);
+  const [pendingConnection, setPendingConnection] = useState<{ from: string; to: string } | null>(null);
 
   function addNode() {
-    const text = window.prompt('Node text') ?? '';
-    if (!text) return;
-    const n: WhiteboardNode = { id: uid(), text, x: 40, y: 40, color: '#6d54c9' };
-    onChange([...nodes, n], edges);
+    setNodeDialogTarget('');
+  }
+
+  function submitNodeText(text: string) {
+    if (nodeDialogTarget) {
+      onChange(nodes.map((n) => (n.id === nodeDialogTarget ? { ...n, text } : n)), edges);
+    } else {
+      const n: WhiteboardNode = { id: uid(), text, x: 40, y: 40, color: '#6d54c9' };
+      onChange([...nodes, n], edges);
+    }
+  }
+
+  function submitConnectionLabel(label: string) {
+    if (!pendingConnection) return;
+    onChange(nodes, [
+      ...edges,
+      { id: uid(), fromNodeId: pendingConnection.from, toNodeId: pendingConnection.to, label: label || null },
+    ]);
   }
 
   // Pointer Events cover mouse, touch, and pen through one code path (unlike the
@@ -53,19 +72,13 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
   function onNodeClick(node: WhiteboardNode) {
     if (!connectFrom) return;
     if (connectFrom !== node.id) {
-      const label = window.prompt('Connection label (optional)') ?? '';
-      onChange(nodes, [
-        ...edges,
-        { id: uid(), fromNodeId: connectFrom, toNodeId: node.id, label: label || null },
-      ]);
+      setPendingConnection({ from: connectFrom, to: node.id });
     }
     setConnectFrom(null);
   }
 
   function editNode(node: WhiteboardNode) {
-    const text = window.prompt('Edit node text', node.text);
-    if (text == null) return;
-    onChange(nodes.map((n) => (n.id === node.id ? { ...n, text } : n)), edges);
+    setNodeDialogTarget(node.id);
   }
 
   function deleteNode(id: string) {
@@ -89,6 +102,22 @@ export function WhiteboardCanvas({ nodes, edges, onChange }: Props) {
           {connectFrom !== null ? 'Connecting… (pick nodes)' : 'Connect'}
         </button>
       </div>
+      <PromptDialog
+        open={nodeDialogTarget !== null}
+        onOpenChange={(open) => !open && setNodeDialogTarget(null)}
+        title={nodeDialogTarget ? 'Edit node text' : 'New node'}
+        label="Node text"
+        defaultValue={nodeDialogTarget ? (byId.get(nodeDialogTarget)?.text ?? '') : ''}
+        onSubmit={submitNodeText}
+      />
+      <PromptDialog
+        open={pendingConnection !== null}
+        onOpenChange={(open) => !open && setPendingConnection(null)}
+        title="Connection label"
+        label="Label (optional)"
+        optional
+        onSubmit={submitConnectionLabel}
+      />
       <div
         ref={ref}
         className="whiteboard-canvas"
