@@ -187,7 +187,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
         <article className={`handout-doc preview-${draft.preset.toLowerCase()}`}>
           <h2 className="handout-title">{draft.title || '(untitled)'}</h2>
           {/* eslint-disable-next-line react/no-danger */}
-          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
+          <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
         </article>
       </div>
 
@@ -205,7 +205,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             <article className={`handout-doc ${draft.preset.toLowerCase()}`}>
               <h2 className="handout-title">{draft.title}</h2>
               {/* eslint-disable-next-line react/no-danger */}
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
+              <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }} />
             </article>
           </div>
         </NewWindowPortal>
