@@ -97,6 +97,15 @@ test('bullet list renders as a real, visibly-marked list, and toggles off', asyn
   await expect(content.locator('p', { hasText: 'first item' })).toBeVisible();
 });
 
+test('bullet list is visibly marked in the read-only preview pane too', async ({ page }) => {
+  await page.getByTestId('md-toolbar-bullet-list').click();
+  await page.keyboard.type('previewed item');
+
+  const previewList = page.locator('.preview-body ul').filter({ hasText: 'previewed item' });
+  await expect(previewList).toBeVisible();
+  await expect(previewList).not.toHaveCSS('list-style-type', 'none');
+});
+
 test('toolbar buttons un-press when the cursor leaves the formatted text', async ({ page }) => {
   const content = page.getByTestId('md-content');
   const boldBtn = page.getByTestId('md-toolbar-bold');
