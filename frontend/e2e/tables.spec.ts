@@ -1,5 +1,18 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, APIRequestContext } from '@playwright/test';
 import { login, apiLogin, apiCreateWorld, apiDeleteWorld, uniqueName } from './support';
+
+async function apiCreateTable(
+  request: APIRequestContext,
+  token: string,
+  worldId: string,
+  body: unknown,
+): Promise<{ id: string; title: string }> {
+  const res = await request.post(`/api/worlds/${worldId}/roll-tables`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: body,
+  });
+  return res.json();
+}
 
 // Regression test for: the roll table/card deck editor's Save button gave
 // no feedback at all, making it hard to tell whether a save went through.
@@ -78,4 +91,40 @@ test('a markdown bullet list in a table entry is visibly marked in the print out
   const printedList = popup.locator('ul').filter({ hasText: 'printed item one' });
   await expect(printedList).toBeVisible();
   await expect(printedList).not.toHaveCSS('list-style-type', 'none');
+});
+
+// Regression test for: a printed table/deck appended every chained
+// table/deck as a separate section, but nothing on the originating row said
+// which section a given result actually led to.
+test('a chained table is labeled on the row that leads to it, in print', async ({ page, request }) => {
+  const token = await apiLogin(request);
+  const subTable = await apiCreateTable(request, token, worldId, {
+    title: 'Sub Table',
+    diceExpression: '1d4',
+    entries: [{ minResult: null, maxResult: null, body: 'A sub-result' }],
+  });
+  const mainTable = await apiCreateTable(request, token, worldId, {
+    title: 'Main Table',
+    diceExpression: '1d4',
+    entries: [
+      {
+        minResult: null,
+        maxResult: null,
+        body: 'Roll on the sub table',
+        nestedTableIds: [subTable.id],
+      },
+    ],
+  });
+
+  await page.goto(`/worlds/${worldId}/tables/table/${mainTable.id}`);
+
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByTestId('table-print-button').click(),
+  ]);
+  await popup.waitForLoadState();
+
+  const mainRow = popup.locator('tr').filter({ hasText: 'Roll on the sub table' });
+  await expect(mainRow.locator('.print-chain-note')).toHaveText(/Sub Table/);
+  await expect(popup.getByRole('heading', { name: 'Sub Table' })).toBeVisible();
 });
