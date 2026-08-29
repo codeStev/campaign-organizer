@@ -11,6 +11,7 @@ import {
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -62,6 +63,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       await api.create({ name: b.name, kind: b.kind, system: b.system, sections: b.sections });
       setChoice('');
       onChanged();
+      toast.success(`Template "${b.name}" added`);
     } catch (err) {
       onError(err);
     }
@@ -75,6 +77,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       setEditing(null);
       navigate(`/worlds/${worldId}/sheets/templates`);
       onChanged();
+      toast.success('Template saved');
     } catch (err) {
       onError(err);
     }

@@ -13,6 +13,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -127,6 +128,7 @@ export function CharacterSheetsPanel({
       setDraft({ ...draft, id: saved.id });
       if (wasNew) navigate(`/worlds/${worldId}/sheets/characters/${saved.id}`);
       await refresh();
+      toast.success(`Character sheet "${body.name}" saved`);
     } catch (err) {
       onError(err);
     }

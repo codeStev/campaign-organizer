@@ -14,6 +14,7 @@ import { ArcBoard } from './ArcBoard';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -81,6 +82,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       await refresh();
       select(created);
       navigate(`/worlds/${worldId}/campaigns/${created.id}`);
+      toast.success(`Campaign "${created.name}" created`);
     } catch (err) {
       handleError(err);
     }
@@ -97,6 +99,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       setSelected(updated);
       setNotesDirty(false);
       await refresh();
+      toast.success('GM notes saved');
     } catch (err) {
       handleError(err);
     }

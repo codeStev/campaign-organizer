@@ -18,6 +18,7 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
+import { toast } from 'sonner';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
@@ -398,6 +399,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setMode('read');
       if (wasNew) navigate(`/worlds/${worldId}/articles/${saved.id}`);
       await refresh(query, campaignFilter);
+      toast.success(`Article "${saved.title}" saved`);
     } catch (err) {
       handleError(err);
     }

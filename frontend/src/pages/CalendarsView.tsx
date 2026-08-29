@@ -4,6 +4,7 @@ import { calendarsApi, Calendar, CalendarMonthInput, ApiError } from '../api/cli
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -99,6 +100,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       setDraft(EMPTY_DRAFT);
       navigate(`/worlds/${worldId}/calendars`);
       await refresh();
+      toast.success(`Calendar "${body.name}" saved`);
     } catch (err) {
       handleError(err);
     }

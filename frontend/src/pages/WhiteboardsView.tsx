@@ -10,6 +10,7 @@ import {
 import { WhiteboardCanvas } from '../components/WhiteboardCanvas';
 import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -72,6 +73,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       await refresh();
       select(created);
       navigate(`/worlds/${worldId}/whiteboards/${created.id}`);
+      toast.success(`Whiteboard "${created.name}" created`);
     } catch (err) {
       handleError(err);
     }
@@ -84,6 +86,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       setSelected(saved);
       setDirty(false);
       await refresh();
+      toast.success('Whiteboard saved');
     } catch (err) {
       handleError(err);
     }

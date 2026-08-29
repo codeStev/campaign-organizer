@@ -26,6 +26,7 @@ import {
 } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
 import { renderLinkedMarkdown, renderMarkdown } from '../lib/markdown';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -224,6 +225,7 @@ export function CheatSheetView({
       );
       setFragments(sheet.fragments);
       setDirty(false);
+      toast.success('Cheat sheet saved');
     } catch (err) {
       onError(err);
     } finally {

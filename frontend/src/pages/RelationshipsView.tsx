@@ -11,6 +11,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { toast } from 'sonner';
 
 interface Props {
   worldId: string;
@@ -68,6 +69,7 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
       setLabel('');
       setTo('');
       await refresh();
+      toast.success('Relationship added');
     } catch (err) {
       handleError(err);
     }
