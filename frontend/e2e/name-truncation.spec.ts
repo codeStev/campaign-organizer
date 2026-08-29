@@ -30,12 +30,12 @@ test.afterEach(async ({ request }) => {
 
 test('long campaign name truncates and shows a real tooltip on hover', async ({ page }) => {
   const nameSpan = page.locator('.article-link span').filter({ hasText: 'A Campaign With' });
-  await expect(nameSpan).toHaveAttribute('title', LONG_NAME);
 
   const overflowing = await nameSpan.evaluate((el) => el.scrollWidth > el.clientWidth);
   expect(overflowing).toBe(true);
 
   await nameSpan.hover();
-  const tooltipContent = await nameSpan.evaluate((el) => getComputedStyle(el, '::after').content);
-  expect(tooltipContent).toContain(LONG_NAME);
+  const tooltip = page.locator('[data-slot="tooltip-content"]');
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText(LONG_NAME);
 });

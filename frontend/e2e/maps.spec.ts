@@ -75,15 +75,14 @@ test('long map name truncates with an ellipsis and shows the full name on hover'
 
 // Regression test for: the native title-attribute tooltip never appeared for
 // a real user, even though the attribute was present and correct. Verifies
-// the CSS-driven replacement tooltip (built from that same title attribute
-// via a ::after pseudo-element) actually renders on hover.
+// the shadcn/Radix Tooltip replacement actually renders on hover.
 test('hovering the truncated name shows a real tooltip with the full text', async ({ page }) => {
   const nameSpan = page.getByTestId('map-name').filter({ hasText: 'The Sprawling Northern' });
 
-  const beforeHover = await nameSpan.evaluate((el) => getComputedStyle(el, '::after').content);
-  expect(beforeHover).toBe('none');
+  await expect(page.locator('[data-slot="tooltip-content"]')).toHaveCount(0);
 
   await nameSpan.hover();
-  const afterHover = await nameSpan.evaluate((el) => getComputedStyle(el, '::after').content);
-  expect(afterHover).toContain(LONG_NAME);
+  const tooltip = page.locator('[data-slot="tooltip-content"]');
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText(LONG_NAME);
 });
