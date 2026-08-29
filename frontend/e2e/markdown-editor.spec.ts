@@ -73,7 +73,7 @@ test('H2 actually renders as a heading, and the button reflects it', async ({ pa
   expect(headingSize).toBeGreaterThan(bodySize);
 });
 
-test('bullet list renders as a real list, and the button reflects it', async ({ page }) => {
+test('bullet list renders as a real, visibly-marked list, and toggles off', async ({ page }) => {
   const content = page.getByTestId('md-content');
   const listBtn = page.getByTestId('md-toolbar-bullet-list');
 
@@ -81,7 +81,20 @@ test('bullet list renders as a real list, and the button reflects it', async ({ 
   await expect(listBtn).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.type('first item');
 
-  await expect(content.locator('ul li', { hasText: 'first item' })).toBeVisible();
+  const list = content.locator('ul');
+  const item = list.locator('li', { hasText: 'first item' });
+  await expect(item).toBeVisible();
+  // A <ul> with list-style: none (Tailwind's preflight default) still
+  // matches the DOM query above but is indistinguishable from a plain
+  // paragraph — the bug was exactly that. Marker must actually be visible.
+  await expect(list).not.toHaveCSS('list-style-type', 'none');
+
+  // The button must be a real toggle: clicking it again while still inside
+  // the list item turns it back into a plain paragraph.
+  await listBtn.click();
+  await expect(listBtn).toHaveAttribute('aria-pressed', 'false');
+  await expect(content.locator('ul li', { hasText: 'first item' })).toHaveCount(0);
+  await expect(content.locator('p', { hasText: 'first item' })).toBeVisible();
 });
 
 test('toolbar buttons un-press when the cursor leaves the formatted text', async ({ page }) => {
