@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { Spinner } from '../components/ui/spinner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -189,7 +190,11 @@ export function CharacterSheetsPanel({
               </button>
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && sheets.length === 0 && (
             <li className="muted">No character sheets yet.</li>
           )}

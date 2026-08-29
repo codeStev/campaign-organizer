@@ -18,6 +18,7 @@ import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -66,9 +67,10 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArti
     e.preventDefault();
     if (!newTitle) return;
     try {
-      await api.create({ title: newTitle });
+      const created = await api.create({ title: newTitle });
       setNewTitle('');
       await refresh();
+      toast.success(`Arc "${created.title}" created`);
     } catch (err) {
       onError(err);
     }
@@ -78,6 +80,7 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArti
     try {
       await api.update(arc.id, { title: arc.title, description: arc.description, status });
       await refresh();
+      toast.success(`"${arc.title}" marked ${status.toLowerCase()}`);
     } catch (err) {
       onError(err);
     }
@@ -122,7 +125,11 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArti
             onRemove={() => removeArc(arc)}
           />
         ))}
-        {loading && <p className="muted">Loading…</p>}
+        {loading && (
+          <p className="muted loading-row">
+            <Spinner /> Loading…
+          </p>
+        )}
         {!loading && arcs.length === 0 && <p className="muted">No arcs yet.</p>}
       </div>
     </section>
@@ -197,9 +204,10 @@ function ArcCard({
     e.preventDefault();
     if (!beatTitle) return;
     try {
-      await api.create({ title: beatTitle });
+      const created = await api.create({ title: beatTitle });
       setBeatTitle('');
       await refresh();
+      toast.success(`Beat "${created.title}" added`);
     } catch (err) {
       onError(err);
     }

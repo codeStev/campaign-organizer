@@ -15,6 +15,7 @@ import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Button } from '../components/ui/button';
+import { Toggle } from '../components/ui/toggle';
 import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -477,14 +478,15 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           <div className="chain-group">
             <span className="muted">🎲</span>
             {otherTables.map((t) => (
-              <button
+              <Toggle
                 type="button"
                 key={t.id}
                 className={row.nestedTableIds.includes(t.id) ? 'chain-chip on' : 'chain-chip'}
-                onClick={() => toggleNested(key, 'nestedTableIds', t.id)}
+                pressed={row.nestedTableIds.includes(t.id)}
+                onPressedChange={() => toggleNested(key, 'nestedTableIds', t.id)}
               >
                 {t.title}
-              </button>
+              </Toggle>
             ))}
           </div>
         )}
@@ -492,14 +494,15 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           <div className="chain-group">
             <span className="muted">🃏</span>
             {otherDecks.map((d) => (
-              <button
+              <Toggle
                 type="button"
                 key={d.id}
                 className={row.nestedDeckIds.includes(d.id) ? 'chain-chip on' : 'chain-chip'}
-                onClick={() => toggleNested(key, 'nestedDeckIds', d.id)}
+                pressed={row.nestedDeckIds.includes(d.id)}
+                onPressedChange={() => toggleNested(key, 'nestedDeckIds', d.id)}
               >
                 {d.title}
-              </button>
+              </Toggle>
             ))}
           </div>
         )}

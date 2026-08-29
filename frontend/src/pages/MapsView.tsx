@@ -22,6 +22,7 @@ import { PromptDialog } from '../components/PromptDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -297,7 +298,11 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
               </button>
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && list.length === 0 && <li className="muted">No maps yet.</li>}
         </ul>
 

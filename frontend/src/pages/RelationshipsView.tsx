@@ -12,6 +12,7 @@ import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
 
 interface Props {
@@ -148,7 +149,11 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
               />
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && relationships.length === 0 && (
             <li className="muted">No relationships yet.</li>
           )}

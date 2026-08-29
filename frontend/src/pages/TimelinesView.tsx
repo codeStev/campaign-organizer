@@ -16,6 +16,7 @@ import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { PromptDialog } from '../components/PromptDialog';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
@@ -232,7 +233,11 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               </button>
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && list.length === 0 && <li className="muted">No timelines yet.</li>}
         </ul>
       </aside>

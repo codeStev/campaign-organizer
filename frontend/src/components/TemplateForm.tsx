@@ -3,6 +3,7 @@ import { MarkdownEditor } from './MarkdownEditor';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
+import { Toggle } from './ui/toggle';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // and a SELECT-type field can genuinely be saved unset, so that state goes
@@ -108,12 +109,13 @@ function CircleTracker({ count, filled, onChange }: CircleTrackerProps) {
         const n = i + 1;
         const on = n <= filled;
         return (
-          <button
+          <Toggle
             key={n}
             type="button"
             className={on ? 'pip on' : 'pip'}
             title={`${n}`}
-            onClick={() => onChange(filled === n ? n - 1 : n)}
+            pressed={on}
+            onPressedChange={() => onChange(filled === n ? n - 1 : n)}
           />
         );
       })}

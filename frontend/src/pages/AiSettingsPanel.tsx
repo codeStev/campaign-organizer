@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { aiSettingsApi, AiProviderSetting, ApiError, AiProviderTestResult } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -101,7 +102,13 @@ export function AiSettingsPanel({ onAuthExpired }: Props) {
     }
   }
 
-  if (loading) return <p className="muted">Loading…</p>;
+  if (loading) {
+    return (
+      <p className="muted loading-row">
+        <Spinner /> Loading…
+      </p>
+    );
+  }
 
   return (
     <div className="card">

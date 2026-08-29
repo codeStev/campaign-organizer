@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
@@ -143,7 +144,11 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
               </button>
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && list.length === 0 && <li className="muted">No calendars yet.</li>}
         </ul>
       </aside>

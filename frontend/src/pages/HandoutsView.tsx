@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
+import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
@@ -136,7 +137,11 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
               </button>
             </li>
           ))}
-          {loading && <li className="muted">Loading…</li>}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
           {!loading && list.length === 0 && <li className="muted">No handouts yet.</li>}
         </ul>
       </aside>
