@@ -65,6 +65,18 @@ public final class SessionPacketDtos {
             String title,
             List<PacketDeckCard> cards) {}
 
+    /**
+     * A handout tagged to this session (ADR-0077). Body is raw markdown, not
+     * pre-rendered HTML: handouts render client-side like the rest of a
+     * packet's freeform text (session summary, GM notes, beat bodies), and
+     * each preset carries its own client-side stylesheet.
+     */
+    public record PacketHandout(
+            UUID id,
+            String title,
+            String preset,
+            String body) {}
+
     public record SessionPacketResponse(
             SessionView session,
             String campaignName,
@@ -73,5 +85,6 @@ public final class SessionPacketDtos {
             List<PacketMap> maps,
             List<StatblockView> statblocks,
             List<PacketRollTable> rollTables,
-            List<PacketCardDeck> cardDecks) {}
+            List<PacketCardDeck> cardDecks,
+            List<PacketHandout> handouts) {}
 }

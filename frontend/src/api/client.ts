@@ -220,6 +220,7 @@ export interface Handout {
   title: string;
   preset: HandoutPreset;
   body?: string | null;
+  sessionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -230,10 +231,12 @@ export function handoutsApi(worldId: string) {
   return {
     list: () => request<Handout[]>(base),
     get: (id: string) => request<Handout>(`${base}/${id}`),
-    create: (body: { title: string; preset: HandoutPreset; body?: string | null }) =>
+    create: (body: { title: string; preset: HandoutPreset; body?: string | null; sessionId?: string | null }) =>
       request<Handout>(base, { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: string, body: { title: string; preset: HandoutPreset; body?: string | null }) =>
-      request<Handout>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    update: (
+      id: string,
+      body: { title: string; preset: HandoutPreset; body?: string | null; sessionId?: string | null },
+    ) => request<Handout>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
@@ -640,6 +643,13 @@ export interface PacketCardDeck {
   cards: PacketDeckCard[];
 }
 
+export interface PacketHandout {
+  id: string;
+  title: string;
+  preset: HandoutPreset;
+  body: string;
+}
+
 export interface SessionPacket {
   session: Session;
   campaignName: string;
@@ -649,6 +659,7 @@ export interface SessionPacket {
   statblocks: Statblock[];
   rollTables: PacketRollTable[];
   cardDecks: PacketCardDeck[];
+  handouts: PacketHandout[];
 }
 
 export function sessionsApi(worldId: string, campaignId: string) {

@@ -3601,9 +3601,26 @@ components:
           items:
             $ref: '#/components/schemas/PacketPin'
 
+    PacketHandout:
+      type: object
+      required: [id, title, preset, body]
+      description: >
+        A handout tagged to this session (ADR-0077). Body is raw Markdown -
+        handouts render client-side, like the packet's other freeform text.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        preset:
+          type: string
+        body:
+          type: string
+
     SessionPacket:
       type: object
-      required: [session, campaignName, beats, articles, maps, statblocks, rollTables, cardDecks]
+      required: [session, campaignName, beats, articles, maps, statblocks, rollTables, cardDecks, handouts]
       description: Everything needed to run one session, aggregated for print.
       properties:
         session:
@@ -3638,6 +3655,11 @@ components:
           description: Card decks linked by the session's beats.
           items:
             $ref: '#/components/schemas/PacketCardDeck'
+        handouts:
+          type: array
+          description: Handouts tagged to this session (ADR-0077).
+          items:
+            $ref: '#/components/schemas/PacketHandout'
 
     RollTableEntryInput:
       type: object
@@ -3846,6 +3868,13 @@ components:
         body:
           type: [string, "null"]
           description: Markdown body (wiki-links render as anchors).
+        sessionId:
+          type: [string, "null"]
+          format: uuid
+          description: >
+            Session this handout is prepped for (ADR-0077); null for a
+            general/unassigned handout. Operational grouping for packet
+            assembly only - not a wiki-graph link (ADR-0070).
 
     Handout:
       type: object
@@ -3864,6 +3893,9 @@ components:
           enum: [PARCHMENT, NEWSPAPER, POSTER, LETTER]
         body:
           type: [string, "null"]
+        sessionId:
+          type: [string, "null"]
+          format: uuid
         createdAt:
           type: string
           format: date-time

@@ -10,11 +10,14 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCardDeck;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketDeckCard;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketHandout;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketMap;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketPin;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketRollTable;
@@ -62,12 +65,14 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     private final CardDeckQueryPort cardDecks;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
+    private final HandoutQueryPort handouts;
 
     public SessionPacketService(CampaignQueryPort campaigns, SessionQueryPort sessions,
                                 ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                                 StatblockQueryPort statblocks, RollTableQueryPort rollTables,
-                                CardDeckQueryPort cardDecks, MapQueryPort maps, MapPinQueryPort pins) {
+                                CardDeckQueryPort cardDecks, MapQueryPort maps, MapPinQueryPort pins,
+                                HandoutQueryPort handouts) {
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.arcs = arcs;
@@ -79,6 +84,7 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         this.cardDecks = cardDecks;
         this.maps = maps;
         this.pins = pins;
+        this.handouts = handouts;
     }
 
     @Override
@@ -181,9 +187,13 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
 
         List<PacketRollTable> packetTables = tables.stream().map(this::toPacketRollTable).toList();
         List<PacketCardDeck> packetDecks = decks.stream().map(this::toPacketCardDeck).toList();
+        List<PacketHandout> packetHandouts = handouts.findBySession(sessionId).stream()
+                .map(this::toPacketHandout)
+                .toList();
 
         return new SessionPacketResponse(session, campaign.name(),
-                packetBeats, packetArticles, packetMaps, packetStatblocks, packetTables, packetDecks);
+                packetBeats, packetArticles, packetMaps, packetStatblocks, packetTables, packetDecks,
+                packetHandouts);
     }
 
     /** Entry outcome bodies go through the same render pipeline as article bodies. */
@@ -223,5 +233,9 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     private PacketArticle toPacketArticle(ArticleView a) {
         return new PacketArticle(a.id(), a.title(), a.template(),
                 articleRenderer.renderBody(a.worldId(), a.body()));
+    }
+
+    private PacketHandout toPacketHandout(HandoutView h) {
+        return new PacketHandout(h.id(), h.title(), h.preset(), h.body());
     }
 }

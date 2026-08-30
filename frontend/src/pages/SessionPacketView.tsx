@@ -244,6 +244,21 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                 ))}
               </section>
             )}
+
+            {packet.handouts.map((h) => (
+              <section key={h.id} className="print-map-section">
+                <div className="handout-print">
+                  <article className={`handout-doc ${h.preset.toLowerCase()}`}>
+                    <h2 className="handout-title">{h.title}</h2>
+                    {/* eslint-disable-next-line react/no-danger */}
+                    <div
+                      className="preview-body"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(h.body) }}
+                    />
+                  </article>
+                </div>
+              </section>
+            ))}
           </>
         )}
       </div>
