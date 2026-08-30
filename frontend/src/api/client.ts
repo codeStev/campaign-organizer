@@ -238,6 +238,8 @@ export function handoutsApi(worldId: string) {
       body: { title: string; preset: HandoutPreset; body?: string | null; sessionId?: string | null },
     ) => request<Handout>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+    reorder: (orderedIds: string[]) =>
+      request<Handout[]>(`${base}/order`, { method: 'PUT', body: JSON.stringify({ orderedIds }) }),
   };
 }
 
