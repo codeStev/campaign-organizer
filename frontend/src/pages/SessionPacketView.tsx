@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
+import { Checkbox } from '../components/ui/checkbox';
 import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
 import { renderMarkdown } from '../lib/markdown';
@@ -25,6 +26,29 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
+  // Print-time filtering (client-side, over the already-fetched packet — mirrors
+  // PrintView's contents/maps/tables checkboxes). Excluding a beat only hides it
+  // from the Beats list; it doesn't re-derive which referenced articles/maps/
+  // statblocks/tables came from it, since the packet DTO doesn't carry that link.
+  const [includeGmNotes, setIncludeGmNotes] = useState(true);
+  const [includeStatblocks, setIncludeStatblocks] = useState(true);
+  const [includeMaps, setIncludeMaps] = useState(true);
+  const [includeTables, setIncludeTables] = useState(true);
+  const [excludedBeatIds, setExcludedBeatIds] = useState<Set<string>>(new Set());
+
+  function toggleBeat(id: string) {
+    setExcludedBeatIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const shownBeats = useMemo(
+    () => packet?.beats.filter((b) => !excludedBeatIds.has(b.id)) ?? [],
+    [packet, excludedBeatIds],
+  );
 
   useEffect(() => {
     let active = true;
@@ -51,6 +75,31 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
     <NewWindowPortal title={`Packet — ${heading}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Session packet</strong>
+        <label className="print-check">
+          <Checkbox
+            checked={includeGmNotes}
+            onCheckedChange={(checked) => setIncludeGmNotes(checked === true)}
+          />
+          GM notes
+        </label>
+        <label className="print-check">
+          <Checkbox
+            checked={includeStatblocks}
+            onCheckedChange={(checked) => setIncludeStatblocks(checked === true)}
+          />
+          Statblocks
+        </label>
+        <label className="print-check">
+          <Checkbox checked={includeMaps} onCheckedChange={(checked) => setIncludeMaps(checked === true)} />
+          Maps
+        </label>
+        <label className="print-check">
+          <Checkbox
+            checked={includeTables}
+            onCheckedChange={(checked) => setIncludeTables(checked === true)}
+          />
+          Tables &amp; decks
+        </label>
         <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={loading || !packet} />
@@ -58,6 +107,18 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
           Close
         </Button>
       </div>
+
+      {!loading && packet && packet.beats.length > 0 && (
+        <div className="print-toolbar map-print-layers">
+          <span className="muted">Show beats:</span>
+          {packet.beats.map((b) => (
+            <label key={b.id} className="print-check">
+              <Checkbox checked={!excludedBeatIds.has(b.id)} onCheckedChange={() => toggleBeat(b.id)} />
+              {b.title}
+            </label>
+          ))}
+        </div>
+      )}
 
       <div className="print-doc" {...printDocProps}>
         <section className="print-cover">
@@ -72,7 +133,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
 
         {!loading && packet && (
           <>
-            {(s?.summary || s?.notes) && (
+            {(s?.summary || (s?.notes && includeGmNotes)) && (
               <section className="print-article">
                 <h1>Session overview</h1>
                 {s?.summary && (
@@ -84,7 +145,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                     />
                   </>
                 )}
-                {s?.notes && (
+                {s?.notes && includeGmNotes && (
                   <>
                     <p className="print-kicker">gm notes</p>
                     <div
@@ -98,11 +159,11 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
 
             <section className="print-article">
               <h1>Beats</h1>
-              {packet.beats.length === 0 && (
+              {shownBeats.length === 0 && (
                 <p className="print-status">No beats scheduled into this session.</p>
               )}
               <ol className="print-beats">
-                {packet.beats.map((b) => (
+                {shownBeats.map((b) => (
                   <li key={b.id} className="print-beat">
                     <span className="print-beat-title">
                       {b.done ? '☑' : '☐'} {b.title}
@@ -138,7 +199,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </article>
             ))}
 
-            {packet.maps.map((m) => (
+            {includeMaps && packet.maps.map((m) => (
               <section key={m.id} className="print-map-section">
                 <h1>{m.name}</h1>
                 {m.imageUrl && (
@@ -165,7 +226,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             ))}
 
-            {packet.statblocks.length > 0 && (
+            {includeStatblocks && packet.statblocks.length > 0 && (
               <section className="print-map-section">
                 <h1>Statblocks</h1>
                 {packet.statblocks.map((sb) => (
@@ -197,7 +258,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             )}
 
-            {packet.rollTables.length > 0 && (
+            {includeTables && packet.rollTables.length > 0 && (
               <section className="print-map-section">
                 <h1>Roll tables</h1>
                 {packet.rollTables.map((t) => (
@@ -226,7 +287,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             )}
 
-            {packet.cardDecks.length > 0 && (
+            {includeTables && packet.cardDecks.length > 0 && (
               <section className="print-map-section">
                 <h1>Card decks</h1>
                 {packet.cardDecks.map((d) => (

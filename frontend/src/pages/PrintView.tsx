@@ -4,6 +4,7 @@ import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMen
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { Input } from '../components/ui/input';
 import {
   articlesApi,
   mapsApi,
@@ -91,6 +92,23 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
   const [rollTables, setRollTables] = useState<RollTable[]>([]);
   const [cardDecks, setCardDecks] = useState<CardDeck[]>([]);
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
+  // Per-article inclusion, on top of the scope above (all included by default).
+  const [excludedArticleIds, setExcludedArticleIds] = useState<Set<string>>(new Set());
+  const [articleFilter, setArticleFilter] = useState('');
+
+  function toggleArticle(id: string) {
+    setExcludedArticleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const shownArticles = useMemo(
+    () => articles.filter((a) => !excludedArticleIds.has(a.id)),
+    [articles, excludedArticleIds],
+  );
 
   const scopeName = scope ? campaigns.find((c) => c.id === scope)?.name ?? '' : '';
   // Maps only print at whole-world scope, so `articles` covers every linked pin.
@@ -183,6 +201,29 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
         </Button>
       </div>
 
+      {!loading && articles.length > 0 && (
+        <div className="print-toolbar map-print-layers">
+          <span className="muted">Include articles:</span>
+          <Input
+            className="article-picker-filter"
+            placeholder="Filter…"
+            value={articleFilter}
+            onChange={(e) => setArticleFilter(e.target.value)}
+          />
+          {articles
+            .filter((a) => a.title.toLowerCase().includes(articleFilter.toLowerCase()))
+            .map((a) => (
+              <label key={a.id} className="print-check">
+                <Checkbox
+                  checked={!excludedArticleIds.has(a.id)}
+                  onCheckedChange={() => toggleArticle(a.id)}
+                />
+                {a.title}
+              </label>
+            ))}
+        </div>
+      )}
+
       <div className="print-doc" {...printDocProps}>
         <section className="print-cover">
           <h1>{worldName}</h1>
@@ -192,11 +233,11 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
 
         {loading && <p className="print-status">Preparing document…</p>}
 
-        {!loading && includeContents && articles.length > 0 && (
+        {!loading && includeContents && shownArticles.length > 0 && (
           <section className="print-contents">
             <h2>Contents</h2>
             <ol>
-              {articles.map((a) => (
+              {shownArticles.map((a) => (
                 <li key={a.id}>{a.title}</li>
               ))}
             </ol>
@@ -204,7 +245,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
         )}
 
         {!loading &&
-          articles.map((a) => (
+          shownArticles.map((a) => (
             <article key={a.id} className="print-article">
               <h1>{a.title}</h1>
               <p className="print-kicker">{a.template.toLowerCase()}</p>
@@ -220,6 +261,10 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           <p className="print-status">
             {scope ? 'This campaign references no articles yet.' : 'No articles to print.'}
           </p>
+        )}
+
+        {!loading && articles.length > 0 && shownArticles.length === 0 && (
+          <p className="print-status">Every article is excluded — check one above to print it.</p>
         )}
 
         {!loading &&

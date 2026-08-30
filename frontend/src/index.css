@@ -1854,8 +1854,13 @@ button:disabled {
 }
 
 .print-toolbar select,
-.print-toolbar button {
+.print-toolbar button,
+.print-toolbar input {
   color: #222;
+}
+
+.article-picker-filter {
+  width: 10rem;
 }
 
 .print-toolbar-spacer {
