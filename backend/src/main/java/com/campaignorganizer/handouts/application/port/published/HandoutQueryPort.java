@@ -14,4 +14,6 @@ public interface HandoutQueryPort {
     Optional<HandoutView> findById(UUID handoutId);
 
     List<HandoutView> findByWorld(UUID worldId);
+
+    List<HandoutView> findBySession(UUID sessionId);
 }

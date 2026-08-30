@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.CreateHandoutCommand;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.UpdateHandoutCommand;
 import com.campaignorganizer.handouts.application.port.out.HandoutRepositoryPort;
+import com.campaignorganizer.handouts.application.port.out.SessionExistsPort;
 import com.campaignorganizer.handouts.application.port.out.WorldExistsPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.handouts.application.service.HandoutService;
@@ -42,6 +43,8 @@ class HandoutServiceTest {
     @Mock
     private WorldExistsPort worlds;
     @Mock
+    private SessionExistsPort sessions;
+    @Mock
     private IdGenerator ids;
 
     private HandoutService service;
@@ -49,31 +52,40 @@ class HandoutServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(worlds.exists(worldId)).thenReturn(true);
+        lenient().when(sessions.existsInWorld(any(), any())).thenReturn(true);
         lenient().when(ids.newId()).thenReturn(UUID.randomUUID());
-        service = new HandoutService(repo, worlds, Mappers.getMapper(HandoutViewMapper.class),
+        service = new HandoutService(repo, worlds, sessions, Mappers.getMapper(HandoutViewMapper.class),
                 ids, Clock.fixed(now, java.time.ZoneOffset.UTC));
     }
 
     private Handout saved() {
         // Plain UUID here: calling the ids mock mid-stubbing trips UnfinishedStubbing.
         return Handout.create(UUID.randomUUID(), worldId, "Wanted poster", Handout.Preset.POSTER,
-                "**500 gold**", now);
+                "**500 gold**", null, now);
     }
 
     @Test
     void createRejectsUnknownWorld() {
         when(worlds.exists(any())).thenReturn(false);
         assertThatThrownBy(() -> service.create(
-                new CreateHandoutCommand(UUID.randomUUID(), "T", "POSTER", null)))
+                new CreateHandoutCommand(UUID.randomUUID(), "T", "POSTER", null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
     void createRejectsUnknownPreset() {
         assertThatThrownBy(() -> service.create(
-                new CreateHandoutCommand(worldId, "T", "NEON", null)))
+                new CreateHandoutCommand(worldId, "T", "NEON", null, null)))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("NEON");
+    }
+
+    @Test
+    void createRejectsUnknownSession() {
+        when(sessions.existsInWorld(any(), any())).thenReturn(false);
+        assertThatThrownBy(() -> service.create(
+                new CreateHandoutCommand(worldId, "T", "POSTER", null, UUID.randomUUID())))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -81,7 +93,7 @@ class HandoutServiceTest {
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         HandoutView view = service.create(new CreateHandoutCommand(worldId, "Letter",
-                "LETTER", "Dear sir,"));
+                "LETTER", "Dear sir,", null));
 
         assertThat(view.preset()).isEqualTo("LETTER");
         assertThat(view.body()).isEqualTo("Dear sir,");
@@ -95,14 +107,14 @@ class HandoutServiceTest {
                 .thenReturn(Optional.of(existing));
 
         service.update(new UpdateHandoutCommand(worldId, existing.getId(), "Newspaper piece",
-                "NEWSPAPER", "Extra, extra"));
+                "NEWSPAPER", "Extra, extra", null));
 
         assertThat(existing.getTitle()).isEqualTo("Newspaper piece");
         assertThat(existing.getPreset()).isEqualTo(Handout.Preset.NEWSPAPER);
 
         when(repo.findByIdAndWorld(existing.getId(), worldId)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.update(new UpdateHandoutCommand(worldId,
-                existing.getId(), "X", "POSTER", null)))
+                existing.getId(), "X", "POSTER", null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 

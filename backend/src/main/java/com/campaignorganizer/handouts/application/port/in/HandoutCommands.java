@@ -7,10 +7,11 @@ public final class HandoutCommands {
     private HandoutCommands() {
     }
 
-    public record CreateHandoutCommand(UUID worldId, String title, String preset, String body) {
+    public record CreateHandoutCommand(UUID worldId, String title, String preset, String body,
+                                       UUID sessionId) {
     }
 
     public record UpdateHandoutCommand(UUID worldId, UUID handoutId, String title,
-                                       String preset, String body) {
+                                       String preset, String body, UUID sessionId) {
     }
 }

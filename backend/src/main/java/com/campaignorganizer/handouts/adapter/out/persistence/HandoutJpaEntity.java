@@ -31,6 +31,9 @@ public class HandoutJpaEntity {
     @Column
     private String body;
 
+    @Column(name = "session_id")
+    private UUID sessionId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -79,6 +82,14 @@ public class HandoutJpaEntity {
 
     public void setBody(String body) {
         this.body = body;
+    }
+
+    public UUID getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(UUID sessionId) {
+        this.sessionId = sessionId;
     }
 
     public Instant getCreatedAt() {
