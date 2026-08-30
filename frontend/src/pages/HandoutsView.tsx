@@ -246,7 +246,13 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
             </Select>
             <Select
               value={draft.sessionId ?? NO_SESSION}
-              onValueChange={(v) => setDraft({ ...draft, sessionId: v === NO_SESSION ? null : v })}
+              onValueChange={(v) => {
+                // Radix's hidden native-<select> bubble fires onValueChange('')
+                // on its own during (re)mount - not a real user selection, and
+                // our own items never carry an empty-string value, so ignore it.
+                if (v === '') return;
+                setDraft({ ...draft, sessionId: v === NO_SESSION ? null : v });
+              }}
             >
               <SelectTrigger title="Session">
                 <SelectValue placeholder="No session" />
