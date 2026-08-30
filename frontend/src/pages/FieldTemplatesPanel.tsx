@@ -9,6 +9,7 @@ import {
   TemplateKind,
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
+import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
@@ -39,20 +40,21 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
   // Which template is open in the builder: an existing one, 'new', or null.
   const [editing, setEditing] = useState<FieldTemplate | null>(null);
   const [building, setBuilding] = useState(false);
+  // Read-only layout preview of an existing template (no values, no builder chrome).
+  const [previewing, setPreviewing] = useState<FieldTemplate | null>(null);
 
   useEffect(() => {
     builtinFieldTemplatesApi.list().then(setBuiltins).catch(onError);
   }, [onError]);
 
-  // The URL is the source of truth for which template is open in the builder
-  // (ADR-0053); "Build new" has no id and stays purely local state.
+  // The URL is the source of truth for which template is open (ADR-0053);
+  // opening an existing template shows a read-only preview first - entering
+  // the builder is an explicit Edit click. "Build new" has no id and stays
+  // purely local state.
   useEffect(() => {
-    if (!urlTemplateId || urlTemplateId === editing?.id) return;
+    if (!urlTemplateId || urlTemplateId === editing?.id || urlTemplateId === previewing?.id) return;
     const found = templates.find((t) => t.id === urlTemplateId);
-    if (found) {
-      setEditing(found);
-      setBuilding(true);
-    }
+    if (found) setPreviewing(found);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlTemplateId, templates]);
 
@@ -77,6 +79,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       else await api.create(body);
       setBuilding(false);
       setEditing(null);
+      setPreviewing(null);
       navigate(`/worlds/${worldId}/sheets/templates`);
       onChanged();
       toast.success('Template saved');
@@ -109,9 +112,50 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
         onCancel={() => {
           setBuilding(false);
           setEditing(null);
-          navigate(`/worlds/${worldId}/sheets/templates`);
+          // Reached the builder via a preview's Edit button? Land back on
+          // that preview rather than the bare list.
+          if (previewing) navigate(`/worlds/${worldId}/sheets/templates/${previewing.id}`);
+          else navigate(`/worlds/${worldId}/sheets/templates`);
         }}
       />
+    );
+  }
+
+  if (previewing) {
+    return (
+      <div className="card template-preview">
+        <div className="article-read-head">
+          <div>
+            <h3>{previewing.name}</h3>
+            <small className="muted">
+              {KIND_LABEL[previewing.kind]} · {previewing.system ?? 'custom'} · {previewing.sections.length}{' '}
+              sections
+            </small>
+          </div>
+          <div className="editor-actions">
+            <Button
+              type="button"
+              onClick={() => {
+                setEditing(previewing);
+                setBuilding(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => {
+                setPreviewing(null);
+                navigate(`/worlds/${worldId}/sheets/templates`);
+              }}
+            >
+              Back to list
+            </Button>
+          </div>
+        </div>
+        <TemplateForm sections={previewing.sections} values={{}} onChange={() => {}} readOnly />
+      </div>
     );
   }
 
@@ -155,6 +199,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
         <Button
           onClick={() => {
             setEditing(null);
+            setPreviewing(null);
             setBuilding(true);
           }}
         >
