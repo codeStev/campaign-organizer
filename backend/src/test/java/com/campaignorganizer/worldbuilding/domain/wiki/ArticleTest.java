@@ -16,9 +16,9 @@ class ArticleTest {
 
     @Test
     void updateBumpsUpdatedAt() {
-        Article a = Article.create(UUID.randomUUID(), UUID.randomUUID(), null, "Goblin", "goblin",
-                ArticleTemplate.CHARACTER, "body", T0);
-        a.update(null, "Hobgoblin", "hobgoblin", ArticleTemplate.CHARACTER, "body2", T1);
+        Article a = Article.create(UUID.randomUUID(), UUID.randomUUID(), null, null, "Goblin",
+                "goblin", ArticleTemplate.CHARACTER, "body", T0);
+        a.update(null, null, "Hobgoblin", "hobgoblin", ArticleTemplate.CHARACTER, "body2", T1);
 
         assertThat(a.getTitle()).isEqualTo("Hobgoblin");
         assertThat(a.getSlug()).isEqualTo("hobgoblin");
@@ -28,22 +28,37 @@ class ArticleTest {
 
     @Test
     void nullTemplateDefaultsToGeneric() {
-        Article a = Article.create(UUID.randomUUID(), UUID.randomUUID(), null, "Goblin", "goblin",
-                null, "body", T0);
+        Article a = Article.create(UUID.randomUUID(), UUID.randomUUID(), null, null, "Goblin",
+                "goblin", null, "body", T0);
         assertThat(a.getTemplate()).isEqualTo(ArticleTemplate.GENERIC);
     }
 
     @Test
     void rejectsBlankTitle() {
-        assertThatThrownBy(() -> Article.create(UUID.randomUUID(), UUID.randomUUID(), null, " ",
-                "goblin", ArticleTemplate.GENERIC, "body", T0))
+        assertThatThrownBy(() -> Article.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
+                " ", "goblin", ArticleTemplate.GENERIC, "body", T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void rejectsBlankSlug() {
-        assertThatThrownBy(() -> Article.create(UUID.randomUUID(), UUID.randomUUID(), null, "Goblin",
-                " ", ArticleTemplate.GENERIC, "body", T0))
+        assertThatThrownBy(() -> Article.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
+                "Goblin", " ", ArticleTemplate.GENERIC, "body", T0))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createAndUpdateRoundTripParentArticleId() {
+        UUID parentId = UUID.randomUUID();
+        Article a = Article.create(UUID.randomUUID(), UUID.randomUUID(), null, parentId, "Room",
+                "room", ArticleTemplate.LOCATION, "body", T0);
+        assertThat(a.getParentArticleId()).isEqualTo(parentId);
+
+        UUID otherParentId = UUID.randomUUID();
+        a.update(null, otherParentId, "Room", "room", ArticleTemplate.LOCATION, "body", T1);
+        assertThat(a.getParentArticleId()).isEqualTo(otherParentId);
+
+        a.update(null, null, "Room", "room", ArticleTemplate.LOCATION, "body", T1);
+        assertThat(a.getParentArticleId()).isNull();
     }
 }

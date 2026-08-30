@@ -103,6 +103,12 @@ public class UsageService implements GetArticleUsagesUseCase, UsageQueryPort {
             out.add(new Usage("MAP_PIN", "Map pin on " + mapName + label, null, null, null));
         });
 
+        // Sub-articles nested under this one (structural parent/child, ADR-0080).
+        articles.findByWorld(worldId).stream()
+                .filter(a -> articleId.equals(a.parentArticleId()))
+                .forEach(child -> out.add(new Usage("CHILD_ARTICLE", "Sub-article: " + child.title(),
+                        child.id(), null, null)));
+
         events.findByArticle(articleId).forEach(e -> {
             String tl = timelines.findById(e.timelineId()).map(TimelineView::name).orElse("timeline");
             out.add(new Usage("TIMELINE_EVENT", "Timeline event: " + e.title() + " (" + tl + ")",

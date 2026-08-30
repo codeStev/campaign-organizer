@@ -231,6 +231,84 @@ class ArticleControllerIT extends AbstractIntegrationTest {
                 .contains("<li>two</li>");
     }
 
+    @Test
+    void createsAndReadsAParentChildArticlePair() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String parentId = JsonPath.read(
+                createArticle(auth, worldId, "{\"title\":\"Sunken Temple\",\"template\":\"LOCATION\"}"),
+                "$.id");
+
+        String created = mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Entry Hall\",\"template\":\"LOCATION\","
+                                + "\"parentArticleId\":\"" + parentId + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.parentArticleId").value(parentId))
+                .andReturn().getResponse().getContentAsString();
+        String childId = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(get("/api/worlds/{w}/articles/{a}", worldId, childId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parentArticleId").value(parentId));
+    }
+
+    @Test
+    void rejectsSelfAndForeignParent() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String id = JsonPath.read(createArticle(auth, worldId, "{\"title\":\"Solo\"}"), "$.id");
+
+        mockMvc.perform(put("/api/worlds/{w}/articles/{a}", worldId, id)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Solo\",\"parentArticleId\":\"" + id + "\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Orphan\",\"parentArticleId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsAMultiHopCycle() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String aId = JsonPath.read(createArticle(auth, worldId, "{\"title\":\"A\"}"), "$.id");
+        String bId = JsonPath.read(
+                createArticle(auth, worldId, "{\"title\":\"B\",\"parentArticleId\":\"" + aId + "\"}"), "$.id");
+
+        // Attempt to set A's parent to B, its own grandchild-to-be (B's parent is A).
+        mockMvc.perform(put("/api/worlds/{w}/articles/{a}", worldId, aId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"A\",\"parentArticleId\":\"" + bId + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deletingAParentLeavesChildrenAsTopLevel() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String parentId = JsonPath.read(createArticle(auth, worldId, "{\"title\":\"Parent\"}"), "$.id");
+        String childId = JsonPath.read(
+                createArticle(auth, worldId, "{\"title\":\"Child\",\"parentArticleId\":\"" + parentId + "\"}"),
+                "$.id");
+
+        mockMvc.perform(delete("/api/worlds/{w}/articles/{a}", worldId, parentId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/worlds/{w}/articles/{a}", worldId, childId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parentArticleId").doesNotExist());
+    }
+
     private String createArticle(String auth, String worldId, String json) throws Exception {
         return mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)

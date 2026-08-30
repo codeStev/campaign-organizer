@@ -12,7 +12,8 @@ public interface ArticlePersistenceMapper {
         if (e == null) {
             return null;
         }
-        return Article.reconstitute(e.getId(), e.getWorldId(), e.getCategoryId(), e.getTitle(),
-                e.getSlug(), e.getTemplate(), e.getBody(), e.getCreatedAt(), e.getUpdatedAt());
+        return Article.reconstitute(e.getId(), e.getWorldId(), e.getCategoryId(),
+                e.getParentArticleId(), e.getTitle(), e.getSlug(), e.getTemplate(), e.getBody(),
+                e.getCreatedAt(), e.getUpdatedAt());
     }
 }

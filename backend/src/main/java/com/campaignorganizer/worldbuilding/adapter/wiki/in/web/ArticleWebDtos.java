@@ -16,6 +16,7 @@ public final class ArticleWebDtos {
             @Size(max = 220) String slug,
             ArticleTemplate template,
             UUID categoryId,
+            UUID parentArticleId,
             String body) {
     }
 
@@ -24,6 +25,7 @@ public final class ArticleWebDtos {
             UUID id,
             UUID worldId,
             UUID categoryId,
+            UUID parentArticleId,
             String title,
             String slug,
             ArticleTemplate template,
@@ -36,6 +38,7 @@ public final class ArticleWebDtos {
             UUID id,
             UUID worldId,
             UUID categoryId,
+            UUID parentArticleId,
             String title,
             String slug,
             ArticleTemplate template,

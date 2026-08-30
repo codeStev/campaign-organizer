@@ -121,6 +121,8 @@ export interface ArticleSummary {
   id: string;
   worldId: string;
   categoryId?: string | null;
+  /** Structural parent for sidebar nesting; independent of categoryId (ADR-0080). */
+  parentArticleId?: string | null;
   title: string;
   slug: string;
   template: ArticleTemplate;
@@ -139,6 +141,7 @@ export interface ArticleRequest {
   slug?: string;
   template?: ArticleTemplate;
   categoryId?: string | null;
+  parentArticleId?: string | null;
   body?: string;
 }
 
@@ -152,7 +155,7 @@ export interface Category {
 }
 
 export interface Usage {
-  type: 'BEAT' | 'MAP_PIN' | 'TIMELINE_EVENT' | 'RELATIONSHIP' | 'CHARACTER_SHEET' | 'STATBLOCK' | 'ARTICLE_LINK';
+  type: 'BEAT' | 'MAP_PIN' | 'TIMELINE_EVENT' | 'RELATIONSHIP' | 'CHARACTER_SHEET' | 'STATBLOCK' | 'ARTICLE_LINK' | 'CHILD_ARTICLE';
   label: string;
   targetId?: string | null;
   campaignId?: string | null;

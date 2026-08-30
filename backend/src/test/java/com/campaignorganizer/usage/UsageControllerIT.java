@@ -101,6 +101,26 @@ class UsageControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void listsChildArticlesAsUsagesOnTheParent() throws Exception {
+        auth = authHeader();
+        worldId = createWorld(auth);
+        String parentId = article("Sunken Temple", null);
+        String childId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Entry Hall\",\"parentArticleId\":\"" + parentId + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(get("/api/worlds/{w}/articles/{a}/usages", worldId, parentId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usages[?(@.type == 'CHILD_ARTICLE')].label")
+                        .value(Matchers.hasItem("Sub-article: Entry Hall")))
+                .andExpect(jsonPath("$.usages[?(@.type == 'CHILD_ARTICLE')].targetId")
+                        .value(Matchers.hasItem(childId)));
+    }
+
+    @Test
     void listsRollTableAndCardDeckUsages() throws Exception {
         auth = authHeader();
         worldId = createWorld(auth);

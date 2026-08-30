@@ -24,6 +24,9 @@ public class ArticleJpaEntity {
     @Column(name = "category_id")
     private UUID categoryId;
 
+    @Column(name = "parent_article_id")
+    private UUID parentArticleId;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -68,6 +71,14 @@ public class ArticleJpaEntity {
 
     public void setCategoryId(UUID categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public UUID getParentArticleId() {
+        return parentArticleId;
+    }
+
+    public void setParentArticleId(UUID parentArticleId) {
+        this.parentArticleId = parentArticleId;
     }
 
     public String getTitle() {

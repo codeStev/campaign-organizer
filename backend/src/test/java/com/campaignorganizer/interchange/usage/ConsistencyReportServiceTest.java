@@ -117,9 +117,13 @@ class ConsistencyReportServiceTest {
     }
 
     private ArticleView article(String title, String body) {
+        return article(title, body, null);
+    }
+
+    private ArticleView article(String title, String body, UUID parentArticleId) {
         UUID id = UUID.nameUUIDFromBytes(title.getBytes());
-        return new ArticleView(id, worldId, null, title, title.toLowerCase(), null, body,
-                Instant.EPOCH, Instant.EPOCH);
+        return new ArticleView(id, worldId, null, parentArticleId, title, title.toLowerCase(), null,
+                body, Instant.EPOCH, Instant.EPOCH);
     }
 
     private ArcBeatView beat(String title, String body, List<UUID> articleIds) {
@@ -194,6 +198,25 @@ class ConsistencyReportServiceTest {
         // B is linked by A; C by the beat's explicit reference. A and D are orphans.
         assertThat(r.orphanedArticles()).extracting(ArticleIssue::title)
                 .containsExactlyInAnyOrder("A", "D");
+    }
+
+    @Test
+    void childWithParent_isNotOrphaned_evenWithNoProseLinkOrBeatRef() {
+        ArticleView parent = article("Sunken Temple", "Plain.");
+        ArticleView child = article("Flooded Corridor", "Plain.", parent.id());
+        when(articles.findByWorld(worldId)).thenReturn(List.of(parent, child));
+        when(beats.findByArc(arcId)).thenReturn(List.of());
+        when(rollTables.findByWorld(worldId)).thenReturn(List.of());
+        when(cardDecks.findByWorld(worldId)).thenReturn(List.of());
+        knownArticles = Map.of("Sunken Temple", parent.id(), "Flooded Corridor", child.id());
+
+        ConsistencyReport r = service.report(worldId);
+
+        // The child is reachable via the parent's sidebar nesting/Used-by
+        // panel, so it's rescued from orphan status; the parent itself has
+        // no inbound reference of any kind and is still orphaned.
+        assertThat(r.orphanedArticles()).extracting(ArticleIssue::title)
+                .containsExactly("Sunken Temple");
     }
 
     @Test

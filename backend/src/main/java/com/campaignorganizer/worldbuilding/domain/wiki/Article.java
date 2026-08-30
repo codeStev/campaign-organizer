@@ -10,6 +10,9 @@ public final class Article {
     private final UUID id;
     private final UUID worldId;
     private UUID categoryId;
+    /** Structural parent for sidebar nesting (e.g. a sub-location under its
+     *  parent location); independent of categoryId, which is a taxonomy. */
+    private UUID parentArticleId;
     private String title;
     private String slug;
     private ArticleTemplate template;
@@ -17,33 +20,38 @@ public final class Article {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Article(UUID id, UUID worldId, UUID categoryId, String title, String slug,
-                    ArticleTemplate template, String body, Instant createdAt, Instant updatedAt) {
+    private Article(UUID id, UUID worldId, UUID categoryId, UUID parentArticleId, String title,
+                    String slug, ArticleTemplate template, String body, Instant createdAt,
+                    Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(categoryId, title, slug, template, body);
+        apply(categoryId, parentArticleId, title, slug, template, body);
     }
 
-    public static Article create(UUID id, UUID worldId, UUID categoryId, String title, String slug,
-                                 ArticleTemplate template, String body, Instant now) {
-        return new Article(id, worldId, categoryId, title, slug, template, body, now, now);
+    public static Article create(UUID id, UUID worldId, UUID categoryId, UUID parentArticleId,
+                                 String title, String slug, ArticleTemplate template, String body,
+                                 Instant now) {
+        return new Article(id, worldId, categoryId, parentArticleId, title, slug, template, body,
+                now, now);
     }
 
-    public static Article reconstitute(UUID id, UUID worldId, UUID categoryId, String title, String slug,
-                                       ArticleTemplate template, String body, Instant createdAt,
-                                       Instant updatedAt) {
-        return new Article(id, worldId, categoryId, title, slug, template, body, createdAt, updatedAt);
+    public static Article reconstitute(UUID id, UUID worldId, UUID categoryId, UUID parentArticleId,
+                                       String title, String slug, ArticleTemplate template,
+                                       String body, Instant createdAt, Instant updatedAt) {
+        return new Article(id, worldId, categoryId, parentArticleId, title, slug, template, body,
+                createdAt, updatedAt);
     }
 
-    public void update(UUID categoryId, String title, String slug, ArticleTemplate template, String body,
-                       Instant now) {
-        apply(categoryId, title, slug, template, body);
+    public void update(UUID categoryId, UUID parentArticleId, String title, String slug,
+                       ArticleTemplate template, String body, Instant now) {
+        apply(categoryId, parentArticleId, title, slug, template, body);
         this.updatedAt = now;
     }
 
-    private void apply(UUID categoryId, String title, String slug, ArticleTemplate template, String body) {
+    private void apply(UUID categoryId, UUID parentArticleId, String title, String slug,
+                       ArticleTemplate template, String body) {
         if (title == null || title.isBlank()) {
             throw new ValidationException("Article title must not be blank");
         }
@@ -51,6 +59,7 @@ public final class Article {
             throw new ValidationException("Article slug must not be blank");
         }
         this.categoryId = categoryId;
+        this.parentArticleId = parentArticleId;
         this.title = title;
         this.slug = slug;
         this.template = template == null ? ArticleTemplate.GENERIC : template;
@@ -67,6 +76,10 @@ public final class Article {
 
     public UUID getCategoryId() {
         return categoryId;
+    }
+
+    public UUID getParentArticleId() {
+        return parentArticleId;
     }
 
     public String getTitle() {

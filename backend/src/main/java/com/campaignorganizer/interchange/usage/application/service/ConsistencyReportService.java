@@ -150,9 +150,13 @@ public class ConsistencyReportService implements GetConsistencyReportUseCase {
     }
 
     /**
-     * Articles with no inbound reference from any {@link LinkSource} body or
-     * any beat's explicit reference list. A self-link does not rescue its own
-     * article from orphanhood.
+     * Articles with no inbound reference from any {@link LinkSource} body,
+     * any beat's explicit reference list, or a child-of-them-nested-under-it
+     * article. A self-link does not rescue its own article from orphanhood.
+     * A parent article rescues its children: nesting under a parent is a
+     * legitimate, primary way to reach an article (sidebar tree + the
+     * parent's Used-by panel), so structurally-organized content isn't
+     * flagged as "orphaned" just because nothing links to it in prose.
      */
     private List<ArticleIssue> findOrphans(List<ArticleView> worldArticles,
                                            List<LinkSource> sources,
@@ -166,6 +170,13 @@ public class ConsistencyReportService implements GetConsistencyReportUseCase {
                 }
             }
             referenced.addAll(s.explicitRefs());
+        }
+        for (ArticleView a : worldArticles) {
+            if (a.parentArticleId() != null) {
+                // This article (the CHILD) is reachable via its parent's
+                // sidebar nesting / Used-by panel - rescue it, not the parent.
+                referenced.add(a.id());
+            }
         }
         return worldArticles.stream()
                 .filter(a -> !referenced.contains(a.id()))

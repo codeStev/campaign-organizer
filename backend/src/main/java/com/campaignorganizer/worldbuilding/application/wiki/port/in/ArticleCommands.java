@@ -9,11 +9,12 @@ public final class ArticleCommands {
     }
 
     /** {@code slug} is the caller-supplied slug (may be null/blank to derive from the title). */
-    public record CreateArticleCommand(UUID worldId, UUID categoryId, String title, String slug,
-                                       ArticleTemplate template, String body) {
+    public record CreateArticleCommand(UUID worldId, UUID categoryId, UUID parentArticleId, String title,
+                                       String slug, ArticleTemplate template, String body) {
     }
 
-    public record UpdateArticleCommand(UUID worldId, UUID articleId, UUID categoryId, String title,
-                                       String slug, ArticleTemplate template, String body) {
+    public record UpdateArticleCommand(UUID worldId, UUID articleId, UUID categoryId,
+                                       UUID parentArticleId, String title, String slug,
+                                       ArticleTemplate template, String body) {
     }
 }
