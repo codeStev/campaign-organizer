@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { NewWindowPortal, PrintButton, useNewWindowContainer } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { WorldMap, MapPin } from '../api/client';
 import { iconComponent } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
@@ -72,6 +73,7 @@ export function MapPrintView({
   const [showLegend, setShowLegend] = useState(true);
   const [excludedLayers, setExcludedLayers] = useState<Set<string>>(new Set());
   const [includeUnlayered, setIncludeUnlayered] = useState(true);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   const filterCss = FILTERS.find((f) => f.key === filterKey)?.css ?? '';
 
@@ -128,6 +130,7 @@ export function MapPrintView({
           <Checkbox checked={showLegend} onCheckedChange={(checked) => setShowLegend(checked === true)} />
           Legend
         </label>
+        <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton />
         <Button variant="link" onClick={onClose}>
@@ -160,7 +163,7 @@ export function MapPrintView({
         </div>
       )}
 
-      <div className="print-doc">
+      <div className="print-doc" {...printDocProps}>
         <h1 className="map-print-title">{map.name}</h1>
         {map.imageUrl ? (
           <div className="print-map-figure" style={{ width: `${scale}%` }}>

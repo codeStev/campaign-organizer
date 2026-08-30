@@ -8,6 +8,7 @@ import {
   Session,
 } from '../api/client';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { renderMarkdown } from '../lib/markdown';
 
@@ -30,6 +31,7 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
   const [beats, setBeats] = useState<Beat[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   useEffect(() => {
     let active = true;
@@ -80,13 +82,14 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
     <NewWindowPortal title={`Recap — ${campaignName}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Session recap</strong>
+        <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={loading} />
         <Button variant="link" onClick={onClose}>
           Close
         </Button>
       </div>
-      <div className="print-doc">
+      <div className="print-doc" {...printDocProps}>
         <section className="print-cover">
           <h1>{campaignName}</h1>
           <p className="print-subtitle">The story so far</p>

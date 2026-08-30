@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError, handoutsApi, mediaApi, campaignsApi, sessionsApi, Handout, HandoutPreset } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -57,6 +58,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
   const [printing, setPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionOptions, setSessionOptions] = useState<SessionOption[]>([]);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -275,13 +277,14 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
         <NewWindowPortal title={`Print — ${draft.title}`} onClose={() => setPrinting(false)}>
           <div className="print-toolbar">
             <strong>Handout</strong>
+            <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
             <span className="print-toolbar-spacer" />
             <PrintButton />
             <Button variant="link" onClick={() => setPrinting(false)}>
               Close
             </Button>
           </div>
-          <div className="print-doc handout-print">
+          <div className="print-doc handout-print" {...printDocProps}>
             <article className={`handout-doc ${draft.preset.toLowerCase()}`}>
               <h2 className="handout-title">{draft.title}</h2>
               {/* eslint-disable-next-line react/no-danger */}

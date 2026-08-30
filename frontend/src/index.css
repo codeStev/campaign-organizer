@@ -1783,6 +1783,63 @@ button:disabled {
   color: #111;
 }
 
+/* Paper size / margins (PrintOptionsMenu), selected per print-doc via the
+   `page` property below. Page-number footer lives here too since it's part
+   of the same @page margin box. */
+@page print-letter-normal {
+  size: letter;
+  margin: 2cm;
+  @bottom-center {
+    content: counter(page) ' / ' counter(pages);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 9pt;
+    color: #666;
+  }
+}
+@page print-letter-narrow {
+  size: letter;
+  margin: 1.2cm;
+  @bottom-center {
+    content: counter(page) ' / ' counter(pages);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 9pt;
+    color: #666;
+  }
+}
+@page print-a4-normal {
+  size: A4;
+  margin: 2cm;
+  @bottom-center {
+    content: counter(page) ' / ' counter(pages);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 9pt;
+    color: #666;
+  }
+}
+@page print-a4-narrow {
+  size: A4;
+  margin: 1.2cm;
+  @bottom-center {
+    content: counter(page) ' / ' counter(pages);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 9pt;
+    color: #666;
+  }
+}
+
+.print-doc {
+  page: print-letter-normal;
+}
+.print-doc[data-paper='a4'] {
+  page: print-a4-normal;
+}
+.print-doc[data-margin='narrow'] {
+  page: print-letter-narrow;
+}
+.print-doc[data-paper='a4'][data-margin='narrow'] {
+  page: print-a4-narrow;
+}
+
 .print-toolbar {
   position: sticky;
   top: 0;
@@ -2154,6 +2211,17 @@ button:disabled {
   }
   .print-map-figure {
     break-inside: avoid;
+  }
+  /* Keep a heading with the text that follows it, and don't strand a lone
+     line at the top/bottom of a page when an article splits mid-body. */
+  .print-doc {
+    orphans: 3;
+    widows: 3;
+  }
+  .print-doc h1,
+  .print-doc h2,
+  .print-doc h3 {
+    break-after: avoid;
   }
 }
 

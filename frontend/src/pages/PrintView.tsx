@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal, PrintButton, useNewWindowContainer } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
@@ -89,6 +90,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
   const [printableMaps, setPrintableMaps] = useState<PrintableMap[]>([]);
   const [rollTables, setRollTables] = useState<RollTable[]>([]);
   const [cardDecks, setCardDecks] = useState<CardDeck[]>([]);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   const scopeName = scope ? campaigns.find((c) => c.id === scope)?.name ?? '' : '';
   // Maps only print at whole-world scope, so `articles` covers every linked pin.
@@ -173,6 +175,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           />
           Tables &amp; decks
         </label>
+        <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={loading} />
         <Button variant="link" onClick={onClose}>
@@ -180,7 +183,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
         </Button>
       </div>
 
-      <div className="print-doc">
+      <div className="print-doc" {...printDocProps}>
         <section className="print-cover">
           <h1>{worldName}</h1>
           <p className="print-subtitle">{scopeName ? `Campaign: ${scopeName}` : 'World compendium'}</p>
