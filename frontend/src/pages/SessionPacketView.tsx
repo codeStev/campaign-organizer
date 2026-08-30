@@ -3,9 +3,129 @@ import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
-import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate } from '../api/client';
+import { CheckTreeNode, CheckTreeRow } from '../components/CheckTree';
+import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate, PacketArticle, Statblock } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
 import { renderMarkdown } from '../lib/markdown';
+
+/** Every article id within an article's subtree (itself + descendants). */
+function articleSubtreeIds(articleId: string, childrenByParent: Map<string, PacketArticle[]>): string[] {
+  const kids = childrenByParent.get(articleId) ?? [];
+  return [articleId, ...kids.flatMap((k) => articleSubtreeIds(k.id, childrenByParent))];
+}
+
+/** An article node, nesting its child articles then any statblocks tagged to it. */
+function buildArticleNode(
+  article: PacketArticle,
+  childrenByParent: Map<string, PacketArticle[]>,
+  statblocksByArticleId: Map<string, Statblock[]>,
+): CheckTreeNode {
+  const childArticleNodes = (childrenByParent.get(article.id) ?? []).map((a) =>
+    buildArticleNode(a, childrenByParent, statblocksByArticleId),
+  );
+  const childStatblockNodes = (statblocksByArticleId.get(article.id) ?? []).map((sb) => ({
+    id: `statblock:${sb.id}`,
+    label: sb.name,
+    children: [] as CheckTreeNode[],
+  }));
+  return {
+    id: `article:${article.id}`,
+    label: article.title,
+    children: [...childArticleNodes, ...childStatblockNodes],
+  };
+}
+
+/**
+ * Builds the packet's include-tree (ADR-0080 nesting + the "fit non-article
+ * entries into the hierarchy" request): article subtrees nest by
+ * parentArticleId (an article whose parent isn't in this packet is promoted
+ * to a subtree root); each beat "claims" the article-root subtrees its
+ * articleIds reach into (root or any descendant) and gets them as children,
+ * so unchecking a beat cascades to everything it pulled in; a subtree no
+ * beat claims surfaces as its own top-level node instead of vanishing.
+ * Statblocks nest under the exact article they're tagged to (wherever that
+ * article appears — duplicated across multiple claiming beats, same shared
+ * id so their checkbox state stays in sync); an untagged statblock is
+ * top-level. Maps, roll tables, card decks, and handouts carry no article
+ * link in these DTOs, so they're always top-level.
+ */
+function buildPacketTree(packet: SessionPacket): CheckTreeNode[] {
+  const articlesById = new Map(packet.articles.map((a) => [a.id, a]));
+  const childrenByParent = new Map<string, PacketArticle[]>();
+  const articleRoots: PacketArticle[] = [];
+  for (const a of packet.articles) {
+    if (a.parentArticleId && articlesById.has(a.parentArticleId)) {
+      const list = childrenByParent.get(a.parentArticleId) ?? [];
+      list.push(a);
+      childrenByParent.set(a.parentArticleId, list);
+    } else {
+      articleRoots.push(a);
+    }
+  }
+
+  const statblocksByArticleId = new Map<string, Statblock[]>();
+  const linkedStatblockIds = new Set<string>();
+  for (const sb of packet.statblocks) {
+    if (sb.articleId && articlesById.has(sb.articleId)) {
+      const list = statblocksByArticleId.get(sb.articleId) ?? [];
+      list.push(sb);
+      statblocksByArticleId.set(sb.articleId, list);
+      linkedStatblockIds.add(sb.id);
+    }
+  }
+
+  const rootSubtreeArticleIds = new Map(
+    articleRoots.map((root) => [root.id, new Set(articleSubtreeIds(root.id, childrenByParent))]),
+  );
+
+  const claimedRootIds = new Set<string>();
+  const beatNodes: CheckTreeNode[] = packet.beats.map((b) => {
+    const claimedRoots = articleRoots.filter((root) =>
+      b.articleIds.some((id) => rootSubtreeArticleIds.get(root.id)!.has(id)),
+    );
+    for (const r of claimedRoots) claimedRootIds.add(r.id);
+    return {
+      id: `beat:${b.id}`,
+      label: b.title,
+      children: claimedRoots.map((r) => buildArticleNode(r, childrenByParent, statblocksByArticleId)),
+    };
+  });
+
+  const unclaimedArticleRootNodes = articleRoots
+    .filter((r) => !claimedRootIds.has(r.id))
+    .map((r) => buildArticleNode(r, childrenByParent, statblocksByArticleId));
+
+  const unlinkedStatblockNodes: CheckTreeNode[] = packet.statblocks
+    .filter((sb) => !linkedStatblockIds.has(sb.id))
+    .map((sb) => ({ id: `statblock:${sb.id}`, label: sb.name, children: [] }));
+
+  const mapNodes: CheckTreeNode[] = packet.maps.map((m) => ({ id: `map:${m.id}`, label: m.name, children: [] }));
+  const rollTableNodes: CheckTreeNode[] = packet.rollTables.map((t) => ({
+    id: `rollTable:${t.id}`,
+    label: t.title,
+    children: [],
+  }));
+  const cardDeckNodes: CheckTreeNode[] = packet.cardDecks.map((d) => ({
+    id: `cardDeck:${d.id}`,
+    label: d.title,
+    children: [],
+  }));
+  const handoutNodes: CheckTreeNode[] = packet.handouts.map((h) => ({
+    id: `handout:${h.id}`,
+    label: h.title,
+    children: [],
+  }));
+
+  return [
+    ...beatNodes,
+    ...unclaimedArticleRootNodes,
+    ...unlinkedStatblockNodes,
+    ...mapNodes,
+    ...rollTableNodes,
+    ...cardDeckNodes,
+    ...handoutNodes,
+  ];
+}
 
 interface Props {
   worldId: string;
@@ -26,28 +146,52 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
-  // Print-time filtering (client-side, over the already-fetched packet — mirrors
-  // PrintView's contents/maps/tables checkboxes). Excluding a beat only hides it
-  // from the Beats list; it doesn't re-derive which referenced articles/maps/
-  // statblocks/tables came from it, since the packet DTO doesn't carry that link.
+  // Print-time filtering (client-side, over the already-fetched packet).
   const [includeGmNotes, setIncludeGmNotes] = useState(true);
-  const [includeStatblocks, setIncludeStatblocks] = useState(true);
-  const [includeMaps, setIncludeMaps] = useState(true);
-  const [includeTables, setIncludeTables] = useState(true);
-  const [excludedBeatIds, setExcludedBeatIds] = useState<Set<string>>(new Set());
+  // Per-item inclusion tree (beats, articles, statblocks, maps, tables,
+  // decks, handouts) — composite `${kind}:${id}` keys, see CheckTree.tsx.
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
 
-  function toggleBeat(id: string) {
-    setExcludedBeatIds((prev) => {
+  function toggleIds(ids: string[], checked: boolean) {
+    setExcludedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      for (const id of ids) {
+        if (checked) next.delete(id);
+        else next.add(id);
+      }
       return next;
     });
   }
 
+  const tree = useMemo(() => (packet ? buildPacketTree(packet) : []), [packet]);
+
   const shownBeats = useMemo(
-    () => packet?.beats.filter((b) => !excludedBeatIds.has(b.id)) ?? [],
-    [packet, excludedBeatIds],
+    () => packet?.beats.filter((b) => !excludedIds.has(`beat:${b.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownArticles = useMemo(
+    () => packet?.articles.filter((a) => !excludedIds.has(`article:${a.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownStatblocks = useMemo(
+    () => packet?.statblocks.filter((sb) => !excludedIds.has(`statblock:${sb.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownMaps = useMemo(
+    () => packet?.maps.filter((m) => !excludedIds.has(`map:${m.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownRollTables = useMemo(
+    () => packet?.rollTables.filter((t) => !excludedIds.has(`rollTable:${t.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownCardDecks = useMemo(
+    () => packet?.cardDecks.filter((d) => !excludedIds.has(`cardDeck:${d.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownHandouts = useMemo(
+    () => packet?.handouts.filter((h) => !excludedIds.has(`handout:${h.id}`)) ?? [],
+    [packet, excludedIds],
   );
 
   useEffect(() => {
@@ -82,24 +226,6 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
           />
           GM notes
         </label>
-        <label className="print-check">
-          <Checkbox
-            checked={includeStatblocks}
-            onCheckedChange={(checked) => setIncludeStatblocks(checked === true)}
-          />
-          Statblocks
-        </label>
-        <label className="print-check">
-          <Checkbox checked={includeMaps} onCheckedChange={(checked) => setIncludeMaps(checked === true)} />
-          Maps
-        </label>
-        <label className="print-check">
-          <Checkbox
-            checked={includeTables}
-            onCheckedChange={(checked) => setIncludeTables(checked === true)}
-          />
-          Tables &amp; decks
-        </label>
         <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={loading || !packet} />
@@ -108,15 +234,14 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
         </Button>
       </div>
 
-      {!loading && packet && packet.beats.length > 0 && (
+      {!loading && packet && tree.length > 0 && (
         <div className="print-toolbar map-print-layers">
-          <span className="muted">Show beats:</span>
-          {packet.beats.map((b) => (
-            <label key={b.id} className="print-check">
-              <Checkbox checked={!excludedBeatIds.has(b.id)} onCheckedChange={() => toggleBeat(b.id)} />
-              {b.title}
-            </label>
-          ))}
+          <span className="muted">Include:</span>
+          <ul className="check-tree">
+            {tree.map((node) => (
+              <CheckTreeRow key={node.id} node={node} excludedIds={excludedIds} onToggle={toggleIds} />
+            ))}
+          </ul>
         </div>
       )}
 
@@ -180,14 +305,14 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </ol>
             </section>
 
-            {packet.articles.length > 0 && (
+            {shownArticles.length > 0 && (
               <div className="print-divider">
                 <h1>Referenced material</h1>
                 <p className="print-kicker">articles linked from this session's beats</p>
               </div>
             )}
 
-            {packet.articles.map((a) => (
+            {shownArticles.map((a) => (
               <article key={a.id} className="print-article">
                 <h1>{a.title}</h1>
                 <p className="print-kicker">{a.template.toLowerCase()}</p>
@@ -199,7 +324,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </article>
             ))}
 
-            {includeMaps && packet.maps.map((m) => (
+            {shownMaps.map((m) => (
               <section key={m.id} className="print-map-section">
                 <h1>{m.name}</h1>
                 {m.imageUrl && (
@@ -226,10 +351,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             ))}
 
-            {includeStatblocks && packet.statblocks.length > 0 && (
+            {shownStatblocks.length > 0 && (
               <section className="print-map-section">
                 <h1>Statblocks</h1>
-                {packet.statblocks.map((sb) => (
+                {shownStatblocks.map((sb) => (
                   <div key={sb.id} className="print-statblock">
                     <h2>{sb.name}</h2>
                     <dl className="print-stats">
@@ -258,10 +383,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             )}
 
-            {includeTables && packet.rollTables.length > 0 && (
+            {shownRollTables.length > 0 && (
               <section className="print-map-section">
                 <h1>Roll tables</h1>
-                {packet.rollTables.map((t) => (
+                {shownRollTables.map((t) => (
                   <div key={t.id} className="print-roll-table">
                     <h2>{t.title}</h2>
                     <p className="print-kicker">
@@ -287,10 +412,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             )}
 
-            {includeTables && packet.cardDecks.length > 0 && (
+            {shownCardDecks.length > 0 && (
               <section className="print-map-section">
                 <h1>Card decks</h1>
-                {packet.cardDecks.map((d) => (
+                {shownCardDecks.map((d) => (
                   <div key={d.id} style={{ marginBottom: '1rem' }}>
                     <h2>{d.title}</h2>
                     <div className="card-sheet">
@@ -307,7 +432,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
               </section>
             )}
 
-            {packet.handouts.map((h) => (
+            {shownHandouts.map((h) => (
               <section key={h.id} className="print-map-section">
                 <div className="handout-print">
                   <article className={`handout-doc ${h.preset.toLowerCase()}`}>
