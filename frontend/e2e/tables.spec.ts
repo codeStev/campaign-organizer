@@ -44,6 +44,11 @@ test('creating a table saves successfully and the button settles back to normal'
   await saveBtn.click();
   // Proves the save actually round-tripped, not just that the label changed.
   await page.waitForURL(/\/tables\/table\/[^/]+$/, { timeout: 5000 });
+
+  // Saving lands on the read preview; reopening the editor shows it's now
+  // treated as an existing table (not stuck offering to create a duplicate).
+  await expect(page.getByRole('heading', { name: /Random Encounters/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(saveBtn).toBeEnabled({ timeout: 3000 });
   await expect(saveBtn).toHaveText(/save table/i, { timeout: 3000 });
 });
@@ -85,8 +90,8 @@ test('save button shows a disabled "Saving…" state while the request is in fli
   await expect(saveBtn).toHaveText(/saving/i);
   await expect(saveBtn).toBeDisabled();
 
-  await expect(saveBtn).toBeEnabled({ timeout: 5000 });
-  await expect(saveBtn).not.toHaveText(/saving/i);
+  // Once the (delayed) request resolves, saving lands on the read preview.
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible({ timeout: 5000 });
 });
 
 // Regression test for: markdown in a table entry (e.g. a bullet list) had no
@@ -159,6 +164,8 @@ test('deleting a table asks for confirmation, and Cancel backs out safely', asyn
   });
 
   await page.goto(`/worlds/${worldId}/tables/table/${table.id}`);
+  // Delete lives in the editor, not the read preview — open it first.
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
   const deleteTrigger = page.getByRole('button', { name: 'Delete', exact: true });
 
   await deleteTrigger.click();
@@ -173,6 +180,7 @@ test('deleting a table asks for confirmation, and Cancel backs out safely', asyn
   await expect(page.locator('.article-link').filter({ hasText: 'Delete Me Table' })).toBeVisible();
 
   // Confirming does delete it.
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await deleteTrigger.click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByRole('alertdialog')).not.toBeVisible();
