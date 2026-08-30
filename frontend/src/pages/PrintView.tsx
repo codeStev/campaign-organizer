@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { Input } from '../components/ui/input';
+import { CheckTreeNode, CheckTreeRow } from '../components/CheckTree';
 import {
   articlesApi,
   mapsApi,
@@ -48,6 +49,47 @@ function linkedClosure(seedId: string, articles: Article[]): Set<string> {
     }
   }
   return visited;
+}
+
+/**
+ * Article nodes for the include-tree, nested by parentArticleId (ADR-0080).
+ * An article whose parent isn't in this document's article list (out of
+ * scope, or simply not loaded) is promoted to a root of its own — same
+ * fallback rule as the sidebar tree.
+ */
+function buildArticleCheckNodes(articles: Article[]): CheckTreeNode[] {
+  const byId = new Map(articles.map((a) => [a.id, a]));
+  const childrenByParent = new Map<string, Article[]>();
+  const roots: Article[] = [];
+  for (const a of articles) {
+    if (a.parentArticleId && byId.has(a.parentArticleId)) {
+      const list = childrenByParent.get(a.parentArticleId) ?? [];
+      list.push(a);
+      childrenByParent.set(a.parentArticleId, list);
+    } else {
+      roots.push(a);
+    }
+  }
+  const build = (a: Article): CheckTreeNode => ({
+    id: `article:${a.id}`,
+    label: a.title,
+    children: (childrenByParent.get(a.id) ?? [])
+      .sort((x, y) => x.title.localeCompare(y.title))
+      .map(build),
+  });
+  return roots.sort((a, b) => a.title.localeCompare(b.title)).map(build);
+}
+
+/** True if a node's own label, or any descendant's, matches the filter. */
+function articleTreeMatches(node: CheckTreeNode, filter: string): boolean {
+  if (node.label.toLowerCase().includes(filter)) return true;
+  return node.children.some((c) => articleTreeMatches(c, filter));
+}
+
+function filterArticleTree(nodes: CheckTreeNode[], filter: string): CheckTreeNode[] {
+  if (!filter) return nodes;
+  const f = filter.toLowerCase();
+  return nodes.filter((n) => articleTreeMatches(n, f));
 }
 
 /**
@@ -115,17 +157,16 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
   const decksApi = useMemo(() => cardDecksApi(worldId), [worldId]);
   // '' = whole world; otherwise restrict to a campaign's referenced articles.
   const [scope, setScope] = useState('');
-  const [includeMaps, setIncludeMaps] = useState(true);
   const [includeContents, setIncludeContents] = useState(true);
-  const [includeTables, setIncludeTables] = useState(false);
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<Article[]>([]);
   const [printableMaps, setPrintableMaps] = useState<PrintableMap[]>([]);
   const [rollTables, setRollTables] = useState<RollTable[]>([]);
   const [cardDecks, setCardDecks] = useState<CardDeck[]>([]);
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
-  // Per-article inclusion, on top of the scope above (all included by default).
-  const [excludedArticleIds, setExcludedArticleIds] = useState<Set<string>>(new Set());
+  // Per-item inclusion, on top of the scope above (all included by default).
+  // Composite `${kind}:${id}` keys — see components/CheckTree.tsx.
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
   const [articleFilter, setArticleFilter] = useState('');
   // "Linked from one article" scope: overrides `scope` when set - the
   // document becomes the seed article plus the transitive closure of
@@ -137,22 +178,58 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
   // current scope/campaign filter, since a link target can live anywhere.
   const [allArticles, setAllArticles] = useState<{ id: string; title: string }[]>([]);
   // Which seed the exclude checklist's defaults were last computed for, so
-  // an unrelated re-load (toggling Maps/Tables/print options) doesn't wipe
-  // out exclusions the GM already customized after picking a seed.
+  // an unrelated re-load (e.g. toggling print options) doesn't wipe out
+  // exclusions the GM already customized after picking a seed.
   const lastSeedAppliedRef = useRef<string | null>(null);
 
-  function toggleArticle(id: string) {
-    setExcludedArticleIds((prev) => {
+  function toggleIds(ids: string[], checked: boolean) {
+    setExcludedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      for (const id of ids) {
+        if (checked) next.delete(id);
+        else next.add(id);
+      }
       return next;
     });
   }
 
   const shownArticles = useMemo(
-    () => articles.filter((a) => !excludedArticleIds.has(a.id)),
-    [articles, excludedArticleIds],
+    () => articles.filter((a) => !excludedIds.has(`article:${a.id}`)),
+    [articles, excludedIds],
+  );
+  const shownMaps = useMemo(
+    () => printableMaps.filter(({ map }) => !excludedIds.has(`map:${map.id}`)),
+    [printableMaps, excludedIds],
+  );
+  const shownRollTables = useMemo(
+    () => rollTables.filter((t) => !excludedIds.has(`rollTable:${t.id}`)),
+    [rollTables, excludedIds],
+  );
+  const shownCardDecks = useMemo(
+    () => cardDecks.filter((d) => !excludedIds.has(`cardDeck:${d.id}`)),
+    [cardDecks, excludedIds],
+  );
+
+  const articleTree = useMemo(() => buildArticleCheckNodes(articles), [articles]);
+  const filteredArticleTree = useMemo(
+    () => filterArticleTree(articleTree, articleFilter),
+    [articleTree, articleFilter],
+  );
+  const mapNodes: CheckTreeNode[] = useMemo(
+    () => printableMaps.map(({ map }) => ({ id: `map:${map.id}`, label: map.name, children: [] })),
+    [printableMaps],
+  );
+  const rollTableNodes: CheckTreeNode[] = useMemo(
+    () => rollTables.map((t) => ({ id: `rollTable:${t.id}`, label: t.title, children: [] })),
+    [rollTables],
+  );
+  const cardDeckNodes: CheckTreeNode[] = useMemo(
+    () => cardDecks.map((d) => ({ id: `cardDeck:${d.id}`, label: d.title, children: [] })),
+    [cardDecks],
+  );
+  const treeRoots = useMemo(
+    () => [...filteredArticleTree, ...mapNodes, ...rollTableNodes, ...cardDeckNodes],
+    [filteredArticleTree, mapNodes, rollTableNodes, cardDeckNodes],
   );
 
   const seedTitle = seedArticleId ? allArticles.find((a) => a.id === seedArticleId)?.title ?? '' : '';
@@ -184,29 +261,26 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
 
       if (seedArticleId && lastSeedAppliedRef.current !== seedArticleId) {
         const closure = linkedClosure(seedArticleId, full);
-        setExcludedArticleIds(new Set(full.filter((a) => !closure.has(a.id)).map((a) => a.id)));
+        setExcludedIds(
+          new Set(full.filter((a) => !closure.has(a.id)).map((a) => `article:${a.id}`)),
+        );
         lastSeedAppliedRef.current = seedArticleId;
       } else if (!seedArticleId && lastSeedAppliedRef.current !== null) {
-        setExcludedArticleIds(new Set());
+        setExcludedIds(new Set());
         lastSeedAppliedRef.current = null;
       }
 
       const wholeWorldScope = !scope && !seedArticleId;
-      if (includeMaps && wholeWorldScope) {
-        const list = await maps.list();
+      if (wholeWorldScope) {
+        const [list, t, d] = await Promise.all([maps.list(), tablesApi.list(), decksApi.list()]);
         const withPins = await Promise.all(
           list.map(async (m) => ({ map: m, pins: await pinsApi(worldId, m.id).list() })),
         );
         setPrintableMaps(withPins);
-      } else {
-        setPrintableMaps([]);
-      }
-
-      if (includeTables && wholeWorldScope) {
-        const [t, d] = await Promise.all([tablesApi.list(), decksApi.list()]);
         setRollTables(t);
         setCardDecks(d);
       } else {
+        setPrintableMaps([]);
         setRollTables([]);
         setCardDecks([]);
       }
@@ -215,7 +289,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
     } finally {
       setLoading(false);
     }
-  }, [api, maps, tablesApi, decksApi, worldId, scope, seedArticleId, includeMaps, includeTables, onError]);
+  }, [api, maps, tablesApi, decksApi, worldId, scope, seedArticleId, onError]);
 
   useEffect(() => {
     void load();
@@ -269,28 +343,6 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           />
           Contents
         </label>
-        <label
-          className="print-check"
-          title={scope || seedArticleId ? 'Maps print with the whole world only' : ''}
-        >
-          <Checkbox
-            checked={includeMaps}
-            disabled={!!scope || !!seedArticleId}
-            onCheckedChange={(checked) => setIncludeMaps(checked === true)}
-          />
-          Maps
-        </label>
-        <label
-          className="print-check"
-          title={scope || seedArticleId ? 'Tables print with the whole world only' : ''}
-        >
-          <Checkbox
-            checked={includeTables}
-            disabled={!!scope || !!seedArticleId}
-            onCheckedChange={(checked) => setIncludeTables(checked === true)}
-          />
-          Tables &amp; decks
-        </label>
         <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={loading} />
@@ -341,26 +393,20 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
         </div>
       )}
 
-      {!loading && articles.length > 0 && (
+      {!loading && treeRoots.length > 0 && (
         <div className="print-toolbar map-print-layers">
-          <span className="muted">Include articles:</span>
+          <span className="muted">Include:</span>
           <Input
             className="article-picker-filter"
-            placeholder="Filter…"
+            placeholder="Filter articles…"
             value={articleFilter}
             onChange={(e) => setArticleFilter(e.target.value)}
           />
-          {articles
-            .filter((a) => a.title.toLowerCase().includes(articleFilter.toLowerCase()))
-            .map((a) => (
-              <label key={a.id} className="print-check">
-                <Checkbox
-                  checked={!excludedArticleIds.has(a.id)}
-                  onCheckedChange={() => toggleArticle(a.id)}
-                />
-                {a.title}
-              </label>
+          <ul className="check-tree">
+            {treeRoots.map((node) => (
+              <CheckTreeRow key={node.id} node={node} excludedIds={excludedIds} onToggle={toggleIds} />
             ))}
+          </ul>
         </div>
       )}
 
@@ -414,7 +460,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
         )}
 
         {!loading &&
-          printableMaps.map(({ map, pins }) => (
+          shownMaps.map(({ map, pins }) => (
             <section key={map.id} className="print-map-section">
               <h1>{map.name}</h1>
               {map.imageUrl && (
@@ -443,10 +489,10 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
             </section>
           ))}
 
-        {!loading && rollTables.length > 0 && (
+        {!loading && shownRollTables.length > 0 && (
           <section className="print-map-section">
             <h1>Roll tables</h1>
-            {rollTables.map((t) => (
+            {shownRollTables.map((t) => (
               <div key={t.id} className="print-roll-table">
                 <h2>{t.title}</h2>
                 <p className="print-kicker">
@@ -477,10 +523,10 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           </section>
         )}
 
-        {!loading && cardDecks.length > 0 && (
+        {!loading && shownCardDecks.length > 0 && (
           <section className="print-map-section">
             <h1>Card decks</h1>
-            {cardDecks.map((d) => (
+            {shownCardDecks.map((d) => (
               <div key={d.id} style={{ marginBottom: '1rem' }}>
                 <h2>{d.title}</h2>
                 <div className="card-sheet">
