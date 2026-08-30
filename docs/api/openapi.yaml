@@ -2516,6 +2516,39 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
+  /worlds/{worldId}/ai/summarize-session-notes:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    post:
+      tags: [ai]
+      summary: Summarize a session's private GM notes (ADR-0082)
+      description: >-
+        On-demand only. Sends the session's GM notes to a cloud LLM (Groq,
+        falling back to OpenRouter) and returns a short digest for the GM to
+        skim before their next session; nothing is persisted server-side.
+        Unavailable (503) if no provider is configured or every configured
+        provider fails.
+      operationId: summarizeSessionNotes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SummarizeSessionNotesRequest'
+      responses:
+        '200':
+          description: Summarized text.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftArticleTextResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
   /ai/settings:
     get:
       tags: [ai]
@@ -2834,6 +2867,16 @@ components:
       type: string
       description: How much to generate, from a short teaser up to a full first draft.
       enum: [QUICK_INSPIRATION, READ_ALOUD, BASIC_INFO, FULL_DRAFT]
+
+    SummarizeSessionNotesRequest:
+      type: object
+      required: [notes]
+      properties:
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: The session's private GM notes to condense into a digest.
 
     DraftArticleTextResult:
       type: object

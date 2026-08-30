@@ -2,6 +2,8 @@ package com.campaignorganizer.ai.adapter.in.web;
 
 import com.campaignorganizer.ai.application.port.in.DraftArticleTextUseCase;
 import com.campaignorganizer.ai.application.port.in.DraftArticleTextUseCase.DraftArticleTextCommand;
+import com.campaignorganizer.ai.application.port.in.SummarizeSessionNotesUseCase;
+import com.campaignorganizer.ai.application.port.in.SummarizeSessionNotesUseCase.SummarizeSessionNotesCommand;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,10 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiController {
 
     private final DraftArticleTextUseCase draftUseCase;
+    private final SummarizeSessionNotesUseCase summarizeUseCase;
     private final AiWebMapper mapper;
 
-    public AiController(DraftArticleTextUseCase draftUseCase, AiWebMapper mapper) {
+    public AiController(
+            DraftArticleTextUseCase draftUseCase, SummarizeSessionNotesUseCase summarizeUseCase, AiWebMapper mapper) {
         this.draftUseCase = draftUseCase;
+        this.summarizeUseCase = summarizeUseCase;
         this.mapper = mapper;
     }
 
@@ -34,5 +39,12 @@ public class AiController {
         var command = new DraftArticleTextCommand(
                 request.instructions(), request.existingContent(), request.level(), request.template());
         return mapper.toResponse(draftUseCase.draft(command));
+    }
+
+    @PostMapping("/summarize-session-notes")
+    public SummarizeSessionNotesResponse summarizeSessionNotes(
+            @PathVariable UUID worldId, @Valid @RequestBody SummarizeSessionNotesRequest request) {
+        var command = new SummarizeSessionNotesCommand(request.notes());
+        return mapper.toSummarizeResponse(summarizeUseCase.summarize(command));
     }
 }
