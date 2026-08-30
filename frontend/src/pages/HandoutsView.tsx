@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ApiError, handoutsApi, Handout, HandoutPreset } from '../api/client';
+import { ApiError, handoutsApi, mediaApi, Handout, HandoutPreset } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { NewWindowPortal } from '../components/NewWindowPortal';
 import { renderMarkdown } from '../lib/markdown';
@@ -36,6 +36,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const { handoutId: urlHandoutId } = useParams<{ handoutId: string }>();
   const api = useMemo(() => handoutsApi(worldId), [worldId]);
+  const media = useMemo(() => mediaApi(worldId), [worldId]);
   const [list, setList] = useState<Handout[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
@@ -171,7 +172,11 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
               </SelectContent>
             </Select>
           </div>
-          <MarkdownEditor value={draft.body} onChange={(body) => setDraft({ ...draft, body })} />
+          <MarkdownEditor
+            value={draft.body}
+            onChange={(body) => setDraft({ ...draft, body })}
+            onUploadImage={async (file) => (await media.upload(file)).url}
+          />
           <div className="editor-actions">
             <Button type="submit" disabled={!draft.title}>
               {editingExisting ? 'Save handout' : 'Create handout'}
