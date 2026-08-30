@@ -34,6 +34,9 @@ public class HandoutJpaEntity {
     @Column(name = "session_id")
     private UUID sessionId;
 
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -90,6 +93,14 @@ public class HandoutJpaEntity {
 
     public void setSessionId(UUID sessionId) {
         this.sessionId = sessionId;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
     }
 
     public Instant getCreatedAt() {

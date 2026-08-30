@@ -24,14 +24,17 @@ public final class Handout {
     private String body;
     /** Optional session this handout is prepped for (ADR-0077); null means unassigned. */
     private UUID sessionId;
+    /** Manual list position; null means "not yet reordered" (falls back to createdAt DESC). */
+    private Integer sortOrder;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private Handout(UUID id, UUID worldId, String title, Preset preset, String body,
-                    UUID sessionId, Instant createdAt, Instant updatedAt) {
+                    UUID sessionId, Integer sortOrder, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.sessionId = sessionId;
+        this.sortOrder = sortOrder;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(title, preset, body);
@@ -39,18 +42,25 @@ public final class Handout {
 
     public static Handout create(UUID id, UUID worldId, String title, Preset preset,
                                  String body, UUID sessionId, Instant now) {
-        return new Handout(id, worldId, title, preset, body, sessionId, now, now);
+        return new Handout(id, worldId, title, preset, body, sessionId, null, now, now);
     }
 
     public static Handout reconstitute(UUID id, UUID worldId, String title, Preset preset,
-                                       String body, UUID sessionId, Instant createdAt,
-                                       Instant updatedAt) {
-        return new Handout(id, worldId, title, preset, body, sessionId, createdAt, updatedAt);
+                                       String body, UUID sessionId, Integer sortOrder,
+                                       Instant createdAt, Instant updatedAt) {
+        return new Handout(id, worldId, title, preset, body, sessionId, sortOrder, createdAt,
+                updatedAt);
     }
 
     public void update(String title, Preset preset, String body, UUID sessionId, Instant now) {
         apply(title, preset, body);
         this.sessionId = sessionId;
+        this.updatedAt = now;
+    }
+
+    /** Sets this handout's position in a manual reorder (FR-46 follow-up). */
+    public void reorder(int sortOrder, Instant now) {
+        this.sortOrder = sortOrder;
         this.updatedAt = now;
     }
 
@@ -91,6 +101,10 @@ public final class Handout {
 
     public UUID getSessionId() {
         return sessionId;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
     }
 
     public Instant getCreatedAt() {

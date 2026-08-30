@@ -4,8 +4,10 @@ import com.campaignorganizer.handouts.application.port.in.CreateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.DeleteHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.GetHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.CreateHandoutCommand;
+import com.campaignorganizer.handouts.application.port.in.HandoutCommands.ReorderHandoutsCommand;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.UpdateHandoutCommand;
 import com.campaignorganizer.handouts.application.port.in.ListHandoutsUseCase;
+import com.campaignorganizer.handouts.application.port.in.ReorderHandoutsUseCase;
 import com.campaignorganizer.handouts.application.port.in.UpdateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.out.HandoutRepositoryPort;
 import com.campaignorganizer.handouts.application.port.out.SessionExistsPort;
@@ -19,16 +21,21 @@ import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Handout use cases; also implements the published query/import ports. */
 @Service
 public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCase,
-        DeleteHandoutUseCase, ListHandoutsUseCase, GetHandoutUseCase,
+        DeleteHandoutUseCase, ListHandoutsUseCase, GetHandoutUseCase, ReorderHandoutsUseCase,
         HandoutQueryPort, HandoutImportPort {
 
     private final HandoutRepositoryPort handouts;
@@ -126,9 +133,29 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     @Transactional
     public HandoutView importHandout(HandoutView view) {
         Handout handout = Handout.reconstitute(view.id(), view.worldId(), view.title(),
-                toPreset(view.preset()), view.body(), view.sessionId(), view.createdAt(),
-                view.updatedAt());
+                toPreset(view.preset()), view.body(), view.sessionId(), view.sortOrder(),
+                view.createdAt(), view.updatedAt());
         return viewMapper.toView(handouts.save(handout));
+    }
+
+    @Override
+    @Transactional
+    public List<HandoutView> reorder(ReorderHandoutsCommand command) {
+        requireWorld(command.worldId());
+        List<Handout> existing = handouts.findByWorld(command.worldId());
+        Set<UUID> existingIds = existing.stream().map(Handout::getId).collect(Collectors.toSet());
+        if (command.orderedIds().size() != existingIds.size()
+                || !existingIds.equals(new HashSet<>(command.orderedIds()))) {
+            throw new ValidationException(
+                    "orderedIds must be exactly this world's current handouts, in the new order");
+        }
+        Map<UUID, Handout> byId = existing.stream()
+                .collect(Collectors.toMap(Handout::getId, Function.identity()));
+        List<Handout> reordered = command.orderedIds().stream().map(byId::get).toList();
+        for (int i = 0; i < reordered.size(); i++) {
+            reordered.get(i).reorder(i, clock.instant());
+        }
+        return reordered.stream().map(h -> viewMapper.toView(handouts.save(h))).toList();
     }
 
     private static Preset toPreset(String raw) {
