@@ -29,6 +29,11 @@ public class SessionPersistenceAdapter implements SessionRepositoryPort {
     }
 
     @Override
+    public Optional<Session> findById(UUID sessionId) {
+        return repository.findById(sessionId).map(mapper::toDomain);
+    }
+
+    @Override
     public Session save(Session session) {
         return mapper.toDomain(repository.save(mapper.toEntity(session)));
     }

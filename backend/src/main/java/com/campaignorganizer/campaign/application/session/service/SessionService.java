@@ -106,6 +106,12 @@ public class SessionService implements CreateSessionUseCase, UpdateSessionUseCas
         return sessions.findByIdAndCampaign(sessionId, campaignId).isPresent();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SessionView> findById(UUID sessionId) {
+        return sessions.findById(sessionId).map(viewMapper::toView);
+    }
+
     private Session require(UUID sessionId, UUID campaignId) {
         return sessions.findByIdAndCampaign(sessionId, campaignId)
                 .orElseThrow(() -> new NotFoundException("Session not found"));

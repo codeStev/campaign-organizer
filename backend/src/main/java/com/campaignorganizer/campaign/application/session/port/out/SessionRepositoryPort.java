@@ -11,6 +11,8 @@ public interface SessionRepositoryPort {
 
     Optional<Session> findByIdAndCampaign(UUID sessionId, UUID campaignId);
 
+    Optional<Session> findById(UUID sessionId);
+
     Session save(Session session);
 
     void delete(Session session);
