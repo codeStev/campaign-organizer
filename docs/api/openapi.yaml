@@ -4166,6 +4166,13 @@ components:
         categoryId:
           type: [string, "null"]
           format: uuid
+        parentArticleId:
+          type: [string, "null"]
+          format: uuid
+          description: >
+            Structural parent for sidebar nesting (e.g. a sub-location under
+            its parent location), or null for a top-level article.
+            Independent of categoryId, which is a separate taxonomy grouping.
         body:
           type: string
           description: Article body as Markdown (see ADR-0054).
@@ -4181,6 +4188,9 @@ components:
           type: string
           format: uuid
         categoryId:
+          type: [string, "null"]
+          format: uuid
+        parentArticleId:
           type: [string, "null"]
           format: uuid
         title:
@@ -4221,13 +4231,13 @@ components:
       properties:
         type:
           type: string
-          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK, ROLL_TABLE, CARD_DECK]
+          enum: [BEAT, MAP_PIN, TIMELINE_EVENT, RELATIONSHIP, CHARACTER_SHEET, STATBLOCK, ARTICLE_LINK, ROLL_TABLE, CARD_DECK, CHILD_ARTICLE]
         label:
           type: string
         targetId:
           type: [string, "null"]
           format: uuid
-          description: An article the client can open (RELATIONSHIP, ARTICLE_LINK); else null.
+          description: An article the client can open (RELATIONSHIP, ARTICLE_LINK, CHILD_ARTICLE); else null.
         campaignId:
           type: [string, "null"]
           format: uuid
