@@ -3603,6 +3603,10 @@ components:
           type: string
         template:
           type: string
+        parentArticleId:
+          type: [string, "null"]
+          format: uuid
+          description: Structural parent (ADR-0080), for nesting in the print-selection tree.
         bodyHtml:
           type: [string, "null"]
 

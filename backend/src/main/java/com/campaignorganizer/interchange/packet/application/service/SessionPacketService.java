@@ -231,7 +231,7 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     }
 
     private PacketArticle toPacketArticle(ArticleView a) {
-        return new PacketArticle(a.id(), a.title(), a.template(),
+        return new PacketArticle(a.id(), a.title(), a.template(), a.parentArticleId(),
                 articleRenderer.renderBody(a.worldId(), a.body()));
     }
 

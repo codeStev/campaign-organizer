@@ -613,6 +613,7 @@ export interface PacketArticle {
   id: string;
   title: string;
   template: string;
+  parentArticleId?: string | null;
   bodyHtml?: string | null;
 }
 

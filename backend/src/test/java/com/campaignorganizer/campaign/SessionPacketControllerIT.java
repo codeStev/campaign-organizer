@@ -84,6 +84,28 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void exposesParentArticleIdForNestingInThePrintTree() throws Exception {
+        setup();
+        String parent = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Phandalin\"}");
+        String child = create("/api/worlds/" + worldId + "/articles",
+                "{\"title\":\"Stonehill Inn\",\"parentArticleId\":\"" + parent + "\"}");
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
+                "{\"title\":\"Arrive\",\"sessionId\":\"" + sessionId + "\",\"articleIds\":[\""
+                        + parent + "\",\"" + child + "\"]}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.articles[?(@.title == 'Phandalin')].parentArticleId")
+                        .value(Matchers.hasItem(Matchers.nullValue())))
+                .andExpect(jsonPath("$.articles[?(@.title == 'Stonehill Inn')].parentArticleId")
+                        .value(Matchers.hasItem(parent)));
+    }
+
+    @Test
     void includesMapsLinkedViaBeatArticles() throws Exception {
         setup();
         String place = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Phandalin\"}");

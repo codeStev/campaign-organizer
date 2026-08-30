@@ -24,6 +24,7 @@ public final class SessionPacketDtos {
             UUID id,
             String title,
             String template,
+            UUID parentArticleId,
             String bodyHtml) {}
 
     /** A pin on a packet map; label is resolved (own label or linked article title). */
