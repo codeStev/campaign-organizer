@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NewWindowPortal, useNewWindowContainer } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton, useNewWindowContainer } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
@@ -72,7 +72,7 @@ interface PrintableMap {
 /**
  * Full-screen print/PDF view (ADR-0035). Renders a clean black-on-white document
  * — cover, optional contents, articles with embedded images, and annotated maps —
- * then hands off to the browser's native print / Save-as-PDF via window.print().
+ * then hands off to the browser's native print / Save-as-PDF (PrintButton).
  */
 export function PrintView({ worldId, worldName, campaigns, onClose, onError }: Props) {
   const api = useMemo(() => articlesApi(worldId), [worldId]);
@@ -174,9 +174,7 @@ export function PrintView({ worldId, worldName, campaigns, onClose, onError }: P
           Tables &amp; decks
         </label>
         <span className="print-toolbar-spacer" />
-        <Button onClick={() => window.print()} disabled={loading}>
-          🖨 Print
-        </Button>
+        <PrintButton disabled={loading} />
         <Button variant="link" onClick={onClose}>
           Close
         </Button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
@@ -50,9 +50,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
       <div className="print-toolbar">
         <strong>Session packet</strong>
         <span className="print-toolbar-spacer" />
-        <Button onClick={() => window.print()} disabled={loading || !packet}>
-          🖨 Print
-        </Button>
+        <PrintButton disabled={loading || !packet} />
         <Button variant="link" onClick={onClose}>
           Close
         </Button>

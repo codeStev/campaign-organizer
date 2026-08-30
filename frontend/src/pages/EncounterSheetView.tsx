@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { characterSheetsApi, CharacterSheet, FieldTemplate, Statblock } from '../api/client';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
@@ -100,9 +100,7 @@ export function EncounterSheetView({ worldId, statblocks, templates, onClose }: 
         <strong>Encounter sheet</strong>
         <span className="muted">{rows.length} combatants</span>
         <span className="print-toolbar-spacer" />
-        <Button onClick={() => window.print()} disabled={rows.length === 0}>
-          🖨 Print
-        </Button>
+        <PrintButton disabled={rows.length === 0} />
         <Button variant="link" onClick={onClose}>
           Close
         </Button>
