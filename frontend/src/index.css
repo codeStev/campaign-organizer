@@ -1631,6 +1631,14 @@ button:disabled {
   background: var(--primary);
 }
 
+.pip.read-only {
+  cursor: default;
+}
+
+.field-read {
+  min-height: 1.5rem;
+}
+
 /* On narrow screens collapse the 12-col grid to a single column. */
 @media (max-width: 680px) {
   .sheet-grid > .sheet-field {

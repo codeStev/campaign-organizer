@@ -13,6 +13,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
+import { renderMarkdown } from '../lib/markdown';
 
 // Radix Select can't use "" as an item value (it's reserved for "no selection"),
 // so options that mean a real, persistently-selectable "none" state (as opposed
@@ -87,6 +88,8 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   const [encounterOpen, setEncounterOpen] = useState(false);
   // Ids ticked for printing; empty = print the whole (filtered) list.
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Read (rendered values) vs edit (the form) — mirrors WorldView's article mode.
+  const [mode, setMode] = useState<'read' | 'edit'>('read');
 
   const statblockTemplates = templates.filter((t) => t.kind === 'STATBLOCK');
   const template = statblockTemplates.find((t) => t.id === draft.templateId) ?? null;
@@ -143,6 +146,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       templateId: sb.templateId ?? '',
       rows: toRows(sb.stats),
     });
+    setMode('read');
   }
 
   // The URL is the source of truth for which statblock is open (ADR-0053).
@@ -171,11 +175,11 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       campaignId: draft.campaignId || null,
       templateId: draft.templateId || null,
     };
+    const wasNew = !draft.id;
     try {
-      if (draft.id) await api.update(draft.id, body);
-      else await api.create(body);
-      setDraft({ ...EMPTY, campaignId: filterCampaign });
-      navigate(`/worlds/${worldId}/sheets/statblocks`);
+      const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
+      edit(saved);
+      if (wasNew) navigate(`/worlds/${worldId}/sheets/statblocks/${saved.id}`);
       await refresh();
       toast.success(`Statblock "${body.name}" saved`);
     } catch (err) {
@@ -206,6 +210,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         <Button
           onClick={() => {
             setDraft({ ...EMPTY, campaignId: filterCampaign });
+            setMode('edit');
             navigate(`/worlds/${worldId}/sheets/statblocks`);
           }}
         >
@@ -287,105 +292,158 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       </div>
 
       <div className="sheet-detail card">
-        <Input
-          className="title-input"
-          placeholder="Statblock name (e.g. Goblin)"
-          value={draft.name}
-          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-        />
-        {campaigns.length > 0 && (
-          <label className="sheet-article">
-            <span className="muted">Campaign</span>
-            <Select
-              value={draft.campaignId || NONE_VALUE}
-              onValueChange={(v) => setDraft({ ...draft, campaignId: v === NONE_VALUE ? '' : v })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE}>— shared (no campaign) —</SelectItem>
-                {campaigns.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-        )}
-        <label className="sheet-article">
-          <span className="muted">Template</span>
-          <Select
-            value={draft.templateId || NONE_VALUE}
-            onValueChange={(v) => setDraft({ ...draft, templateId: v === NONE_VALUE ? '' : v })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_VALUE}>None — free-form</SelectItem>
-              {statblockTemplates.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-
-        {template && (
-          <TemplateForm sections={template.sections} values={templateValues} onChange={setTemplateValues} />
-        )}
-
-        <strong className="muted">{template ? 'Other stats' : 'Stats'}</strong>
-        {(template ? otherRows : draft.rows.map((row, index) => ({ row, index }))).map(({ row, index }) => (
-          <div key={index} className="month-row">
+        {(mode === 'edit' || !draft.id) && (
+          <>
             <Input
-              placeholder="stat (AC)"
-              value={row.key}
-              onChange={(e) => setRow(index, { key: e.target.value })}
+              className="title-input"
+              placeholder="Statblock name (e.g. Goblin)"
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
-            <Input
-              placeholder="value (15)"
-              value={row.value}
-              onChange={(e) => setRow(index, { value: e.target.value })}
-            />
+            {campaigns.length > 0 && (
+              <label className="sheet-article">
+                <span className="muted">Campaign</span>
+                <Select
+                  value={draft.campaignId || NONE_VALUE}
+                  onValueChange={(v) => setDraft({ ...draft, campaignId: v === NONE_VALUE ? '' : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>— shared (no campaign) —</SelectItem>
+                    {campaigns.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+            <label className="sheet-article">
+              <span className="muted">Template</span>
+              <Select
+                value={draft.templateId || NONE_VALUE}
+                onValueChange={(v) => setDraft({ ...draft, templateId: v === NONE_VALUE ? '' : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>None — free-form</SelectItem>
+                  {statblockTemplates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+
+            {template && (
+              <TemplateForm sections={template.sections} values={templateValues} onChange={setTemplateValues} />
+            )}
+
+            <strong className="muted">{template ? 'Other stats' : 'Stats'}</strong>
+            {(template ? otherRows : draft.rows.map((row, index) => ({ row, index }))).map(({ row, index }) => (
+              <div key={index} className="month-row">
+                <Input
+                  placeholder="stat (AC)"
+                  value={row.key}
+                  onChange={(e) => setRow(index, { key: e.target.value })}
+                />
+                <Input
+                  placeholder="value (15)"
+                  value={row.value}
+                  onChange={(e) => setRow(index, { value: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setDraft((d) => ({ ...d, rows: d.rows.filter((_, j) => j !== index) }))}
+                >
+                  ✕
+                </Button>
+              </div>
+            ))}
             <Button
               type="button"
               variant="link"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setDraft((d) => ({ ...d, rows: d.rows.filter((_, j) => j !== index) }))}
+              onClick={() => setDraft((d) => ({ ...d, rows: [...d.rows, { key: '', value: '' }] }))}
             >
-              ✕
+              + Add stat
             </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="link"
-          onClick={() => setDraft((d) => ({ ...d, rows: [...d.rows, { key: '', value: '' }] }))}
-        >
-          + Add stat
-        </Button>
-        <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
-        <div className="editor-actions">
-          <Button onClick={save} disabled={!draft.name}>
-            {draft.id ? 'Save statblock' : 'Create statblock'}
-          </Button>
-          {draft.id && (
-            <ConfirmDeleteDialog
-              trigger={
-                <Button variant="link" className="text-destructive hover:text-destructive">
-                  Delete
+            <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
+            <div className="editor-actions">
+              <Button onClick={save} disabled={!draft.name}>
+                {draft.id ? 'Save statblock' : 'Create statblock'}
+              </Button>
+              {draft.id && (
+                <Button type="button" variant="link" onClick={() => setMode('read')}>
+                  Cancel
                 </Button>
-              }
-              title="Delete statblock?"
-              description={`This permanently deletes "${draft.name}" and cannot be undone.`}
-              onConfirm={() => remove(list.find((s) => s.id === draft.id)!)}
-            />
-          )}
-        </div>
+              )}
+              {draft.id && (
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      Delete
+                    </Button>
+                  }
+                  title="Delete statblock?"
+                  description={`This permanently deletes "${draft.name}" and cannot be undone.`}
+                  onConfirm={() => remove(list.find((s) => s.id === draft.id)!)}
+                />
+              )}
+            </div>
+          </>
+        )}
+        {mode === 'read' && draft.id && (
+          <article className="article-read">
+            <div className="article-read-head">
+              <h2>{draft.name}</h2>
+              <Button type="button" onClick={() => setMode('edit')}>
+                Edit
+              </Button>
+            </div>
+            {draft.campaignId && campaigns.length > 0 && (
+              <p className="muted">
+                Campaign: {campaigns.find((c) => c.id === draft.campaignId)?.name ?? '—'}
+              </p>
+            )}
+            {template && <p className="muted">Template: {template.name}</p>}
+
+            {template && (
+              <TemplateForm sections={template.sections} values={templateValues} onChange={() => {}} readOnly />
+            )}
+
+            {(template ? otherRows : draft.rows.map((row, index) => ({ row, index }))).filter(({ row }) =>
+              row.key.trim(),
+            ).length > 0 && (
+              <>
+                <strong className="muted">{template ? 'Other stats' : 'Stats'}</strong>
+                <dl className="print-stats">
+                  {(template ? otherRows : draft.rows.map((row, index) => ({ row, index })))
+                    .filter(({ row }) => row.key.trim())
+                    .map(({ row, index }) => (
+                      <div key={index} className="print-stat">
+                        <dt>{row.key}</dt>
+                        <dd>{row.value || '—'}</dd>
+                      </div>
+                    ))}
+                </dl>
+              </>
+            )}
+
+            {draft.notes ? (
+              <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.notes) }} />
+            ) : (
+              <p className="muted">(no notes)</p>
+            )}
+          </article>
+        )}
       </div>
 
       {cardsOpen && (

@@ -55,6 +55,8 @@ export function CharacterSheetsPanel({
   const [draft, setDraft] = useState<Draft | null>(null);
   // '' = all campaigns; a campaign id = only that party's sheets.
   const [filterCampaign, setFilterCampaign] = useState('');
+  // Read (rendered values) vs edit (the form) — mirrors WorldView's article mode.
+  const [mode, setMode] = useState<'read' | 'edit'>('read');
 
   const refresh = useCallback(async () => {
     try {
@@ -86,6 +88,7 @@ export function CharacterSheetsPanel({
       campaignId: filterCampaign, // default new sheets to the active campaign
       values: {},
     });
+    setMode('edit');
     navigate(`/worlds/${worldId}/sheets/characters`);
   }
 
@@ -101,6 +104,7 @@ export function CharacterSheetsPanel({
           campaignId: sheet.campaignId ?? '',
           values: sheet.values ?? {},
         });
+        setMode('read');
       } catch (err) {
         onError(err);
       }
@@ -128,6 +132,7 @@ export function CharacterSheetsPanel({
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       setDraft({ ...draft, id: saved.id });
+      setMode('read');
       if (wasNew) navigate(`/worlds/${worldId}/sheets/characters/${saved.id}`);
       await refresh();
       toast.success(`Character sheet "${body.name}" saved`);
@@ -203,7 +208,7 @@ export function CharacterSheetsPanel({
 
       <div className="sheet-detail">
         {!draft && <p className="muted">Select or create a character sheet.</p>}
-        {draft && (
+        {draft && mode === 'edit' && (
           <>
             <div className="sheet-head">
               <Input
@@ -289,6 +294,11 @@ export function CharacterSheetsPanel({
               <Button onClick={save} disabled={!draft.name}>
                 {draft.id ? 'Save sheet' : 'Create sheet'}
               </Button>
+              {draft.id && (
+                <Button type="button" variant="link" onClick={() => setMode('read')}>
+                  Cancel
+                </Button>
+              )}
               {draft.id && template && (
                 <Button variant="link" onClick={exportPdf} title="Download a filled fillable PDF">
                   ⭳ Export PDF
@@ -308,6 +318,41 @@ export function CharacterSheetsPanel({
               )}
             </div>
           </>
+        )}
+        {draft && mode === 'read' && (
+          <article className="card article-read">
+            <div className="article-read-head">
+              <h2>{draft.name}</h2>
+              <div className="editor-actions">
+                <Button type="button" onClick={() => setMode('edit')}>
+                  Edit
+                </Button>
+                {template && (
+                  <Button variant="link" onClick={exportPdf} title="Download a filled fillable PDF">
+                    ⭳ Export PDF
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {draft.articleId && (
+              <p className="muted">
+                Linked article:{' '}
+                <Button variant="link" onClick={() => onOpenArticle(draft.articleId)}>
+                  {articles.find((a) => a.id === draft.articleId)?.title ?? draft.articleId}
+                </Button>
+              </p>
+            )}
+            {draft.campaignId && campaigns.length > 0 && (
+              <p className="muted">
+                Campaign: {campaigns.find((c) => c.id === draft.campaignId)?.name ?? '—'}
+              </p>
+            )}
+
+            {template && (
+              <TemplateForm sections={template.sections} values={draft.values} onChange={() => {}} readOnly />
+            )}
+          </article>
         )}
       </div>
     </div>
