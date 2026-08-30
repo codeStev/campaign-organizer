@@ -22,6 +22,7 @@ public interface HandoutPersistenceMapper {
                 entity.getBody(),
                 entity.getSessionId(),
                 entity.getSortOrder(),
+                entity.isRevealed(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }

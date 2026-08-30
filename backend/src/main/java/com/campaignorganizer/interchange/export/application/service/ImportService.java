@@ -313,7 +313,7 @@ public class ImportService implements ImportBackupUseCase {
         for (HandoutView h : handouts) {
             handoutImportPort.importHandout(new HandoutView(remap.get(h.id()), newWorldId,
                     h.title(), h.preset(), h.body(), remap.getOrNull(h.sessionId()), h.sortOrder(),
-                    h.createdAt(), h.updatedAt()));
+                    h.revealed(), h.createdAt(), h.updatedAt()));
         }
 
         // Cheat sheets (FR-37) after sessions: their session id is remapped.

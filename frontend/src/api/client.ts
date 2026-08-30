@@ -221,8 +221,17 @@ export interface Handout {
   preset: HandoutPreset;
   body?: string | null;
   sessionId?: string | null;
+  revealed: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface HandoutRequestBody {
+  title: string;
+  preset: HandoutPreset;
+  body?: string | null;
+  sessionId?: string | null;
+  revealed?: boolean;
 }
 
 /** FR-46: player-facing styled one-page printables. */
@@ -231,12 +240,10 @@ export function handoutsApi(worldId: string) {
   return {
     list: () => request<Handout[]>(base),
     get: (id: string) => request<Handout>(`${base}/${id}`),
-    create: (body: { title: string; preset: HandoutPreset; body?: string | null; sessionId?: string | null }) =>
+    create: (body: HandoutRequestBody) =>
       request<Handout>(base, { method: 'POST', body: JSON.stringify(body) }),
-    update: (
-      id: string,
-      body: { title: string; preset: HandoutPreset; body?: string | null; sessionId?: string | null },
-    ) => request<Handout>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    update: (id: string, body: HandoutRequestBody) =>
+      request<Handout>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     reorder: (orderedIds: string[]) =>
       request<Handout[]>(`${base}/order`, { method: 'PUT', body: JSON.stringify({ orderedIds }) }),

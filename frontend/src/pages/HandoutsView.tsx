@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { Toggle } from '../components/ui/toggle';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -31,6 +32,7 @@ const EMPTY_DRAFT = {
   preset: 'PARCHMENT' as HandoutPreset,
   body: '',
   sessionId: null as string | null,
+  revealed: false,
 };
 
 // Radix Select can't use "" as an item value (reserved for "no selection").
@@ -122,6 +124,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
       preset: h.preset,
       body: h.body ?? '',
       sessionId: h.sessionId ?? null,
+      revealed: h.revealed,
     })).catch(handleError);
   }, [urlHandoutId, api, handleError]);
 
@@ -132,6 +135,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
       preset: draft.preset,
       body: draft.body || null,
       sessionId: draft.sessionId,
+      revealed: draft.revealed,
     };
     try {
       if (draft.id) {
@@ -155,6 +159,24 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     setList(next);
     try {
       await api.reorder(next.map((h) => h.id));
+    } catch (err) {
+      handleError(err);
+      await refresh();
+    }
+  }
+
+  async function toggleRevealed(h: Handout) {
+    const revealed = !h.revealed;
+    setList((prev) => prev.map((x) => (x.id === h.id ? { ...x, revealed } : x)));
+    if (draft.id === h.id) setDraft((d) => ({ ...d, revealed }));
+    try {
+      await api.update(h.id, {
+        title: h.title,
+        preset: h.preset,
+        body: h.body ?? null,
+        sessionId: h.sessionId ?? null,
+        revealed,
+      });
     } catch (err) {
       handleError(err);
       await refresh();
@@ -211,6 +233,16 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
                   {PRESETS.find((p) => p.value === h.preset)?.label ?? h.preset}
                 </small>
               </button>
+              <Toggle
+                type="button"
+                size="sm"
+                pressed={h.revealed}
+                onPressedChange={() => void toggleRevealed(h)}
+                title={h.revealed ? 'Revealed to players — click to mark secret' : 'Not yet revealed — click to mark revealed'}
+                aria-label="Revealed to players"
+              >
+                {h.revealed ? '👁' : '🔒'}
+              </Toggle>
             </li>
           ))}
           {loading && (

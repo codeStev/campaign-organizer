@@ -37,6 +37,7 @@ class HandoutControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Wanted: the Harbor Ghost"))
                 .andExpect(jsonPath("$.preset").value("POSTER"))
+                .andExpect(jsonPath("$.revealed").value(false))
                 .andReturn().getResponse().getContentAsString();
         String handoutId = JsonPath.read(created, "$.id");
 
@@ -55,11 +56,12 @@ class HandoutControllerIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"title":"Letter to the magistrate","preset":"LETTER",
-                                 "body":"Dear sir,"}
+                                 "body":"Dear sir,","revealed":true}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Letter to the magistrate"))
-                .andExpect(jsonPath("$.preset").value("LETTER"));
+                .andExpect(jsonPath("$.preset").value("LETTER"))
+                .andExpect(jsonPath("$.revealed").value(true));
 
         mockMvc.perform(delete("/api/worlds/{w}/handouts/{h}", worldId, handoutId)
                         .header(HttpHeaders.AUTHORIZATION, auth))

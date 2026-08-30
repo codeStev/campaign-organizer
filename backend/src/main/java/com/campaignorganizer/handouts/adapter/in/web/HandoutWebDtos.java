@@ -18,7 +18,12 @@ public final class HandoutWebDtos {
             @NotBlank @Size(max = 200) String title,
             @NotNull String preset,
             String body,
-            UUID sessionId) {
+            UUID sessionId,
+            Boolean revealed) {
+
+        public boolean revealedOrDefault() {
+            return revealed != null && revealed;
+        }
     }
 
     public record HandoutResponse(
@@ -28,6 +33,7 @@ public final class HandoutWebDtos {
             String preset,
             String body,
             UUID sessionId,
+            boolean revealed,
             Instant createdAt,
             Instant updatedAt) {
     }

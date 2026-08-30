@@ -9,11 +9,12 @@ public final class HandoutCommands {
     }
 
     public record CreateHandoutCommand(UUID worldId, String title, String preset, String body,
-                                       UUID sessionId) {
+                                       UUID sessionId, boolean revealed) {
     }
 
     public record UpdateHandoutCommand(UUID worldId, UUID handoutId, String title,
-                                       String preset, String body, UUID sessionId) {
+                                       String preset, String body, UUID sessionId,
+                                       boolean revealed) {
     }
 
     /** orderedIds must be exactly the world's current handout ids, in the new order. */

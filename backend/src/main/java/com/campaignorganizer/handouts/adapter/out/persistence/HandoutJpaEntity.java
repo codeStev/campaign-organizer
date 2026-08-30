@@ -37,6 +37,9 @@ public class HandoutJpaEntity {
     @Column(name = "sort_order")
     private Integer sortOrder;
 
+    @Column(nullable = false)
+    private boolean revealed;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -101,6 +104,14 @@ public class HandoutJpaEntity {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public boolean isRevealed() {
+        return revealed;
+    }
+
+    public void setRevealed(boolean revealed) {
+        this.revealed = revealed;
     }
 
     public Instant getCreatedAt() {
