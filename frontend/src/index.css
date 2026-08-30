@@ -390,6 +390,31 @@ button:disabled {
   outline-offset: 2px;
 }
 
+/* Drag-to-resize handle for images (resizableImageExtension.ts). Tiptap's
+   ResizableNodeView positions these itself via inline styles; it ships no
+   default appearance, so an unstyled handle would be an invisible 0x0 div. */
+.editor-content [data-resize-wrapper] {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.editor-content [data-resize-handle] {
+  width: 0.85rem;
+  height: 0.85rem;
+  background: var(--primary);
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  transform: translate(50%, 50%);
+  cursor: nwse-resize;
+}
+
+.editor-content [data-resize-wrapper]:hover [data-resize-handle],
+.editor-content [data-resize-container][data-resize-state='true'] [data-resize-handle] {
+  opacity: 1;
+}
+
 /* Markdown formatting (ADR-0054): shared between the live editor and every
    read-only rendering of the same content (article preview, print, packets,
    cards). Milkdown ships no theme, so headings/lists/quotes/code/tables need
