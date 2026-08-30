@@ -22,30 +22,35 @@ public final class Handout {
     private String title;
     private Preset preset;
     private String body;
+    /** Optional session this handout is prepped for (ADR-0077); null means unassigned. */
+    private UUID sessionId;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private Handout(UUID id, UUID worldId, String title, Preset preset, String body,
-                    Instant createdAt, Instant updatedAt) {
+                    UUID sessionId, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.sessionId = sessionId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(title, preset, body);
     }
 
     public static Handout create(UUID id, UUID worldId, String title, Preset preset,
-                                 String body, Instant now) {
-        return new Handout(id, worldId, title, preset, body, now, now);
+                                 String body, UUID sessionId, Instant now) {
+        return new Handout(id, worldId, title, preset, body, sessionId, now, now);
     }
 
     public static Handout reconstitute(UUID id, UUID worldId, String title, Preset preset,
-                                       String body, Instant createdAt, Instant updatedAt) {
-        return new Handout(id, worldId, title, preset, body, createdAt, updatedAt);
+                                       String body, UUID sessionId, Instant createdAt,
+                                       Instant updatedAt) {
+        return new Handout(id, worldId, title, preset, body, sessionId, createdAt, updatedAt);
     }
 
-    public void update(String title, Preset preset, String body, Instant now) {
+    public void update(String title, Preset preset, String body, UUID sessionId, Instant now) {
         apply(title, preset, body);
+        this.sessionId = sessionId;
         this.updatedAt = now;
     }
 
@@ -82,6 +87,10 @@ public final class Handout {
 
     public String getBody() {
         return body;
+    }
+
+    public UUID getSessionId() {
+        return sessionId;
     }
 
     public Instant getCreatedAt() {

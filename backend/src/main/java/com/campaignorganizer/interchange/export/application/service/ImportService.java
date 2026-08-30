@@ -308,10 +308,12 @@ public class ImportService implements ImportBackupUseCase {
                     d.updatedAt()));
         }
 
-        // Handouts (FR-46): standalone props, only the world id is remapped.
+        // Handouts (FR-46/ADR-0077): after sessions, so an optional session tag
+        // remaps along with everything else.
         for (HandoutView h : handouts) {
             handoutImportPort.importHandout(new HandoutView(remap.get(h.id()), newWorldId,
-                    h.title(), h.preset(), h.body(), h.createdAt(), h.updatedAt()));
+                    h.title(), h.preset(), h.body(), remap.getOrNull(h.sessionId()), h.createdAt(),
+                    h.updatedAt()));
         }
 
         // Cheat sheets (FR-37) after sessions: their session id is remapped.

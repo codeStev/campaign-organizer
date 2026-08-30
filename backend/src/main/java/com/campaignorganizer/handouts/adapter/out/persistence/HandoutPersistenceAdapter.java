@@ -28,6 +28,13 @@ public class HandoutPersistenceAdapter implements HandoutRepositoryPort {
     }
 
     @Override
+    public List<Handout> findBySession(UUID sessionId) {
+        return repository.findBySessionIdOrderByCreatedAtDesc(sessionId).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public Optional<Handout> findByIdAndWorld(UUID handoutId, UUID worldId) {
         return repository.findByIdAndWorldId(handoutId, worldId).map(mapper::toDomain);
     }

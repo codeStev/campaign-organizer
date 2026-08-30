@@ -11,5 +11,8 @@ public interface SessionQueryPort {
 
     Optional<SessionView> findByIdInCampaign(UUID sessionId, UUID campaignId);
 
+    /** Looks up a session without knowing its campaign (its campaignId is on the view). */
+    Optional<SessionView> findById(UUID sessionId);
+
     boolean existsInCampaign(UUID sessionId, UUID campaignId);
 }

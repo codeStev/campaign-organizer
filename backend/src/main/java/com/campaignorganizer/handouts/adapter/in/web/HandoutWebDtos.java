@@ -15,7 +15,8 @@ public final class HandoutWebDtos {
     public record HandoutRequest(
             @NotBlank @Size(max = 200) String title,
             @NotNull String preset,
-            String body) {
+            String body,
+            UUID sessionId) {
     }
 
     public record HandoutResponse(
@@ -24,6 +25,7 @@ public final class HandoutWebDtos {
             String title,
             String preset,
             String body,
+            UUID sessionId,
             Instant createdAt,
             Instant updatedAt) {
     }

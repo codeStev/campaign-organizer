@@ -10,4 +10,6 @@ public interface HandoutJpaRepository extends JpaRepository<HandoutJpaEntity, UU
     List<HandoutJpaEntity> findByWorldIdOrderByCreatedAtDesc(UUID worldId);
 
     Optional<HandoutJpaEntity> findByIdAndWorldId(UUID id, UUID worldId);
+
+    List<HandoutJpaEntity> findBySessionIdOrderByCreatedAtDesc(UUID sessionId);
 }

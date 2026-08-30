@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ApiError, handoutsApi, mediaApi, Handout, HandoutPreset } from '../api/client';
+import { ApiError, handoutsApi, mediaApi, campaignsApi, sessionsApi, Handout, HandoutPreset } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { renderMarkdown } from '../lib/markdown';
@@ -24,7 +24,21 @@ const PRESETS: { value: HandoutPreset; label: string }[] = [
   { value: 'LETTER', label: 'Personal letter' },
 ];
 
-const EMPTY_DRAFT = { id: null as string | null, title: '', preset: 'PARCHMENT' as HandoutPreset, body: '' };
+const EMPTY_DRAFT = {
+  id: null as string | null,
+  title: '',
+  preset: 'PARCHMENT' as HandoutPreset,
+  body: '',
+  sessionId: null as string | null,
+};
+
+// Radix Select can't use "" as an item value (reserved for "no selection").
+const NO_SESSION = '__none__';
+
+interface SessionOption {
+  id: string;
+  label: string;
+}
 
 /**
  * FR-46: player-facing handouts — letters, wanted posters, in-world
@@ -42,6 +56,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [printing, setPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionOptions, setSessionOptions] = useState<SessionOption[]>([]);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -68,6 +83,31 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     void refresh();
   }, [refresh]);
 
+  // Session picker options, flattened across every campaign in the world.
+  useEffect(() => {
+    let active = true;
+    campaignsApi(worldId)
+      .list()
+      .then(async (campaigns) => {
+        const perCampaign = await Promise.all(
+          campaigns.map(async (c) => {
+            const sessions = await sessionsApi(worldId, c.id).list();
+            return sessions.map((s) => ({
+              id: s.id,
+              label: `${c.name} — ${s.sessionNumber != null ? `Session ${s.sessionNumber}: ` : ''}${s.title}`,
+            }));
+          }),
+        );
+        if (active) setSessionOptions(perCampaign.flat());
+      })
+      .catch(() => {
+        /* Session tagging is optional; the editor works without the picker. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [worldId]);
+
   // Load the draft behind the URL-selected handout.
   useEffect(() => {
     if (!urlHandoutId) {
@@ -79,12 +119,18 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
       title: h.title,
       preset: h.preset,
       body: h.body ?? '',
+      sessionId: h.sessionId ?? null,
     })).catch(handleError);
   }, [urlHandoutId, api, handleError]);
 
   async function save(e: FormEvent) {
     e.preventDefault();
-    const body = { title: draft.title, preset: draft.preset, body: draft.body || null };
+    const body = {
+      title: draft.title,
+      preset: draft.preset,
+      body: draft.body || null,
+      sessionId: draft.sessionId,
+    };
     try {
       if (draft.id) {
         await api.update(draft.id, body);
@@ -167,6 +213,22 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
                 {PRESETS.map((p) => (
                   <SelectItem key={p.value} value={p.value}>
                     {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={draft.sessionId ?? NO_SESSION}
+              onValueChange={(v) => setDraft({ ...draft, sessionId: v === NO_SESSION ? null : v })}
+            >
+              <SelectTrigger title="Session">
+                <SelectValue placeholder="No session" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_SESSION}>No session</SelectItem>
+                {sessionOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>

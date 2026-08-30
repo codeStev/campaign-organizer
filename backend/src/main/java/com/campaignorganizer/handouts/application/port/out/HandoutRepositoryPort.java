@@ -9,6 +9,8 @@ public interface HandoutRepositoryPort {
 
     List<Handout> findByWorld(UUID worldId);
 
+    List<Handout> findBySession(UUID sessionId);
+
     Optional<Handout> findByIdAndWorld(UUID handoutId, UUID worldId);
 
     Optional<Handout> findById(UUID handoutId);
