@@ -5,7 +5,7 @@ import { Markdown } from '@tiptap/markdown';
 import { TableKit } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import TiptapImage from '@tiptap/extension-image';
+import { ResizableImage } from '../lib/resizableImageExtension';
 import {
   Bold as BoldIcon,
   Italic as ItalicIcon,
@@ -105,7 +105,9 @@ export function MarkdownEditor({
       TableKit.configure({ table: { resizable: false } }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      TiptapImage,
+      ResizableImage.configure({
+        resize: { enabled: true, directions: ['bottom-right'], minWidth: 40, alwaysPreserveAspectRatio: true },
+      }),
       WikiLink,
     ],
     content: value,
