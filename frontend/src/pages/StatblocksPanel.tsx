@@ -381,7 +381,15 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                 {draft.id ? 'Save statblock' : 'Create statblock'}
               </Button>
               {draft.id && (
-                <Button type="button" variant="link" onClick={() => setMode('read')}>
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => {
+                    const saved = list.find((s) => s.id === draft.id);
+                    if (saved) edit(saved);
+                    else setMode('read');
+                  }}
+                >
                   Cancel
                 </Button>
               )}

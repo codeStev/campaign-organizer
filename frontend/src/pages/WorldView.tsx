@@ -744,7 +744,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     {draft.id ? 'Save changes' : 'Create article'}
                   </Button>
                   {draft.id && (
-                    <Button type="button" variant="link" onClick={() => setMode('read')}>
+                    <Button type="button" variant="link" onClick={() => void loadArticle(draft.id!)}>
                       Cancel
                     </Button>
                   )}
