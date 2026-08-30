@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -496,7 +496,7 @@ export function CheatSheetView({
           <div className="print-toolbar">
             <strong>Cheat sheet</strong>
             <span className="print-toolbar-spacer" />
-            <Button onClick={() => window.print()}>🖨 Print</Button>
+            <PrintButton />
             <Button variant="link" onClick={() => setPrintOpen(false)}>
               Close
             </Button>

@@ -1,8 +1,10 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
+import { Button } from './ui/button';
 
 const NewWindowContainerContext = createContext<HTMLElement | null>(null);
+const NewWindowRefContext = createContext<Window | null>(null);
 
 /**
  * The popped-out window's mount element, for components that need an explicit
@@ -12,6 +14,33 @@ const NewWindowContainerContext = createContext<HTMLElement | null>(null);
  */
 export function useNewWindowContainer(): HTMLElement | null {
   return useContext(NewWindowContainerContext);
+}
+
+/**
+ * The popped-out window's own `Window` object. `createPortal` only moves
+ * *where* a component's DOM renders — its code still runs in the app tab's
+ * JS realm, so a plain `window.print()` inside a portaled component prints
+ * the (backgrounded, invisible) app tab, not the print window the user is
+ * looking at. Use this (or <PrintButton>) instead.
+ */
+export function useNewWindowRef(): Window | null {
+  return useContext(NewWindowRefContext);
+}
+
+/**
+ * The print view's own "🖨 Print" button, wired to the popped-out window's
+ * `.print()` rather than the ambient `window.print()` — see useNewWindowRef.
+ * Must render as a descendant of <NewWindowPortal> (it always does: every
+ * call site places it directly inside one, same as useNewWindowContainer's
+ * other consumers).
+ */
+export function PrintButton({ disabled }: { disabled?: boolean }) {
+  const win = useNewWindowRef();
+  return (
+    <Button onClick={() => win?.print()} disabled={disabled}>
+      🖨 Print
+    </Button>
+  );
 }
 
 interface Props {
@@ -27,6 +56,7 @@ interface Props {
  */
 export function NewWindowPortal({ title, onClose, children }: Props) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  const [windowRef, setWindowRef] = useState<Window | null>(null);
 
   useEffect(() => {
     const win = window.open('', '_blank');
@@ -55,6 +85,7 @@ export function NewWindowPortal({ title, onClose, children }: Props) {
     win.document.body.style.margin = '0';
     win.document.body.appendChild(mount);
     setContainer(mount);
+    setWindowRef(win);
 
     win.addEventListener('beforeunload', onClose);
     return () => {
@@ -66,7 +97,9 @@ export function NewWindowPortal({ title, onClose, children }: Props) {
 
   if (!container) return null;
   return createPortal(
-    <NewWindowContainerContext.Provider value={container}>{children}</NewWindowContainerContext.Provider>,
+    <NewWindowContainerContext.Provider value={container}>
+      <NewWindowRefContext.Provider value={windowRef}>{children}</NewWindowRefContext.Provider>
+    </NewWindowContainerContext.Provider>,
     container,
   );
 }

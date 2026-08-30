@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { NewWindowPortal, useNewWindowContainer } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton, useNewWindowContainer } from '../components/NewWindowPortal';
 import { WorldMap, MapPin } from '../api/client';
 import { iconComponent } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
@@ -129,7 +129,7 @@ export function MapPrintView({
           Legend
         </label>
         <span className="print-toolbar-spacer" />
-        <Button onClick={() => window.print()}>🖨 Print</Button>
+        <PrintButton />
         <Button variant="link" onClick={onClose}>
           Close
         </Button>

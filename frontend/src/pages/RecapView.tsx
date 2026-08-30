@@ -7,7 +7,7 @@ import {
   Beat,
   Session,
 } from '../api/client';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { Button } from '../components/ui/button';
 import { renderMarkdown } from '../lib/markdown';
 
@@ -81,9 +81,7 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
       <div className="print-toolbar">
         <strong>Session recap</strong>
         <span className="print-toolbar-spacer" />
-        <Button onClick={() => window.print()} disabled={loading}>
-          🖨 Print
-        </Button>
+        <PrintButton disabled={loading} />
         <Button variant="link" onClick={onClose}>
           Close
         </Button>

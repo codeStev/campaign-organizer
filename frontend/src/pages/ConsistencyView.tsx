@@ -7,7 +7,7 @@ import {
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 
 interface Props {
   worldId: string;
@@ -144,7 +144,7 @@ export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpir
           <div className="print-toolbar">
             <strong>Consistency report</strong>
             <span className="print-toolbar-spacer" />
-            <Button onClick={() => window.print()}>🖨 Print</Button>
+            <PrintButton />
             <Button variant="link" onClick={() => setPrinting(false)}>
               Close
             </Button>

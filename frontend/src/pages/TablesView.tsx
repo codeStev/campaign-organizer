@@ -12,7 +12,7 @@ import {
 import { diceRange, DiceRange } from '../lib/dice';
 import { renderLinkedMarkdown } from '../lib/markdown';
 import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Button } from '../components/ui/button';
 import { Toggle } from '../components/ui/toggle';
@@ -1046,7 +1046,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           <div className="print-toolbar">
             <strong>{printTable ? 'Roll table' : 'Card deck'}</strong>
             <span className="print-toolbar-spacer" />
-            <Button onClick={() => window.print()}>🖨 Print</Button>
+            <PrintButton />
             <Button variant="link" onClick={() => setPrinting(false)}>
               Close
             </Button>

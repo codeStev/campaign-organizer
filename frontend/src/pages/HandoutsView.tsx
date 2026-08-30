@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError, handoutsApi, mediaApi, Handout, HandoutPreset } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
-import { NewWindowPortal } from '../components/NewWindowPortal';
+import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -214,7 +214,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
           <div className="print-toolbar">
             <strong>Handout</strong>
             <span className="print-toolbar-spacer" />
-            <Button onClick={() => window.print()}>🖨 Print</Button>
+            <PrintButton />
             <Button variant="link" onClick={() => setPrinting(false)}>
               Close
             </Button>
