@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 
 const NewWindowContainerContext = createContext<HTMLElement | null>(null);
 
@@ -31,6 +32,7 @@ export function NewWindowPortal({ title, onClose, children }: Props) {
     const win = window.open('', '_blank');
     if (!win) {
       // Popup blocked — nothing to render; let the parent reset its state.
+      toast.error('Your browser blocked the print window. Allow popups for this site and try again.');
       onClose();
       return;
     }
