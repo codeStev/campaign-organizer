@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { characterSheetsApi, CharacterSheet, FieldTemplate, Statblock } from '../api/client';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
@@ -43,6 +44,7 @@ export function EncounterSheetView({ worldId, statblocks, templates, onClose }: 
   );
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [includedSheets, setIncludedSheets] = useState<Set<string>>(new Set());
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   useEffect(() => {
     let active = true;
@@ -99,6 +101,7 @@ export function EncounterSheetView({ worldId, statblocks, templates, onClose }: 
       <div className="print-toolbar">
         <strong>Encounter sheet</strong>
         <span className="muted">{rows.length} combatants</span>
+        <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={rows.length === 0} />
         <Button variant="link" onClick={onClose}>
@@ -157,7 +160,7 @@ export function EncounterSheetView({ worldId, statblocks, templates, onClose }: 
         )}
       </div>
 
-      <div className="print-doc">
+      <div className="print-doc" {...printDocProps}>
         <section className="print-cover">
           <h1>Encounter</h1>
           <p className="print-subtitle">

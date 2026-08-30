@@ -13,6 +13,7 @@ import { diceRange, DiceRange } from '../lib/dice';
 import { renderLinkedMarkdown } from '../lib/markdown';
 import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Button } from '../components/ui/button';
 import { Toggle } from '../components/ui/toggle';
@@ -189,6 +190,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const textareas = useRef<Record<string, HTMLTextAreaElement | null>>({});
   // Standalone print of the open table/deck (ADR-0038 pattern).
   const [printing, setPrinting] = useState(false);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
   // Lowercase title/slug → display title, for [[wiki-links]] in the printout.
   const [linkTitles, setLinkTitles] = useState<Map<string, string>>(new Map());
 
@@ -1045,13 +1047,14 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         >
           <div className="print-toolbar">
             <strong>{printTable ? 'Roll table' : 'Card deck'}</strong>
+            <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
             <span className="print-toolbar-spacer" />
             <PrintButton />
             <Button variant="link" onClick={() => setPrinting(false)}>
               Close
             </Button>
           </div>
-          <div className="print-doc">
+          <div className="print-doc" {...printDocProps}>
             <section className="print-cover">
               <h1>{printTable?.title ?? printDeck?.title}</h1>
               {(printTable?.description || printDeck?.description) && (

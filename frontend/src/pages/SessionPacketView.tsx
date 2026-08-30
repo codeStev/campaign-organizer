@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
@@ -23,6 +24,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
   const [packet, setPacket] = useState<SessionPacket | null>(null);
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   useEffect(() => {
     let active = true;
@@ -49,6 +51,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
     <NewWindowPortal title={`Packet — ${heading}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Session packet</strong>
+        <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={loading || !packet} />
         <Button variant="link" onClick={onClose}>
@@ -56,7 +59,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
         </Button>
       </div>
 
-      <div className="print-doc">
+      <div className="print-doc" {...printDocProps}>
         <section className="print-cover">
           <h1>{heading}</h1>
           <p className="print-subtitle">

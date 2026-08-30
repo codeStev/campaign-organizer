@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -104,6 +105,7 @@ export function CheatSheetView({
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
   const [add, setAdd] = useState(EMPTY_ADD);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
@@ -495,13 +497,14 @@ export function CheatSheetView({
         <NewWindowPortal title={`Cheat sheet — ${sessionTitle}`} onClose={() => setPrintOpen(false)}>
           <div className="print-toolbar">
             <strong>Cheat sheet</strong>
+            <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
             <span className="print-toolbar-spacer" />
             <PrintButton />
             <Button variant="link" onClick={() => setPrintOpen(false)}>
               Close
             </Button>
           </div>
-          <div className="print-doc cheat-sheet-print">
+          <div className="print-doc cheat-sheet-print" {...printDocProps}>
             <section className="print-cover">
               <h1>{sessionTitle}</h1>
               <p className="print-subtitle">GM cheat sheet</p>

@@ -8,6 +8,7 @@ import {
 } from '../api/client';
 import { Button } from '../components/ui/button';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 
 interface Props {
   worldId: string;
@@ -34,6 +35,7 @@ export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpir
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -143,13 +145,14 @@ export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpir
         <NewWindowPortal title={`Print — Consistency report`} onClose={() => setPrinting(false)}>
           <div className="print-toolbar">
             <strong>Consistency report</strong>
+            <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
             <span className="print-toolbar-spacer" />
             <PrintButton />
             <Button variant="link" onClick={() => setPrinting(false)}>
               Close
             </Button>
           </div>
-          <div className="print-doc">
+          <div className="print-doc" {...printDocProps}>
             <section className="print-cover">
               <h1>{worldName}</h1>
               <p className="print-subtitle">Consistency report</p>

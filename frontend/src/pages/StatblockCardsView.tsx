@@ -1,4 +1,5 @@
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
+import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { Statblock, FieldTemplate } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
@@ -17,11 +18,13 @@ interface Props {
  * <body> so the print CSS (ADR-0035) can hide the app.
  */
 export function StatblockCardsView({ statblocks, templates, title, onClose }: Props) {
+  const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
   return (
     <NewWindowPortal title={`Cards — ${title}`} onClose={onClose}>
       <div className="print-toolbar">
         <strong>Statblock cards</strong>
         <span className="muted">{title}</span>
+        <PrintOptionsMenu opts={printOpts} onChange={setPrintOpts} />
         <span className="print-toolbar-spacer" />
         <PrintButton disabled={statblocks.length === 0} />
         <Button variant="link" onClick={onClose}>
@@ -29,7 +32,7 @@ export function StatblockCardsView({ statblocks, templates, title, onClose }: Pr
         </Button>
       </div>
 
-      <div className="print-doc card-sheet">
+      <div className="print-doc card-sheet" {...printDocProps}>
         {statblocks.length === 0 && <p className="print-status">No statblocks to print.</p>}
         {statblocks.map((sb) => {
           const stats = orderedStatEntries(sb.stats, sb.templateId, templates);
