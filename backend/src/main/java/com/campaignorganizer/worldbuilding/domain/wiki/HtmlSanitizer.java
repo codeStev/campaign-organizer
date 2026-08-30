@@ -18,6 +18,8 @@ public final class HtmlSanitizer {
             .and(Sanitizers.BLOCKS)
             .and(Sanitizers.LINKS)
             .and(Sanitizers.IMAGES)
+            // GFM tables (ADR-0076) - table/tr/td/th/thead/tbody/etc.
+            .and(Sanitizers.TABLES)
             // Permit relative image URLs (our media endpoint, e.g. /api/media/{id}/content).
             .and(new HtmlPolicyBuilder()
                     .allowUrlProtocols("http", "https")
@@ -33,6 +35,19 @@ public final class HtmlSanitizer {
                     .allowElements("a", "span")
                     .allowAttributes("class").matching(HtmlSanitizer::isAllowedLinkClass).onElements("a", "span")
                     .allowAttributes("data-article-id").matching(HtmlSanitizer::isUuid).onElements("a")
+                    .toFactory())
+            // Fenced code blocks (ADR-0076) - FORMATTING already allows <code>, not <pre>.
+            .and(new HtmlPolicyBuilder()
+                    .allowElements("pre")
+                    .toFactory())
+            // Task-list checkboxes (ADR-0076, GFM task lists via flexmark's TaskListExtension) -
+            // always rendered disabled/readonly (non-interactive, no form to submit into), so
+            // this doesn't reopen the form-injection risk <input> is normally excluded to avoid.
+            .and(new HtmlPolicyBuilder()
+                    .allowElements("input")
+                    .allowAttributes("type").matching(HtmlSanitizer::isCheckboxType).onElements("input")
+                    .allowAttributes("disabled", "readonly").onElements("input")
+                    .allowAttributes("class").matching(HtmlSanitizer::isAllowedTaskListClass).onElements("input")
                     .toFactory());
 
     public String sanitize(String html) {
@@ -53,6 +68,14 @@ public final class HtmlSanitizer {
 
     private static boolean isAllowedLinkClass(String value) {
         return "wiki-link".equals(value) || "broken-link".equals(value);
+    }
+
+    private static boolean isCheckboxType(String value) {
+        return "checkbox".equals(value);
+    }
+
+    private static boolean isAllowedTaskListClass(String value) {
+        return "task-list-item-checkbox".equals(value);
     }
 
     private static boolean isUuid(String value) {

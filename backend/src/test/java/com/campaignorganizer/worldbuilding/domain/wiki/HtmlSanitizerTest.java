@@ -56,4 +56,33 @@ class HtmlSanitizerTest {
         assertThat(out).contains("[[Goblin]]");
         assertThat(out).contains("[[Waterdeep|the city]]");
     }
+
+    @Test
+    void keepsGfmTables() {
+        String html = "<table><thead><tr><th>A</th></tr></thead>"
+                + "<tbody><tr><td>1</td></tr></tbody></table>";
+        String out = sanitizer.sanitize(html);
+        assertThat(out).contains("<table>").contains("<th>A</th>").contains("<td>1</td>");
+    }
+
+    @Test
+    void keepsFencedCodeBlocks() {
+        // The sanitizer HTML-entity-encodes text content on the way out (e.g. `=` as
+        // `&#61;`) - harmless, browsers render it identically; assert structure, not
+        // the exact byte-for-byte text encoding.
+        String out = sanitizer.sanitize("<pre><code>const x = 1;\n</code></pre>");
+        assertThat(out).contains("<pre>").contains("<code>").contains("const x");
+    }
+
+    @Test
+    void keepsDisabledTaskListCheckboxesButNotOtherInputTypes() {
+        String checkbox = sanitizer.sanitize(
+                "<li class=\"task-list-item\">"
+                        + "<input type=\"checkbox\" class=\"task-list-item-checkbox\" disabled=\"disabled\" "
+                        + "readonly=\"readonly\" /> done</li>");
+        assertThat(checkbox).contains("type=\"checkbox\"").contains("disabled").contains("readonly");
+
+        String textInput = sanitizer.sanitize("<input type=\"text\" value=\"steal me\" />");
+        assertThat(textInput).doesNotContain("<input");
+    }
 }
