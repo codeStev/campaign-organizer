@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.CreateHandoutCommand;
+import com.campaignorganizer.handouts.application.port.in.HandoutCommands.ReorderHandoutsCommand;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.UpdateHandoutCommand;
 import com.campaignorganizer.handouts.application.port.out.HandoutRepositoryPort;
 import com.campaignorganizer.handouts.application.port.out.SessionExistsPort;
@@ -126,5 +127,35 @@ class HandoutServiceTest {
 
         lenient().when(worlds.exists(any())).thenReturn(false);
         assertThatThrownBy(() -> service.list(worldId)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void reorderSetsPositionsInGivenOrder() {
+        Handout a = saved();
+        Handout b = saved();
+        when(repo.findByWorld(worldId)).thenReturn(List.of(a, b));
+        when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<HandoutView> reordered = service.reorder(
+                new ReorderHandoutsCommand(worldId, List.of(b.getId(), a.getId())));
+
+        assertThat(reordered).extracting(HandoutView::id).containsExactly(b.getId(), a.getId());
+        assertThat(b.getSortOrder()).isEqualTo(0);
+        assertThat(a.getSortOrder()).isEqualTo(1);
+    }
+
+    @Test
+    void reorderRejectsAnIncompleteOrPartialIdList() {
+        Handout a = saved();
+        Handout b = saved();
+        when(repo.findByWorld(worldId)).thenReturn(List.of(a, b));
+
+        assertThatThrownBy(() -> service.reorder(
+                new ReorderHandoutsCommand(worldId, List.of(a.getId()))))
+                .isInstanceOf(ValidationException.class);
+
+        assertThatThrownBy(() -> service.reorder(
+                new ReorderHandoutsCommand(worldId, List.of(a.getId(), UUID.randomUUID()))))
+                .isInstanceOf(ValidationException.class);
     }
 }

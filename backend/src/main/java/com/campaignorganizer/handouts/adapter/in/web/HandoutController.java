@@ -2,10 +2,12 @@ package com.campaignorganizer.handouts.adapter.in.web;
 
 import com.campaignorganizer.handouts.adapter.in.web.HandoutWebDtos.HandoutRequest;
 import com.campaignorganizer.handouts.adapter.in.web.HandoutWebDtos.HandoutResponse;
+import com.campaignorganizer.handouts.adapter.in.web.HandoutWebDtos.ReorderHandoutsRequest;
 import com.campaignorganizer.handouts.application.port.in.CreateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.DeleteHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.GetHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.ListHandoutsUseCase;
+import com.campaignorganizer.handouts.application.port.in.ReorderHandoutsUseCase;
 import com.campaignorganizer.handouts.application.port.in.UpdateHandoutUseCase;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -28,22 +30,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/worlds/{worldId}/handouts")
 public class HandoutController {
 
+    /**
+     * Constrains {handoutId} to an actual UUID so it doesn't swallow the
+     * literal /order route below - without this, Spring can route PUT
+     * .../handouts/order to update(handoutId="order") instead, which then
+     * fails UUID conversion.
+     */
+    private static final String UUID_PATTERN =
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
     private final CreateHandoutUseCase createUseCase;
     private final UpdateHandoutUseCase updateUseCase;
     private final DeleteHandoutUseCase deleteUseCase;
     private final ListHandoutsUseCase listUseCase;
     private final GetHandoutUseCase getUseCase;
+    private final ReorderHandoutsUseCase reorderUseCase;
     private final HandoutWebMapper mapper;
 
     public HandoutController(CreateHandoutUseCase createUseCase,
                              UpdateHandoutUseCase updateUseCase,
                              DeleteHandoutUseCase deleteUseCase, ListHandoutsUseCase listUseCase,
-                             GetHandoutUseCase getUseCase, HandoutWebMapper mapper) {
+                             GetHandoutUseCase getUseCase, ReorderHandoutsUseCase reorderUseCase,
+                             HandoutWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
+        this.reorderUseCase = reorderUseCase;
         this.mapper = mapper;
     }
 
@@ -52,7 +66,7 @@ public class HandoutController {
         return listUseCase.list(worldId).stream().map(mapper::toResponse).toList();
     }
 
-    @GetMapping("/{handoutId}")
+    @GetMapping("/{handoutId:" + UUID_PATTERN + "}")
     public HandoutResponse get(@PathVariable UUID worldId, @PathVariable UUID handoutId) {
         return mapper.toResponse(getUseCase.get(worldId, handoutId));
     }
@@ -67,14 +81,22 @@ public class HandoutController {
                 .body(response);
     }
 
-    @PutMapping("/{handoutId}")
+    @PutMapping("/{handoutId:" + UUID_PATTERN + "}")
     public HandoutResponse update(@PathVariable UUID worldId, @PathVariable UUID handoutId,
                                   @Valid @RequestBody HandoutRequest request) {
         return mapper.toResponse(
                 updateUseCase.update(mapper.toUpdateCommand(worldId, handoutId, request)));
     }
 
-    @DeleteMapping("/{handoutId}")
+    @PutMapping("/order")
+    public List<HandoutResponse> reorder(@PathVariable UUID worldId,
+                                         @Valid @RequestBody ReorderHandoutsRequest request) {
+        return reorderUseCase.reorder(mapper.toReorderCommand(worldId, request)).stream()
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    @DeleteMapping("/{handoutId:" + UUID_PATTERN + "}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID handoutId) {
         deleteUseCase.delete(worldId, handoutId);

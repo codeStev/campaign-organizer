@@ -21,6 +21,7 @@ public interface HandoutPersistenceMapper {
                 Handout.Preset.valueOf(entity.getPreset()),
                 entity.getBody(),
                 entity.getSessionId(),
+                entity.getSortOrder(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }
