@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it';
+import taskLists from 'markdown-it-task-lists';
 
 /**
  * `breaks: true` preserves the visual line-break behavior these fields had
@@ -6,7 +7,11 @@ import MarkdownIt from 'markdown-it';
  * rendering existed (ADR-0054) — without it, a single Enter in existing
  * prose collapses into a run-on paragraph under strict CommonMark.
  */
-const md = new MarkdownIt({ html: false, breaks: true, linkify: true });
+const md = new MarkdownIt({ html: false, breaks: true, linkify: true })
+  // GFM task lists (`- [ ] `/`- [x] `, ADR-0076) render as real, disabled
+  // checkboxes here - this is read-only preview, editing happens in
+  // MarkdownEditor. `label: true` groups the checkbox with its text.
+  .use(taskLists, { label: true });
 
 export function renderMarkdown(source: string): string {
   return md.render(source || '');

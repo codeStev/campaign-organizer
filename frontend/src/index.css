@@ -289,6 +289,8 @@ button:disabled {
 
 .editor-toolbar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.25rem;
   padding: 0.35rem;
   background: var(--background);
@@ -484,6 +486,69 @@ button:disabled {
 .editor-content .ProseMirror th,
 .preview-body th {
   background: var(--background);
+}
+
+.editor-content .ProseMirror hr,
+.preview-body hr {
+  border: none;
+  border-top: 1px solid var(--input);
+  margin: 1em 0;
+}
+
+.editor-content .ProseMirror a,
+.preview-body a {
+  color: var(--primary);
+}
+
+/* Wiki-links (ADR-0076): the live editor's own distinct styling for the
+   `[[Article]]` mark - not click-navigable there (see wikiLinkExtension.ts),
+   unlike .preview-body .wiki-link/.broken-link above which are real,
+   resolved links. */
+.editor-content .ProseMirror .wiki-link-editor {
+  color: var(--primary);
+  border-bottom: 1px dashed var(--primary);
+}
+
+/* Task lists (ADR-0076). Three different renderers produce this content,
+   each with its own markup shape: Tiptap's TaskItem in the live editor
+   (data-type/data-checked attributes, its own built-in NodeView);
+   markdown-it-task-lists in the client-side preview renderer used by every
+   non-article markdown field (GM notes, session summaries, beats, etc.);
+   and flexmark-java's TaskListExtension in the *server-side* renderer used
+   specifically for articles/session packets (`bodyHtml`, ADR-0054) - which,
+   unlike markdown-it-task-lists, puts no distinguishing class on the <ul>/
+   <li> themselves. `:has()` targets the one thing all three renderers do
+   agree on (the checkbox's own class) instead of chasing three markups. */
+.editor-content .ProseMirror ul[data-type='taskList'],
+.preview-body ul:has(> li > input.task-list-item-checkbox),
+.preview-body ul:has(> li > label > input.task-list-item-checkbox) {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+.editor-content .ProseMirror li[data-type='taskItem'],
+.preview-body li:has(> input.task-list-item-checkbox),
+.preview-body li:has(> label > input.task-list-item-checkbox) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.editor-content .ProseMirror li[data-type='taskItem'] > label {
+  display: flex;
+  align-items: center;
+  padding-top: 0.2rem;
+}
+
+.editor-content .ProseMirror li[data-type='taskItem'] > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.editor-content .ProseMirror input[type='checkbox'],
+.preview-body input[type='checkbox'] {
+  accent-color: var(--primary);
+  margin-top: 0.3rem;
 }
 
 .tab {
