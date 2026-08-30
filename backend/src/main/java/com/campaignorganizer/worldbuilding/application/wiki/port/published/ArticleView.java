@@ -8,6 +8,7 @@ public record ArticleView(
         UUID id,
         UUID worldId,
         UUID categoryId,
+        UUID parentArticleId,
         String title,
         String slug,
         String template,

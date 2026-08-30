@@ -3,6 +3,7 @@ package com.campaignorganizer.interchange.export.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
@@ -122,6 +123,7 @@ class ImportServiceTest {
         UUID oldWorldId = UUID.randomUUID();
         UUID oldCategoryId = UUID.randomUUID();
         UUID oldArticleId = UUID.randomUUID();
+        UUID oldChildArticleId = UUID.randomUUID();
         UUID oldMediaId = UUID.randomUUID();
         Instant now = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -132,8 +134,11 @@ class ImportServiceTest {
                 "contentType", "image/png", "sizeBytes", 3, "createdAt", now.toString())));
         bundle.put("categories", List.of(
                 new CategoryView(oldCategoryId, oldWorldId, null, "Places", now, now)));
-        bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, oldCategoryId, "Tortuga",
-                "tortuga", "LOCATION", "See ![cover](/api/media/" + oldMediaId + "/content)", now, now)));
+        bundle.put("articles", List.of(
+                new ArticleView(oldArticleId, oldWorldId, oldCategoryId, null, "Tortuga", "tortuga",
+                        "LOCATION", "See ![cover](/api/media/" + oldMediaId + "/content)", now, now),
+                new ArticleView(oldChildArticleId, oldWorldId, null, oldArticleId, "Tortuga Docks",
+                        "tortuga-docks", "LOCATION", "Plain.", now, now)));
         bundle.put("maps", List.of());
         bundle.put("mapPins", List.of());
         bundle.put("calendars", List.of());
@@ -166,12 +171,18 @@ class ImportServiceTest {
         assertThat(categoryCaptor.getValue().worldId()).isEqualTo(newWorldId);
 
         ArgumentCaptor<ArticleView> articleCaptor = ArgumentCaptor.forClass(ArticleView.class);
-        verify(articleImportPort).importArticle(articleCaptor.capture());
-        ArticleView importedArticle = articleCaptor.getValue();
+        verify(articleImportPort, times(2)).importArticle(articleCaptor.capture());
+        List<ArticleView> importedArticles = articleCaptor.getAllValues();
+        ArticleView importedArticle = importedArticles.stream()
+                .filter(a -> "Tortuga".equals(a.title())).findFirst().orElseThrow();
+        ArticleView importedChild = importedArticles.stream()
+                .filter(a -> "Tortuga Docks".equals(a.title())).findFirst().orElseThrow();
         assertThat(importedArticle.id()).isNotEqualTo(oldArticleId);
         assertThat(importedArticle.worldId()).isEqualTo(newWorldId);
         assertThat(importedArticle.categoryId()).isEqualTo(newCategoryId);
         assertThat(importedArticle.body()).doesNotContain(oldMediaId.toString());
+        // The child's parentArticleId must follow the same remap as the parent's own id.
+        assertThat(importedChild.parentArticleId()).isEqualTo(importedArticle.id());
 
         verify(mediaImportPort).importMedia(any(), any(), any(), any(), any(), any());
     }

@@ -221,8 +221,8 @@ public class ImportService implements ImportBackupUseCase {
         for (ArticleView a : articles) {
             String body = rewriteMediaLinks(a.body(), remap);
             articleImportPort.importArticle(new ArticleView(remap.get(a.id()), newWorldId,
-                    remap.getOrNull(a.categoryId()), a.title(), a.slug(), a.template(), body,
-                    a.createdAt(), a.updatedAt()));
+                    remap.getOrNull(a.categoryId()), remap.getOrNull(a.parentArticleId()), a.title(),
+                    a.slug(), a.template(), body, a.createdAt(), a.updatedAt()));
         }
 
         for (MapView m : maps) {

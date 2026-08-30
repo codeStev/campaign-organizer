@@ -24,12 +24,13 @@ public interface ArticleWebMapper {
     RevisionResponse toRevisionResponse(ArticleRevisionView view);
 
     default CreateArticleCommand toCreateCommand(UUID worldId, ArticleRequest request) {
-        return new CreateArticleCommand(worldId, request.categoryId(), request.title(), request.slug(),
-                request.template(), request.body());
+        return new CreateArticleCommand(worldId, request.categoryId(), request.parentArticleId(),
+                request.title(), request.slug(), request.template(), request.body());
     }
 
     default UpdateArticleCommand toUpdateCommand(UUID worldId, UUID articleId, ArticleRequest request) {
-        return new UpdateArticleCommand(worldId, articleId, request.categoryId(), request.title(),
-                request.slug(), request.template(), request.body());
+        return new UpdateArticleCommand(worldId, articleId, request.categoryId(),
+                request.parentArticleId(), request.title(), request.slug(), request.template(),
+                request.body());
     }
 }

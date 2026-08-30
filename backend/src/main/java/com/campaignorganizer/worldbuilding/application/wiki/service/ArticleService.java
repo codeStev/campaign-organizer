@@ -27,6 +27,7 @@ import com.campaignorganizer.worldbuilding.domain.wiki.ArticleRevision;
 import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import com.campaignorganizer.worldbuilding.domain.wiki.Slugs;
 import java.time.Clock;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,10 +69,11 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     public ArticleView create(CreateArticleCommand command) {
         requireWorld(command.worldId());
         validateCategory(command.worldId(), command.categoryId());
+        validateParent(command.worldId(), command.parentArticleId(), null);
         String slug = resolveSlugForCreate(command.worldId(), command.slug(), command.title());
         Article created = Article.create(ids.newId(), command.worldId(), command.categoryId(),
-                command.title(), slug, command.template(), command.body(),
-                clock.instant());
+                command.parentArticleId(), command.title(), slug, command.template(),
+                command.body(), clock.instant());
         return viewMapper.toView(articles.save(created));
     }
 
@@ -80,11 +82,12 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     public ArticleView update(UpdateArticleCommand command) {
         Article article = require(command.worldId(), command.articleId());
         validateCategory(command.worldId(), command.categoryId());
+        validateParent(command.worldId(), command.parentArticleId(), command.articleId());
         // Snapshot the pre-update state so the change can be reviewed/undone (ADR-0026).
         revisions.save(ArticleRevision.snapshot(ids.newId(), article, clock.instant()));
         String slug = resolveSlugForUpdate(command.worldId(), command.slug(), article);
-        article.update(command.categoryId(), command.title(), slug, command.template(),
-                command.body(), clock.instant());
+        article.update(command.categoryId(), command.parentArticleId(), command.title(), slug,
+                command.template(), command.body(), clock.instant());
         return viewMapper.toView(articles.save(article));
     }
 
@@ -135,8 +138,8 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
                 .orElseThrow(() -> new NotFoundException("Revision not found"));
         // Snapshot current state first so the restore is itself undoable.
         revisions.save(ArticleRevision.snapshot(ids.newId(), article, clock.instant()));
-        article.update(article.getCategoryId(), revision.getTitle(), revision.getSlug(),
-                revision.getTemplate(), revision.getBody(), clock.instant());
+        article.update(article.getCategoryId(), article.getParentArticleId(), revision.getTitle(),
+                revision.getSlug(), revision.getTemplate(), revision.getBody(), clock.instant());
         return viewMapper.toView(articles.save(article));
     }
 
@@ -145,8 +148,9 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     @Override
     @Transactional
     public ArticleView importArticle(ArticleView view) {
-        Article article = Article.reconstitute(view.id(), view.worldId(), view.categoryId(), view.title(),
-                view.slug(), ArticleTemplate.valueOf(view.template()), view.body(), view.createdAt(),
+        Article article = Article.reconstitute(view.id(), view.worldId(), view.categoryId(),
+                view.parentArticleId(), view.title(), view.slug(),
+                ArticleTemplate.valueOf(view.template()), view.body(), view.createdAt(),
                 view.updatedAt());
         return viewMapper.toView(articles.save(article));
     }
@@ -204,6 +208,37 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     private void validateCategory(UUID worldId, UUID categoryId) {
         if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
             throw new ValidationException("Category not found in this world");
+        }
+    }
+
+    /**
+     * Rejects a missing/foreign parent, self-parenting, and multi-hop cycles
+     * (walks the proposed parent's ancestor chain looking for selfId). On
+     * create, selfId is null and only existence is checked - a brand-new id
+     * cannot yet be anyone's ancestor.
+     */
+    private void validateParent(UUID worldId, UUID parentArticleId, UUID selfId) {
+        if (parentArticleId == null) {
+            return;
+        }
+        if (parentArticleId.equals(selfId)) {
+            throw new ValidationException("An article cannot be its own parent");
+        }
+        if (!articles.existsInWorld(parentArticleId, worldId)) {
+            throw new ValidationException("Parent article not found in this world");
+        }
+        if (selfId == null) {
+            return;
+        }
+        UUID cursor = parentArticleId;
+        Set<UUID> visited = new HashSet<>();
+        while (cursor != null && visited.add(cursor)) {
+            if (cursor.equals(selfId)) {
+                throw new ValidationException(
+                        "Setting this parent would create a cycle in the article hierarchy");
+            }
+            cursor = articles.findByIdAndWorld(cursor, worldId)
+                    .map(Article::getParentArticleId).orElse(null);
         }
     }
 

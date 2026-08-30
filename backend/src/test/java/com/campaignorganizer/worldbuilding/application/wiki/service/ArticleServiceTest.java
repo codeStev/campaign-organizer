@@ -3,6 +3,7 @@ package com.campaignorganizer.worldbuilding.application.wiki.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +23,7 @@ import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +56,7 @@ class ArticleServiceTest {
     @BeforeEach
     void setUp() {
         service = new ArticleService(articles, revisions, categories, worlds, viewMapper, ids, clock);
+        lenient().when(worlds.exists(worldId)).thenReturn(true);
     }
 
     @Test
@@ -61,31 +64,39 @@ class ArticleServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateArticleCommand(
-                worldId, null, "Goblin", null, ArticleTemplate.GENERIC, "body")))
+                worldId, null, null, "Goblin", null, ArticleTemplate.GENERIC, "body")))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
     void createRejectsForeignCategory() {
         UUID categoryId = UUID.randomUUID();
-        when(worlds.exists(worldId)).thenReturn(true);
         when(categories.existsInWorld(categoryId, worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateArticleCommand(
-                worldId, categoryId, "Goblin", null, ArticleTemplate.GENERIC, "body")))
+                worldId, categoryId, null, "Goblin", null, ArticleTemplate.GENERIC, "body")))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createRejectsForeignParent() {
+        UUID parentId = UUID.randomUUID();
+        when(articles.existsInWorld(parentId, worldId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(new CreateArticleCommand(
+                worldId, null, parentId, "Goblin", null, ArticleTemplate.GENERIC, "body")))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void createDerivesAndDeduplicatesSlugFromTitle() {
-        when(worlds.exists(worldId)).thenReturn(true);
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(articles.existsSlugInWorld(worldId, "goblin")).thenReturn(true);
         when(articles.existsSlugInWorld(worldId, "goblin-2")).thenReturn(false);
         when(articles.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ArticleView view = service.create(new CreateArticleCommand(
-                worldId, null, "Goblin", null, ArticleTemplate.GENERIC, "body"));
+                worldId, null, null, "Goblin", null, ArticleTemplate.GENERIC, "body"));
 
         assertThat(view.slug()).isEqualTo("goblin-2");
     }
@@ -93,15 +104,71 @@ class ArticleServiceTest {
     @Test
     void updateSnapshotsRevisionBeforeApplying() {
         UUID articleId = UUID.randomUUID();
-        Article existing = Article.create(articleId, worldId, null, "Goblin", "goblin",
+        Article existing = Article.create(articleId, worldId, null, null, "Goblin", "goblin",
                 ArticleTemplate.GENERIC, "old", clock.instant());
-        when(articles.findByIdAndWorld(articleId, worldId)).thenReturn(java.util.Optional.of(existing));
+        when(articles.findByIdAndWorld(articleId, worldId)).thenReturn(Optional.of(existing));
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(articles.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service.update(new UpdateArticleCommand(
-                worldId, articleId, null, "Goblin", null, ArticleTemplate.GENERIC, "new"));
+                worldId, articleId, null, null, "Goblin", null, ArticleTemplate.GENERIC, "new"));
 
         verify(revisions).save(any(ArticleRevision.class));
+    }
+
+    @Test
+    void updateRejectsSelfParent() {
+        UUID articleId = UUID.randomUUID();
+        Article existing = Article.create(articleId, worldId, null, null, "Goblin", "goblin",
+                ArticleTemplate.GENERIC, "old", clock.instant());
+        when(articles.findByIdAndWorld(articleId, worldId)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.update(new UpdateArticleCommand(
+                worldId, articleId, null, articleId, "Goblin", null, ArticleTemplate.GENERIC, "new")))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void updateRejectsCycleThroughGrandparent() {
+        // A -> B -> C today; attempt to set A's parent to C should be rejected.
+        UUID aId = UUID.randomUUID();
+        UUID bId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
+        Article a = Article.create(aId, worldId, null, null, "A", "a", ArticleTemplate.GENERIC,
+                "body", clock.instant());
+        Article b = Article.create(bId, worldId, null, aId, "B", "b", ArticleTemplate.GENERIC,
+                "body", clock.instant());
+        Article c = Article.create(cId, worldId, null, bId, "C", "c", ArticleTemplate.GENERIC,
+                "body", clock.instant());
+
+        when(articles.findByIdAndWorld(aId, worldId)).thenReturn(Optional.of(a));
+        when(articles.existsInWorld(cId, worldId)).thenReturn(true);
+        when(articles.findByIdAndWorld(cId, worldId)).thenReturn(Optional.of(c));
+        when(articles.findByIdAndWorld(bId, worldId)).thenReturn(Optional.of(b));
+
+        assertThatThrownBy(() -> service.update(new UpdateArticleCommand(
+                worldId, aId, null, cId, "A", null, ArticleTemplate.GENERIC, "body")))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void restorePreservesCurrentParentArticleId() {
+        UUID articleId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        UUID revisionId = UUID.randomUUID();
+        Article existing = Article.create(articleId, worldId, null, parentId, "New title", "new-title",
+                ArticleTemplate.GENERIC, "new body", clock.instant());
+        // Snapshot captures content only (no parentArticleId) - restore() must
+        // preserve the article's *current* parentage, not anything from the revision.
+        ArticleRevision revision = ArticleRevision.snapshot(revisionId, existing, clock.instant());
+
+        when(articles.findByIdAndWorld(articleId, worldId)).thenReturn(Optional.of(existing));
+        when(revisions.findByIdAndArticle(revisionId, articleId)).thenReturn(Optional.of(revision));
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(articles.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ArticleView restored = service.restore(worldId, articleId, revisionId);
+
+        assertThat(restored.parentArticleId()).isEqualTo(parentId);
     }
 }
