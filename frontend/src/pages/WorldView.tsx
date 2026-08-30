@@ -55,6 +55,94 @@ function outlineMarkdown(info: ArticleTemplateInfo): string {
   return info.sections.map((s) => `## ${s.heading}\n\n`).join('');
 }
 
+/** All ids reachable from rootId through childrenByParent, any depth. */
+function descendantIds(rootId: string, childrenByParent: Map<string, ArticleSummary[]>): Set<string> {
+  const result = new Set<string>();
+  const stack = [...(childrenByParent.get(rootId) ?? [])];
+  while (stack.length) {
+    const next = stack.pop()!;
+    if (result.has(next.id)) continue;
+    result.add(next.id);
+    stack.push(...(childrenByParent.get(next.id) ?? []));
+  }
+  return result;
+}
+
+function groupByParent(list: ArticleSummary[]): Map<string, ArticleSummary[]> {
+  const map = new Map<string, ArticleSummary[]>();
+  for (const a of list) {
+    if (!a.parentArticleId) continue;
+    const bucket = map.get(a.parentArticleId) ?? [];
+    bucket.push(a);
+    map.set(a.parentArticleId, bucket);
+  }
+  return map;
+}
+
+/**
+ * Sidebar tree, collapsed by default: articles with no parent (or whose
+ * parent didn't survive the current filter/search) render at the root so
+ * filtering never makes an article unreachable.
+ */
+function ArticleTreeItem({
+  article,
+  childrenByParent,
+  expandedIds,
+  onToggleExpand,
+  activeId,
+  onOpen,
+}: {
+  article: ArticleSummary;
+  childrenByParent: Map<string, ArticleSummary[]>;
+  expandedIds: Set<string>;
+  onToggleExpand: (id: string) => void;
+  activeId: string | null;
+  onOpen: (id: string) => void;
+}) {
+  const children = childrenByParent.get(article.id) ?? [];
+  const expanded = expandedIds.has(article.id);
+  return (
+    <li>
+      <div className="article-tree-row">
+        {children.length > 0 ? (
+          <button
+            type="button"
+            className="article-tree-toggle"
+            onClick={() => onToggleExpand(article.id)}
+            title={expanded ? 'Collapse' : 'Expand'}
+          >
+            {expanded ? '▾' : '▸'}
+          </button>
+        ) : (
+          <span className="article-tree-toggle-spacer" />
+        )}
+        <button
+          className={article.id === activeId ? 'article-link active' : 'article-link'}
+          onClick={() => onOpen(article.id)}
+        >
+          <TruncatedLabel label={article.title}>{article.title}</TruncatedLabel>
+          <small className="muted">{article.template.toLowerCase()}</small>
+        </button>
+      </div>
+      {expanded && children.length > 0 && (
+        <ul className="article-list article-list-nested">
+          {children.map((c) => (
+            <ArticleTreeItem
+              key={c.id}
+              article={c}
+              childrenByParent={childrenByParent}
+              expandedIds={expandedIds}
+              onToggleExpand={onToggleExpand}
+              activeId={activeId}
+              onOpen={onOpen}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 interface Props {
   worldId: string;
   worldName: string;
@@ -67,9 +155,16 @@ interface Draft {
   title: string;
   template: ArticleTemplate;
   body: string;
+  parentArticleId: string | null;
 }
 
-const EMPTY_DRAFT: Draft = { id: null, title: '', template: 'GENERIC', body: '' };
+const EMPTY_DRAFT: Draft = {
+  id: null,
+  title: '',
+  template: 'GENERIC',
+  body: '',
+  parentArticleId: null,
+};
 
 type Tab =
   | 'articles'
@@ -141,10 +236,47 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   // Full-screen print/PDF view.
   const [printOpen, setPrintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Sidebar tree: which parent articles are expanded; collapsed by default.
+  const [expandedArticleIds, setExpandedArticleIds] = useState<Set<string>>(new Set());
+  // Breadcrumb title for the open article's parent, when the parent isn't in
+  // the currently-loaded (possibly search-filtered) articles list.
+  const [parentArticleTitle, setParentArticleTitle] = useState<string | null>(null);
 
   const visibleArticles = articles.filter(
     (a) => typeFilter.size === 0 || typeFilter.has(a.template),
   );
+
+  // Sidebar tree, built from the currently-visible (filtered/searched) set.
+  const visibleIds = new Set(visibleArticles.map((a) => a.id));
+  const sidebarChildrenByParent = new Map<string, ArticleSummary[]>();
+  const rootArticles: ArticleSummary[] = [];
+  for (const a of visibleArticles) {
+    if (a.parentArticleId && visibleIds.has(a.parentArticleId)) {
+      const bucket = sidebarChildrenByParent.get(a.parentArticleId) ?? [];
+      bucket.push(a);
+      sidebarChildrenByParent.set(a.parentArticleId, bucket);
+    } else {
+      rootArticles.push(a);
+    }
+  }
+
+  // Parent-article picker candidates: every article except the one being
+  // edited and its own descendants (built from the full, unfiltered list -
+  // a candidate hidden by the sidebar's type filter is still a valid parent).
+  const allChildrenByParent = groupByParent(articles);
+  const excludedParentIds = draft.id
+    ? new Set([draft.id, ...descendantIds(draft.id, allChildrenByParent)])
+    : new Set<string>();
+  const parentCandidates = articles.filter((a) => !excludedParentIds.has(a.id));
+
+  function toggleExpandedArticle(id: string) {
+    setExpandedArticleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   function toggleType(t: ArticleTemplate) {
     setTypeFilter((prev) => {
@@ -167,6 +299,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     CHARACTER_SHEET: 'Sheet',
     STATBLOCK: 'Statblock',
     ARTICLE_LINK: 'Wiki-link',
+    CHILD_ARTICLE: 'Sub-article',
   };
 
   const handleError = useCallback(
@@ -229,6 +362,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           title: article.title,
           template: article.template,
           body: article.body ?? '',
+          parentArticleId: article.parentArticleId ?? null,
         });
         setPreviewHtml(article.bodyHtml ?? '');
         setMode('read');
@@ -254,6 +388,34 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   function openArticle(id: string) {
     navigate(`/worlds/${worldId}/articles/${id}`);
   }
+
+  // Breadcrumb title for the open article's parent: reuse the already-loaded
+  // list when possible, otherwise a single lightweight fetch for just the title.
+  useEffect(() => {
+    const parentId = draft.parentArticleId;
+    if (!parentId) {
+      setParentArticleTitle(null);
+      return;
+    }
+    const local = articles.find((a) => a.id === parentId);
+    if (local) {
+      setParentArticleTitle(local.title);
+      return;
+    }
+    let active = true;
+    api
+      .get(parentId)
+      .then((a) => {
+        if (active) setParentArticleTitle(a.title);
+      })
+      .catch(() => {
+        if (active) setParentArticleTitle(null);
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.parentArticleId, articles]);
 
   async function toggleUsages() {
     if (usages !== null) {
@@ -325,6 +487,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         title: restored.title,
         template: restored.template,
         body: restored.body ?? '',
+        parentArticleId: restored.parentArticleId ?? null,
       });
       setPreviewHtml(restored.bodyHtml ?? '');
       setRevisions(null);
@@ -392,12 +555,23 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     event.preventDefault();
     setError(null);
     const wasNew = !draft.id;
-    const payload = { title: draft.title, template: draft.template, body: draft.body };
+    const payload = {
+      title: draft.title,
+      template: draft.template,
+      body: draft.body,
+      parentArticleId: draft.parentArticleId,
+    };
     try {
       const saved = draft.id
         ? await api.update(draft.id, payload)
         : await api.create(payload);
-      setDraft({ id: saved.id, title: saved.title, template: saved.template, body: saved.body ?? '' });
+      setDraft({
+        id: saved.id,
+        title: saved.title,
+        template: saved.template,
+        body: saved.body ?? '',
+        parentArticleId: saved.parentArticleId ?? null,
+      });
       setPreviewHtml(saved.bodyHtml ?? '');
       setMode('read');
       if (wasNew) navigate(`/worlds/${worldId}/articles/${saved.id}`);
@@ -485,16 +659,16 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
 
           <div className="article-list-scroll">
             <ul className="article-list">
-              {visibleArticles.map((a) => (
-                <li key={a.id}>
-                  <button
-                    className={a.id === draft.id ? 'article-link active' : 'article-link'}
-                    onClick={() => openArticle(a.id)}
-                  >
-                    <TruncatedLabel label={a.title}>{a.title}</TruncatedLabel>
-                    <small className="muted">{a.template.toLowerCase()}</small>
-                  </button>
-                </li>
+              {rootArticles.map((a) => (
+                <ArticleTreeItem
+                  key={a.id}
+                  article={a}
+                  childrenByParent={sidebarChildrenByParent}
+                  expandedIds={expandedArticleIds}
+                  onToggleExpand={toggleExpandedArticle}
+                  activeId={draft.id}
+                  onOpen={openArticle}
+                />
               ))}
               {articlesLoading && (
                 <li className="muted loading-row">
@@ -529,6 +703,28 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     {ARTICLE_TEMPLATES.map((t) => (
                       <SelectItem key={t} value={t}>
                         {templateLabel(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={draft.parentArticleId ?? NONE_VALUE}
+                  onValueChange={(v) => {
+                    // Radix's hidden native-<select> fallback fires a spurious
+                    // onValueChange('') on (re)mount - not a real user pick, and
+                    // our own items never carry an empty-string value, so ignore it.
+                    if (v === '') return;
+                    setDraft({ ...draft, parentArticleId: v === NONE_VALUE ? null : v });
+                  }}
+                >
+                  <SelectTrigger title="Nest this article under a parent (structure, independent of type)">
+                    <SelectValue placeholder="No parent article" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>No parent article</SelectItem>
+                    {parentCandidates.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -590,7 +786,21 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           ) : draft.id ? (
             <article className="card article-read">
               <div className="article-read-head">
-                <h2>{draft.title}</h2>
+                <div>
+                  {draft.parentArticleId && parentArticleTitle && (
+                    <p className="muted breadcrumb">
+                      Part of{' '}
+                      <button
+                        type="button"
+                        className="breadcrumb-link"
+                        onClick={() => openArticle(draft.parentArticleId!)}
+                      >
+                        {parentArticleTitle}
+                      </button>
+                    </p>
+                  )}
+                  <h2>{draft.title}</h2>
+                </div>
                 <div className="editor-actions">
                   <Button type="button" onClick={() => setMode('edit')}>
                     Edit
@@ -623,7 +833,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   <ul className="usage-list">
                     {usages.map((u, i) => {
                       const clickable =
-                        (u.type === 'ARTICLE_LINK' || u.type === 'RELATIONSHIP') && u.targetId;
+                        (u.type === 'ARTICLE_LINK' || u.type === 'RELATIONSHIP' || u.type === 'CHILD_ARTICLE')
+                        && u.targetId;
                       return (
                         <li key={i} className="usage-item">
                           <span className="usage-type">{USAGE_LABELS[u.type]}</span>
