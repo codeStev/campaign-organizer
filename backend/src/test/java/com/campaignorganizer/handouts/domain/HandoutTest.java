@@ -15,21 +15,28 @@ class HandoutTest {
     @Test
     void nullBodyBecomesEmpty() {
         Handout h = Handout.create(UUID.randomUUID(), UUID.randomUUID(), "Letter",
-                Handout.Preset.LETTER, null, null, NOW);
+                Handout.Preset.LETTER, null, null, false, NOW);
         assertThat(h.getBody()).isEmpty();
+    }
+
+    @Test
+    void createDefaultsToNotRevealed() {
+        Handout h = Handout.create(UUID.randomUUID(), UUID.randomUUID(), "Letter",
+                Handout.Preset.LETTER, "b", null, false, NOW);
+        assertThat(h.isRevealed()).isFalse();
     }
 
     @Test
     void rejectsBlankTitle() {
         assertThatThrownBy(() -> Handout.create(UUID.randomUUID(), UUID.randomUUID(), "  ",
-                Handout.Preset.POSTER, "b", null, NOW))
+                Handout.Preset.POSTER, "b", null, false, NOW))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void rejectsTitleOverTwoHundredChars() {
         assertThatThrownBy(() -> Handout.create(UUID.randomUUID(), UUID.randomUUID(),
-                "x".repeat(201), Handout.Preset.POSTER, "b", null, NOW))
+                "x".repeat(201), Handout.Preset.POSTER, "b", null, false, NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("200");
     }
@@ -37,29 +44,30 @@ class HandoutTest {
     @Test
     void rejectsMissingPreset() {
         assertThatThrownBy(() -> Handout.create(UUID.randomUUID(), UUID.randomUUID(), "T",
-                null, "b", null, NOW))
+                null, "b", null, false, NOW))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void updateChangesFieldsAndTouchTimestamp() {
         Handout h = Handout.create(UUID.randomUUID(), UUID.randomUUID(), "Old",
-                Handout.Preset.PARCHMENT, "old body", null, NOW);
+                Handout.Preset.PARCHMENT, "old body", null, false, NOW);
 
         UUID sessionId = UUID.randomUUID();
-        h.update("New", Handout.Preset.NEWSPAPER, "new body", sessionId, NOW.plusSeconds(10));
+        h.update("New", Handout.Preset.NEWSPAPER, "new body", sessionId, true, NOW.plusSeconds(10));
 
         assertThat(h.getTitle()).isEqualTo("New");
         assertThat(h.getPreset()).isEqualTo(Handout.Preset.NEWSPAPER);
         assertThat(h.getBody()).isEqualTo("new body");
         assertThat(h.getSessionId()).isEqualTo(sessionId);
+        assertThat(h.isRevealed()).isTrue();
         assertThat(h.getUpdatedAt()).isEqualTo(NOW.plusSeconds(10));
     }
 
     @Test
     void reorderSetsPositionAndTouchesTimestampOnly() {
         Handout h = Handout.create(UUID.randomUUID(), UUID.randomUUID(), "Old",
-                Handout.Preset.PARCHMENT, "old body", null, NOW);
+                Handout.Preset.PARCHMENT, "old body", null, false, NOW);
 
         h.reorder(3, NOW.plusSeconds(5));
 

@@ -62,7 +62,8 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
         requireWorld(command.worldId());
         requireSession(command.worldId(), command.sessionId());
         Handout created = Handout.create(ids.newId(), command.worldId(), command.title(),
-                toPreset(command.preset()), command.body(), command.sessionId(), clock.instant());
+                toPreset(command.preset()), command.body(), command.sessionId(),
+                command.revealed(), clock.instant());
         return viewMapper.toView(handouts.save(created));
     }
 
@@ -72,7 +73,7 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
         requireSession(command.worldId(), command.sessionId());
         Handout handout = require(command.worldId(), command.handoutId());
         handout.update(command.title(), toPreset(command.preset()), command.body(),
-                command.sessionId(), clock.instant());
+                command.sessionId(), command.revealed(), clock.instant());
         return viewMapper.toView(handouts.save(handout));
     }
 
@@ -134,7 +135,7 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     public HandoutView importHandout(HandoutView view) {
         Handout handout = Handout.reconstitute(view.id(), view.worldId(), view.title(),
                 toPreset(view.preset()), view.body(), view.sessionId(), view.sortOrder(),
-                view.createdAt(), view.updatedAt());
+                view.revealed(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(handouts.save(handout));
     }
 

@@ -18,13 +18,13 @@ public interface HandoutWebMapper {
 
     default CreateHandoutCommand toCreateCommand(UUID worldId, HandoutRequest request) {
         return new CreateHandoutCommand(worldId, request.title(), request.preset(),
-                request.body(), request.sessionId());
+                request.body(), request.sessionId(), request.revealedOrDefault());
     }
 
     default UpdateHandoutCommand toUpdateCommand(UUID worldId, UUID handoutId,
                                                  HandoutRequest request) {
         return new UpdateHandoutCommand(worldId, handoutId, request.title(), request.preset(),
-                request.body(), request.sessionId());
+                request.body(), request.sessionId(), request.revealedOrDefault());
     }
 
     default ReorderHandoutsCommand toReorderCommand(UUID worldId, ReorderHandoutsRequest request) {

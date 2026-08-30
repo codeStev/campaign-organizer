@@ -26,35 +26,41 @@ public final class Handout {
     private UUID sessionId;
     /** Manual list position; null means "not yet reordered" (falls back to createdAt DESC). */
     private Integer sortOrder;
+    /** Screen-only prep flag: has the GM revealed this to players? Not access control. */
+    private boolean revealed;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private Handout(UUID id, UUID worldId, String title, Preset preset, String body,
-                    UUID sessionId, Integer sortOrder, Instant createdAt, Instant updatedAt) {
+                    UUID sessionId, Integer sortOrder, boolean revealed, Instant createdAt,
+                    Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.sessionId = sessionId;
         this.sortOrder = sortOrder;
+        this.revealed = revealed;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(title, preset, body);
     }
 
     public static Handout create(UUID id, UUID worldId, String title, Preset preset,
-                                 String body, UUID sessionId, Instant now) {
-        return new Handout(id, worldId, title, preset, body, sessionId, null, now, now);
+                                 String body, UUID sessionId, boolean revealed, Instant now) {
+        return new Handout(id, worldId, title, preset, body, sessionId, null, revealed, now, now);
     }
 
     public static Handout reconstitute(UUID id, UUID worldId, String title, Preset preset,
                                        String body, UUID sessionId, Integer sortOrder,
-                                       Instant createdAt, Instant updatedAt) {
-        return new Handout(id, worldId, title, preset, body, sessionId, sortOrder, createdAt,
-                updatedAt);
+                                       boolean revealed, Instant createdAt, Instant updatedAt) {
+        return new Handout(id, worldId, title, preset, body, sessionId, sortOrder, revealed,
+                createdAt, updatedAt);
     }
 
-    public void update(String title, Preset preset, String body, UUID sessionId, Instant now) {
+    public void update(String title, Preset preset, String body, UUID sessionId,
+                       boolean revealed, Instant now) {
         apply(title, preset, body);
         this.sessionId = sessionId;
+        this.revealed = revealed;
         this.updatedAt = now;
     }
 
@@ -105,6 +111,10 @@ public final class Handout {
 
     public Integer getSortOrder() {
         return sortOrder;
+    }
+
+    public boolean isRevealed() {
+        return revealed;
     }
 
     public Instant getCreatedAt() {
