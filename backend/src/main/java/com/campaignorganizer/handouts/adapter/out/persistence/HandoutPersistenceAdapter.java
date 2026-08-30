@@ -22,7 +22,7 @@ public class HandoutPersistenceAdapter implements HandoutRepositoryPort {
 
     @Override
     public List<Handout> findByWorld(UUID worldId) {
-        return repository.findByWorldIdOrderByCreatedAtDesc(worldId).stream()
+        return repository.findByWorldOrdered(worldId).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

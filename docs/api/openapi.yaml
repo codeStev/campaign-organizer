@@ -1667,6 +1667,38 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/handouts/order:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    put:
+      tags: [handouts]
+      summary: Reorder a world's handouts
+      description: >
+        orderedIds must be exactly the world's current handout ids, in the
+        new order (ADR-0077 follow-up).
+      operationId: reorderHandouts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderHandoutsRequest'
+      responses:
+        '200':
+          description: Handouts in their new order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Handout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/handouts/{handoutId}:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -3875,6 +3907,17 @@ components:
             Session this handout is prepped for (ADR-0077); null for a
             general/unassigned handout. Operational grouping for packet
             assembly only - not a wiki-graph link (ADR-0070).
+
+    ReorderHandoutsRequest:
+      type: object
+      required: [orderedIds]
+      properties:
+        orderedIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
 
     Handout:
       type: object

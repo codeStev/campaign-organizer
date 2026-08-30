@@ -55,4 +55,16 @@ class HandoutTest {
         assertThat(h.getSessionId()).isEqualTo(sessionId);
         assertThat(h.getUpdatedAt()).isEqualTo(NOW.plusSeconds(10));
     }
+
+    @Test
+    void reorderSetsPositionAndTouchesTimestampOnly() {
+        Handout h = Handout.create(UUID.randomUUID(), UUID.randomUUID(), "Old",
+                Handout.Preset.PARCHMENT, "old body", null, NOW);
+
+        h.reorder(3, NOW.plusSeconds(5));
+
+        assertThat(h.getSortOrder()).isEqualTo(3);
+        assertThat(h.getTitle()).isEqualTo("Old");
+        assertThat(h.getUpdatedAt()).isEqualTo(NOW.plusSeconds(5));
+    }
 }
