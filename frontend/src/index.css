@@ -2215,6 +2215,18 @@ button:disabled {
   min-width: 2rem;
 }
 
+/* Handout list rows reuse the cheat-sheet's up/down reorder buttons. */
+.handout-list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.handout-list-row .article-link {
+  flex: 1;
+  min-width: 0;
+}
+
 .cheatsheet-order button {
   padding: 0 0.25rem;
   line-height: 1;

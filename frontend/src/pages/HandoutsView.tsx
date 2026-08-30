@@ -145,6 +145,20 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  async function move(index: number, delta: number) {
+    const target = index + delta;
+    if (target < 0 || target >= list.length) return;
+    const next = [...list];
+    [next[index], next[target]] = [next[target], next[index]];
+    setList(next);
+    try {
+      await api.reorder(next.map((h) => h.id));
+    } catch (err) {
+      handleError(err);
+      await refresh();
+    }
+  }
+
   async function remove() {
     if (!draft.id) return;
     try {
@@ -171,8 +185,21 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
           + New handout
         </Button>
         <ul className="article-list">
-          {list.map((h) => (
-            <li key={h.id}>
+          {list.map((h, i) => (
+            <li key={h.id} className="handout-list-row">
+              <div className="cheatsheet-order">
+                <Button variant="link" onClick={() => void move(i, -1)} disabled={i === 0} title="Move up">
+                  ↑
+                </Button>
+                <Button
+                  variant="link"
+                  onClick={() => void move(i, 1)}
+                  disabled={i === list.length - 1}
+                  title="Move down"
+                >
+                  ↓
+                </Button>
+              </div>
               <button
                 className={h.id === urlHandoutId ? 'article-link active' : 'article-link'}
                 onClick={() => navigate(`/worlds/${worldId}/handouts/${h.id}`)}
