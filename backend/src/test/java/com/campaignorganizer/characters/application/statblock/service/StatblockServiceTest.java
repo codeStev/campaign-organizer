@@ -10,6 +10,7 @@ import com.campaignorganizer.characters.application.statblock.port.out.ArticleEx
 import com.campaignorganizer.characters.application.statblock.port.out.CampaignExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.out.CampaignStatblockRefPort;
 import com.campaignorganizer.characters.application.statblock.port.out.StatblockRepositoryPort;
+import com.campaignorganizer.characters.application.statblock.port.out.StatblockTagLookupPort;
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -48,6 +49,8 @@ class StatblockServiceTest {
     @Mock
     private CampaignStatblockRefPort campaignRefs;
     @Mock
+    private StatblockTagLookupPort tagLookup;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -62,7 +65,7 @@ class StatblockServiceTest {
     @BeforeEach
     void setUp() {
         service = new StatblockService(statblocks, worlds, articles, campaigns, templates, campaignRefs,
-                viewMapper, ids, clock);
+                tagLookup, viewMapper, ids, clock);
     }
 
     private Statblock statblock(UUID id, UUID campaign) {
@@ -126,7 +129,7 @@ class StatblockServiceTest {
         when(statblocks.findAllByIds(any()))
                 .thenReturn(List.of(statblock(referenced, null)));
 
-        List<StatblockView> result = service.list(worldId, campaignId);
+        List<StatblockView> result = service.list(worldId, campaignId, null);
 
         assertThat(result).extracting(StatblockView::id).containsExactly(scoped, referenced);
     }

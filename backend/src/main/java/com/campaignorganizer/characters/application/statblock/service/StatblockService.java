@@ -11,6 +11,7 @@ import com.campaignorganizer.characters.application.statblock.port.out.ArticleEx
 import com.campaignorganizer.characters.application.statblock.port.out.CampaignExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.out.CampaignStatblockRefPort;
 import com.campaignorganizer.characters.application.statblock.port.out.StatblockRepositoryPort;
+import com.campaignorganizer.characters.application.statblock.port.out.StatblockTagLookupPort;
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
@@ -27,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,7 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     private final CampaignExistsPort campaigns;
     private final FieldTemplateQueryPort templates;
     private final CampaignStatblockRefPort campaignRefs;
+    private final StatblockTagLookupPort tagLookup;
     private final StatblockViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
@@ -50,13 +53,15 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     public StatblockService(StatblockRepositoryPort statblocks, WorldExistsPort worlds,
                             ArticleExistsPort articles, CampaignExistsPort campaigns,
                             FieldTemplateQueryPort templates, CampaignStatblockRefPort campaignRefs,
-                            StatblockViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                            StatblockTagLookupPort tagLookup, StatblockViewMapper viewMapper,
+                            IdGenerator ids, Clock clock) {
         this.statblocks = statblocks;
         this.worlds = worlds;
         this.articles = articles;
         this.campaigns = campaigns;
         this.templates = templates;
         this.campaignRefs = campaignRefs;
+        this.tagLookup = tagLookup;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -97,11 +102,15 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
 
     @Override
     @Transactional(readOnly = true)
-    public List<StatblockView> list(UUID worldId, UUID campaignId) {
+    public List<StatblockView> list(UUID worldId, UUID campaignId, String tag) {
         requireWorld(worldId);
         List<Statblock> result = campaignId == null
                 ? statblocks.findByWorld(worldId)
                 : statblocksForCampaign(worldId, campaignId);
+        if (tag != null && !tag.isBlank()) {
+            Set<UUID> tagged = tagLookup.statblockIdsTaggedWith(worldId, tag);
+            result = result.stream().filter(s -> tagged.contains(s.getId())).toList();
+        }
         return result.stream().map(viewMapper::toView).toList();
     }
 

@@ -9,6 +9,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.in.DeleteArticl
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.GetArticleUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ListArticlesUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.UpdateArticleUseCase;
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleTagLookupPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.CampaignArticleUsagePort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
@@ -17,6 +18,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -41,12 +43,14 @@ public class ArticleController {
     private final ListArticlesUseCase listUseCase;
     private final ArticleRenderPort renderPort;
     private final CampaignArticleUsagePort campaignUsage;
+    private final ArticleTagLookupPort tagLookup;
     private final ArticleWebMapper mapper;
 
     public ArticleController(CreateArticleUseCase createUseCase, UpdateArticleUseCase updateUseCase,
                              DeleteArticleUseCase deleteUseCase, GetArticleUseCase getUseCase,
                              ListArticlesUseCase listUseCase, ArticleRenderPort renderPort,
-                             CampaignArticleUsagePort campaignUsage, ArticleWebMapper mapper) {
+                             CampaignArticleUsagePort campaignUsage, ArticleTagLookupPort tagLookup,
+                             ArticleWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
@@ -54,6 +58,7 @@ public class ArticleController {
         this.listUseCase = listUseCase;
         this.renderPort = renderPort;
         this.campaignUsage = campaignUsage;
+        this.tagLookup = tagLookup;
         this.mapper = mapper;
     }
 
@@ -61,10 +66,17 @@ public class ArticleController {
     public List<ArticleSummaryResponse> list(@PathVariable UUID worldId,
                                              @RequestParam(required = false) UUID categoryId,
                                              @RequestParam(required = false) UUID campaignId,
-                                             @RequestParam(required = false) String q) {
+                                             @RequestParam(required = false) String q,
+                                             @RequestParam(required = false) String tag) {
         Set<UUID> restrictToIds = campaignId == null
                 ? null
                 : campaignUsage.articleIdsUsedInCampaign(worldId, campaignId);
+        if (tag != null && !tag.isBlank()) {
+            Set<UUID> tagged = tagLookup.articleIdsTaggedWith(worldId, tag);
+            restrictToIds = restrictToIds == null
+                    ? tagged
+                    : restrictToIds.stream().filter(tagged::contains).collect(Collectors.toSet());
+        }
         return listUseCase.list(new ArticleListQuery(worldId, categoryId, q, restrictToIds)).stream()
                 .map(mapper::toSummary)
                 .toList();

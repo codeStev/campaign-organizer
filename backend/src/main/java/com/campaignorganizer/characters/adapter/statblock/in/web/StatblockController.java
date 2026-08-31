@@ -48,8 +48,9 @@ public class StatblockController {
 
     @GetMapping
     public List<StatblockResponse> list(@PathVariable UUID worldId,
-                                        @RequestParam(required = false) UUID campaignId) {
-        return listUseCase.list(worldId, campaignId).stream().map(mapper::toResponse).toList();
+                                        @RequestParam(required = false) UUID campaignId,
+                                        @RequestParam(required = false) String tag) {
+        return listUseCase.list(worldId, campaignId, tag).stream().map(mapper::toResponse).toList();
     }
 
     @GetMapping("/{statblockId}")
