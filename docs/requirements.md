@@ -215,6 +215,15 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   separate from GM-only content: handouts are meant to leave the table in
   the players' hands. Own bounded context; ships in world backups; reuses
   the standalone print-window pattern (ADR-0038). (ADR-0070)
+- **FR-47 Folksonomy tags.** Freeform, world-scoped tags — no `type:`/
+  `status:` namespacing, no colors/icons, no forced taxonomy — orthogonal to
+  the article category/parent-child hierarchy (FR-1, ADR-0080). v1 covers
+  articles and statblocks: an inline chip-style tag input with autocomplete
+  against the world's existing tags on each entity's detail view, per-list
+  filtering by tag (same pattern as the existing campaign filter), and a
+  cross-entity "browse by tag" view across articles and statblocks together,
+  included from the start. No tag management screen (no global rename/
+  merge/delete) and no tags in print output. (ADR-0083)
 
 ---
 
