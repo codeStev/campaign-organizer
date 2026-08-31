@@ -6,6 +6,9 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPor
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockQueryPort;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
@@ -16,6 +19,8 @@ import com.campaignorganizer.interchange.packet.application.port.in.BuildSession
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCardDeck;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketClock;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketClockSegment;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketDeckCard;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketHandout;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketMap;
@@ -66,13 +71,14 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
     private final HandoutQueryPort handouts;
+    private final ClockQueryPort clocks;
 
     public SessionPacketService(CampaignQueryPort campaigns, SessionQueryPort sessions,
                                 ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                                 StatblockQueryPort statblocks, RollTableQueryPort rollTables,
                                 CardDeckQueryPort cardDecks, MapQueryPort maps, MapPinQueryPort pins,
-                                HandoutQueryPort handouts) {
+                                HandoutQueryPort handouts, ClockQueryPort clocks) {
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.arcs = arcs;
@@ -85,6 +91,7 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         this.maps = maps;
         this.pins = pins;
         this.handouts = handouts;
+        this.clocks = clocks;
     }
 
     @Override
@@ -191,9 +198,16 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .map(this::toPacketHandout)
                 .toList();
 
+        // Campaign-scoped, unconditional (like the statblocks above) - a
+        // clock has no beat linkage to filter by. Deliberately drops fill
+        // state: the packet prints blank for hand-marking (ADR-0084).
+        List<PacketClock> packetClocks = clocks.findByCampaign(campaignId).stream()
+                .map(this::toPacketClock)
+                .toList();
+
         return new SessionPacketResponse(session, campaign.name(),
                 packetBeats, packetArticles, packetMaps, packetStatblocks, packetTables, packetDecks,
-                packetHandouts);
+                packetHandouts, packetClocks);
     }
 
     /** Entry outcome bodies go through the same render pipeline as article bodies. */
@@ -237,5 +251,17 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
 
     private PacketHandout toPacketHandout(HandoutView h) {
         return new PacketHandout(h.id(), h.title(), h.preset(), h.body());
+    }
+
+    /** Drops each segment's fill state - the packet is stateless/print-blank by design. */
+    private PacketClock toPacketClock(ClockView c) {
+        List<PacketClockSegment> segments = c.segments().stream()
+                .map(this::toPacketClockSegment)
+                .toList();
+        return new PacketClock(c.id(), c.title(), c.description(), segments);
+    }
+
+    private PacketClockSegment toPacketClockSegment(ClockSegmentView s) {
+        return new PacketClockSegment(s.title(), s.description());
     }
 }

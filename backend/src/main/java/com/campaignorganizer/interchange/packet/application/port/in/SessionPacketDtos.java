@@ -78,6 +78,22 @@ public final class SessionPacketDtos {
             String preset,
             String body) {}
 
+    /**
+     * A segment of a packet clock (ADR-0084). Deliberately carries no fill
+     * state - the packet prints a blank diagram for hand-marking at the
+     * table; the app is updated afterward to match.
+     */
+    public record PacketClockSegment(
+            String title,
+            String description) {}
+
+    /** One of the campaign's clocks, included unconditionally (ADR-0084). */
+    public record PacketClock(
+            UUID id,
+            String title,
+            String description,
+            List<PacketClockSegment> segments) {}
+
     public record SessionPacketResponse(
             SessionView session,
             String campaignName,
@@ -87,5 +103,6 @@ public final class SessionPacketDtos {
             List<StatblockView> statblocks,
             List<PacketRollTable> rollTables,
             List<PacketCardDeck> cardDecks,
-            List<PacketHandout> handouts) {}
+            List<PacketHandout> handouts,
+            List<PacketClock> clocks) {}
 }

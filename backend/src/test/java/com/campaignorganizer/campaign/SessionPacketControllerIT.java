@@ -220,6 +220,29 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void includesCampaignClocksUnconditionallyWithoutFillState() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        // No beat references this clock at all - it must still appear, campaign-wide.
+        create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/clocks",
+                "{\"title\":\"Doom\",\"segments\":"
+                        + "[{\"filled\":true},{\"filled\":false,\"title\":\"Alarm\",\"description\":\"Guards\"}]}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clocks.length()").value(1))
+                .andExpect(jsonPath("$.clocks[0].title").value("Doom"))
+                .andExpect(jsonPath("$.clocks[0].segments.length()").value(2))
+                .andExpect(jsonPath("$.clocks[0].segments[1].title").value("Alarm"))
+                // Stateless by design (ADR-0084): no fill flag leaks into the packet.
+                .andExpect(jsonPath("$.clocks[0].segments[0].filled").doesNotExist())
+                .andExpect(jsonPath("$.clocks[0].segments[1].filled").doesNotExist());
+    }
+
+    @Test
     void printsArticleReferencedFromBeatTableAndDeckExactlyOnce() throws Exception {
         setup();
         String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
