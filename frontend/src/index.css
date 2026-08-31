@@ -1229,6 +1229,26 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+/* Folksonomy tags (ADR-0083): reuses .beat-chip's chip styling. */
+.tag-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tag-command {
+  border: 1px solid var(--border);
+}
+
+.tag-chip-link {
+  cursor: pointer;
+  background: none;
+}
+
+.tag-chip-link:hover {
+  background: var(--muted);
+}
+
 .beat-check {
   flex: 1;
   display: flex;
