@@ -47,6 +47,10 @@ tags:
   - name: clocks
     description: >-
       Segmented, labeled progress trackers scoped to a campaign (ADR-0084).
+  - name: loose-threads
+    description: >-
+      Retrospective, session-scoped notes on improvised details players
+      latched onto (ADR-0085).
   - name: sheets
     description: Schema-driven character sheet templates and character sheets.
   - name: dice
@@ -1179,6 +1183,93 @@ paths:
       responses:
         '204':
           description: Cheat sheet deleted (or nothing to delete).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/loose-threads:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [loose-threads]
+      summary: List a session's loose threads
+      operationId: listLooseThreads
+      responses:
+        '200':
+          description: Loose threads, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LooseThread'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [loose-threads]
+      summary: Quick-add a loose thread to a session
+      operationId: createLooseThread
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LooseThreadRequest'
+      responses:
+        '201':
+          description: Loose thread created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LooseThread'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/loose-threads/{threadId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+      - $ref: '#/components/parameters/LooseThreadId'
+    put:
+      tags: [loose-threads]
+      summary: Update a loose thread's text and/or status
+      operationId: updateLooseThread
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LooseThreadRequest'
+      responses:
+        '200':
+          description: Loose thread updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LooseThread'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [loose-threads]
+      summary: Delete a loose thread
+      operationId: deleteLooseThread
+      responses:
+        '204':
+          description: Loose thread deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2949,6 +3040,14 @@ components:
       schema:
         type: string
         format: uuid
+    LooseThreadId:
+      name: threadId
+      in: path
+      required: true
+      description: Identifier of the loose thread.
+      schema:
+        type: string
+        format: uuid
     FieldTemplateId:
       name: templateId
       in: path
@@ -3929,6 +4028,45 @@ components:
           format: date-time
         updatedAt:
           type: [string, "null"]
+          format: date-time
+
+    LooseThreadStatus:
+      type: string
+      enum: [OPEN, RESOLVED, ABANDONED]
+
+    LooseThreadRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        status:
+          $ref: '#/components/schemas/LooseThreadStatus'
+
+    LooseThread:
+      type: object
+      required: [id, sessionId, campaignId, text, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        text:
+          type: string
+        status:
+          $ref: '#/components/schemas/LooseThreadStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
           format: date-time
 
     Session:
