@@ -3,6 +3,8 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import {
   articlesApi,
   articleRevisionsApi,
+  articleTagsApi,
+  worldTagsApi,
   campaignsApi,
   exportWorld,
   ArticleSummary,
@@ -27,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { TagInput, TagList } from '../components/TagInput';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { CommandPalette, Command } from '../components/CommandPalette';
 import { RevisionDiff } from '../components/RevisionDiff';
@@ -41,6 +44,7 @@ import { WhiteboardsView } from './WhiteboardsView';
 import { TablesView } from './TablesView';
 import { HandoutsView } from './HandoutsView';
 import { ConsistencyView } from './ConsistencyView';
+import { TagBrowseView } from './TagBrowseView';
 
 /** True when the Markdown has no meaningful text content. */
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -156,6 +160,7 @@ interface Draft {
   template: ArticleTemplate;
   body: string;
   parentArticleId: string | null;
+  tags: string[];
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -164,6 +169,7 @@ const EMPTY_DRAFT: Draft = {
   template: 'GENERIC',
   body: '',
   parentArticleId: null,
+  tags: [],
 };
 
 type Tab =
@@ -177,6 +183,7 @@ type Tab =
   | 'whiteboards'
   | 'tables'
   | 'handouts'
+  | 'tags'
   | 'consistency';
 
 /** Route path segments, in nav order. */
@@ -191,6 +198,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'whiteboards', label: 'Whiteboards' },
   { key: 'tables', label: 'Tables & Decks' },
   { key: 'handouts', label: 'Handouts' },
+  { key: 'tags', label: 'Tags' },
   { key: 'consistency', label: 'Consistency' },
 ];
 
@@ -227,6 +235,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   // Narrow the article list to entries referenced by this campaign ('' = all).
   const [campaignFilter, setCampaignFilter] = useState('');
+  // Narrow the article list to entries carrying this tag ('' = all, ADR-0083).
+  const [tagFilter, setTagFilter] = useState('');
+  const [worldTags, setWorldTags] = useState<string[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
   // "Used by" panel for the open article (null = hidden).
   const [usages, setUsages] = useState<Usage[] | null>(null);
@@ -314,11 +325,12 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   );
 
   const refresh = useCallback(
-    async (q: string, campaignId: string) => {
+    async (q: string, campaignId: string, tag: string) => {
       try {
-        const params: { q?: string; campaignId?: string } = {};
+        const params: { q?: string; campaignId?: string; tag?: string } = {};
         if (q) params.q = q;
         if (campaignId) params.campaignId = campaignId;
+        if (tag) params.tag = tag;
         setArticles(await api.list(Object.keys(params).length ? params : undefined));
       } catch (err) {
         handleError(err);
@@ -331,15 +343,20 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
 
   useEffect(() => {
     // Debounce so typing a query doesn't fire a request per keystroke.
-    const handle = setTimeout(() => void refresh(query, campaignFilter), 150);
+    const handle = setTimeout(() => void refresh(query, campaignFilter, tagFilter), 150);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, campaignFilter]);
+  }, [query, campaignFilter, tagFilter]);
+
+  const loadWorldTags = useCallback(() => {
+    worldTagsApi(worldId).list().then(setWorldTags).catch(handleError);
+  }, [worldId, handleError]);
 
   useEffect(() => {
     templatesApi.list().then(setTemplates).catch(handleError);
     campaignsApi(worldId).list().then(setCampaigns).catch(handleError);
-  }, [handleError, worldId]);
+    loadWorldTags();
+  }, [handleError, worldId, loadWorldTags]);
 
   // Changing the template on an empty draft seeds an outline (ADR-0015).
   function selectTemplate(template: ArticleTemplate) {
@@ -356,13 +373,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const loadArticle = useCallback(
     async (id: string) => {
       try {
-        const article = await api.get(id);
+        const [article, articleTags] = await Promise.all([api.get(id), articleTagsApi(worldId, id).get()]);
         setDraft({
           id: article.id,
           title: article.title,
           template: article.template,
           body: article.body ?? '',
           parentArticleId: article.parentArticleId ?? null,
+          tags: articleTags.tags,
         });
         setPreviewHtml(article.bodyHtml ?? '');
         setMode('read');
@@ -373,7 +391,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         handleError(err);
       }
     },
-    [api, handleError],
+    [api, handleError, worldId],
   );
 
   // The URL is the source of truth for which article is open (ADR-0053): clicking an
@@ -482,16 +500,17 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
     if (!draft.id) return;
     try {
       const restored = await articleRevisionsApi(worldId, draft.id).restore(revisionId);
-      setDraft({
+      setDraft((d) => ({
         id: restored.id,
         title: restored.title,
         template: restored.template,
         body: restored.body ?? '',
         parentArticleId: restored.parentArticleId ?? null,
-      });
+        tags: d.tags,
+      }));
       setPreviewHtml(restored.bodyHtml ?? '');
       setRevisions(null);
-      await refresh(query, campaignFilter);
+      await refresh(query, campaignFilter, tagFilter);
     } catch (err) {
       handleError(err);
     }
@@ -565,17 +584,20 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       const saved = draft.id
         ? await api.update(draft.id, payload)
         : await api.create(payload);
+      const savedTags = await articleTagsApi(worldId, saved.id).set(draft.tags);
       setDraft({
         id: saved.id,
         title: saved.title,
         template: saved.template,
         body: saved.body ?? '',
         parentArticleId: saved.parentArticleId ?? null,
+        tags: savedTags.tags,
       });
       setPreviewHtml(saved.bodyHtml ?? '');
       setMode('read');
       if (wasNew) navigate(`/worlds/${worldId}/articles/${saved.id}`);
-      await refresh(query, campaignFilter);
+      await refresh(query, campaignFilter, tagFilter);
+      loadWorldTags();
       toast.success(`Article "${saved.title}" saved`);
     } catch (err) {
       handleError(err);
@@ -589,7 +611,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       setDraft(EMPTY_DRAFT);
       setPreviewHtml('');
       navigate(`/worlds/${worldId}/articles`);
-      await refresh(query, campaignFilter);
+      await refresh(query, campaignFilter, tagFilter);
     } catch (err) {
       handleError(err);
     }
@@ -651,6 +673,22 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     Used in {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {worldTags.length > 0 && (
+            <Select value={tagFilter || NONE_VALUE} onValueChange={(v) => setTagFilter(v === NONE_VALUE ? '' : v)}>
+              <SelectTrigger className="tag-filter" title="Show only articles carrying a tag">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>All tags</SelectItem>
+                {worldTags.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -729,6 +767,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                     ))}
                   </SelectContent>
                 </Select>
+                <TagInput worldId={worldId} value={draft.tags} onChange={(tags) => setDraft({ ...draft, tags })} />
                 <MarkdownEditor
                   value={draft.body}
                   onChange={(body) => setDraft({ ...draft, body })}
@@ -823,6 +862,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
                   />
                 </div>
               </div>
+              <TagList worldId={worldId} tags={draft.tags} />
 
               {usages !== null && (
                 <div className="usages card">
@@ -929,6 +969,14 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
       onAuthExpired={onAuthExpired}
     />
   );
+  const tagsPane = (
+    <TagBrowseView
+      worldId={worldId}
+      onOpenArticle={openFromMap}
+      onOpenStatblock={(id) => navigate(`/worlds/${worldId}/sheets/statblocks/${id}`)}
+      onAuthExpired={onAuthExpired}
+    />
+  );
 
   return (
     <section className="world-view">
@@ -1018,6 +1066,8 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
           path="handouts/:handoutId"
           element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
         />
+        <Route path="tags" element={tagsPane} />
+        <Route path="tags/:tagName" element={tagsPane} />
         <Route path="consistency" element={consistencyPane} />
         <Route path="*" element={<Navigate to="articles" replace />} />
       </Routes>
