@@ -10,6 +10,10 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImpo
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -107,6 +111,8 @@ class ImportServiceTest {
     private CheatSheetImportPort cheatSheetImportPort;
     @Mock
     private TagImportPort tagImportPort;
+    @Mock
+    private ClockImportPort clockImportPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -120,7 +126,7 @@ class ImportServiceTest {
                 arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
-                cheatSheetImportPort, tagImportPort);
+                cheatSheetImportPort, tagImportPort, clockImportPort);
     }
 
     @Test
@@ -244,6 +250,42 @@ class ImportServiceTest {
                 .containsExactlyInAnyOrder(newArticleId, newStatblockId);
         assertThat(importedTags).allMatch(t -> t.name().equals("npc") && t.worldId().equals(
                 articleCaptor.getValue().worldId()));
+    }
+
+    @Test
+    void remapsClockCampaignIdAndKeepsSegmentsIntact() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldClockId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null, now, now)));
+        bundle.put("clocks", List.of(new ClockView(oldClockId, oldCampaignId, "Doom", null,
+                List.of(new ClockSegmentView(true, null, null),
+                        new ClockSegmentView(false, "Alarm", "Guards notice")),
+                0, now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats",
+                "fieldTemplates", "characterSheets", "statblocks", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<ClockView> clockCaptor = ArgumentCaptor.forClass(ClockView.class);
+        verify(clockImportPort).importClock(clockCaptor.capture());
+        ClockView imported = clockCaptor.getValue();
+        assertThat(imported.id()).isNotEqualTo(oldClockId);
+        assertThat(imported.campaignId()).isNotEqualTo(oldCampaignId);
+        assertThat(imported.title()).isEqualTo("Doom");
+        assertThat(imported.segments()).containsExactly(
+                new ClockSegmentView(true, null, null),
+                new ClockSegmentView(false, "Alarm", "Guards notice"));
     }
 
     /** Chains live in JSONB without FKs — dangling ids import as dropped refs. */

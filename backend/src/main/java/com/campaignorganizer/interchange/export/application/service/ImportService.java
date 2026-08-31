@@ -6,6 +6,8 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPo
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -96,6 +98,7 @@ public class ImportService implements ImportBackupUseCase {
     private final HandoutImportPort handoutImportPort;
     private final CheatSheetImportPort cheatSheetImportPort;
     private final TagImportPort tagImportPort;
+    private final ClockImportPort clockImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -108,7 +111,8 @@ public class ImportService implements ImportBackupUseCase {
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
-            CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort) {
+            CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
+            ClockImportPort clockImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -133,6 +137,7 @@ public class ImportService implements ImportBackupUseCase {
         this.handoutImportPort = handoutImportPort;
         this.cheatSheetImportPort = cheatSheetImportPort;
         this.tagImportPort = tagImportPort;
+        this.clockImportPort = clockImportPort;
     }
 
     @Override
@@ -178,6 +183,7 @@ public class ImportService implements ImportBackupUseCase {
         List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
         List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
         List<TagView> tags = readList(root, "tags", TagView.class);
+        List<ClockView> clocks = readList(root, "clocks", ClockView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -205,6 +211,7 @@ public class ImportService implements ImportBackupUseCase {
         handouts.forEach(h -> remap.assign(h.id()));
         cheatSheets.forEach(cs -> remap.assign(cs.id()));
         tags.forEach(t -> remap.assign(t.id()));
+        clocks.forEach(c -> remap.assign(c.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -278,6 +285,12 @@ public class ImportService implements ImportBackupUseCase {
         for (ArcView a : arcs) {
             arcImportPort.importArc(new ArcView(remap.get(a.id()), remap.get(a.campaignId()), a.title(),
                     a.description(), a.status(), a.position(), a.createdAt(), a.updatedAt()));
+        }
+
+        // Clocks (FR-48): campaign-scoped, no other id references inside.
+        for (ClockView c : clocks) {
+            clockImportPort.importClock(new ClockView(remap.get(c.id()), remap.get(c.campaignId()),
+                    c.title(), c.description(), c.segments(), c.position(), c.createdAt(), c.updatedAt()));
         }
 
         for (FieldTemplateView f : fieldTemplates) {

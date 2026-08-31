@@ -3,6 +3,7 @@ package com.campaignorganizer.interchange.export.application.service;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.clock.port.published.ClockQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
@@ -71,6 +72,7 @@ public class ExportService implements ExportWorldUseCase {
     private final HandoutQueryPort handouts;
     private final CheatSheetQueryPort cheatSheets;
     private final TagQueryPort tags;
+    private final ClockQueryPort clocks;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
@@ -81,7 +83,7 @@ public class ExportService implements ExportWorldUseCase {
                          StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
                          HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
-                         TagQueryPort tags) {
+                         TagQueryPort tags, ClockQueryPort clocks) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -104,6 +106,7 @@ public class ExportService implements ExportWorldUseCase {
         this.handouts = handouts;
         this.cheatSheets = cheatSheets;
         this.tags = tags;
+        this.clocks = clocks;
     }
 
     @Override
@@ -140,17 +143,21 @@ public class ExportService implements ExportWorldUseCase {
         List<Object> allSessions = new ArrayList<>();
         List<Object> allArcs = new ArrayList<>();
         List<Object> allBeats = new ArrayList<>();
+        List<Object> allClocks = new ArrayList<>();
         worldCampaigns.forEach(c -> {
             allSessions.addAll(sessions.findOrdered(c.id()));
             arcs.findByCampaign(c.id()).forEach(a -> {
                 allArcs.add(a);
                 allBeats.addAll(beats.findByArc(a.id()));
             });
+            // Clocks (FR-48): campaign-scoped, no beat linkage to walk.
+            allClocks.addAll(clocks.findByCampaign(c.id()));
         });
         bundle.put("campaigns", worldCampaigns);
         bundle.put("sessions", allSessions);
         bundle.put("arcs", allArcs);
         bundle.put("beats", allBeats);
+        bundle.put("clocks", allClocks);
         // Session cheat sheets (FR-37): one per session, when present.
         List<CheatSheetView> cheatSheetViews = new ArrayList<>();
         for (Object s : allSessions) {
