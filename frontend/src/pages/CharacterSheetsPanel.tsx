@@ -92,18 +92,21 @@ export function CharacterSheetsPanel({
     navigate(`/worlds/${worldId}/sheets/characters`);
   }
 
+  function toDraft(sheet: CharacterSheet): Draft {
+    return {
+      id: sheet.id,
+      name: sheet.name,
+      templateId: sheet.templateId,
+      articleId: sheet.articleId ?? '',
+      campaignId: sheet.campaignId ?? '',
+      values: sheet.values ?? {},
+    };
+  }
+
   const open = useCallback(
     async (id: string) => {
       try {
-        const sheet = await api.get(id);
-        setDraft({
-          id: sheet.id,
-          name: sheet.name,
-          templateId: sheet.templateId,
-          articleId: sheet.articleId ?? '',
-          campaignId: sheet.campaignId ?? '',
-          values: sheet.values ?? {},
-        });
+        setDraft(toDraft(await api.get(id)));
         setMode('read');
       } catch (err) {
         onError(err);
@@ -131,7 +134,7 @@ export function CharacterSheetsPanel({
     };
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
-      setDraft({ ...draft, id: saved.id });
+      setDraft(toDraft(saved));
       setMode('read');
       if (wasNew) navigate(`/worlds/${worldId}/sheets/characters/${saved.id}`);
       await refresh();
@@ -295,7 +298,15 @@ export function CharacterSheetsPanel({
                 {draft.id ? 'Save sheet' : 'Create sheet'}
               </Button>
               {draft.id && (
-                <Button type="button" variant="link" onClick={() => setMode('read')}>
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => {
+                    const saved = sheets.find((s) => s.id === draft.id);
+                    if (saved) setDraft(toDraft(saved));
+                    setMode('read');
+                  }}
+                >
                   Cancel
                 </Button>
               )}

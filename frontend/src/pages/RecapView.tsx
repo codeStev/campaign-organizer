@@ -1,16 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  arcsApi,
-  beatsApi,
-  sessionsApi,
-  Arc,
-  Beat,
-  Session,
-} from '../api/client';
+import { arcsApi, sessionsApi, Arc, Beat, Session } from '../api/client';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { renderMarkdown } from '../lib/markdown';
+import { fetchCampaignBeats } from '../lib/beats';
 
 interface Props {
   worldId: string;
@@ -35,19 +29,13 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      arcsApi(worldId, campaignId).list(),
-      sessionsApi(worldId, campaignId).list(),
-    ])
+    Promise.all([arcsApi(worldId, campaignId).list(), sessionsApi(worldId, campaignId).list()])
       .then(async ([arcList, sessionList]) => {
         if (!active) return;
         setArcs(arcList);
         setSessions(sessionList);
-        // Beats live per arc; gather them all, then order in one flat list.
-        const perArc = await Promise.all(
-          arcList.map((a) => beatsApi(worldId, campaignId, a.id).list()),
-        );
-        if (active) setBeats(perArc.flat());
+        const beatList = await fetchCampaignBeats(worldId, campaignId, arcList);
+        if (active) setBeats(beatList);
       })
       .catch(onError)
       .finally(() => active && setLoading(false));

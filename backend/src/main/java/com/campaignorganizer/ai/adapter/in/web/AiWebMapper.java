@@ -8,4 +8,6 @@ import org.mapstruct.Mapper;
 public interface AiWebMapper {
 
     DraftArticleTextResponse toResponse(DraftResult result);
+
+    SummarizeSessionNotesResponse toSummarizeResponse(DraftResult result);
 }

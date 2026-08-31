@@ -6,7 +6,9 @@ import {
   diceApi,
   articlesApi,
   RollTable,
+  RollTableEntry,
   CardDeck,
+  DeckCard,
   ApiError,
 } from '../api/client';
 import { diceRange, DiceRange } from '../lib/dice';
@@ -163,6 +165,8 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  // Read (rendered, with roll/draw) vs edit (the form) — mirrors WorldView's article mode.
+  const [mode, setMode] = useState<'read' | 'edit'>('read');
   // Save button feedback: "saved" auto-reverts after a beat so it doesn't
   // linger indefinitely once the user starts editing again.
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -223,6 +227,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     setRoll(null);
     setDrawnIndex(null);
     setSaveState('idle');
+    setMode('read');
   }
 
   // The URL is the source of truth for what's open (ADR-0053): /tables/table/:id
@@ -326,8 +331,56 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     return names.length > 0 ? names.join(', ') : null;
   }
 
+  /** Read-only entries grid — shared by the read view and the print portal. */
+  function tableEntriesGrid(entries: RollTableEntry[]) {
+    return (
+      <table className="print-table-grid">
+        <tbody>
+          {entries.map((e) => (
+            <tr key={e.id}>
+              <td className="print-table-range">
+                {e.minResult != null && e.maxResult != null ? `${e.minResult}–${e.maxResult}` : 'else'}
+              </td>
+              <td>
+                {/* eslint-disable-next-line react/no-danger */}
+                <div
+                  className="preview-body"
+                  dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(e.body, titleLookup) }}
+                />
+                {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
+                  <p className="print-chain-note">↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}</p>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  /** Read-only cards sheet — shared by the read view and the print portal. */
+  function deckCardSheet(cards: DeckCard[]) {
+    return (
+      <div className="card-sheet">
+        {cards.map((c) => (
+          <div key={c.id} className="deck-card">
+            {c.title && <div className="deck-card-name">{c.title}</div>}
+            {/* eslint-disable-next-line react/no-danger */}
+            <div
+              className="preview-body"
+              dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }}
+            />
+            {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
+              <p className="print-chain-note">↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   useEffect(() => {
-    if (!printing || linkTitles.size > 0) return;
+    if ((!printing && !(mode === 'read' && draft.id != null)) || linkTitles.size > 0) return;
     articlesApi(worldId)
       .list()
       .then((list) => {
@@ -341,7 +394,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       .catch(() => {
         // Print anyway; [[links]] render as broken-link spans.
       });
-  }, [printing, worldId, linkTitles.size]);
+  }, [printing, mode, draft.id, worldId, linkTitles.size]);
   const titleLookup = (name: string) => linkTitles.get(name) ?? null;
 
   function setEntry(index: number, patch: Partial<TableEntryDraft>) {
@@ -540,6 +593,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       try {
         const saved =
           draft.id != null ? await tablesApi.update(draft.id, body) : await tablesApi.create(body);
+        edit('table', saved);
         navigate(`/worlds/${worldId}/tables/table/${saved.id}`);
         await refresh();
         markSaved(`Table "${saved.title}" saved`);
@@ -570,6 +624,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       try {
         const saved =
           draft.id != null ? await decksApi.update(draft.id, body) : await decksApi.create(body);
+        edit('deck', saved);
         navigate(`/worlds/${worldId}/tables/deck/${saved.id}`);
         await refresh();
         markSaved(`Deck "${saved.title}" saved`);
@@ -606,6 +661,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
               entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
             });
             setRoll(null);
+            setMode('edit');
             navigate(`/worlds/${worldId}/tables`);
           }}
           data-testid="new-table-button"
@@ -639,6 +695,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
               cards: [{ title: '', body: '', ...emptyChains }],
             });
             setDrawnIndex(null);
+            setMode('edit');
             navigate(`/worlds/${worldId}/tables`);
           }}
           data-testid="new-deck-button"
@@ -665,6 +722,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
 
       <div className="wiki-main">
         {error && <p className="error">{error}</p>}
+        {(mode === 'edit' || !editingExisting) && (
         <form className="card" onSubmit={save}>
           {draft.kind === 'table' ? (
             <>
@@ -1007,6 +1065,19 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                       ? 'Create table'
                       : 'Create deck'}
             </Button>
+            {editingExisting && (
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => {
+                  const saved = draft.kind === 'table' ? printTable : printDeck;
+                  if (saved) edit(draft.kind, saved);
+                  else setMode('read');
+                }}
+              >
+                Cancel
+              </Button>
+            )}
             {(printTable || printDeck) && (
               <Button
                 type="button"
@@ -1031,6 +1102,119 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             )}
           </div>
         </form>
+        )}
+
+        {mode === 'read' && editingExisting && (printTable || printDeck) && (
+          <article className="article-read">
+            <div className="article-read-head">
+              <h2>{printTable ? `🎲 ${printTable.title}` : `🃏 ${printDeck!.title}`}</h2>
+              <div className="editor-actions">
+                <Button type="button" onClick={() => setMode('edit')}>
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPrinting(true)}
+                  data-testid="table-print-button"
+                >
+                  🖨 Print
+                </Button>
+              </div>
+            </div>
+            {(printTable?.description || printDeck?.description) && (
+              <p className="muted">{printTable?.description ?? printDeck?.description}</p>
+            )}
+
+            {printTable && (
+              <>
+                <div className="editor-actions">
+                  <Button type="button" variant="outline" onClick={() => void doRoll()}>
+                    🎲 Roll ({printTable.diceExpression})
+                  </Button>
+                  {roll && (
+                    <small className="muted">
+                      Rolled <strong>{roll.total}</strong> ({roll.breakdown})
+                      {roll.matchedIndex == null ? ` — no entry covers ${roll.total}` : ''}
+                    </small>
+                  )}
+                </div>
+                {landedEntry &&
+                  (landedEntry.nestedTableIds.length > 0 || landedEntry.nestedDeckIds.length > 0) && (
+                  <div className="chain-children">
+                    {landedEntry.nestedTableIds.map((id) => (
+                      <ChainNode
+                        key={`t-${id}`}
+                        kind="table"
+                        entityId={id}
+                        tables={tables}
+                        decks={decks}
+                        depth={1}
+                        onError={handleError}
+                      />
+                    ))}
+                    {landedEntry.nestedDeckIds.map((id) => (
+                      <ChainNode
+                        key={`d-${id}`}
+                        kind="deck"
+                        entityId={id}
+                        tables={tables}
+                        decks={decks}
+                        depth={1}
+                        onError={handleError}
+                      />
+                    ))}
+                  </div>
+                )}
+                {tableEntriesGrid(printTable.entries)}
+              </>
+            )}
+
+            {printDeck && (
+              <>
+                <div className="editor-actions">
+                  <Button type="button" variant="outline" disabled={printDeck.cards.length === 0} onClick={drawCard}>
+                    🃏 Draw a card
+                  </Button>
+                  {drawnIndex != null && printDeck.cards[drawnIndex] && (
+                    <small className="muted">
+                      Drew card {drawnIndex + 1}
+                      {printDeck.cards[drawnIndex].title ? `: ${printDeck.cards[drawnIndex].title}` : ''}
+                    </small>
+                  )}
+                </div>
+                {drawnCard &&
+                  (drawnCard.nestedTableIds.length > 0 || drawnCard.nestedDeckIds.length > 0) && (
+                  <div className="chain-children">
+                    {drawnCard.nestedTableIds.map((id) => (
+                      <ChainNode
+                        key={`t-${id}`}
+                        kind="table"
+                        entityId={id}
+                        tables={tables}
+                        decks={decks}
+                        depth={1}
+                        onError={handleError}
+                      />
+                    ))}
+                    {drawnCard.nestedDeckIds.map((id) => (
+                      <ChainNode
+                        key={`d-${id}`}
+                        kind="deck"
+                        entityId={id}
+                        tables={tables}
+                        decks={decks}
+                        depth={1}
+                        onError={handleError}
+                      />
+                    ))}
+                  </div>
+                )}
+                {deckCardSheet(printDeck.cards)}
+              </>
+            )}
+          </article>
+        )}
       </div>
 
       <ArticleLinkPicker
@@ -1067,52 +1251,13 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 <p className="print-kicker">
                   {printTable.diceExpression} ({printTable.minResult}–{printTable.maxResult})
                 </p>
-                <table className="print-table-grid">
-                  <tbody>
-                    {printTable.entries.map((e) => (
-                      <tr key={e.id}>
-                        <td className="print-table-range">
-                          {e.minResult != null && e.maxResult != null
-                            ? `${e.minResult}–${e.maxResult}`
-                            : 'else'}
-                        </td>
-                        <td>
-                          {/* eslint-disable-next-line react/no-danger */}
-                          <div
-                            className="preview-body"
-                            dangerouslySetInnerHTML={{
-                              __html: renderLinkedMarkdown(e.body, titleLookup),
-                            }}
-                          />
-                          {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
-                            <p className="print-chain-note">
-                              ↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {tableEntriesGrid(printTable.entries)}
               </section>
             )}
 
             {printDeck && (
               <section className="print-map-section">
-                <div className="card-sheet">
-                  {printDeck.cards.map((c) => (
-                    <div key={c.id} className="deck-card">
-                      {c.title && <div className="deck-card-name">{c.title}</div>}
-                      {/* eslint-disable-next-line react/no-danger */}
-                      <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderLinkedMarkdown(c.body, titleLookup) }} />
-                      {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
-                        <p className="print-chain-note">
-                          ↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {deckCardSheet(printDeck.cards)}
               </section>
             )}
 
@@ -1122,33 +1267,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 <p className="print-kicker">
                   {t.diceExpression} ({t.minResult}–{t.maxResult})
                 </p>
-                <table className="print-table-grid">
-                  <tbody>
-                    {t.entries.map((e) => (
-                      <tr key={e.id}>
-                        <td className="print-table-range">
-                          {e.minResult != null && e.maxResult != null
-                            ? `${e.minResult}–${e.maxResult}`
-                            : 'else'}
-                        </td>
-                        <td>
-                          {/* eslint-disable-next-line react/no-danger */}
-                          <div
-                            className="preview-body"
-                            dangerouslySetInnerHTML={{
-                              __html: renderLinkedMarkdown(e.body, titleLookup),
-                            }}
-                          />
-                          {chainNote(e.nestedTableIds, e.nestedDeckIds) && (
-                            <p className="print-chain-note">
-                              ↳ see: {chainNote(e.nestedTableIds, e.nestedDeckIds)}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {tableEntriesGrid(t.entries)}
               </section>
             ))}
             {chainedForPrint.decks.length > 0 && (
@@ -1156,25 +1275,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 {chainedForPrint.decks.map((d) => (
                   <div key={d.id} style={{ marginBottom: '1rem' }}>
                     <h2>{d.title}</h2>
-                    <div className="card-sheet">
-                      {d.cards.map((c) => (
-                        <div key={c.id} className="deck-card">
-                          {c.title && <div className="deck-card-name">{c.title}</div>}
-                          {/* eslint-disable-next-line react/no-danger */}
-                          <div
-                            className="preview-body"
-                            dangerouslySetInnerHTML={{
-                              __html: renderLinkedMarkdown(c.body, titleLookup),
-                            }}
-                          />
-                          {chainNote(c.nestedTableIds, c.nestedDeckIds) && (
-                            <p className="print-chain-note">
-                              ↳ see: {chainNote(c.nestedTableIds, c.nestedDeckIds)}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {deckCardSheet(d.cards)}
                   </div>
                 ))}
               </section>

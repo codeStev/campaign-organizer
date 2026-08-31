@@ -55,7 +55,8 @@ class DraftArticleTextServiceTest {
         lenient().when(openRouter.configured()).thenReturn(true);
         // Empty settings -> DefaultProviderSettings.orDefaults() applies: groq then openrouter.
         lenient().when(settingsRepository.findAllOrderedByPriority()).thenReturn(List.of());
-        service = new DraftArticleTextService(List.of(groq, openRouter), settingsRepository);
+        service = new DraftArticleTextService(
+                new ProviderFallbackTextGenerator(List.of(groq, openRouter), settingsRepository));
     }
 
     @Test

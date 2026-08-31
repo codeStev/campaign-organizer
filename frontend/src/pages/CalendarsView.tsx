@@ -35,6 +35,8 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  // Read (rendered months) vs edit (the form) — mirrors WorldView's article mode.
+  const [mode, setMode] = useState<'read' | 'edit'>('read');
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -65,6 +67,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       daysPerWeek: calendar.daysPerWeek != null ? String(calendar.daysPerWeek) : '',
       months: calendar.months.map((m) => ({ ...m })),
     });
+    setMode('read');
   }
 
   // The URL is the source of truth for which calendar is open (ADR-0053). No
@@ -97,10 +100,9 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       months,
     };
     try {
-      if (draft.id) await api.update(draft.id, body);
-      else await api.create(body);
-      setDraft(EMPTY_DRAFT);
-      navigate(`/worlds/${worldId}/calendars`);
+      const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
+      edit(saved);
+      if (!draft.id) navigate(`/worlds/${worldId}/calendars/${saved.id}`);
       await refresh();
       toast.success(`Calendar "${body.name}" saved`);
     } catch (err) {
@@ -127,6 +129,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
         <Button
           onClick={() => {
             setDraft(EMPTY_DRAFT);
+            setMode('edit');
             navigate(`/worlds/${worldId}/calendars`);
           }}
         >
@@ -155,6 +158,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
 
       <div className="wiki-main">
         {error && <p className="error">{error}</p>}
+        {(mode === 'edit' || !draft.id) && (
         <form className="card" onSubmit={save}>
           <strong>{draft.id ? 'Edit calendar' : 'New calendar'}</strong>
           <Input
@@ -210,6 +214,19 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
               {draft.id ? 'Save calendar' : 'Create calendar'}
             </Button>
             {draft.id && (
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => {
+                  const saved = list.find((c) => c.id === draft.id);
+                  if (saved) edit(saved);
+                  else setMode('read');
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+            {draft.id && (
               <ConfirmDeleteDialog
                 trigger={
                   <Button type="button" variant="link" className="text-destructive hover:text-destructive">
@@ -223,6 +240,31 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
             )}
           </div>
         </form>
+        )}
+
+        {mode === 'read' && draft.id && (
+          <article className="article-read">
+            <div className="article-read-head">
+              <h2>{draft.name}</h2>
+              <Button type="button" onClick={() => setMode('edit')}>
+                Edit
+              </Button>
+            </div>
+            {draft.daysPerWeek && <p className="muted">{draft.daysPerWeek} days per week</p>}
+            {draft.months.length > 0 ? (
+              <dl className="print-stats">
+                {draft.months.map((month, i) => (
+                  <div key={i} className="print-stat">
+                    <dt>{month.name}</dt>
+                    <dd>{month.days} days</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="muted">(no months)</p>
+            )}
+          </article>
+        )}
       </div>
     </div>
   );

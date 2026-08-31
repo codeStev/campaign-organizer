@@ -930,6 +930,12 @@ export function aiApi(worldId: string) {
         method: 'POST',
         body: JSON.stringify({ instructions, existingContent, level, template }),
       }),
+    /** On-demand digest of a session's private GM notes (ADR-0082). Not persisted. */
+    summarizeSessionNotes: (notes: string) =>
+      request<DraftArticleTextResult>(`${base}/summarize-session-notes`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      }),
   };
 }
 

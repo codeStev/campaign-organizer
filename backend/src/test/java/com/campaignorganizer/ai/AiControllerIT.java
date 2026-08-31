@@ -142,6 +142,59 @@ class AiControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void summarizeRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"notes\":\"we found a map\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void summarize_blankNotesIs400() throws Exception {
+        stubProviderIds();
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"notes\":\"   \"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void summarize_successfulSummary_returnsTextAndProvider() throws Exception {
+        stubProviderIds();
+        Mockito.when(groq.configured()).thenReturn(true);
+        Mockito.when(groq.generate(anyString(), anyString(), anyString()))
+                .thenReturn(new com.campaignorganizer.ai.domain.DraftResult("The party found the map.", "groq"));
+
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"notes\":\"we found a map in the crypt\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.text").value("The party found the map."))
+                .andExpect(jsonPath("$.provider").value("groq"));
+    }
+
+    @Test
+    void summarize_everyProviderFailing_is503ProblemJson() throws Exception {
+        stubProviderIds();
+        Mockito.when(groq.configured()).thenReturn(true);
+        Mockito.when(openRouter.configured()).thenReturn(true);
+        Mockito.when(groq.generate(anyString(), anyString(), anyString()))
+                .thenThrow(new TextGenerationFailedException("down"));
+        Mockito.when(openRouter.generate(anyString(), anyString(), anyString()))
+                .thenThrow(new TextGenerationFailedException("down"));
+
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"notes\":\"we found a map in the crypt\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.title").value("AI unavailable"));
+    }
+
     /** The service map is keyed by providerId(); both mocks must identify themselves. */
     private void stubProviderIds() {
         Mockito.lenient().when(groq.providerId()).thenReturn("groq");
