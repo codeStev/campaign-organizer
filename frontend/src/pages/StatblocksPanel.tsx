@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { statblocksApi, Statblock, Campaign, FieldTemplate, FieldType } from '../api/client';
+import {
+  statblocksApi,
+  statblockTagsApi,
+  worldTagsApi,
+  Statblock,
+  Campaign,
+  FieldTemplate,
+  FieldType,
+} from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
 import { EncounterSheetView } from './EncounterSheetView';
 import { TemplateForm } from '../components/TemplateForm';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { TagInput, TagList } from '../components/TagInput';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
@@ -39,6 +48,7 @@ interface Draft {
   campaignId: string;
   templateId: string;
   rows: StatRow[];
+  tags: string[];
 }
 
 const EMPTY: Draft = {
@@ -48,6 +58,7 @@ const EMPTY: Draft = {
   campaignId: '',
   templateId: '',
   rows: [{ key: '', value: '' }],
+  tags: [],
 };
 
 function toRows(stats: Record<string, unknown>): StatRow[] {
@@ -82,7 +93,10 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   const [list, setList] = useState<Statblock[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [savedTags, setSavedTags] = useState<string[]>([]);
+  const [worldTags, setWorldTags] = useState<string[]>([]);
   const [filterCampaign, setFilterCampaign] = useState('');
+  const [filterTag, setFilterTag] = useState('');
   const [cardsOpen, setCardsOpen] = useState(false);
   // FR-44: encounter-sheet builder over the same selection as card printing.
   const [encounterOpen, setEncounterOpen] = useState(false);
@@ -125,19 +139,27 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
 
   const refresh = useCallback(async () => {
     try {
-      setList(await api.list(filterCampaign || undefined));
+      setList(await api.list({ campaignId: filterCampaign || undefined, tag: filterTag || undefined }));
     } catch (err) {
       onError(err);
     } finally {
       setLoading(false);
     }
-  }, [api, filterCampaign, onError]);
+  }, [api, filterCampaign, filterTag, onError]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  function edit(sb: Statblock) {
+  const loadWorldTags = useCallback(() => {
+    worldTagsApi(worldId).list().then(setWorldTags).catch(onError);
+  }, [worldId, onError]);
+
+  useEffect(() => {
+    loadWorldTags();
+  }, [loadWorldTags]);
+
+  function edit(sb: Statblock, tags: string[] = []) {
     setDraft({
       id: sb.id,
       name: sb.name,
@@ -145,14 +167,18 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       campaignId: sb.campaignId ?? '',
       templateId: sb.templateId ?? '',
       rows: toRows(sb.stats),
+      tags,
     });
+    setSavedTags(tags);
     setMode('read');
   }
 
   // The URL is the source of truth for which statblock is open (ADR-0053).
   useEffect(() => {
     if (!urlStatblockId || urlStatblockId === draft.id) return;
-    api.get(urlStatblockId).then(edit).catch(onError);
+    Promise.all([api.get(urlStatblockId), statblockTagsApi(worldId, urlStatblockId).get()])
+      .then(([sb, t]) => edit(sb, t.tags))
+      .catch(onError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlStatblockId]);
 
@@ -178,9 +204,11 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
     const wasNew = !draft.id;
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
-      edit(saved);
+      const tagResult = await statblockTagsApi(worldId, saved.id).set(draft.tags);
+      edit(saved, tagResult.tags);
       if (wasNew) navigate(`/worlds/${worldId}/sheets/statblocks/${saved.id}`);
       await refresh();
+      loadWorldTags();
       toast.success(`Statblock "${body.name}" saved`);
     } catch (err) {
       onError(err);
@@ -192,6 +220,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       await api.remove(sb.id);
       if (draft.id === sb.id) {
         setDraft(EMPTY);
+        setSavedTags([]);
         navigate(`/worlds/${worldId}/sheets/statblocks`);
       }
       await refresh();
@@ -210,6 +239,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         <Button
           onClick={() => {
             setDraft({ ...EMPTY, campaignId: filterCampaign });
+            setSavedTags([]);
             setMode('edit');
             navigate(`/worlds/${worldId}/sheets/statblocks`);
           }}
@@ -229,6 +259,21 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
               {campaigns.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {worldTags.length > 0 && (
+          <Select value={filterTag || NONE_VALUE} onValueChange={(v) => setFilterTag(v === NONE_VALUE ? '' : v)}>
+            <SelectTrigger title="Filter by tag">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>All tags</SelectItem>
+              {worldTags.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -375,6 +420,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
             >
               + Add stat
             </Button>
+            <TagInput worldId={worldId} value={draft.tags} onChange={(tags) => setDraft({ ...draft, tags })} />
             <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
             <div className="editor-actions">
               <Button onClick={save} disabled={!draft.name}>
@@ -386,7 +432,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                   variant="link"
                   onClick={() => {
                     const saved = list.find((s) => s.id === draft.id);
-                    if (saved) edit(saved);
+                    if (saved) edit(saved, savedTags);
                     else setMode('read');
                   }}
                 >
@@ -416,6 +462,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                 Edit
               </Button>
             </div>
+            <TagList worldId={worldId} tags={draft.tags} />
             {draft.campaignId && campaigns.length > 0 && (
               <p className="muted">
                 Campaign: {campaigns.find((c) => c.id === draft.campaignId)?.name ?? '—'}
