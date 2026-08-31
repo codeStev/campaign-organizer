@@ -60,6 +60,10 @@ tags:
     description: >-
       Prep-time AI text drafting via a cloud LLM (ADR-0064). Stateless;
       nothing here is persisted.
+  - name: tags
+    description: >-
+      Freeform, world-scoped folksonomy tags on articles and statblocks
+      (ADR-0083).
 
 paths:
   /auth/login:
@@ -1793,6 +1797,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: tag
+          in: query
+          required: false
+          description: Filter to statblocks carrying this tag (ADR-0083).
+          schema:
+            type: string
       responses:
         '200':
           description: Statblocks in the world, newest first.
@@ -1879,6 +1889,49 @@ paths:
       responses:
         '204':
           description: Statblock deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/statblocks/{statblockId}/tags:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/StatblockId'
+    get:
+      tags: [tags]
+      summary: Get a statblock's tags
+      operationId: getStatblockTags
+      responses:
+        '200':
+          description: The statblock's tags (ADR-0083).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTags'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [tags]
+      summary: Replace a statblock's tags
+      operationId: setStatblockTags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityTagsRequest'
+      responses:
+        '200':
+          description: The statblock's tags, replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTags'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2298,6 +2351,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: tag
+          in: query
+          required: false
+          description: Filter to articles carrying this tag (ADR-0083).
+          schema:
+            type: string
       responses:
         '200':
           description: Matching articles (summaries), newest first.
@@ -2476,6 +2535,101 @@ paths:
       responses:
         '204':
           description: Article deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}/tags:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    get:
+      tags: [tags]
+      summary: Get an article's tags
+      operationId: getArticleTags
+      responses:
+        '200':
+          description: The article's tags (ADR-0083).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTags'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [tags]
+      summary: Replace an article's tags
+      operationId: setArticleTags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityTagsRequest'
+      responses:
+        '200':
+          description: The article's tags, replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTags'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/tags:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [tags]
+      summary: List a world's distinct tag names
+      description: >-
+        Every distinct tag name used anywhere in the world (articles and
+        statblocks), for autocomplete (ADR-0083).
+      operationId: listWorldTags
+      responses:
+        '200':
+          description: Distinct tag names, alphabetical.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/tags/{tagName}/entities:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: tagName
+        in: path
+        required: true
+        description: The tag name to browse (case-insensitive).
+        schema:
+          type: string
+    get:
+      tags: [tags]
+      summary: Browse everything tagged with a given tag, across entity types
+      description: >-
+        Cross-entity browse view (ADR-0083): every article and statblock in
+        the world carrying this tag.
+      operationId: browseTag
+      responses:
+        '200':
+          description: Articles and statblocks carrying this tag.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagBrowseResult'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -3234,6 +3388,42 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    EntityTags:
+      type: object
+      required: [tags]
+      description: Tag names are trimmed and lower-cased (ADR-0083).
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+
+    EntityTagsRequest:
+      type: object
+      required: [tags]
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+
+    TagBrowseResult:
+      type: object
+      required: [tag, articles, statblocks]
+      properties:
+        tag:
+          type: string
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+        statblocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Statblock'
 
     CharacterSheetRequest:
       type: object
