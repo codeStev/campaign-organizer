@@ -800,6 +800,36 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
   };
 }
 
+export type LooseThreadStatus = 'OPEN' | 'RESOLVED' | 'ABANDONED';
+export const LOOSE_THREAD_STATUSES: LooseThreadStatus[] = ['OPEN', 'RESOLVED', 'ABANDONED'];
+
+export interface LooseThread {
+  id: string;
+  sessionId: string;
+  campaignId: string;
+  text: string;
+  status: LooseThreadStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LooseThreadRequest {
+  text: string;
+  status?: LooseThreadStatus;
+}
+
+export function looseThreadsApi(worldId: string, campaignId: string, sessionId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions/${sessionId}/loose-threads`;
+  return {
+    list: () => request<LooseThread[]>(base),
+    create: (body: LooseThreadRequest) =>
+      request<LooseThread>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: LooseThreadRequest) =>
+      request<LooseThread>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 // ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
 
 export type TemplateKind = 'CHARACTER' | 'STATBLOCK';
