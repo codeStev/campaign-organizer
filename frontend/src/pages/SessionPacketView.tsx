@@ -4,7 +4,14 @@ import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMen
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { CheckTreeNode, CheckTreeRow } from '../components/CheckTree';
-import { sessionsApi, fieldTemplatesApi, SessionPacket, FieldTemplate, PacketArticle, Statblock } from '../api/client';
+import {
+  sessionsApi,
+  fieldTemplatesApi,
+  SessionPacket,
+  FieldTemplate,
+  PacketArticle,
+  Statblock,
+} from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
 import { renderMarkdown } from '../lib/markdown';
 
@@ -115,6 +122,11 @@ function buildPacketTree(packet: SessionPacket): CheckTreeNode[] {
     label: h.title,
     children: [],
   }));
+  const clockNodes: CheckTreeNode[] = packet.clocks.map((c) => ({
+    id: `clock:${c.id}`,
+    label: c.title,
+    children: [],
+  }));
 
   return [
     ...beatNodes,
@@ -124,6 +136,7 @@ function buildPacketTree(packet: SessionPacket): CheckTreeNode[] {
     ...rollTableNodes,
     ...cardDeckNodes,
     ...handoutNodes,
+    ...clockNodes,
   ];
 }
 
@@ -191,6 +204,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
   );
   const shownHandouts = useMemo(
     () => packet?.handouts.filter((h) => !excludedIds.has(`handout:${h.id}`)) ?? [],
+    [packet, excludedIds],
+  );
+  const shownClocks = useMemo(
+    () => packet?.clocks.filter((c) => !excludedIds.has(`clock:${c.id}`)) ?? [],
     [packet, excludedIds],
   );
 
@@ -446,6 +463,36 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                 </div>
               </section>
             ))}
+
+            {shownClocks.length > 0 && (
+              <section className="print-map-section">
+                <h1>Clocks</h1>
+                <p className="print-kicker">blank for hand-marking at the table</p>
+                {shownClocks.map((c) => (
+                  <div key={c.id} className="print-clock">
+                    <h2>{c.title}</h2>
+                    {c.description && <p className="print-kicker">{c.description}</p>}
+                    <div className="circle-tracker">
+                      {c.segments.map((_, i) => (
+                        <span key={i} className="pip read-only" title={`${i + 1}`} />
+                      ))}
+                    </div>
+                    {c.segments.some((s) => s.title) && (
+                      <ol className="print-map-legend">
+                        {c.segments.map((s, i) =>
+                          s.title ? (
+                            <li key={i}>
+                              {i + 1}: {s.title}
+                              {s.description ? ` — ${s.description}` : ''}
+                            </li>
+                          ) : null,
+                        )}
+                      </ol>
+                    )}
+                  </div>
+                ))}
+              </section>
+            )}
           </>
         )}
       </div>
