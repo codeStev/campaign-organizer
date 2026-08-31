@@ -588,6 +588,30 @@ export interface BeatRequest {
   position?: number | null;
 }
 
+export interface ClockSegment {
+  filled: boolean;
+  title?: string | null;
+  description?: string | null;
+}
+
+export interface Clock {
+  id: string;
+  campaignId: string;
+  title: string;
+  description?: string | null;
+  segments: ClockSegment[];
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClockRequest {
+  title: string;
+  description?: string | null;
+  segments: ClockSegment[];
+  position?: number | null;
+}
+
 export function campaignsApi(worldId: string) {
   const base = `/worlds/${worldId}/campaigns`;
   return {
@@ -664,6 +688,19 @@ export interface PacketHandout {
   body: string;
 }
 
+/** No `filled` field - the packet prints a blank diagram for hand-marking (ADR-0084). */
+export interface PacketClockSegment {
+  title?: string | null;
+  description?: string | null;
+}
+
+export interface PacketClock {
+  id: string;
+  title: string;
+  description?: string | null;
+  segments: PacketClockSegment[];
+}
+
 export interface SessionPacket {
   session: Session;
   campaignName: string;
@@ -674,6 +711,7 @@ export interface SessionPacket {
   rollTables: PacketRollTable[];
   cardDecks: PacketCardDeck[];
   handouts: PacketHandout[];
+  clocks: PacketClock[];
 }
 
 export function sessionsApi(worldId: string, campaignId: string) {
@@ -734,6 +772,18 @@ export function arcsApi(worldId: string, campaignId: string) {
       request<Arc>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: ArcRequest) =>
       request<Arc>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function clocksApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/clocks`;
+  return {
+    list: () => request<Clock[]>(base),
+    create: (body: ClockRequest) =>
+      request<Clock>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: ClockRequest) =>
+      request<Clock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
