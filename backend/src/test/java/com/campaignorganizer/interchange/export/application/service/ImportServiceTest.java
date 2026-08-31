@@ -14,8 +14,11 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
+import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
+import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
@@ -113,6 +116,8 @@ class ImportServiceTest {
     private TagImportPort tagImportPort;
     @Mock
     private ClockImportPort clockImportPort;
+    @Mock
+    private LooseThreadImportPort looseThreadImportPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -126,7 +131,7 @@ class ImportServiceTest {
                 arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
-                cheatSheetImportPort, tagImportPort, clockImportPort);
+                cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort);
     }
 
     @Test
@@ -286,6 +291,42 @@ class ImportServiceTest {
         assertThat(imported.segments()).containsExactly(
                 new ClockSegmentView(true, null, null),
                 new ClockSegmentView(false, "Alarm", "Guards notice"));
+    }
+
+    @Test
+    void remapsLooseThreadSessionAndCampaignIds() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldSessionId = UUID.randomUUID();
+        UUID oldThreadId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null, now, now)));
+        bundle.put("sessions", List.of(
+                new SessionView(oldSessionId, oldCampaignId, "Session 1", 1, null, null, null, now, now)));
+        bundle.put("looseThreads", List.of(new LooseThreadView(oldThreadId, oldSessionId, oldCampaignId,
+                "A stranger left a coin", "OPEN", now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "arcs", "beats", "clocks",
+                "fieldTemplates", "characterSheets", "statblocks", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<LooseThreadView> threadCaptor = ArgumentCaptor.forClass(LooseThreadView.class);
+        verify(looseThreadImportPort).importLooseThread(threadCaptor.capture());
+        LooseThreadView imported = threadCaptor.getValue();
+        assertThat(imported.id()).isNotEqualTo(oldThreadId);
+        assertThat(imported.sessionId()).isNotEqualTo(oldSessionId);
+        assertThat(imported.campaignId()).isNotEqualTo(oldCampaignId);
+        assertThat(imported.text()).isEqualTo("A stranger left a coin");
+        assertThat(imported.status()).isEqualTo("OPEN");
     }
 
     /** Chains live in JSONB without FKs — dangling ids import as dropped refs. */

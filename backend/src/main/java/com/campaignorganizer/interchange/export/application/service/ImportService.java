@@ -8,6 +8,8 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
+import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
+import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -99,6 +101,7 @@ public class ImportService implements ImportBackupUseCase {
     private final CheatSheetImportPort cheatSheetImportPort;
     private final TagImportPort tagImportPort;
     private final ClockImportPort clockImportPort;
+    private final LooseThreadImportPort looseThreadImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -112,7 +115,7 @@ public class ImportService implements ImportBackupUseCase {
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
             CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
-            ClockImportPort clockImportPort) {
+            ClockImportPort clockImportPort, LooseThreadImportPort looseThreadImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -138,6 +141,7 @@ public class ImportService implements ImportBackupUseCase {
         this.cheatSheetImportPort = cheatSheetImportPort;
         this.tagImportPort = tagImportPort;
         this.clockImportPort = clockImportPort;
+        this.looseThreadImportPort = looseThreadImportPort;
     }
 
     @Override
@@ -184,6 +188,7 @@ public class ImportService implements ImportBackupUseCase {
         List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
         List<TagView> tags = readList(root, "tags", TagView.class);
         List<ClockView> clocks = readList(root, "clocks", ClockView.class);
+        List<LooseThreadView> looseThreads = readList(root, "looseThreads", LooseThreadView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -212,6 +217,7 @@ public class ImportService implements ImportBackupUseCase {
         cheatSheets.forEach(cs -> remap.assign(cs.id()));
         tags.forEach(t -> remap.assign(t.id()));
         clocks.forEach(c -> remap.assign(c.id()));
+        looseThreads.forEach(t -> remap.assign(t.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -291,6 +297,13 @@ public class ImportService implements ImportBackupUseCase {
         for (ClockView c : clocks) {
             clockImportPort.importClock(new ClockView(remap.get(c.id()), remap.get(c.campaignId()),
                     c.title(), c.description(), c.segments(), c.position(), c.createdAt(), c.updatedAt()));
+        }
+
+        // Loose threads (FR-49): both sessionId and campaignId are remapped.
+        for (LooseThreadView t : looseThreads) {
+            looseThreadImportPort.importLooseThread(new LooseThreadView(remap.get(t.id()),
+                    remap.get(t.sessionId()), remap.get(t.campaignId()), t.text(), t.status(),
+                    t.createdAt(), t.updatedAt()));
         }
 
         for (FieldTemplateView f : fieldTemplates) {
