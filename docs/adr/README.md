@@ -74,6 +74,7 @@ the old one.
 | [0065](0065-ai-provider-settings.md) | AI provider settings (model + priority), user-editable (amends ADR-0064's no-persistence premise) | Accepted |
 | [0083](0083-folksonomy-tags.md) | Folksonomy tags for articles/statblocks (new `tagging` bounded context) | Accepted |
 | [0084](0084-clocks.md) | Clocks — segmented, labeled progress trackers (amends ADR-0036) | Accepted |
+| [0085](0085-loose-threads.md) | Loose threads — retrospective session tracker, denormalized campaign_id | Accepted |
 
 ## Template
 

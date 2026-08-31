@@ -235,6 +235,14 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   updating in-app afterward. A future per-campaign dashboard (FR-67, not
   yet built) will surface the next unfilled segment's label as a prep
   hint via the same query port. (ADR-0084; amends ADR-0036/FR-28)
+- **FR-49 Loose threads.** A retrospective (not prospective, unlike beats)
+  capture of things improvised at the table that players latched onto:
+  quick-add lives in the session's own edit view alongside GM notes, zero
+  extra navigation, persisting immediately. Three-state status (open/
+  resolved/abandoned). No forced structural link to beats or articles —
+  when a thread earns real content, that's just a normal new article. Not
+  surfaced in ArcBoard for v1; a future per-campaign dashboard (FR-67, not
+  yet built) will list open threads via the same query port. (ADR-0085)
 
 ---
 
