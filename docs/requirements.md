@@ -224,6 +224,17 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   cross-entity "browse by tag" view across articles and statblocks together,
   included from the start. No tag management screen (no global rename/
   merge/delete) and no tags in print output. (ADR-0083)
+- **FR-48 Clocks.** Segmented, labeled progress trackers (Blades in the
+  Dark-style): per-campaign scope, a flat list alongside Story Arcs, any
+  GM-chosen segment count, each segment optionally titled/described,
+  persisting across sessions with no session-boundary reset, always
+  filling up from empty (a "countdown to doom" is just how the clock is
+  named, not an app-enforced direction). Print-trackable: the session
+  packet gets an always-included Clocks section rendering a blank
+  segmented diagram per campaign clock, for hand-marking at the table and
+  updating in-app afterward. A future per-campaign dashboard (FR-67, not
+  yet built) will surface the next unfilled segment's label as a prep
+  hint via the same query port. (ADR-0084; amends ADR-0036/FR-28)
 
 ---
 
