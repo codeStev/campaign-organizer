@@ -25,6 +25,9 @@ import com.campaignorganizer.tables.application.carddeck.port.published.DeckCard
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
+import com.campaignorganizer.tagging.application.port.published.TagImportPort;
+import com.campaignorganizer.tagging.application.port.published.TagView;
+import com.campaignorganizer.tagging.domain.EntityType;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
@@ -102,6 +105,8 @@ class ImportServiceTest {
     private HandoutImportPort handoutImportPort;
     @Mock
     private CheatSheetImportPort cheatSheetImportPort;
+    @Mock
+    private TagImportPort tagImportPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -115,7 +120,7 @@ class ImportServiceTest {
                 arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
-                cheatSheetImportPort);
+                cheatSheetImportPort, tagImportPort);
     }
 
     @Test
@@ -194,6 +199,51 @@ class ImportServiceTest {
 
         assertThatThrownBy(() -> service.importWorld(json, Map.of()))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void remapsTagEntityIdsToTheirNewArticleOrStatblockId() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldArticleId = UUID.randomUUID();
+        UUID oldStatblockId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, null, null,
+                "Tortuga", "tortuga", "LOCATION", "Plain.", now, now)));
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+                null, "Goblin", Map.of(), null, now, now)));
+        bundle.put("tags", List.of(
+                new TagView(UUID.randomUUID(), oldWorldId, EntityType.ARTICLE, oldArticleId, "npc", now),
+                new TagView(UUID.randomUUID(), oldWorldId, EntityType.STATBLOCK, oldStatblockId, "npc",
+                        now)));
+        for (String key : List.of("media", "categories", "maps", "mapPins", "calendars", "timelines",
+                "timelineEvents", "relationships", "campaigns", "sessions", "arcs", "beats",
+                "fieldTemplates", "characterSheets", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<ArticleView> articleCaptor = ArgumentCaptor.forClass(ArticleView.class);
+        verify(articleImportPort).importArticle(articleCaptor.capture());
+        UUID newArticleId = articleCaptor.getValue().id();
+
+        ArgumentCaptor<StatblockView> statblockCaptor = ArgumentCaptor.forClass(StatblockView.class);
+        verify(statblockImportPort).importStatblock(statblockCaptor.capture());
+        UUID newStatblockId = statblockCaptor.getValue().id();
+
+        ArgumentCaptor<TagView> tagCaptor = ArgumentCaptor.forClass(TagView.class);
+        verify(tagImportPort, times(2)).importTag(tagCaptor.capture());
+        List<TagView> importedTags = tagCaptor.getAllValues();
+        assertThat(importedTags)
+                .extracting(TagView::entityId)
+                .containsExactlyInAnyOrder(newArticleId, newStatblockId);
+        assertThat(importedTags).allMatch(t -> t.name().equals("npc") && t.worldId().equals(
+                articleCaptor.getValue().worldId()));
     }
 
     /** Chains live in JSONB without FKs — dangling ids import as dropped refs. */

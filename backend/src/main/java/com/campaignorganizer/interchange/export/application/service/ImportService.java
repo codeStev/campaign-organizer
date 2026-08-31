@@ -27,6 +27,8 @@ import com.campaignorganizer.tables.application.carddeck.port.published.DeckCard
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
+import com.campaignorganizer.tagging.application.port.published.TagImportPort;
+import com.campaignorganizer.tagging.application.port.published.TagView;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
@@ -93,6 +95,7 @@ public class ImportService implements ImportBackupUseCase {
     private final CardDeckImportPort cardDeckImportPort;
     private final HandoutImportPort handoutImportPort;
     private final CheatSheetImportPort cheatSheetImportPort;
+    private final TagImportPort tagImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -105,7 +108,7 @@ public class ImportService implements ImportBackupUseCase {
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
-            CheatSheetImportPort cheatSheetImportPort) {
+            CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -129,6 +132,7 @@ public class ImportService implements ImportBackupUseCase {
         this.cardDeckImportPort = cardDeckImportPort;
         this.handoutImportPort = handoutImportPort;
         this.cheatSheetImportPort = cheatSheetImportPort;
+        this.tagImportPort = tagImportPort;
     }
 
     @Override
@@ -173,6 +177,7 @@ public class ImportService implements ImportBackupUseCase {
         List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
         List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
         List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
+        List<TagView> tags = readList(root, "tags", TagView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -199,6 +204,7 @@ public class ImportService implements ImportBackupUseCase {
         cardDecks.forEach(d -> remap.assign(d.id()));
         handouts.forEach(h -> remap.assign(h.id()));
         cheatSheets.forEach(cs -> remap.assign(cs.id()));
+        tags.forEach(t -> remap.assign(t.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -291,6 +297,13 @@ public class ImportService implements ImportBackupUseCase {
                     remap.getOrNull(s.articleId()), remap.getOrNull(s.campaignId()),
                     remap.getOrNull(s.templateId()), s.name(), s.stats(), s.notes(), s.createdAt(),
                     s.updatedAt()));
+        }
+
+        // Folksonomy tags (FR-47): entityId points at an already-remapped
+        // article or statblock id from the same pass.
+        for (TagView t : tags) {
+            tagImportPort.importTag(new TagView(remap.get(t.id()), newWorldId, t.entityType(),
+                    remap.get(t.entityId()), t.name(), t.createdAt()));
         }
 
         // Tables and decks before beats: beats reference them (FR-40). Nested

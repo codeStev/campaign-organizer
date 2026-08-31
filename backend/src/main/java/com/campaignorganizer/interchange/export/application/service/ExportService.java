@@ -15,6 +15,7 @@ import com.campaignorganizer.interchange.export.application.port.in.ExportWorldU
 import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
+import com.campaignorganizer.tagging.application.port.published.TagQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardQueryPort;
@@ -69,6 +70,7 @@ public class ExportService implements ExportWorldUseCase {
     private final CardDeckQueryPort cardDecks;
     private final HandoutQueryPort handouts;
     private final CheatSheetQueryPort cheatSheets;
+    private final TagQueryPort tags;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
@@ -78,7 +80,8 @@ public class ExportService implements ExportWorldUseCase {
                          FieldTemplateQueryPort fieldTemplates, CharacterSheetQueryPort characterSheets,
                          StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
-                         HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets) {
+                         HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
+                         TagQueryPort tags) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -100,6 +103,7 @@ public class ExportService implements ExportWorldUseCase {
         this.cardDecks = cardDecks;
         this.handouts = handouts;
         this.cheatSheets = cheatSheets;
+        this.tags = tags;
     }
 
     @Override
@@ -163,6 +167,8 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("cardDecks", cardDecks.findByWorld(worldId));
         // Player-facing props (FR-46).
         bundle.put("handouts", handouts.findByWorld(worldId));
+        // Folksonomy tags on articles/statblocks (FR-47).
+        bundle.put("tags", tags.findByWorld(worldId));
 
         return new WorldExportBundle(world.name(), bundle);
     }
