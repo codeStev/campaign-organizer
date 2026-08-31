@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { SessionLog } from './SessionLog';
 import { ArcBoard } from './ArcBoard';
+import { ClockBoard } from './ClockBoard';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
@@ -203,6 +204,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               onOpenArticle={onOpenArticle}
               onError={handleError}
             />
+            <ClockBoard worldId={worldId} campaignId={selected.id} onError={handleError} />
           </>
         )}
       </div>
