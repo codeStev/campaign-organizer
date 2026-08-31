@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   looseThreadsApi,
   LooseThread,
@@ -46,8 +46,7 @@ export function LooseThreadsPanel({ worldId, campaignId, sessionId, onError, rea
     void refresh();
   }, [refresh]);
 
-  async function addThread(e: FormEvent) {
-    e.preventDefault();
+  async function addThread() {
     const trimmed = text.trim();
     if (!trimmed) return;
     try {
@@ -57,6 +56,13 @@ export function LooseThreadsPanel({ worldId, campaignId, sessionId, onError, rea
       toast.success('Loose thread added');
     } catch (err) {
       onError(err);
+    }
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      void addThread();
     }
   }
 
@@ -146,16 +152,17 @@ export function LooseThreadsPanel({ worldId, campaignId, sessionId, onError, rea
         )}
         {!loading && threads.length === 0 && <li className="muted">No loose threads yet.</li>}
       </ul>
-      <form className="beat-form" onSubmit={addThread}>
+      <div className="beat-form">
         <Input
           placeholder="Something happened… (Enter to log it)"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
         />
-        <Button type="submit" disabled={!text.trim()}>
+        <Button type="button" disabled={!text.trim()} onClick={() => void addThread()}>
           Add
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
