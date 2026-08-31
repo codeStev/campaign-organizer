@@ -3,6 +3,7 @@ import { aiApi, arcsApi, sessionsApi, Beat, Session } from '../api/client';
 import { SessionPacketView } from './SessionPacketView';
 import { RecapView } from './RecapView';
 import { CheatSheetView } from './CheatSheetView';
+import { LooseThreadsPanel } from '../components/LooseThreadsPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { fetchCampaignBeats } from '../lib/beats';
@@ -210,6 +211,14 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
             <span className="muted">GM notes (private)</span>
             <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
           </label>
+          {draft.id && (
+            <LooseThreadsPanel
+              worldId={worldId}
+              campaignId={campaignId}
+              sessionId={draft.id}
+              onError={onError}
+            />
+          )}
           <div className="editor-actions">
             <Button type="submit" disabled={!draft.title}>
               {draft.id ? 'Save session' : 'Add session'}
@@ -309,6 +318,14 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
               <p>{summaryText}</p>
             </div>
           )}
+
+          <LooseThreadsPanel
+            worldId={worldId}
+            campaignId={campaignId}
+            sessionId={openSession.id}
+            onError={onError}
+            readOnly
+          />
         </article>
       )}
 

@@ -1152,6 +1152,35 @@ button:disabled {
   border-color: var(--destructive);
 }
 
+.loose-threads {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.loose-thread-status {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--input);
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.lt-open {
+  color: var(--muted-foreground);
+}
+.lt-resolved {
+  color: #6ad39f;
+  border-color: #6ad39f;
+}
+.lt-abandoned {
+  color: var(--destructive);
+  border-color: var(--destructive);
+}
+
 .arc-beats {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
