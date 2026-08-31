@@ -165,11 +165,12 @@ export interface Usage {
 export function articlesApi(worldId: string) {
   const base = `/worlds/${worldId}/articles`;
   return {
-    list: (params?: { categoryId?: string; q?: string; campaignId?: string }) => {
+    list: (params?: { categoryId?: string; q?: string; campaignId?: string; tag?: string }) => {
       const search = new URLSearchParams();
       if (params?.categoryId) search.set('categoryId', params.categoryId);
       if (params?.q) search.set('q', params.q);
       if (params?.campaignId) search.set('campaignId', params.campaignId);
+      if (params?.tag) search.set('tag', params.tag);
       const qs = search.toString();
       return request<ArticleSummary[]>(qs ? `${base}?${qs}` : base);
     },
@@ -886,14 +887,60 @@ export function characterSheetsApi(worldId: string) {
 export function statblocksApi(worldId: string) {
   const base = `/worlds/${worldId}/statblocks`;
   return {
-    list: (campaignId?: string) =>
-      request<Statblock[]>(campaignId ? `${base}?campaignId=${campaignId}` : base),
+    list: (params?: { campaignId?: string; tag?: string }) => {
+      const search = new URLSearchParams();
+      if (params?.campaignId) search.set('campaignId', params.campaignId);
+      if (params?.tag) search.set('tag', params.tag);
+      const qs = search.toString();
+      return request<Statblock[]>(qs ? `${base}?${qs}` : base);
+    },
     get: (id: string) => request<Statblock>(`${base}/${id}`),
     create: (body: StatblockRequest) =>
       request<Statblock>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: StatblockRequest) =>
       request<Statblock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+// ---- Tags (ADR-0083, FR-47): freeform, world-scoped folksonomy tags ----
+
+export interface EntityTags {
+  tags: string[];
+}
+
+export interface TagBrowseResult {
+  tag: string;
+  articles: ArticleSummary[];
+  statblocks: Statblock[];
+}
+
+function entityTagsApi(base: string) {
+  return {
+    get: () => request<EntityTags>(`${base}/tags`),
+    set: (tags: string[]) =>
+      request<EntityTags>(`${base}/tags`, { method: 'PUT', body: JSON.stringify({ tags }) }),
+  };
+}
+
+export function articleTagsApi(worldId: string, articleId: string) {
+  return entityTagsApi(`/worlds/${worldId}/articles/${articleId}`);
+}
+
+export function statblockTagsApi(worldId: string, statblockId: string) {
+  return entityTagsApi(`/worlds/${worldId}/statblocks/${statblockId}`);
+}
+
+export function worldTagsApi(worldId: string) {
+  return {
+    list: () => request<string[]>(`/worlds/${worldId}/tags`),
+  };
+}
+
+export function tagBrowseApi(worldId: string) {
+  return {
+    entities: (tagName: string) =>
+      request<TagBrowseResult>(`/worlds/${worldId}/tags/${encodeURIComponent(tagName)}/entities`),
   };
 }
 
