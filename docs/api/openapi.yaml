@@ -44,6 +44,9 @@ tags:
     description: Gamemaster campaigns and their play sessions.
   - name: arcs
     description: Story arcs and their ordered beats within a campaign.
+  - name: clocks
+    description: >-
+      Segmented, labeled progress trackers scoped to a campaign (ADR-0084).
   - name: sheets
     description: Schema-driven character sheet templates and character sheets.
   - name: dice
@@ -2238,6 +2241,91 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/clocks:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [clocks]
+      summary: List a campaign's clocks (ordered)
+      operationId: listClocks
+      responses:
+        '200':
+          description: Clocks ordered by position.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Clock'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [clocks]
+      summary: Create a clock
+      operationId: createClock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClockRequest'
+      responses:
+        '201':
+          description: Clock created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Clock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/clocks/{clockId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/ClockId'
+    put:
+      tags: [clocks]
+      summary: Update a clock (title, description, segments, position)
+      operationId: updateClock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClockRequest'
+      responses:
+        '200':
+          description: Clock updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Clock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [clocks]
+      summary: Delete a clock
+      operationId: deleteClock
+      responses:
+        '204':
+          description: Clock deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/categories:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -2925,6 +3013,14 @@ components:
       schema:
         type: string
         format: uuid
+    ClockId:
+      name: clockId
+      in: path
+      required: true
+      description: Identifier of the clock.
+      schema:
+        type: string
+        format: uuid
     BeatId:
       name: beatId
       in: path
@@ -3526,6 +3622,68 @@ components:
           type: string
           format: date-time
 
+    ClockSegment:
+      type: object
+      required: [filled]
+      description: >-
+        A single wedge of a clock. Most segments are unlabeled generic
+        progress; only narratively meaningful ones carry a title (ADR-0084).
+      properties:
+        filled:
+          type: boolean
+        title:
+          type: [string, "null"]
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+
+    ClockRequest:
+      type: object
+      required: [title, segments]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          maxLength: 5000
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClockSegment'
+        position:
+          type: [integer, "null"]
+          description: Ordering index within the campaign.
+
+    Clock:
+      type: object
+      required: [id, campaignId, title, segments, position, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClockSegment'
+        position:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     BeatRequest:
       type: object
       required: [title]
@@ -3887,9 +4045,39 @@ components:
         body:
           type: string
 
+    PacketClockSegment:
+      type: object
+      description: >-
+        Deliberately carries no fill state - the packet prints a blank
+        diagram for hand-marking at the table (ADR-0084).
+      properties:
+        title:
+          type: [string, "null"]
+        description:
+          type: [string, "null"]
+
+    PacketClock:
+      type: object
+      required: [id, title, segments]
+      description: >
+        One of the campaign's clocks (ADR-0084), included unconditionally
+        (not filtered by beat reference, like the packet's statblocks).
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketClockSegment'
+
     SessionPacket:
       type: object
-      required: [session, campaignName, beats, articles, maps, statblocks, rollTables, cardDecks, handouts]
+      required: [session, campaignName, beats, articles, maps, statblocks, rollTables, cardDecks, handouts, clocks]
       description: Everything needed to run one session, aggregated for print.
       properties:
         session:
@@ -3929,6 +4117,13 @@ components:
           description: Handouts tagged to this session (ADR-0077).
           items:
             $ref: '#/components/schemas/PacketHandout'
+        clocks:
+          type: array
+          description: >-
+            All of the campaign's clocks (ADR-0084), unconditionally - a
+            clock has no beat linkage to filter by.
+          items:
+            $ref: '#/components/schemas/PacketClock'
 
     RollTableEntryInput:
       type: object
