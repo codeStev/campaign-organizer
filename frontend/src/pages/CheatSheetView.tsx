@@ -23,11 +23,10 @@ import {
   FieldTemplate,
   rollTablesApi,
   RollTable,
-  RollTableEntry,
   statblocksApi,
   Statblock,
 } from '../api/client';
-import { orderedStatEntries } from '../lib/statblockDisplay';
+import { cardLabel, entryRange, statblockLine } from '../lib/cheatSheetDisplay';
 import { renderLinkedMarkdown, renderMarkdown } from '../lib/markdown';
 import { toast } from 'sonner';
 
@@ -56,31 +55,6 @@ const EMPTY_ADD = {
   deckId: '',
   cardId: '',
 };
-
-/** "2–7" / "≤12" / "—" for a table row's printed range. */
-function entryRange(e: RollTableEntry): string {
-  if (e.minResult == null && e.maxResult == null) return '—';
-  if (e.minResult != null && (e.maxResult == null || e.minResult === e.maxResult)) {
-    return String(e.minResult);
-  }
-  if (e.minResult == null) return `≤${e.maxResult}`;
-  return `${e.minResult}–${e.maxResult}`;
-}
-
-function cardLabel(c: { title?: string | null; body: string }): string {
-  if (c.title) return c.title;
-  const plain = c.body.replace(/[#*_>`[\]]/g, '').trim();
-  return plain.length > 48 ? `${plain.slice(0, 48)}…` : plain || '(untitled card)';
-}
-
-/** Condensed "AC 15 · HP 7 · Speed 30 ft" line for a referenced statblock. */
-function statblockLine(sb: Statblock, templates: FieldTemplate[]): string {
-  return orderedStatEntries(sb.stats, sb.templateId, templates)
-    .filter((e) => e.type !== 'TEXTAREA' && String(e.value).trim() !== '')
-    .slice(0, 8)
-    .map((e) => `${e.label} ${String(e.value)}`)
-    .join(' · ');
-}
 
 /**
  * Editor + printable one-page sheet for one session (FR-37): an ordered list
