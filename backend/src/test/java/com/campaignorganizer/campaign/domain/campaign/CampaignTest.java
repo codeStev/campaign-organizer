@@ -17,19 +17,28 @@ class CampaignTest {
     @Test
     void updateBumpsUpdatedAt() {
         Campaign c = Campaign.create(UUID.randomUUID(), UUID.randomUUID(), "Rise of the Dragon",
-                "desc", "notes", T0);
-        c.update("Fall of the Dragon", "desc2", "notes2", T1);
+                "desc", "notes", CampaignStatus.ACTIVE, T0);
+        c.update("Fall of the Dragon", "desc2", "notes2", CampaignStatus.ON_HIATUS, T1);
 
         assertThat(c.getName()).isEqualTo("Fall of the Dragon");
         assertThat(c.getNotes()).isEqualTo("notes2");
+        assertThat(c.getStatus()).isEqualTo(CampaignStatus.ON_HIATUS);
         assertThat(c.getCreatedAt()).isEqualTo(T0);
         assertThat(c.getUpdatedAt()).isEqualTo(T1);
     }
 
     @Test
+    void defaultsStatusToPlannedWhenNull() {
+        Campaign c = Campaign.create(UUID.randomUUID(), UUID.randomUUID(), "Rise of the Dragon",
+                "desc", "notes", null, T0);
+
+        assertThat(c.getStatus()).isEqualTo(CampaignStatus.PLANNED);
+    }
+
+    @Test
     void rejectsBlankName() {
         assertThatThrownBy(() ->
-                Campaign.create(UUID.randomUUID(), UUID.randomUUID(), " ", null, null, T0))
+                Campaign.create(UUID.randomUUID(), UUID.randomUUID(), " ", null, null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

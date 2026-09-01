@@ -34,6 +34,7 @@ class CampaignControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Echoes of Chaos"))
                 .andExpect(jsonPath("$.notes").value("Beware the dragons."))
+                .andExpect(jsonPath("$.status").value("PLANNED"))
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(created, "$.id");
 
@@ -44,10 +45,11 @@ class CampaignControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(put("/api/worlds/{w}/campaigns/{c}", worldId, id)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Echoes (rev)\",\"description\":\"main run\"}"))
+                        .content("{\"name\":\"Echoes (rev)\",\"description\":\"main run\",\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Echoes (rev)"))
-                .andExpect(jsonPath("$.description").value("main run"));
+                .andExpect(jsonPath("$.description").value("main run"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         mockMvc.perform(delete("/api/worlds/{w}/campaigns/{c}", worldId, id)
                         .header(HttpHeaders.AUTHORIZATION, auth))

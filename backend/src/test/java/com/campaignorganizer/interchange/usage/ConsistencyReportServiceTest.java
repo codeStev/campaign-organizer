@@ -14,6 +14,7 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPor
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.interchange.usage.application.port.in.ConsistencyDtos.ArticleIssue;
 import com.campaignorganizer.interchange.usage.application.port.in.ConsistencyDtos.ConsistencyReport;
 import com.campaignorganizer.interchange.usage.application.port.in.GetConsistencyReportUseCase;
@@ -85,7 +86,7 @@ class ConsistencyReportServiceTest {
         lenient().when(worlds.exists(worldId)).thenReturn(true);
         lenient().when(campaigns.findByWorld(worldId))
                 .thenReturn(List.of(new CampaignView(campaignId, worldId, "Main", null, null,
-                        Instant.EPOCH, Instant.EPOCH)));
+                        CampaignStatus.ACTIVE, Instant.EPOCH, Instant.EPOCH)));
         lenient().when(arcs.findByCampaign(campaignId))
                 .thenReturn(List.of(new ArcView(arcId, campaignId, "Act I", null, null, 0,
                         Instant.EPOCH, Instant.EPOCH)));

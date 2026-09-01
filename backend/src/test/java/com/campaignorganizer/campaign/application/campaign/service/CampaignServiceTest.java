@@ -9,6 +9,7 @@ import com.campaignorganizer.campaign.application.campaign.port.in.CampaignComma
 import com.campaignorganizer.campaign.application.campaign.port.out.CampaignRepositoryPort;
 import com.campaignorganizer.campaign.application.campaign.port.out.WorldExistsPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import java.time.Clock;
@@ -51,17 +52,32 @@ class CampaignServiceTest {
         when(ids.newId()).thenReturn(id);
         when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CampaignView view = service.create(new CreateCampaignCommand(worldId, "Rise", "desc", "notes"));
+        CampaignView view = service.create(
+                new CreateCampaignCommand(worldId, "Rise", "desc", "notes", CampaignStatus.ACTIVE));
 
         assertThat(view.id()).isEqualTo(id);
         assertThat(view.name()).isEqualTo("Rise");
+        assertThat(view.status()).isEqualTo(CampaignStatus.ACTIVE);
+    }
+
+    @Test
+    void createDefaultsStatusToPlannedWhenNull() {
+        UUID id = UUID.randomUUID();
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(ids.newId()).thenReturn(id);
+        when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CampaignView view = service.create(new CreateCampaignCommand(worldId, "Rise", null, null, null));
+
+        assertThat(view.status()).isEqualTo(CampaignStatus.PLANNED);
     }
 
     @Test
     void createRejectsMissingWorld() {
         when(worlds.exists(worldId)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.create(new CreateCampaignCommand(worldId, "Rise", null, null)))
+        assertThatThrownBy(() -> service.create(
+                new CreateCampaignCommand(worldId, "Rise", null, null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 }

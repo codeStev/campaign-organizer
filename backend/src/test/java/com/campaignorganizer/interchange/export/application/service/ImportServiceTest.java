@@ -11,6 +11,7 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
+import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
@@ -275,7 +276,8 @@ class ImportServiceTest {
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("campaigns", List.of(
-                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null, now, now)));
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, now, now)));
         bundle.put("clocks", List.of(new ClockView(oldClockId, oldCampaignId, "Doom", null,
                 List.of(new ClockSegmentView(true, null, null),
                         new ClockSegmentView(false, "Alarm", "Guards notice")),
@@ -312,7 +314,8 @@ class ImportServiceTest {
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("campaigns", List.of(
-                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null, now, now)));
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, now, now)));
         bundle.put("sessions", List.of(
                 new SessionView(oldSessionId, oldCampaignId, "Session 1", 1, null, null, null, now, now)));
         bundle.put("looseThreads", List.of(new LooseThreadView(oldThreadId, oldSessionId, oldCampaignId,
@@ -348,7 +351,8 @@ class ImportServiceTest {
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("campaigns", List.of(
-                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null, now, now)));
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, now, now)));
         bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId,
                 "Session Zero", TemplateKind.DOCUMENT, null, List.of(), now, now)));
         bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, oldTemplateId,
