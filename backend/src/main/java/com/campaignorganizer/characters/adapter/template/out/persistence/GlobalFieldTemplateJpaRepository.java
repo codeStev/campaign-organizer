@@ -12,6 +12,8 @@ public interface GlobalFieldTemplateJpaRepository extends JpaRepository<GlobalFi
 
     List<GlobalFieldTemplateJpaEntity> findAllByOrderByCreatedAtDesc();
 
-    Optional<GlobalFieldTemplateJpaEntity> findByKindAndSystemAndName(TemplateKind kind, String system,
-                                                                      String name);
+    Optional<GlobalFieldTemplateJpaEntity> findByKindAndSystemIdAndName(TemplateKind kind, UUID systemId,
+                                                                        String name);
+
+    boolean existsBySystemId(UUID systemId);
 }

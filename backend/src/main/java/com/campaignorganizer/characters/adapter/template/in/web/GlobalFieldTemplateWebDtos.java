@@ -17,7 +17,7 @@ public final class GlobalFieldTemplateWebDtos {
     public record GlobalFieldTemplateRequest(
             @NotBlank @Size(max = 200) String name,
             @NotNull TemplateKind kind,
-            @NotBlank @Size(max = 100) String system,
+            @NotNull UUID systemId,
             List<TemplateSection> sections) {
     }
 
@@ -25,7 +25,7 @@ public final class GlobalFieldTemplateWebDtos {
             UUID id,
             String name,
             TemplateKind kind,
-            String system,
+            UUID systemId,
             List<TemplateSection> sections,
             Instant createdAt,
             Instant updatedAt) {

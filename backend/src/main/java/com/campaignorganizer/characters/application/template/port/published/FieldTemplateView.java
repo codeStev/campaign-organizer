@@ -12,7 +12,7 @@ public record FieldTemplateView(
         UUID worldId,
         String name,
         TemplateKind kind,
-        String system,
+        UUID systemId,
         List<TemplateSection> sections,
         Instant createdAt,
         Instant updatedAt) {

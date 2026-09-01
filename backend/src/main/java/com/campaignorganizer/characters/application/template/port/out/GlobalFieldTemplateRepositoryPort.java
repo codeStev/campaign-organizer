@@ -14,7 +14,9 @@ public interface GlobalFieldTemplateRepositoryPort {
 
     Optional<GlobalFieldTemplate> findById(UUID templateId);
 
-    Optional<GlobalFieldTemplate> findByKindAndSystemAndName(TemplateKind kind, String system, String name);
+    Optional<GlobalFieldTemplate> findByKindAndSystemIdAndName(TemplateKind kind, UUID systemId, String name);
+
+    boolean existsBySystemId(UUID systemId);
 
     GlobalFieldTemplate save(GlobalFieldTemplate template);
 

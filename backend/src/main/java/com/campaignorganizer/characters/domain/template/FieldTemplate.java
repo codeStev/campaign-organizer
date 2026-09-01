@@ -18,37 +18,37 @@ public final class FieldTemplate {
     private final UUID worldId;
     private String name;
     private TemplateKind kind;
-    private String system;
+    private UUID systemId;
     private List<TemplateSection> sections;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private FieldTemplate(UUID id, UUID worldId, String name, TemplateKind kind, String system,
+    private FieldTemplate(UUID id, UUID worldId, String name, TemplateKind kind, UUID systemId,
                           List<TemplateSection> sections, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(name, kind, system, sections);
+        apply(name, kind, systemId, sections);
     }
 
-    public static FieldTemplate create(UUID id, UUID worldId, String name, TemplateKind kind, String system,
+    public static FieldTemplate create(UUID id, UUID worldId, String name, TemplateKind kind, UUID systemId,
                                        List<TemplateSection> sections, Instant now) {
-        return new FieldTemplate(id, worldId, name, kind, system, sections, now, now);
+        return new FieldTemplate(id, worldId, name, kind, systemId, sections, now, now);
     }
 
     public static FieldTemplate reconstitute(UUID id, UUID worldId, String name, TemplateKind kind,
-                                             String system, List<TemplateSection> sections, Instant createdAt,
+                                             UUID systemId, List<TemplateSection> sections, Instant createdAt,
                                              Instant updatedAt) {
-        return new FieldTemplate(id, worldId, name, kind, system, sections, createdAt, updatedAt);
+        return new FieldTemplate(id, worldId, name, kind, systemId, sections, createdAt, updatedAt);
     }
 
-    public void update(String name, String system, List<TemplateSection> sections, Instant now) {
-        apply(name, this.kind, system, sections);
+    public void update(String name, UUID systemId, List<TemplateSection> sections, Instant now) {
+        apply(name, this.kind, systemId, sections);
         this.updatedAt = now;
     }
 
-    private void apply(String name, TemplateKind kind, String system, List<TemplateSection> sections) {
+    private void apply(String name, TemplateKind kind, UUID systemId, List<TemplateSection> sections) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Field template name must not be blank");
         }
@@ -57,7 +57,7 @@ public final class FieldTemplate {
         }
         this.name = name;
         this.kind = kind;
-        this.system = system;
+        this.systemId = systemId;
         this.sections = sections == null ? new ArrayList<>() : sections;
     }
 
@@ -77,8 +77,8 @@ public final class FieldTemplate {
         return kind;
     }
 
-    public String getSystem() {
-        return system;
+    public UUID getSystemId() {
+        return systemId;
     }
 
     public List<TemplateSection> getSections() {

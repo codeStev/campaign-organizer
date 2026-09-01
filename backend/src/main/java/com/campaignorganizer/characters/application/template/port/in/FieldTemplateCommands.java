@@ -10,11 +10,11 @@ public final class FieldTemplateCommands {
     private FieldTemplateCommands() {
     }
 
-    public record CreateFieldTemplateCommand(UUID worldId, String name, TemplateKind kind, String system,
+    public record CreateFieldTemplateCommand(UUID worldId, String name, TemplateKind kind, UUID systemId,
                                               List<TemplateSection> sections) {
     }
 
-    public record UpdateFieldTemplateCommand(UUID worldId, UUID templateId, String name, String system,
+    public record UpdateFieldTemplateCommand(UUID worldId, UUID templateId, String name, UUID systemId,
                                               List<TemplateSection> sections) {
     }
 }

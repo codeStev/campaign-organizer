@@ -10,11 +10,11 @@ public final class GlobalFieldTemplateCommands {
     private GlobalFieldTemplateCommands() {
     }
 
-    public record CreateGlobalFieldTemplateCommand(String name, TemplateKind kind, String system,
+    public record CreateGlobalFieldTemplateCommand(String name, TemplateKind kind, UUID systemId,
                                                     List<TemplateSection> sections) {
     }
 
-    public record UpdateGlobalFieldTemplateCommand(UUID templateId, String name, String system,
+    public record UpdateGlobalFieldTemplateCommand(UUID templateId, String name, UUID systemId,
                                                     List<TemplateSection> sections) {
     }
 }

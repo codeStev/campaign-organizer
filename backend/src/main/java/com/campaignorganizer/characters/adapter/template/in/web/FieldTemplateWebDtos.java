@@ -17,7 +17,7 @@ public final class FieldTemplateWebDtos {
     public record FieldTemplateRequest(
             @NotBlank @Size(max = 200) String name,
             @NotNull TemplateKind kind,
-            @Size(max = 100) String system,
+            UUID systemId,
             List<TemplateSection> sections) {
     }
 
@@ -26,7 +26,7 @@ public final class FieldTemplateWebDtos {
             UUID worldId,
             String name,
             TemplateKind kind,
-            String system,
+            UUID systemId,
             List<TemplateSection> sections,
             Instant createdAt,
             Instant updatedAt) {

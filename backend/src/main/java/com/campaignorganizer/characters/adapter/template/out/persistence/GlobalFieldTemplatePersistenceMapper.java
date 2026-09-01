@@ -12,7 +12,7 @@ public interface GlobalFieldTemplatePersistenceMapper {
         if (e == null) {
             return null;
         }
-        return GlobalFieldTemplate.reconstitute(e.getId(), e.getName(), e.getKind(), e.getSystem(),
+        return GlobalFieldTemplate.reconstitute(e.getId(), e.getName(), e.getKind(), e.getSystemId(),
                 e.getSections(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

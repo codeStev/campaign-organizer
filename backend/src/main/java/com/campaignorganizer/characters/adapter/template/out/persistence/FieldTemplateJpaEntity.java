@@ -33,8 +33,8 @@ public class FieldTemplateJpaEntity {
     @Column(nullable = false, length = 20)
     private FieldSchema.TemplateKind kind;
 
-    @Column(length = 100)
-    private String system;
+    @Column(name = "system_id")
+    private UUID systemId;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
@@ -81,12 +81,12 @@ public class FieldTemplateJpaEntity {
         this.kind = kind;
     }
 
-    public String getSystem() {
-        return system;
+    public UUID getSystemId() {
+        return systemId;
     }
 
-    public void setSystem(String system) {
-        this.system = system;
+    public void setSystemId(UUID systemId) {
+        this.systemId = systemId;
     }
 
     public List<TemplateSection> getSections() {

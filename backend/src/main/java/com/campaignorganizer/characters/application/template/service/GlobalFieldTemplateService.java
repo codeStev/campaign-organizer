@@ -69,7 +69,7 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     @Transactional
     public GlobalFieldTemplateView create(CreateGlobalFieldTemplateCommand command) {
         GlobalFieldTemplate created = GlobalFieldTemplate.create(ids.newId(), command.name(), command.kind(),
-                command.system(), command.sections(), clock.instant());
+                command.systemId(), command.sections(), clock.instant());
         return viewMapper.toView(templates.save(created));
     }
 
@@ -77,7 +77,7 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     @Transactional
     public GlobalFieldTemplateView update(UpdateGlobalFieldTemplateCommand command) {
         GlobalFieldTemplate template = require(command.templateId());
-        template.update(command.name(), command.system(), command.sections(), clock.instant());
+        template.update(command.name(), command.systemId(), command.sections(), clock.instant());
         return viewMapper.toView(templates.save(template));
     }
 
@@ -116,8 +116,11 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
         if (source.getKind() == TemplateKind.DOCUMENT) {
             throw new ValidationException("Document templates cannot be promoted to the global catalog");
         }
+        if (source.getSystemId() == null) {
+            throw new ValidationException("Assign a game system before promoting this template");
+        }
         GlobalFieldTemplate global = GlobalFieldTemplate.create(ids.newId(), source.getName(),
-                source.getKind(), source.getSystem(), source.getSections(), clock.instant());
+                source.getKind(), source.getSystemId(), source.getSections(), clock.instant());
         GlobalFieldTemplate saved = templates.save(global);
 
         characterSheetRefs.repointWorldTemplateToGlobal(templateId, saved.getId());
@@ -133,12 +136,12 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     @Transactional
     public GlobalFieldTemplateView importOrReuse(GlobalFieldTemplateView view) {
         Optional<GlobalFieldTemplate> existing =
-                templates.findByKindAndSystemAndName(view.kind(), view.system(), view.name());
+                templates.findByKindAndSystemIdAndName(view.kind(), view.systemId(), view.name());
         if (existing.isPresent()) {
             return viewMapper.toView(existing.get());
         }
         GlobalFieldTemplate created = GlobalFieldTemplate.reconstitute(view.id(), view.name(), view.kind(),
-                view.system(), view.sections(), view.createdAt(), view.updatedAt());
+                view.systemId(), view.sections(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(templates.save(created));
     }
 

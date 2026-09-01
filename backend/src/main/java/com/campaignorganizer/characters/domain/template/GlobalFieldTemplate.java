@@ -18,48 +18,48 @@ public final class GlobalFieldTemplate {
     private final UUID id;
     private String name;
     private TemplateKind kind;
-    private String system;
+    private UUID systemId;
     private List<TemplateSection> sections;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private GlobalFieldTemplate(UUID id, String name, TemplateKind kind, String system,
+    private GlobalFieldTemplate(UUID id, String name, TemplateKind kind, UUID systemId,
                                 List<TemplateSection> sections, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(name, kind, system, sections);
+        apply(name, kind, systemId, sections);
     }
 
-    public static GlobalFieldTemplate create(UUID id, String name, TemplateKind kind, String system,
+    public static GlobalFieldTemplate create(UUID id, String name, TemplateKind kind, UUID systemId,
                                              List<TemplateSection> sections, Instant now) {
-        return new GlobalFieldTemplate(id, name, kind, system, sections, now, now);
+        return new GlobalFieldTemplate(id, name, kind, systemId, sections, now, now);
     }
 
-    public static GlobalFieldTemplate reconstitute(UUID id, String name, TemplateKind kind, String system,
+    public static GlobalFieldTemplate reconstitute(UUID id, String name, TemplateKind kind, UUID systemId,
                                                     List<TemplateSection> sections, Instant createdAt,
                                                     Instant updatedAt) {
-        return new GlobalFieldTemplate(id, name, kind, system, sections, createdAt, updatedAt);
+        return new GlobalFieldTemplate(id, name, kind, systemId, sections, createdAt, updatedAt);
     }
 
-    public void update(String name, String system, List<TemplateSection> sections, Instant now) {
-        apply(name, this.kind, system, sections);
+    public void update(String name, UUID systemId, List<TemplateSection> sections, Instant now) {
+        apply(name, this.kind, systemId, sections);
         this.updatedAt = now;
     }
 
-    private void apply(String name, TemplateKind kind, String system, List<TemplateSection> sections) {
+    private void apply(String name, TemplateKind kind, UUID systemId, List<TemplateSection> sections) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Global field template name must not be blank");
         }
         if (kind == null) {
             throw new ValidationException("Global field template kind must not be null");
         }
-        if (system == null || system.isBlank()) {
-            throw new ValidationException("Global field template system must not be blank");
+        if (systemId == null) {
+            throw new ValidationException("Global field template system must not be null");
         }
         this.name = name;
         this.kind = kind;
-        this.system = system;
+        this.systemId = systemId;
         this.sections = sections == null ? new ArrayList<>() : sections;
     }
 
@@ -75,8 +75,8 @@ public final class GlobalFieldTemplate {
         return kind;
     }
 
-    public String getSystem() {
-        return system;
+    public UUID getSystemId() {
+        return systemId;
     }
 
     public List<TemplateSection> getSections() {

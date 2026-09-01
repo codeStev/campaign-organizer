@@ -11,7 +11,7 @@ public record GlobalFieldTemplateView(
         UUID id,
         String name,
         TemplateKind kind,
-        String system,
+        UUID systemId,
         List<TemplateSection> sections,
         Instant createdAt,
         Instant updatedAt) {

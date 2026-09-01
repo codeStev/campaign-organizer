@@ -50,7 +50,7 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     public FieldTemplateView create(CreateFieldTemplateCommand command) {
         requireWorld(command.worldId());
         FieldTemplate created = FieldTemplate.create(ids.newId(), command.worldId(), command.name(),
-                command.kind(), command.system(), command.sections(), clock.instant());
+                command.kind(), command.systemId(), command.sections(), clock.instant());
         return viewMapper.toView(templates.save(created));
     }
 
@@ -58,7 +58,7 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional
     public FieldTemplateView update(UpdateFieldTemplateCommand command) {
         FieldTemplate template = require(command.worldId(), command.templateId());
-        template.update(command.name(), command.system(), command.sections(), clock.instant());
+        template.update(command.name(), command.systemId(), command.sections(), clock.instant());
         return viewMapper.toView(templates.save(template));
     }
 
@@ -73,7 +73,7 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     public FieldTemplateView duplicate(UUID worldId, UUID templateId) {
         FieldTemplate source = require(worldId, templateId);
         return create(new CreateFieldTemplateCommand(worldId, source.getName() + " (copy)",
-                source.getKind(), source.getSystem(), source.getSections()));
+                source.getKind(), source.getSystemId(), source.getSections()));
     }
 
     @Override
@@ -95,7 +95,7 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional
     public FieldTemplateView importFieldTemplate(FieldTemplateView view) {
         FieldTemplate template = FieldTemplate.reconstitute(view.id(), view.worldId(), view.name(),
-                view.kind(), view.system(), view.sections(), view.createdAt(), view.updatedAt());
+                view.kind(), view.systemId(), view.sections(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(templates.save(template));
     }
 

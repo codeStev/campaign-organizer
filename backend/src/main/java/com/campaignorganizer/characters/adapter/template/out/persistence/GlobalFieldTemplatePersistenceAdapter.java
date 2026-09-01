@@ -36,9 +36,14 @@ public class GlobalFieldTemplatePersistenceAdapter implements GlobalFieldTemplat
     }
 
     @Override
-    public Optional<GlobalFieldTemplate> findByKindAndSystemAndName(TemplateKind kind, String system,
-                                                                     String name) {
-        return repository.findByKindAndSystemAndName(kind, system, name).map(mapper::toDomain);
+    public Optional<GlobalFieldTemplate> findByKindAndSystemIdAndName(TemplateKind kind, UUID systemId,
+                                                                       String name) {
+        return repository.findByKindAndSystemIdAndName(kind, systemId, name).map(mapper::toDomain);
+    }
+
+    @Override
+    public boolean existsBySystemId(UUID systemId) {
+        return repository.existsBySystemId(systemId);
     }
 
     @Override
