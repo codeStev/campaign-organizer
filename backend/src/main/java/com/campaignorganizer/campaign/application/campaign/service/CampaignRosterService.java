@@ -14,6 +14,7 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.domain.campaign.CampaignPlayer;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
@@ -63,7 +64,7 @@ public class CampaignRosterService implements GetCampaignRosterUseCase, SetCampa
         requireCampaign(command.worldId(), command.campaignId());
         for (RosterEntryInput in : command.entries()) {
             if (!players.existsInWorld(in.playerId(), command.worldId())) {
-                throw new NotFoundException("Player not found: " + in.playerId());
+                throw new ValidationException("Player not found in world: " + in.playerId());
             }
         }
         roster.deleteByCampaign(command.campaignId());
