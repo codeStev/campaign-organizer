@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerImportPort;
@@ -18,7 +19,9 @@ import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterEntryView;
 import com.campaignorganizer.campaign.application.encounter.port.published.EncounterImportPort;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterView;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
@@ -452,6 +455,81 @@ class ImportServiceTest {
         assertThat(imported.segments()).containsExactly(
                 new ClockSegmentView(true, null, null),
                 new ClockSegmentView(false, "Alarm", "Guards notice"));
+    }
+
+    @Test
+    void remapsEncounterCampaignAndEntryStatblockIds() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldStatblockId = UUID.randomUUID();
+        UUID oldEncounterId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, null, now, now)));
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+                null, null, "Goblin", Map.of(), null, now, now)));
+        bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", "notes",
+                List.of(new EncounterEntryView(oldStatblockId, 3, 7)), now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats",
+                "fieldTemplates", "characterSheets", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<EncounterView> encounterCaptor = ArgumentCaptor.forClass(EncounterView.class);
+        verify(encounterImportPort).importEncounter(encounterCaptor.capture());
+        EncounterView imported = encounterCaptor.getValue();
+        assertThat(imported.id()).isNotEqualTo(oldEncounterId);
+        assertThat(imported.campaignId()).isNotEqualTo(oldCampaignId);
+        assertThat(imported.name()).isEqualTo("Ambush");
+        assertThat(imported.entries()).hasSize(1);
+        assertThat(imported.entries().get(0).statblockId()).isNotEqualTo(oldStatblockId);
+        assertThat(imported.entries().get(0).quantity()).isEqualTo(3);
+        assertThat(imported.entries().get(0).maxHpOverride()).isEqualTo(7);
+    }
+
+    @Test
+    void remapsBeatEncounterIds() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldArcId = UUID.randomUUID();
+        UUID oldBeatId = UUID.randomUUID();
+        UUID oldEncounterId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, null, now, now)));
+        bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", null,
+                List.of(), now, now)));
+        bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
+                List.of(), List.of(), List.of(oldEncounterId), List.of(), List.of(), null, 0, now, now)));
+        bundle.put("arcs", List.of(new ArcView(oldArcId, oldCampaignId, "Main Arc", null, "ACTIVE", 0,
+                now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions",
+                "fieldTemplates", "characterSheets", "statblocks", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<ArcBeatView> beatCaptor = ArgumentCaptor.forClass(ArcBeatView.class);
+        verify(arcBeatImportPort).importArcBeat(beatCaptor.capture());
+        assertThat(beatCaptor.getValue().encounterIds()).hasSize(1)
+                .doesNotContain(oldEncounterId);
     }
 
     @Test

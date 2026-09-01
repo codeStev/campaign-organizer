@@ -140,6 +140,41 @@ class BeatControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    private String encounterId(String name, String statblockId) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/encounters",
+                        worldId, campaignId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\",\"entries\":[{\"statblockId\":\"" + statblockId
+                                + "\",\"quantity\":1}]}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void linksEncounterToBeat() throws Exception {
+        setup();
+        String goblin = statblockId("Goblin");
+        String ambush = encounterId("Goblin ambush", goblin);
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"The road ambush\",\"encounterIds\":[\"" + ambush + "\"]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.encounterIds.length()").value(1))
+                .andExpect(jsonPath("$.encounterIds[0]").value(ambush));
+    }
+
+    @Test
+    void rejectsBeatWithForeignEncounter() throws Exception {
+        setup();
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"encounterIds\":[\"" + UUID.randomUUID() + "\"]}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void rejectsBeatWithForeignSession() throws Exception {
         setup();
