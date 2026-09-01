@@ -251,6 +251,7 @@ export function handoutsApi(worldId: string) {
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     reorder: (orderedIds: string[]) =>
       request<Handout[]>(`${base}/order`, { method: 'PUT', body: JSON.stringify({ orderedIds }) }),
+    duplicate: (id: string) => request<Handout>(`${base}/${id}/duplicate`, { method: 'POST' }),
   };
 }
 
@@ -978,6 +979,8 @@ export function fieldTemplatesApi(worldId: string) {
     update: (id: string, body: FieldTemplateRequest) =>
       request<FieldTemplate>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+    duplicate: (id: string) =>
+      request<FieldTemplate>(`${base}/${id}/duplicate`, { method: 'POST' }),
   };
 }
 
@@ -1030,6 +1033,7 @@ export function statblocksApi(worldId: string) {
     update: (id: string, body: StatblockRequest) =>
       request<Statblock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+    duplicate: (id: string) => request<Statblock>(`${base}/${id}/duplicate`, { method: 'POST' }),
   };
 }
 
@@ -1387,6 +1391,7 @@ export function rollTablesApi(worldId: string) {
     update: (id: string, body: RollTableRequest) =>
       request<RollTable>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+    duplicate: (id: string) => request<RollTable>(`${base}/${id}/duplicate`, { method: 'POST' }),
   };
 }
 
@@ -1430,5 +1435,6 @@ export function cardDecksApi(worldId: string) {
     update: (id: string, body: CardDeckRequest) =>
       request<CardDeck>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+    duplicate: (id: string) => request<CardDeck>(`${base}/${id}/duplicate`, { method: 'POST' }),
   };
 }
