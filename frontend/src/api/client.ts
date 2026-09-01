@@ -1055,6 +1055,36 @@ export interface GlobalFieldTemplateRequest {
   sections: TemplateSection[];
 }
 
+/**
+ * World-independent, system-scoped statblock catalog (ADR-0096). Importing
+ * one into a campaign copies its stats/notes into a new world-scoped
+ * Statblock — the copy carries no live link back to this catalog entry.
+ */
+export interface GlobalStatblock {
+  id: string;
+  systemId: string;
+  globalTemplateId?: string | null;
+  name: string;
+  stats: Record<string, unknown>;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlobalStatblockRequest {
+  name: string;
+  systemId: string;
+  globalTemplateId?: string | null;
+  stats?: Record<string, unknown>;
+  notes?: string | null;
+}
+
+export interface ImportGlobalStatblockRequest {
+  worldId: string;
+  campaignId: string;
+  name?: string;
+}
+
 export interface CharacterSheet {
   id: string;
   worldId: string;
@@ -1178,6 +1208,20 @@ export const globalFieldTemplatesApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => request<void>(`/field-templates/global/${id}`, { method: 'DELETE' }),
+};
+
+/** World-independent CRUD + copy-on-import for the global statblock catalog (ADR-0096). */
+export const globalStatblocksApi = {
+  list: (systemId?: string) =>
+    request<GlobalStatblock[]>(systemId ? `/statblocks/global?systemId=${systemId}` : '/statblocks/global'),
+  get: (id: string) => request<GlobalStatblock>(`/statblocks/global/${id}`),
+  create: (body: GlobalStatblockRequest) =>
+    request<GlobalStatblock>('/statblocks/global', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: GlobalStatblockRequest) =>
+    request<GlobalStatblock>(`/statblocks/global/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string) => request<void>(`/statblocks/global/${id}`, { method: 'DELETE' }),
+  import: (id: string, body: ImportGlobalStatblockRequest) =>
+    request<Statblock>(`/statblocks/global/${id}/import`, { method: 'POST', body: JSON.stringify(body) }),
 };
 
 export function characterSheetsApi(worldId: string) {
