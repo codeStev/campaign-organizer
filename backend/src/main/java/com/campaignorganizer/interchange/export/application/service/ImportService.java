@@ -28,6 +28,8 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.interchange.export.application.port.in.ImportBackupUseCase;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -63,6 +65,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.published.Categ
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryView;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldImportPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -103,6 +106,7 @@ public class ImportService implements ImportBackupUseCase {
     private final SessionAttendanceImportPort sessionAttendanceImportPort;
     private final ArcImportPort arcImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
+    private final GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
     private final CharacterSheetImportPort characterSheetImportPort;
     private final DocumentImportPort documentImportPort;
     private final StatblockImportPort statblockImportPort;
@@ -127,6 +131,7 @@ public class ImportService implements ImportBackupUseCase {
             CampaignPlayerImportPort campaignPlayerImportPort, SessionImportPort sessionImportPort,
             SessionAttendanceImportPort sessionAttendanceImportPort,
             ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
+            GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
             StatblockImportPort statblockImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
@@ -152,6 +157,7 @@ public class ImportService implements ImportBackupUseCase {
         this.sessionAttendanceImportPort = sessionAttendanceImportPort;
         this.arcImportPort = arcImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
+        this.globalFieldTemplateImportPort = globalFieldTemplateImportPort;
         this.characterSheetImportPort = characterSheetImportPort;
         this.documentImportPort = documentImportPort;
         this.statblockImportPort = statblockImportPort;
@@ -206,6 +212,8 @@ public class ImportService implements ImportBackupUseCase {
                 readList(root, "sessionAttendance", SessionAttendanceView.class);
         List<ArcView> arcs = readList(root, "arcs", ArcView.class);
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
+        List<GlobalFieldTemplateView> globalFieldTemplates =
+                readList(root, "globalFieldTemplates", GlobalFieldTemplateView.class);
         List<CharacterSheetView> characterSheets =
                 readList(root, "characterSheets", CharacterSheetView.class);
         List<DocumentView> documents = readList(root, "documents", DocumentView.class);
@@ -366,9 +374,20 @@ public class ImportService implements ImportBackupUseCase {
                     f.updatedAt()));
         }
 
+        // Global template catalog (ADR-0093): resolved-or-reused by (kind, system,
+        // name), not blindly recreated with a fresh id like every other entity — so
+        // the id a referencing sheet/statblock should use is whatever importOrReuse
+        // returns, tracked here rather than through the normal id remap.
+        Map<UUID, UUID> globalTemplateResolution = new HashMap<>();
+        for (GlobalFieldTemplateView g : globalFieldTemplates) {
+            GlobalFieldTemplateView resolved = globalFieldTemplateImportPort.importOrReuse(g);
+            globalTemplateResolution.put(g.id(), resolved.id());
+        }
+
         for (CharacterSheetView s : characterSheets) {
             characterSheetImportPort.importCharacterSheet(new CharacterSheetView(remap.get(s.id()),
-                    newWorldId, remap.getOrNull(s.templateId()), remap.getOrNull(s.articleId()),
+                    newWorldId, remap.getOrNull(s.worldTemplateId()),
+                    globalTemplateResolution.get(s.globalTemplateId()), remap.getOrNull(s.articleId()),
                     remap.getOrNull(s.campaignId()), s.name(), s.values(), s.createdAt(), s.updatedAt()));
         }
 
@@ -382,8 +401,8 @@ public class ImportService implements ImportBackupUseCase {
         for (StatblockView s : statblocks) {
             statblockImportPort.importStatblock(new StatblockView(remap.get(s.id()), newWorldId,
                     remap.getOrNull(s.articleId()), remap.getOrNull(s.campaignId()),
-                    remap.getOrNull(s.templateId()), s.name(), s.stats(), s.notes(), s.createdAt(),
-                    s.updatedAt()));
+                    remap.getOrNull(s.worldTemplateId()), globalTemplateResolution.get(s.globalTemplateId()),
+                    s.name(), s.stats(), s.notes(), s.createdAt(), s.updatedAt()));
         }
 
         // Folksonomy tags (FR-47): entityId points at an already-remapped
