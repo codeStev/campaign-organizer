@@ -280,6 +280,13 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   character death/replacement. The session view gets an Attended | Player
   | Character table, pre-populated from the roster and defaulting to
   everyone present. Surfaces in the session recap (not GM-only). (ADR-0091)
+- **FR-54 Campaign and session todos.** A lightweight GM task list — text
+  plus a done checkbox, no priority, no manual ordering — distinct from
+  loose threads (narrative) and beats (story structure). Campaign-level
+  todos are standing chores not tied to any session; session-level todos
+  attach to a specific session (its date is the implicit due date) and
+  surface while prepping that session. Both will show on the future
+  per-campaign dashboard (FR-67, not yet built). (ADR-0092)
 
 ---
 
