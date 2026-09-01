@@ -39,6 +39,7 @@ import { TimelinesView } from './TimelinesView';
 import { CalendarsView } from './CalendarsView';
 import { RelationshipsView } from './RelationshipsView';
 import { CampaignsView } from './CampaignsView';
+import { PlayersPanel } from './PlayersPanel';
 import { SheetsView } from './SheetsView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { TablesView } from './TablesView';
@@ -179,6 +180,7 @@ type Tab =
   | 'calendars'
   | 'relationships'
   | 'campaigns'
+  | 'players'
   | 'sheets'
   | 'whiteboards'
   | 'tables'
@@ -194,6 +196,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'calendars', label: 'Calendars' },
   { key: 'relationships', label: 'Relationships' },
   { key: 'campaigns', label: 'Campaigns' },
+  { key: 'players', label: 'Players' },
   { key: 'sheets', label: 'Sheets' },
   { key: 'whiteboards', label: 'Whiteboards' },
   { key: 'tables', label: 'Tables & Decks' },
@@ -959,6 +962,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
   const campaignsPane = (
     <CampaignsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
   );
+  const playersPane = <PlayersPanel worldId={worldId} onAuthExpired={onAuthExpired} />;
   const whiteboardsPane = <WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />;
   const tablesPane = <TablesView worldId={worldId} onAuthExpired={onAuthExpired} />;
   const consistencyPane = (
@@ -1049,6 +1053,7 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         />
         <Route path="campaigns" element={campaignsPane} />
         <Route path="campaigns/:campaignId" element={campaignsPane} />
+        <Route path="players" element={playersPane} />
         <Route
           path="sheets/*"
           element={<SheetsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />}
