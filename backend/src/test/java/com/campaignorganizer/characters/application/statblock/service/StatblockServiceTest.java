@@ -128,7 +128,7 @@ class StatblockServiceTest {
         when(worlds.exists(worldId)).thenReturn(true);
         when(globalTemplates.findById(globalTemplateId)).thenReturn(Optional.of(
                 new GlobalFieldTemplateView(globalTemplateId, "D&D 5e Monster", TemplateKind.STATBLOCK,
-                        "dnd5e", List.of(), Instant.now(), Instant.now())));
+                        UUID.randomUUID(), List.of(), Instant.now(), Instant.now())));
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(statblocks.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

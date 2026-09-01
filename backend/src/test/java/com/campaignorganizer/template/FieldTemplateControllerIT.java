@@ -15,14 +15,24 @@ import org.springframework.http.MediaType;
 
 class FieldTemplateControllerIT extends AbstractIntegrationTest {
 
-    private static final String DND = """
-            {"name":"D&D 5e","kind":"CHARACTER","system":"dnd5e","sections":[
+    private static String dnd(String systemId) {
+        return """
+            {"name":"D&D 5e","kind":"CHARACTER","systemId":"%s","sections":[
               {"title":"Core","fields":[
                 {"key":"class","label":"Class","type":"TEXT"},
                 {"key":"level","label":"Level","type":"NUMBER"},
                 {"key":"alignment","label":"Alignment","type":"SELECT","options":["LG","NG","CG"]}
               ]}
-            ]}""";
+            ]}""".formatted(systemId);
+    }
+
+    private String createGameSystem(String auth, String name) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/game-systems")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
 
     @Test
     void requiresAuthentication() throws Exception {
@@ -34,13 +44,15 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
     void roundTripsJsonbSchema() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
+        String systemId = createGameSystem(auth, "D&D 5e (round trip)");
 
         String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DND))
+                        .content(dnd(systemId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("D&D 5e"))
+                .andExpect(jsonPath("$.systemId").value(systemId))
                 .andExpect(jsonPath("$.sections[0].title").value("Core"))
                 .andExpect(jsonPath("$.sections[0].fields[1].key").value("level"))
                 .andExpect(jsonPath("$.sections[0].fields[1].type").value("NUMBER"))
@@ -108,7 +120,7 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"kind\":\"CHARACTER\",\"system\":\"x\",\"sections\":[]}"))
+                        .content("{\"kind\":\"CHARACTER\",\"sections\":[]}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -149,11 +161,12 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
     void duplicatesATemplateCarryingOverKindAndRenamingIt() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
+        String systemId = createGameSystem(auth, "D&D 5e (duplicate)");
 
         String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DND))
+                        .content(dnd(systemId)))
                 .andReturn().getResponse().getContentAsString();
         String sourceId = JsonPath.read(created, "$.id");
 
@@ -163,7 +176,7 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(sourceId)))
                 .andExpect(jsonPath("$.name").value("D&D 5e (copy)"))
                 .andExpect(jsonPath("$.kind").value("CHARACTER"))
-                .andExpect(jsonPath("$.system").value("dnd5e"))
+                .andExpect(jsonPath("$.systemId").value(systemId))
                 .andExpect(jsonPath("$.sections[0].fields[1].key").value("level"));
 
         mockMvc.perform(post("/api/worlds/{w}/field-templates/{t}/duplicate", worldId,
@@ -176,11 +189,12 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
     void promotesATemplateToGlobalAndRepointsExistingCharacterSheets() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
+        String systemId = createGameSystem(auth, "D&D 5e (promote)");
 
         String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DND))
+                        .content(dnd(systemId)))
                 .andReturn().getResponse().getContentAsString();
         String templateId = JsonPath.read(created, "$.id");
 
@@ -195,7 +209,7 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("D&D 5e"))
-                .andExpect(jsonPath("$.system").value("dnd5e"))
+                .andExpect(jsonPath("$.systemId").value(systemId))
                 .andReturn().getResponse().getContentAsString();
         String globalId = JsonPath.read(promoted, "$.id");
 
@@ -210,5 +224,22 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.globalTemplateId").value(globalId))
                 .andExpect(jsonPath("$.worldTemplateId").doesNotExist());
+    }
+
+    @Test
+    void promoteRejectsTemplateWithoutSystem() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"No System\",\"kind\":\"CHARACTER\",\"sections\":[]}"))
+                .andReturn().getResponse().getContentAsString();
+        String templateId = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(post("/api/worlds/{w}/field-templates/{t}/promote", worldId, templateId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isBadRequest());
     }
 }

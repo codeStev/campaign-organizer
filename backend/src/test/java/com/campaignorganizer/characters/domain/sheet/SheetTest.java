@@ -20,9 +20,10 @@ class SheetTest {
 
     @Test
     void templateUpdateBumpsUpdatedAt() {
+        UUID systemId = UUID.randomUUID();
         FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic",
-                TemplateKind.CHARACTER, "generic", List.of(), T0);
-        t.update("Generic v2", "generic", List.of(), T1);
+                TemplateKind.CHARACTER, systemId, List.of(), T0);
+        t.update("Generic v2", systemId, List.of(), T1);
 
         assertThat(t.getName()).isEqualTo("Generic v2");
         assertThat(t.getCreatedAt()).isEqualTo(T0);

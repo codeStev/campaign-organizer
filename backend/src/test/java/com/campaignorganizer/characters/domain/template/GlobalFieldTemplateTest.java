@@ -15,12 +15,13 @@ class GlobalFieldTemplateTest {
 
     private static final Instant T0 = Instant.parse("2026-01-01T00:00:00Z");
     private static final Instant T1 = Instant.parse("2026-02-02T00:00:00Z");
+    private static final UUID SYSTEM_ID = UUID.randomUUID();
 
     @Test
     void updateBumpsUpdatedAt() {
         GlobalFieldTemplate t = GlobalFieldTemplate.create(UUID.randomUUID(), "D&D 5e",
-                TemplateKind.CHARACTER, "dnd5e", List.of(), T0);
-        t.update("D&D 5e v2", "dnd5e", List.of(), T1);
+                TemplateKind.CHARACTER, SYSTEM_ID, List.of(), T0);
+        t.update("D&D 5e v2", SYSTEM_ID, List.of(), T1);
 
         assertThat(t.getName()).isEqualTo("D&D 5e v2");
         assertThat(t.getCreatedAt()).isEqualTo(T0);
@@ -30,28 +31,21 @@ class GlobalFieldTemplateTest {
     @Test
     void nullSectionsBecomeEmptyList() {
         GlobalFieldTemplate t = GlobalFieldTemplate.create(UUID.randomUUID(), "D&D 5e",
-                TemplateKind.CHARACTER, "dnd5e", null, T0);
+                TemplateKind.CHARACTER, SYSTEM_ID, null, T0);
         assertThat(t.getSections()).isEmpty();
     }
 
     @Test
     void rejectsBlankName() {
         assertThatThrownBy(() -> GlobalFieldTemplate.create(UUID.randomUUID(), " ", TemplateKind.CHARACTER,
-                "dnd5e", null, T0))
+                SYSTEM_ID, null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void rejectsNullKind() {
-        assertThatThrownBy(() -> GlobalFieldTemplate.create(UUID.randomUUID(), "D&D 5e", null, "dnd5e",
+        assertThatThrownBy(() -> GlobalFieldTemplate.create(UUID.randomUUID(), "D&D 5e", null, SYSTEM_ID,
                 null, T0))
-                .isInstanceOf(ValidationException.class);
-    }
-
-    @Test
-    void rejectsBlankSystem() {
-        assertThatThrownBy(() -> GlobalFieldTemplate.create(UUID.randomUUID(), "D&D 5e",
-                TemplateKind.CHARACTER, " ", null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 

@@ -34,6 +34,7 @@ import com.campaignorganizer.characters.application.sheet.port.published.Charact
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GameSystemImportPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
@@ -116,6 +117,8 @@ class ImportServiceTest {
     @Mock
     private FieldTemplateImportPort fieldTemplateImportPort;
     @Mock
+    private GameSystemImportPort gameSystemImportPort;
+    @Mock
     private GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
     @Mock
     private CharacterSheetImportPort characterSheetImportPort;
@@ -156,7 +159,7 @@ class ImportServiceTest {
                 mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
-                arcImportPort, fieldTemplateImportPort, globalFieldTemplateImportPort,
+                arcImportPort, fieldTemplateImportPort, gameSystemImportPort, globalFieldTemplateImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
@@ -299,7 +302,7 @@ class ImportServiceTest {
         // template: importOrReuse resolves to a DIFFERENT id than the bundle's.
         when(globalFieldTemplateImportPort.importOrReuse(any())).thenAnswer(inv -> {
             GlobalFieldTemplateView v = inv.getArgument(0);
-            return new GlobalFieldTemplateView(reusedGlobalTemplateId, v.name(), v.kind(), v.system(),
+            return new GlobalFieldTemplateView(reusedGlobalTemplateId, v.name(), v.kind(), v.systemId(),
                     v.sections(), v.createdAt(), v.updatedAt());
         });
 
@@ -307,7 +310,7 @@ class ImportServiceTest {
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("globalFieldTemplates", List.of(new GlobalFieldTemplateView(oldGlobalTemplateId,
-                "D&D 5e Monster", TemplateKind.STATBLOCK, "dnd5e", List.of(), now, now)));
+                "D&D 5e Monster", TemplateKind.STATBLOCK, UUID.randomUUID(), List.of(), now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
                 null, oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",

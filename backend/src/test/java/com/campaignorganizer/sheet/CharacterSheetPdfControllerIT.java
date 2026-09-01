@@ -21,11 +21,19 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
     private String auth;
     private String worldId;
 
-    private String template(String system) throws Exception {
+    private String gameSystem(String name) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/game-systems")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    private String template(String systemId) throws Exception {
         return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"T\",\"kind\":\"CHARACTER\",\"system\":\"" + system + "\",\"sections\":[]}"))
+                        .content("{\"name\":\"T\",\"kind\":\"CHARACTER\",\"systemId\":\"" + systemId + "\",\"sections\":[]}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
 
@@ -48,7 +56,8 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
     void fillsAndReturnsDnd5ePdf() throws Exception {
         auth = authHeader();
         worldId = createWorld(auth);
-        String templateId = template("dnd5e");
+        String systemId = gameSystem("dnd5e");
+        String templateId = template(systemId);
         String sheetId = sheet(templateId,
                 "{\"class\":\"Wizard\",\"level\":5,\"str\":16,\"dex\":12,\"race\":\"Elf\"}");
 
@@ -83,7 +92,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Homebrew\",\"kind\":\"CHARACTER\",\"system\":\"custom\",\"sections\":["
+                        .content("{\"name\":\"Homebrew\",\"kind\":\"CHARACTER\",\"sections\":["
                                 + "{\"title\":\"Core\",\"fields\":["
                                 + "{\"key\":\"grit\",\"label\":\"Grit\",\"type\":\"NUMBER\"},"
                                 + "{\"key\":\"alive\",\"label\":\"Alive\",\"type\":\"BOOLEAN\"}]}]}"))
@@ -112,7 +121,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         String templateId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Trackers\",\"kind\":\"CHARACTER\",\"system\":\"custom\",\"sections\":["
+                        .content("{\"name\":\"Trackers\",\"kind\":\"CHARACTER\",\"sections\":["
                                 + "{\"title\":\"State\",\"fields\":["
                                 + "{\"key\":\"str\",\"label\":\"STR\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"
                                 + "{\"key\":\"dex\",\"label\":\"DEX\",\"type\":\"NUMBER\",\"width\":\"HALF\"},"

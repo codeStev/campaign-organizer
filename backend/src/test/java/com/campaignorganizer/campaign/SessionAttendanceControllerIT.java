@@ -71,7 +71,7 @@ class SessionAttendanceControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Basic","kind":"CHARACTER","system":"homebrew","sections":[]}
+                                {"name":"Basic","kind":"CHARACTER","sections":[]}
                                 """))
                 .andReturn().getResponse().getContentAsString();
         String templateId = JsonPath.read(template, "$.id");

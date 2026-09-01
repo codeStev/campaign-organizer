@@ -14,27 +14,38 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
-/** The world-independent global field template catalog (ADR-0093). */
+/** The world-independent global field template catalog (ADR-0093/ADR-0094). */
 class GlobalFieldTemplateControllerIT extends AbstractIntegrationTest {
 
-    private static final String DND = """
-            {"name":"D&D 5e","kind":"CHARACTER","system":"dnd5e","sections":[
+    private static String dnd(String systemId) {
+        return """
+            {"name":"D&D 5e","kind":"CHARACTER","systemId":"%s","sections":[
               {"title":"Core","fields":[
                 {"key":"level","label":"Level","type":"NUMBER"}
               ]}
-            ]}""";
+            ]}""".formatted(systemId);
+    }
+
+    private String createGameSystem(String auth, String name) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/game-systems")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
 
     @Test
     void createReadUpdateDelete() throws Exception {
         String auth = authHeader();
+        String systemId = createGameSystem(auth, "D&D 5e (crud)");
 
         String created = mockMvc.perform(post("/api/field-templates/global")
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DND))
+                        .content(dnd(systemId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("D&D 5e"))
-                .andExpect(jsonPath("$.system").value("dnd5e"))
+                .andExpect(jsonPath("$.systemId").value(systemId))
                 .andExpect(jsonPath("$.sections[0].fields[0].key").value("level"))
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(created, "$.id");
@@ -47,8 +58,8 @@ class GlobalFieldTemplateControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(put("/api/field-templates/global/{t}", id)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"D&D 5e (revised)\",\"kind\":\"CHARACTER\",\"system\":\"dnd5e\","
-                                + "\"sections\":[]}"))
+                        .content("{\"name\":\"D&D 5e (revised)\",\"kind\":\"CHARACTER\",\"systemId\":\"" + systemId
+                                + "\",\"sections\":[]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("D&D 5e (revised)"));
 
@@ -74,15 +85,19 @@ class GlobalFieldTemplateControllerIT extends AbstractIntegrationTest {
     @Test
     void filtersByKind() throws Exception {
         String auth = authHeader();
+        String systemA = createGameSystem(auth, "System A");
+        String systemB = createGameSystem(auth, "System B");
         mockMvc.perform(post("/api/field-templates/global")
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"A\",\"kind\":\"CHARACTER\",\"system\":\"a\",\"sections\":[]}"))
+                        .content("{\"name\":\"A\",\"kind\":\"CHARACTER\",\"systemId\":\"" + systemA
+                                + "\",\"sections\":[]}"))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/field-templates/global")
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"B\",\"kind\":\"STATBLOCK\",\"system\":\"b\",\"sections\":[]}"))
+                        .content("{\"name\":\"B\",\"kind\":\"STATBLOCK\",\"systemId\":\"" + systemB
+                                + "\",\"sections\":[]}"))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/field-templates/global?kind=STATBLOCK")
@@ -96,11 +111,12 @@ class GlobalFieldTemplateControllerIT extends AbstractIntegrationTest {
     void deleteFailsWhileACharacterSheetStillReferencesIt() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
+        String systemId = createGameSystem(auth, "D&D 5e (delete-restrict)");
 
         String created = mockMvc.perform(post("/api/field-templates/global")
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DND))
+                        .content(dnd(systemId)))
                 .andReturn().getResponse().getContentAsString();
         String globalId = JsonPath.read(created, "$.id");
 

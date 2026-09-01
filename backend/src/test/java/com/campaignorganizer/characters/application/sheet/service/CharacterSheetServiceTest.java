@@ -118,8 +118,8 @@ class CharacterSheetServiceTest {
         UUID globalTemplateId = UUID.randomUUID();
         when(worlds.exists(worldId)).thenReturn(true);
         when(globalTemplates.findById(globalTemplateId)).thenReturn(Optional.of(
-                new GlobalFieldTemplateView(globalTemplateId, "D&D 5e", TemplateKind.CHARACTER, "dnd5e",
-                        List.of(), Instant.now(), Instant.now())));
+                new GlobalFieldTemplateView(globalTemplateId, "D&D 5e", TemplateKind.CHARACTER,
+                        UUID.randomUUID(), List.of(), Instant.now(), Instant.now())));
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(sheets.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
