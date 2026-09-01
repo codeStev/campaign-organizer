@@ -4358,6 +4358,15 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        tagline:
+          type: [string, "null"]
+          maxLength: 200
+        color:
+          type: [string, "null"]
+          maxLength: 20
+        notes:
+          type: [string, "null"]
+          description: Free-text notes (Markdown) — rule references, house rules, etc. (ADR-0095).
 
     GameSystem:
       type: object
@@ -4368,6 +4377,12 @@ components:
           format: uuid
         name:
           type: string
+        tagline:
+          type: [string, "null"]
+        color:
+          type: [string, "null"]
+        notes:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
@@ -4936,6 +4951,10 @@ components:
           description: Free-text GM notes for the campaign (Markdown, see ADR-0054).
         status:
           $ref: '#/components/schemas/CampaignStatus'
+        systemId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional game system this campaign runs (ADR-0095); null = undecided/agnostic.
 
     Campaign:
       type: object
@@ -4956,6 +4975,9 @@ components:
           description: Free-text GM notes for the campaign (Markdown, see ADR-0054).
         status:
           $ref: '#/components/schemas/CampaignStatus'
+        systemId:
+          type: [string, "null"]
+          format: uuid
         createdAt:
           type: string
           format: date-time
