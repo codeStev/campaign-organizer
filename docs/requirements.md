@@ -297,6 +297,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   explicitly promoted to global. Purely one-off/homebrew per-world
   templates remain fully supported alongside the catalog. Document
   templates (FR-50) are out of scope for now. (ADR-0093)
+- **FR-56 Game system entity.** Game systems (D&D 5e, Pirate Borg, …) are
+  a real, top-level, world-independent entity with a stable identity —
+  not a free-text label — selectable from a list in the template editor
+  instead of typed. Gives future system-level metadata (e.g. rule
+  references) somewhere to attach independent of any game world. (ADR-0094)
 
 ---
 
