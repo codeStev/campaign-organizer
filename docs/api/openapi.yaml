@@ -2160,6 +2160,135 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/documents:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [sheets]
+      summary: List a world's documents
+      operationId: listDocuments
+      parameters:
+        - name: campaignId
+          in: query
+          required: false
+          description: Filter to a single campaign's documents.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Documents in the world, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [sheets]
+      summary: Create a document
+      operationId: createDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+      responses:
+        '201':
+          description: Document created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/documents/{documentId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [sheets]
+      summary: Get a document
+      operationId: getDocument
+      responses:
+        '200':
+          description: The document.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [sheets]
+      summary: Update a document
+      operationId: updateDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+      responses:
+        '200':
+          description: Document updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a document
+      operationId: deleteDocument
+      responses:
+        '204':
+          description: Document deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/documents/{documentId}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [sheets]
+      summary: Export a document as a filled fillable PDF
+      operationId: exportDocumentPdf
+      responses:
+        '200':
+          description: The filled PDF (still fillable).
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/arcs:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -3067,6 +3196,14 @@ components:
       schema:
         type: string
         format: uuid
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      description: Identifier of the document.
+      schema:
+        type: string
+        format: uuid
     StatblockId:
       name: statblockId
       in: path
@@ -3344,10 +3481,12 @@ components:
 
     TemplateKind:
       type: string
-      enum: [CHARACTER, STATBLOCK]
+      enum: [CHARACTER, STATBLOCK, DOCUMENT]
       description: >
-        What a field template is for — a character sheet or a monster/NPC
-        statblock. Chosen at creation; drives which picker offers the template.
+        What a field template is for — a character sheet, a monster/NPC
+        statblock, or a general-purpose document (session-zero sheets and
+        similar, ADR-0088). Chosen at creation; drives which picker offers
+        the template.
 
     FieldType:
       type: string
@@ -3662,6 +3801,54 @@ components:
           format: uuid
         articleId:
           type: [string, "null"]
+          format: uuid
+        campaignId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        values:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentRequest:
+      type: object
+      required: [name, templateId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        templateId:
+          type: string
+          format: uuid
+        campaignId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional campaign this document belongs to; null = shared.
+        values:
+          type: object
+          additionalProperties: true
+          description: Field values keyed by the template's field keys.
+
+    Document:
+      type: object
+      required: [id, worldId, templateId, name, values, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        templateId:
+          type: string
           format: uuid
         campaignId:
           type: [string, "null"]
