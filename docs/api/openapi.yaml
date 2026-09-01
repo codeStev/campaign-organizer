@@ -1924,6 +1924,119 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
 
+  /game-systems:
+    get:
+      tags: [sheets]
+      summary: List game systems (ADR-0094)
+      operationId: listGameSystems
+      responses:
+        '200':
+          description: Game systems.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameSystem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [sheets]
+      summary: Add a game system
+      operationId: createGameSystem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GameSystemRequest'
+      responses:
+        '201':
+          description: Game system created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSystem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: A game system with that name already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /game-systems/{systemId}:
+    parameters:
+      - $ref: '#/components/parameters/GameSystemId'
+    get:
+      tags: [sheets]
+      summary: Get a game system
+      operationId: getGameSystem
+      responses:
+        '200':
+          description: The game system.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSystem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [sheets]
+      summary: Rename a game system
+      operationId: updateGameSystem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GameSystemRequest'
+      responses:
+        '200':
+          description: Game system updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSystem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A game system with that name already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags: [sheets]
+      summary: Delete a game system
+      description: >
+        Fails if any global field template still references it (RESTRICT,
+        ADR-0094) — reassign or delete those first. World-scoped templates
+        referencing it are simply detached (SET NULL).
+      operationId: deleteGameSystem
+      responses:
+        '204':
+          description: Game system deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Still referenced by at least one global field template.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
   /worlds/{worldId}/whiteboards:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -3798,6 +3911,14 @@ components:
       schema:
         type: string
         format: uuid
+    GameSystemId:
+      name: systemId
+      in: path
+      required: true
+      description: Identifier of the game system.
+      schema:
+        type: string
+        format: uuid
     SheetId:
       name: sheetId
       in: path
@@ -4148,9 +4269,9 @@ components:
           maxLength: 200
         kind:
           $ref: '#/components/schemas/TemplateKind'
-        system:
+        systemId:
           type: [string, "null"]
-          maxLength: 100
+          format: uuid
         sections:
           type: array
           items:
@@ -4170,8 +4291,9 @@ components:
           type: string
         kind:
           $ref: '#/components/schemas/TemplateKind'
-        system:
+        systemId:
           type: [string, "null"]
+          format: uuid
         sections:
           type: array
           items:
@@ -4185,7 +4307,7 @@ components:
 
     GlobalFieldTemplateRequest:
       type: object
-      required: [name, kind, system]
+      required: [name, kind, systemId]
       description: CHARACTER/STATBLOCK kinds only (ADR-0093).
       properties:
         name:
@@ -4194,11 +4316,10 @@ components:
           maxLength: 200
         kind:
           $ref: '#/components/schemas/TemplateKind'
-        system:
+        systemId:
           type: string
-          minLength: 1
-          maxLength: 100
-          description: Required here (unlike world-scoped templates) — it's the sharing key.
+          format: uuid
+          description: Required here (unlike world-scoped templates) — it's the sharing key (ADR-0094).
         sections:
           type: array
           items:
@@ -4206,7 +4327,7 @@ components:
 
     GlobalFieldTemplate:
       type: object
-      required: [id, name, kind, system, sections, createdAt, updatedAt]
+      required: [id, name, kind, systemId, sections, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -4215,12 +4336,38 @@ components:
           type: string
         kind:
           $ref: '#/components/schemas/TemplateKind'
-        system:
+        systemId:
           type: string
+          format: uuid
         sections:
           type: array
           items:
             $ref: '#/components/schemas/TemplateSection'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GameSystemRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    GameSystem:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
         createdAt:
           type: string
           format: date-time
