@@ -27,6 +27,7 @@ interface Props {
 const KIND_LABEL: Record<TemplateKind, string> = {
   CHARACTER: 'Character sheet',
   STATBLOCK: 'Statblock',
+  DOCUMENT: 'Document',
 };
 
 export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, onError }: Props) {
@@ -98,9 +99,9 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
   }
 
   function deleteConsequence(t: FieldTemplate): string {
-    return t.kind === 'CHARACTER'
-      ? 'Character sheets using it will be removed too.'
-      : 'Statblocks using it will fall back to freeform stats.';
+    if (t.kind === 'CHARACTER') return 'Character sheets using it will be removed too.';
+    if (t.kind === 'DOCUMENT') return 'Documents built from it will be deleted too.';
+    return 'Statblocks using it will fall back to freeform stats.';
   }
 
   if (building) {
@@ -178,6 +179,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             <SelectContent>
               <SelectItem value="CHARACTER">Character sheet</SelectItem>
               <SelectItem value="STATBLOCK">Statblock</SelectItem>
+              <SelectItem value="DOCUMENT">Document</SelectItem>
             </SelectContent>
           </Select>
         </label>

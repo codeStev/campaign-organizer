@@ -213,7 +213,9 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
       <div className="builder-head">
         <Input className="title-input" placeholder="Template name" value={name} onChange={(e) => setName(e.target.value)} />
         <Input placeholder="system (e.g. homebrew)" value={system} onChange={(e) => setSystem(e.target.value)} />
-        <small className="muted">{kind === 'CHARACTER' ? 'Character sheet' : 'Statblock'} template</small>
+        <small className="muted">
+          {kind === 'CHARACTER' ? 'Character sheet' : kind === 'STATBLOCK' ? 'Statblock' : 'Document'} template
+        </small>
       </div>
 
       <div className="field-palette">
