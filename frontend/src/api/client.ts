@@ -701,6 +701,23 @@ export interface PacketClock {
   segments: PacketClockSegment[];
 }
 
+/** Resolved fresh from its source at print time, same as the standalone cheat sheet (ADR-0086). */
+export interface PacketCheatSheetFragment {
+  type: CheatSheetFragmentType;
+  missing: boolean;
+  text?: string | null;
+  statblock?: Statblock | null;
+  tableTitle?: string | null;
+  tableEntry?: PacketRollTableEntry | null;
+  deckTitle?: string | null;
+  deckCard?: PacketDeckCard | null;
+}
+
+export interface PacketCheatSheet {
+  id: string;
+  fragments: PacketCheatSheetFragment[];
+}
+
 export interface SessionPacket {
   session: Session;
   campaignName: string;
@@ -712,6 +729,7 @@ export interface SessionPacket {
   cardDecks: PacketCardDeck[];
   handouts: PacketHandout[];
   clocks: PacketClock[];
+  cheatSheet?: PacketCheatSheet | null;
 }
 
 export function sessionsApi(worldId: string, campaignId: string) {

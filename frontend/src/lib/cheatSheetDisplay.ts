@@ -11,9 +11,14 @@ export function entryRange(e: { minResult?: number | null; maxResult?: number | 
   return `${e.minResult}–${e.maxResult}`;
 }
 
+/** `body` may be raw Markdown (the editor) or already-rendered HTML (the packet). */
 export function cardLabel(c: { title?: string | null; body: string }): string {
   if (c.title) return c.title;
-  const plain = c.body.replace(/[#*_>`[\]]/g, '').trim();
+  const plain = c.body
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[#*_>`[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return plain.length > 48 ? `${plain.slice(0, 48)}…` : plain || '(untitled card)';
 }
 

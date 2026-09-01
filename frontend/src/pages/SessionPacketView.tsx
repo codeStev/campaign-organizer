@@ -13,6 +13,7 @@ import {
   Statblock,
 } from '../api/client';
 import { orderedStatEntries } from '../lib/statblockDisplay';
+import { cardLabel, entryRange, statblockLine } from '../lib/cheatSheetDisplay';
 import { renderMarkdown } from '../lib/markdown';
 
 /** Every article id within an article's subtree (itself + descendants). */
@@ -127,6 +128,10 @@ function buildPacketTree(packet: SessionPacket): CheckTreeNode[] {
     label: c.title,
     children: [],
   }));
+  const cheatSheetNodes: CheckTreeNode[] =
+    packet.cheatSheet && packet.cheatSheet.fragments.length > 0
+      ? [{ id: `cheatSheet:${packet.cheatSheet.id}`, label: 'Cheat sheet', children: [] }]
+      : [];
 
   return [
     ...beatNodes,
@@ -137,6 +142,7 @@ function buildPacketTree(packet: SessionPacket): CheckTreeNode[] {
     ...cardDeckNodes,
     ...handoutNodes,
     ...clockNodes,
+    ...cheatSheetNodes,
   ];
 }
 
@@ -210,6 +216,11 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
     () => packet?.clocks.filter((c) => !excludedIds.has(`clock:${c.id}`)) ?? [],
     [packet, excludedIds],
   );
+  const shownCheatSheet = useMemo(() => {
+    const sheet = packet?.cheatSheet;
+    if (!sheet || sheet.fragments.length === 0) return null;
+    return excludedIds.has(`cheatSheet:${sheet.id}`) ? null : sheet;
+  }, [packet, excludedIds]);
 
   useEffect(() => {
     let active = true;
@@ -491,6 +502,70 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                     )}
                   </div>
                 ))}
+              </section>
+            )}
+
+            {shownCheatSheet && (
+              <section className="print-map-section cheat-sheet-print">
+                <h1>Cheat sheet</h1>
+                <ol className="cheatsheet-list">
+                  {shownCheatSheet.fragments.map((f, i) => (
+                    <li key={i} className={`cheatsheet-item cheatsheet-${f.type.toLowerCase()}`}>
+                      <span className="cheatsheet-num">{i + 1}</span>
+                      <div className="cheatsheet-content">
+                        {f.missing ? (
+                          <span className="cheatsheet-missing">
+                            Missing{' '}
+                            {f.type === 'STATBLOCK'
+                              ? 'statblock'
+                              : f.type === 'TABLE_ROW'
+                                ? 'table row'
+                                : f.type === 'DECK_CARD'
+                                  ? 'deck card'
+                                  : 'content'}
+                          </span>
+                        ) : f.type === 'FREEFORM' ? (
+                          <div
+                            className="preview-body"
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text ?? '') }}
+                          />
+                        ) : f.type === 'STATBLOCK' && f.statblock ? (
+                          <>
+                            <strong>{f.statblock.name}</strong>
+                            {statblockLine(f.statblock, templates) && (
+                              <div className="cheatsheet-statline">
+                                {statblockLine(f.statblock, templates)}
+                              </div>
+                            )}
+                          </>
+                        ) : f.type === 'TABLE_ROW' && f.tableEntry ? (
+                          <>
+                            <span className="cheatsheet-ref">
+                              {f.tableTitle} · {entryRange(f.tableEntry)}
+                            </span>
+                            {/* eslint-disable-next-line react/no-danger */}
+                            <div
+                              className="preview-body"
+                              dangerouslySetInnerHTML={{ __html: f.tableEntry.bodyHtml ?? '' }}
+                            />
+                          </>
+                        ) : f.type === 'DECK_CARD' && f.deckCard ? (
+                          <>
+                            <span className="cheatsheet-ref">
+                              {f.deckTitle} ·{' '}
+                              {cardLabel({ title: f.deckCard.title, body: f.deckCard.bodyHtml })}
+                            </span>
+                            {/* eslint-disable-next-line react/no-danger */}
+                            <div
+                              className="preview-body"
+                              dangerouslySetInnerHTML={{ __html: f.deckCard.bodyHtml ?? '' }}
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </section>
             )}
           </>
