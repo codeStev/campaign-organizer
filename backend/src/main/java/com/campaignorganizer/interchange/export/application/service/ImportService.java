@@ -28,6 +28,8 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
+import com.campaignorganizer.characters.application.template.port.published.GameSystemImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GameSystemView;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.interchange.export.application.port.in.ImportBackupUseCase;
@@ -106,6 +108,7 @@ public class ImportService implements ImportBackupUseCase {
     private final SessionAttendanceImportPort sessionAttendanceImportPort;
     private final ArcImportPort arcImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
+    private final GameSystemImportPort gameSystemImportPort;
     private final GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
     private final CharacterSheetImportPort characterSheetImportPort;
     private final DocumentImportPort documentImportPort;
@@ -131,6 +134,7 @@ public class ImportService implements ImportBackupUseCase {
             CampaignPlayerImportPort campaignPlayerImportPort, SessionImportPort sessionImportPort,
             SessionAttendanceImportPort sessionAttendanceImportPort,
             ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
+            GameSystemImportPort gameSystemImportPort,
             GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
             StatblockImportPort statblockImportPort,
@@ -157,6 +161,7 @@ public class ImportService implements ImportBackupUseCase {
         this.sessionAttendanceImportPort = sessionAttendanceImportPort;
         this.arcImportPort = arcImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
+        this.gameSystemImportPort = gameSystemImportPort;
         this.globalFieldTemplateImportPort = globalFieldTemplateImportPort;
         this.characterSheetImportPort = characterSheetImportPort;
         this.documentImportPort = documentImportPort;
@@ -211,6 +216,7 @@ public class ImportService implements ImportBackupUseCase {
         List<SessionAttendanceView> sessionAttendance =
                 readList(root, "sessionAttendance", SessionAttendanceView.class);
         List<ArcView> arcs = readList(root, "arcs", ArcView.class);
+        List<GameSystemView> gameSystems = readList(root, "gameSystems", GameSystemView.class);
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<GlobalFieldTemplateView> globalFieldTemplates =
                 readList(root, "globalFieldTemplates", GlobalFieldTemplateView.class);
@@ -368,19 +374,32 @@ public class ImportService implements ImportBackupUseCase {
                     remap.getOrNull(t.sessionId()), t.text(), t.done(), t.createdAt(), t.updatedAt()));
         }
 
-        for (FieldTemplateView f : fieldTemplates) {
-            fieldTemplateImportPort.importFieldTemplate(new FieldTemplateView(remap.get(f.id()),
-                    newWorldId, f.name(), f.kind(), f.system(), f.sections(), f.createdAt(),
-                    f.updatedAt()));
+        // Game systems (ADR-0094): resolved-or-reused by exact name, same
+        // exception to the normal id-remap contract as the global template
+        // catalog, and for the same reason (avoid fragmenting one shared
+        // system across re-imports).
+        Map<UUID, UUID> gameSystemResolution = new HashMap<>();
+        for (GameSystemView sys : gameSystems) {
+            GameSystemView resolved = gameSystemImportPort.importOrReuse(sys);
+            gameSystemResolution.put(sys.id(), resolved.id());
         }
 
-        // Global template catalog (ADR-0093): resolved-or-reused by (kind, system,
+        for (FieldTemplateView f : fieldTemplates) {
+            fieldTemplateImportPort.importFieldTemplate(new FieldTemplateView(remap.get(f.id()),
+                    newWorldId, f.name(), f.kind(), gameSystemResolution.get(f.systemId()), f.sections(),
+                    f.createdAt(), f.updatedAt()));
+        }
+
+        // Global template catalog (ADR-0093): resolved-or-reused by (kind, systemId,
         // name), not blindly recreated with a fresh id like every other entity — so
         // the id a referencing sheet/statblock should use is whatever importOrReuse
         // returns, tracked here rather than through the normal id remap.
         Map<UUID, UUID> globalTemplateResolution = new HashMap<>();
         for (GlobalFieldTemplateView g : globalFieldTemplates) {
-            GlobalFieldTemplateView resolved = globalFieldTemplateImportPort.importOrReuse(g);
+            GlobalFieldTemplateView withResolvedSystem = new GlobalFieldTemplateView(g.id(), g.name(),
+                    g.kind(), gameSystemResolution.get(g.systemId()), g.sections(), g.createdAt(),
+                    g.updatedAt());
+            GlobalFieldTemplateView resolved = globalFieldTemplateImportPort.importOrReuse(withResolvedSystem);
             globalTemplateResolution.put(g.id(), resolved.id());
         }
 

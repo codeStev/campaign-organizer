@@ -17,6 +17,7 @@ import com.campaignorganizer.campaign.application.todo.port.published.TodoQueryP
 import com.campaignorganizer.characters.application.document.port.published.DocumentQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.GameSystemQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
@@ -74,6 +75,7 @@ public class ExportService implements ExportWorldUseCase {
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
     private final FieldTemplateQueryPort fieldTemplates;
+    private final GameSystemQueryPort gameSystems;
     private final GlobalFieldTemplateQueryPort globalFieldTemplates;
     private final CharacterSheetQueryPort characterSheets;
     private final DocumentQueryPort documents;
@@ -95,7 +97,8 @@ public class ExportService implements ExportWorldUseCase {
                          PlayerQueryPort players, CampaignPlayerQueryPort campaignPlayers,
                          SessionQueryPort sessions, SessionAttendanceQueryPort sessionAttendance,
                          ArcQueryPort arcs, ArcBeatQueryPort beats,
-                         FieldTemplateQueryPort fieldTemplates, GlobalFieldTemplateQueryPort globalFieldTemplates,
+                         FieldTemplateQueryPort fieldTemplates, GameSystemQueryPort gameSystems,
+                         GlobalFieldTemplateQueryPort globalFieldTemplates,
                          CharacterSheetQueryPort characterSheets,
                          DocumentQueryPort documents, StatblockQueryPort statblocks,
                          WhiteboardQueryPort whiteboards,
@@ -120,6 +123,7 @@ public class ExportService implements ExportWorldUseCase {
         this.arcs = arcs;
         this.beats = beats;
         this.fieldTemplates = fieldTemplates;
+        this.gameSystems = gameSystems;
         this.globalFieldTemplates = globalFieldTemplates;
         this.characterSheets = characterSheets;
         this.documents = documents;
@@ -211,10 +215,12 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("sessionAttendance", allAttendance);
 
         bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
-        // Global template catalog (ADR-0093): not world-scoped, but included so a
-        // fresh instance importing this bundle has the referenced templates too;
-        // import resolves-or-reuses by (kind, system, name) rather than blindly
-        // recreating, so re-importing never duplicates the catalog.
+        // Game systems (ADR-0094) and the global template catalog (ADR-0093):
+        // neither is world-scoped, but both are included so a fresh instance
+        // importing this bundle has whatever's referenced; import
+        // resolves-or-reuses each by name/(kind, systemId, name) rather than
+        // blindly recreating, so re-importing never duplicates them.
+        bundle.put("gameSystems", gameSystems.findAll());
         bundle.put("globalFieldTemplates", globalFieldTemplates.findAll());
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));
         // General-purpose documents (FR-50).
