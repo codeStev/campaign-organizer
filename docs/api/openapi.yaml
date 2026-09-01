@@ -4177,6 +4177,10 @@ components:
           type: string
           format: date-time
 
+    CampaignStatus:
+      type: string
+      enum: [PLANNED, ACTIVE, ON_HIATUS, COMPLETED]
+
     CampaignRequest:
       type: object
       required: [name]
@@ -4192,10 +4196,12 @@ components:
           type: [string, "null"]
           maxLength: 20000
           description: Free-text GM notes for the campaign (Markdown, see ADR-0054).
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
 
     Campaign:
       type: object
-      required: [id, worldId, name, createdAt, updatedAt]
+      required: [id, worldId, name, status, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -4210,6 +4216,8 @@ components:
         notes:
           type: [string, "null"]
           description: Free-text GM notes for the campaign (Markdown, see ADR-0054).
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
         createdAt:
           type: string
           format: date-time
