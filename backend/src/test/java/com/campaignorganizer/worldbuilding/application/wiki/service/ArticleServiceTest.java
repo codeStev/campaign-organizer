@@ -12,9 +12,12 @@ import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ArticleCommands.CreateArticleCommand;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ArticleCommands.UpdateArticleCommand;
+import com.campaignorganizer.worldbuilding.application.wiki.port.in.ArticleListQuery;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRevisionRepositoryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleTagLookupPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleSummaryView;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
 import com.campaignorganizer.worldbuilding.domain.wiki.Article;
@@ -23,7 +26,9 @@ import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +49,8 @@ class ArticleServiceTest {
     @Mock
     private WorldExistsPort worlds;
     @Mock
+    private ArticleTagLookupPort tagLookup;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -55,8 +62,10 @@ class ArticleServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ArticleService(articles, revisions, categories, worlds, viewMapper, ids, clock);
+        service = new ArticleService(articles, revisions, categories, worlds, tagLookup, viewMapper,
+                ids, clock);
         lenient().when(worlds.exists(worldId)).thenReturn(true);
+        lenient().when(tagLookup.articleIdsTaggedContaining(any(), any())).thenReturn(Set.of());
     }
 
     @Test
@@ -170,5 +179,28 @@ class ArticleServiceTest {
         ArticleView restored = service.restore(worldId, articleId, revisionId);
 
         assertThat(restored.parentArticleId()).isEqualTo(parentId);
+    }
+
+    @Test
+    void listAppendsTagOnlyMatchesAfterTextMatches() {
+        UUID textMatchId = UUID.randomUUID();
+        UUID tagOnlyId = UUID.randomUUID();
+        UUID unrelatedId = UUID.randomUUID();
+        Article textMatch = Article.create(textMatchId, worldId, null, null, "The Patron's Ledger",
+                "patrons-ledger", ArticleTemplate.GENERIC, "body", clock.instant());
+        Article tagOnly = Article.create(tagOnlyId, worldId, null, null, "Corvin", "corvin",
+                ArticleTemplate.CHARACTER, "no mention here", clock.instant());
+        Article unrelated = Article.create(unrelatedId, worldId, null, null, "Somewhere Else",
+                "somewhere-else", ArticleTemplate.LOCATION, "body", clock.instant());
+
+        when(articles.search(worldId, "patron")).thenReturn(List.of(textMatch));
+        when(tagLookup.articleIdsTaggedContaining(worldId, "patron"))
+                .thenReturn(Set.of(tagOnlyId, textMatchId));
+        when(articles.findByWorld(worldId)).thenReturn(List.of(unrelated, tagOnly));
+
+        List<ArticleSummaryView> result = service.list(new ArticleListQuery(worldId, null, "patron", null));
+
+        assertThat(result).extracting(ArticleSummaryView::id)
+                .containsExactly(textMatchId, tagOnlyId);
     }
 }

@@ -44,4 +44,12 @@ class TagQueryServiceTest {
 
         verify(repo).findByWorld(any());
     }
+
+    @Test
+    void entityIdsWhereTagContainsLowercasesTheFragment() {
+        service.entityIdsWhereTagContains(worldId, EntityType.ARTICLE, "  Pat ");
+
+        verify(repo).findEntityIdsByWorldAndTypeAndNameContaining(worldId, EntityType.ARTICLE,
+                "pat");
+    }
 }
