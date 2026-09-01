@@ -34,6 +34,9 @@ public class CampaignJpaEntity {
     @Column(nullable = false, length = 20)
     private CampaignStatus status;
 
+    @Column(name = "system_id")
+    private UUID systemId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -89,6 +92,14 @@ public class CampaignJpaEntity {
 
     public void setStatus(CampaignStatus status) {
         this.status = status;
+    }
+
+    public UUID getSystemId() {
+        return systemId;
+    }
+
+    public void setSystemId(UUID systemId) {
+        this.systemId = systemId;
     }
 
     public Instant getCreatedAt() {

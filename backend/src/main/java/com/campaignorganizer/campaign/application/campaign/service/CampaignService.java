@@ -8,6 +8,7 @@ import com.campaignorganizer.campaign.application.campaign.port.in.GetCampaignUs
 import com.campaignorganizer.campaign.application.campaign.port.in.ListCampaignsUseCase;
 import com.campaignorganizer.campaign.application.campaign.port.in.UpdateCampaignUseCase;
 import com.campaignorganizer.campaign.application.campaign.port.out.CampaignRepositoryPort;
+import com.campaignorganizer.campaign.application.campaign.port.out.GameSystemExistsPort;
 import com.campaignorganizer.campaign.application.campaign.port.out.WorldExistsPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
@@ -15,6 +16,7 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.domain.campaign.Campaign;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +32,17 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
 
     private final CampaignRepositoryPort campaigns;
     private final WorldExistsPort worlds;
+    private final GameSystemExistsPort gameSystems;
     private final CampaignViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public CampaignService(CampaignRepositoryPort campaigns, WorldExistsPort worlds,
-                           CampaignViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                           GameSystemExistsPort gameSystems, CampaignViewMapper viewMapper,
+                           IdGenerator ids, Clock clock) {
         this.campaigns = campaigns;
         this.worlds = worlds;
+        this.gameSystems = gameSystems;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -47,8 +52,10 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     @Transactional
     public CampaignView create(CreateCampaignCommand command) {
         requireWorld(command.worldId());
+        requireGameSystem(command.systemId());
         Campaign created = Campaign.create(ids.newId(), command.worldId(), command.name(),
-                command.description(), command.notes(), command.status(), clock.instant());
+                command.description(), command.notes(), command.status(), command.systemId(),
+                clock.instant());
         return viewMapper.toView(campaigns.save(created));
     }
 
@@ -56,8 +63,9 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     @Transactional
     public CampaignView update(UpdateCampaignCommand command) {
         Campaign campaign = require(command.worldId(), command.campaignId());
+        requireGameSystem(command.systemId());
         campaign.update(command.name(), command.description(), command.notes(), command.status(),
-                clock.instant());
+                command.systemId(), clock.instant());
         return viewMapper.toView(campaigns.save(campaign));
     }
 
@@ -86,7 +94,8 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     @Transactional
     public CampaignView importCampaign(CampaignView view) {
         Campaign campaign = Campaign.reconstitute(view.id(), view.worldId(), view.name(),
-                view.description(), view.notes(), view.status(), view.createdAt(), view.updatedAt());
+                view.description(), view.notes(), view.status(), view.systemId(), view.createdAt(),
+                view.updatedAt());
         return viewMapper.toView(campaigns.save(campaign));
     }
 
@@ -124,6 +133,12 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     private void requireWorld(UUID worldId) {
         if (!worlds.exists(worldId)) {
             throw new NotFoundException("World not found");
+        }
+    }
+
+    private void requireGameSystem(UUID systemId) {
+        if (systemId != null && !gameSystems.exists(systemId)) {
+            throw new ValidationException("Game system not found");
         }
     }
 }

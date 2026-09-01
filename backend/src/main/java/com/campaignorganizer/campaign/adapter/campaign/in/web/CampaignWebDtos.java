@@ -15,7 +15,8 @@ public final class CampaignWebDtos {
             @NotBlank @Size(max = 200) String name,
             @Size(max = 5000) String description,
             @Size(max = 20000) String notes,
-            CampaignStatus status) {
+            CampaignStatus status,
+            UUID systemId) {
     }
 
     public record CampaignResponse(
@@ -25,6 +26,7 @@ public final class CampaignWebDtos {
             String description,
             String notes,
             CampaignStatus status,
+            UUID systemId,
             Instant createdAt,
             Instant updatedAt) {
     }

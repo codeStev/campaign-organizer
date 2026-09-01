@@ -13,35 +13,38 @@ public final class Campaign {
     private String description;
     private String notes;
     private CampaignStatus status;
+    private UUID systemId;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private Campaign(UUID id, UUID worldId, String name, String description, String notes,
-                     CampaignStatus status, Instant createdAt, Instant updatedAt) {
+                     CampaignStatus status, UUID systemId, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(name, description, notes, status);
+        apply(name, description, notes, status, systemId);
     }
 
     public static Campaign create(UUID id, UUID worldId, String name, String description, String notes,
-                                  CampaignStatus status, Instant now) {
-        return new Campaign(id, worldId, name, description, notes, status, now, now);
+                                  CampaignStatus status, UUID systemId, Instant now) {
+        return new Campaign(id, worldId, name, description, notes, status, systemId, now, now);
     }
 
     public static Campaign reconstitute(UUID id, UUID worldId, String name, String description,
-                                        String notes, CampaignStatus status, Instant createdAt,
-                                        Instant updatedAt) {
-        return new Campaign(id, worldId, name, description, notes, status, createdAt, updatedAt);
+                                        String notes, CampaignStatus status, UUID systemId,
+                                        Instant createdAt, Instant updatedAt) {
+        return new Campaign(id, worldId, name, description, notes, status, systemId, createdAt, updatedAt);
     }
 
-    public void update(String name, String description, String notes, CampaignStatus status, Instant now) {
-        apply(name, description, notes, status);
+    public void update(String name, String description, String notes, CampaignStatus status, UUID systemId,
+                       Instant now) {
+        apply(name, description, notes, status, systemId);
         this.updatedAt = now;
     }
 
-    private void apply(String name, String description, String notes, CampaignStatus status) {
+    private void apply(String name, String description, String notes, CampaignStatus status,
+                       UUID systemId) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Campaign name must not be blank");
         }
@@ -49,6 +52,7 @@ public final class Campaign {
         this.description = description;
         this.notes = notes;
         this.status = status == null ? CampaignStatus.PLANNED : status;
+        this.systemId = systemId;
     }
 
     public UUID getId() {
@@ -73,6 +77,10 @@ public final class Campaign {
 
     public CampaignStatus getStatus() {
         return status;
+    }
+
+    public UUID getSystemId() {
+        return systemId;
     }
 
     public Instant getCreatedAt() {

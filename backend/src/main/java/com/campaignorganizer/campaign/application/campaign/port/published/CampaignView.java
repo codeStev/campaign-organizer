@@ -12,6 +12,7 @@ public record CampaignView(
         String description,
         String notes,
         CampaignStatus status,
+        UUID systemId,
         Instant createdAt,
         Instant updatedAt) {
 }

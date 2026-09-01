@@ -9,10 +9,10 @@ public final class CampaignCommands {
     }
 
     public record CreateCampaignCommand(UUID worldId, String name, String description, String notes,
-                                        CampaignStatus status) {
+                                        CampaignStatus status, UUID systemId) {
     }
 
     public record UpdateCampaignCommand(UUID worldId, UUID campaignId, String name, String description,
-                                        String notes, CampaignStatus status) {
+                                        String notes, CampaignStatus status, UUID systemId) {
     }
 }
