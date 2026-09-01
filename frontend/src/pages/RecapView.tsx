@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { arcsApi, sessionsApi, Arc, Beat, Session } from '../api/client';
+import { arcsApi, sessionsApi, sessionAttendanceApi, Arc, Beat, Session, AttendanceEntry } from '../api/client';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
@@ -24,6 +24,9 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
   const [arcs, setArcs] = useState<Arc[]>([]);
   const [beats, setBeats] = useState<Beat[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  // FR-53: who was at the table, keyed by session id. Not GM-only, so it's
+  // fetched right alongside everything else the recap already shows.
+  const [attendanceBySession, setAttendanceBySession] = useState<Map<string, AttendanceEntry[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
 
@@ -34,8 +37,17 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
         if (!active) return;
         setArcs(arcList);
         setSessions(sessionList);
-        const beatList = await fetchCampaignBeats(worldId, campaignId, arcList);
-        if (active) setBeats(beatList);
+        const [beatList, attendanceLists] = await Promise.all([
+          fetchCampaignBeats(worldId, campaignId, arcList),
+          Promise.all(
+            sessionList.map((s) => sessionAttendanceApi(worldId, campaignId, s.id).get()),
+          ),
+        ]);
+        if (!active) return;
+        setBeats(beatList);
+        setAttendanceBySession(
+          new Map(sessionList.map((s, i) => [s.id, attendanceLists[i]])),
+        );
       })
       .catch(onError)
       .finally(() => active && setLoading(false));
@@ -85,17 +97,25 @@ export function RecapView({ worldId, campaignId, campaignName, onClose, onError 
 
         <h2>Sessions</h2>
         {orderedSessions.length === 0 && <p className="muted">No sessions logged yet.</p>}
-        {orderedSessions.map((s) => (
-          <section key={s.id} className="recap-session">
-            <h3>
-              {s.sessionNumber != null ? `#${s.sessionNumber} ` : ''}
-              {s.title}
-              {s.date && <span className="print-kicker"> — {s.date}</span>}
-            </h3>
-            {/* Summary only; GM notes are private and never rendered here. */}
-            {s.summary && <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }} />}
-          </section>
-        ))}
+        {orderedSessions.map((s) => {
+          const present = (attendanceBySession.get(s.id) ?? []).filter((a) => a.present);
+          return (
+            <section key={s.id} className="recap-session">
+              <h3>
+                {s.sessionNumber != null ? `#${s.sessionNumber} ` : ''}
+                {s.title}
+                {s.date && <span className="print-kicker"> — {s.date}</span>}
+              </h3>
+              {/* Summary only; GM notes are private and never rendered here. */}
+              {s.summary && <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }} />}
+              {present.length > 0 && (
+                <p className="muted recap-attendance">
+                  Present: {present.map((a) => (a.guest ? `${a.name} (guest)` : a.name)).join(', ')}
+                </p>
+              )}
+            </section>
+          );
+        })}
 
         <h2>Story so far</h2>
         {[...arcs]
