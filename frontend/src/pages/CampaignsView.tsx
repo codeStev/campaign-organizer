@@ -14,6 +14,7 @@ import {
 import { SessionLog } from './SessionLog';
 import { ArcBoard } from './ArcBoard';
 import { ClockBoard } from './ClockBoard';
+import { RosterPanel } from '../components/RosterPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -226,6 +227,8 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                 </Button>
               </div>
             </section>
+
+            <RosterPanel worldId={worldId} campaignId={selected.id} onError={handleError} />
 
             <SessionLog
               worldId={worldId}
