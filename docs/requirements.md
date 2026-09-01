@@ -302,6 +302,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   not a free-text label — selectable from a list in the template editor
   instead of typed. Gives future system-level metadata (e.g. rule
   references) somewhere to attach independent of any game world. (ADR-0094)
+- **FR-57 Game system details and campaign link.** Game systems gain an
+  optional Markdown notes field (rule references, house rules), a short
+  tagline, and a color badge. Campaigns can optionally declare which
+  game system they run — previously only inferable indirectly via which
+  templates their character sheets used. (ADR-0095)
 
 ---
 
