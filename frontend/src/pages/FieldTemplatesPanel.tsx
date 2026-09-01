@@ -100,6 +100,22 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     }
   }
 
+  // ADR-0093: repoints every sheet/statblock using this template to a new
+  // global entry, then deletes the source — CHARACTER/STATBLOCK kinds only.
+  async function promote(t: FieldTemplate) {
+    try {
+      await api.promote(t.id);
+      if (previewing?.id === t.id) {
+        setPreviewing(null);
+        navigate(`/worlds/${worldId}/sheets/templates`);
+      }
+      onChanged();
+      toast.success(`Promoted "${t.name}" to the global catalog`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   async function remove(t: FieldTemplate) {
     try {
       await api.remove(t.id);
@@ -236,6 +252,15 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             <Button variant="link" onClick={() => duplicate(t)} title="Duplicate this template">
               ⎘
             </Button>
+            {t.kind !== 'DOCUMENT' && (
+              <Button
+                variant="link"
+                onClick={() => promote(t)}
+                title="Promote to the global catalog, shared across every world"
+              >
+                🌐
+              </Button>
+            )}
             <ConfirmDeleteDialog
               trigger={
                 <Button variant="link" className="text-destructive hover:text-destructive">
