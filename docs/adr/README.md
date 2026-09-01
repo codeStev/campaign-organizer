@@ -85,6 +85,7 @@ the old one.
 | [0093](0093-global-field-template-catalog.md) | Global, system-scoped field template catalog for character sheets/statblocks | Accepted |
 | [0094](0094-game-system-entity.md) | Game system as a real entity (replaces the free-text `system` field) | Accepted |
 | [0095](0095-game-system-details-and-campaign-link.md) | Game system details (tagline/color/notes) and `Campaign.systemId` | Accepted |
+| [0096](0096-global-statblock-catalog.md) | Global, system-scoped statblock catalog with copy-on-import | Accepted |
 
 ## Template
 

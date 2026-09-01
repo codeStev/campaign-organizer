@@ -307,6 +307,13 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   tagline, and a color badge. Campaigns can optionally declare which
   game system they run — previously only inferable indirectly via which
   templates their character sheets used. (ADR-0095)
+- **FR-58 Global statblock catalog.** Reusable monster/NPC statblocks
+  (real stat data, not just templates) can live in a world-independent,
+  game-system-scoped catalog — build "Adult Red Dragon" once, reuse it
+  across every campaign running that system in any world. Bringing one
+  into a campaign is an explicit, one-time copy ("import"), not a live
+  reference: the imported statblock and the catalog original are
+  independent from that point on. (ADR-0096)
 
 ---
 
