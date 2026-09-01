@@ -14,6 +14,9 @@ public interface TagQueryPort {
     /** Ids of entities of this type, in this world, carrying this (already-normalized) tag. */
     List<UUID> entityIdsTaggedWith(UUID worldId, EntityType entityType, String name);
 
+    /** Ids of entities of this type, in this world, carrying a tag whose name contains this fragment. */
+    List<UUID> entityIdsWhereTagContains(UUID worldId, EntityType entityType, String fragment);
+
     /** Every distinct tag name in the world, alphabetical. */
     List<String> distinctNames(UUID worldId);
 }

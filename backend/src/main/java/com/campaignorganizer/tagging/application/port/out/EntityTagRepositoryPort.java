@@ -13,6 +13,10 @@ public interface EntityTagRepositoryPort {
 
     List<UUID> findEntityIdsByWorldAndTypeAndName(UUID worldId, EntityType entityType, String name);
 
+    /** Ids of entities whose tag name contains this (already-normalized) fragment. */
+    List<UUID> findEntityIdsByWorldAndTypeAndNameContaining(UUID worldId, EntityType entityType,
+            String fragment);
+
     List<String> findDistinctNamesByWorld(UUID worldId);
 
     EntityTag save(EntityTag tag);

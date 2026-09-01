@@ -55,6 +55,13 @@ public class TagQueryService implements TagQueryPort {
 
     @Override
     @Transactional(readOnly = true)
+    public List<UUID> entityIdsWhereTagContains(UUID worldId, EntityType entityType, String fragment) {
+        String normalized = fragment.strip().toLowerCase();
+        return tags.findEntityIdsByWorldAndTypeAndNameContaining(worldId, entityType, normalized);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<String> distinctNames(UUID worldId) {
         return tags.findDistinctNamesByWorld(worldId).stream().sorted().toList();
     }

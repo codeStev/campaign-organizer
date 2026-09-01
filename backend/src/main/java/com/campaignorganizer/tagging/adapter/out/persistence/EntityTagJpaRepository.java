@@ -26,4 +26,12 @@ public interface EntityTagJpaRepository extends JpaRepository<EntityTagJpaEntity
 
     @Query("SELECT DISTINCT t.name FROM EntityTagJpaEntity t WHERE t.worldId = :worldId")
     List<String> findDistinctNamesByWorldId(@Param("worldId") UUID worldId);
+
+    @Query("""
+            SELECT DISTINCT t.entityId FROM EntityTagJpaEntity t
+            WHERE t.worldId = :worldId AND t.entityType = :entityType
+              AND t.name LIKE CONCAT('%', :fragment, '%')
+            """)
+    List<UUID> findEntityIdsByWorldIdAndEntityTypeAndNameContaining(@Param("worldId") UUID worldId,
+            @Param("entityType") EntityType entityType, @Param("fragment") String fragment);
 }

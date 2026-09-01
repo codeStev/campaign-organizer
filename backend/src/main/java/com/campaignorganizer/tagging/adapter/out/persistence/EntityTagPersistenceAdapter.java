@@ -40,6 +40,13 @@ public class EntityTagPersistenceAdapter implements EntityTagRepositoryPort {
     }
 
     @Override
+    public List<UUID> findEntityIdsByWorldAndTypeAndNameContaining(UUID worldId,
+            EntityType entityType, String fragment) {
+        return repository.findEntityIdsByWorldIdAndEntityTypeAndNameContaining(worldId, entityType,
+                fragment);
+    }
+
+    @Override
     public List<String> findDistinctNamesByWorld(UUID worldId) {
         return repository.findDistinctNamesByWorldId(worldId);
     }
