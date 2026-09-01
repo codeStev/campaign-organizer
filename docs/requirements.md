@@ -271,6 +271,15 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   future global landing page (FR-67-adjacent, not yet built), where a
   campaign stuck in "planned" or "active" with nothing scheduled is a
   signal worth surfacing. (ADR-0090)
+- **FR-53 Player roster and attendance.** A reusable, world-scoped pool of
+  players (name only); each campaign has its own roster drawn from that
+  pool, with a per-membership regular/guest flag. Attendance is recorded
+  per session, per player — present plus an optional link to which
+  character sheet they played that session — deliberately not a "current
+  character" pointer on the player, so history stays accurate across
+  character death/replacement. The session view gets an Attended | Player
+  | Character table, pre-populated from the roster and defaulting to
+  everyone present. Surfaces in the session recap (not GM-only). (ADR-0091)
 
 ---
 
