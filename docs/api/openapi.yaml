@@ -3295,6 +3295,91 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/encounters:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [encounters]
+      summary: List a campaign's encounters
+      operationId: listEncounters
+      responses:
+        '200':
+          description: Encounters in the campaign.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Encounter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [encounters]
+      summary: Create an encounter
+      operationId: createEncounter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncounterRequest'
+      responses:
+        '201':
+          description: Encounter created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Encounter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/encounters/{encounterId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/EncounterId'
+    put:
+      tags: [encounters]
+      summary: Update an encounter (name, notes, entries)
+      operationId: updateEncounter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncounterRequest'
+      responses:
+        '200':
+          description: Encounter updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Encounter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [encounters]
+      summary: Delete an encounter
+      operationId: deleteEncounter
+      responses:
+        '204':
+          description: Encounter deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/clocks:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -4123,6 +4208,14 @@ components:
       in: path
       required: true
       description: Identifier of the arc.
+      schema:
+        type: string
+        format: uuid
+    EncounterId:
+      name: encounterId
+      in: path
+      required: true
+      description: Identifier of the encounter.
       schema:
         type: string
         format: uuid
@@ -4962,6 +5055,67 @@ components:
           type: string
           format: date-time
 
+    EncounterEntry:
+      type: object
+      required: [statblockId, quantity]
+      description: One statblock's slot in an encounter, with how many copies (ADR-0097).
+      properties:
+        statblockId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 20
+        maxHpOverride:
+          type: [integer, "null"]
+          description: >
+            Optional per-entry max HP, saved so reprinting doesn't require
+            re-staging; when null the printed sheet auto-detects from the
+            statblock's stats, same as the ad-hoc flow (FR-44).
+
+    EncounterRequest:
+      type: object
+      required: [name, entries]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        notes:
+          type: [string, "null"]
+          maxLength: 20000
+          description: Freeform notes (Markdown, see ADR-0054).
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/EncounterEntry'
+
+    Encounter:
+      type: object
+      required: [id, campaignId, name, entries, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        notes:
+          type: [string, "null"]
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/EncounterEntry'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     ClockSegment:
       type: object
       required: [filled]
@@ -5051,6 +5205,12 @@ components:
             type: string
             format: uuid
           description: Linked statblocks (goblin spearman, boss, …).
+        encounterIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Linked encounters (ADR-0097) — structured, quantified combat groupings.
         tableIds:
           type: array
           items:
@@ -5072,7 +5232,7 @@ components:
 
     Beat:
       type: object
-      required: [id, arcId, title, done, articleIds, statblockIds, tableIds, deckIds, position, createdAt, updatedAt]
+      required: [id, arcId, title, done, articleIds, statblockIds, encounterIds, tableIds, deckIds, position, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -5093,6 +5253,11 @@ components:
             type: string
             format: uuid
         statblockIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        encounterIds:
           type: array
           items:
             type: string
