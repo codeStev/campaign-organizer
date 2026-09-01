@@ -19,6 +19,7 @@ import com.campaignorganizer.characters.application.sheet.port.published.Charact
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GameSystemQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
 import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
@@ -80,6 +81,7 @@ public class ExportService implements ExportWorldUseCase {
     private final CharacterSheetQueryPort characterSheets;
     private final DocumentQueryPort documents;
     private final StatblockQueryPort statblocks;
+    private final GlobalStatblockQueryPort globalStatblocks;
     private final WhiteboardQueryPort whiteboards;
     private final RollTableQueryPort rollTables;
     private final CardDeckQueryPort cardDecks;
@@ -101,6 +103,7 @@ public class ExportService implements ExportWorldUseCase {
                          GlobalFieldTemplateQueryPort globalFieldTemplates,
                          CharacterSheetQueryPort characterSheets,
                          DocumentQueryPort documents, StatblockQueryPort statblocks,
+                         GlobalStatblockQueryPort globalStatblocks,
                          WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
                          HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
@@ -128,6 +131,7 @@ public class ExportService implements ExportWorldUseCase {
         this.characterSheets = characterSheets;
         this.documents = documents;
         this.statblocks = statblocks;
+        this.globalStatblocks = globalStatblocks;
         this.whiteboards = whiteboards;
         this.rollTables = rollTables;
         this.cardDecks = cardDecks;
@@ -222,6 +226,10 @@ public class ExportService implements ExportWorldUseCase {
         // blindly recreating, so re-importing never duplicates them.
         bundle.put("gameSystems", gameSystems.findAll());
         bundle.put("globalFieldTemplates", globalFieldTemplates.findAll());
+        // Global statblock catalog (ADR-0096): same "not world-scoped but
+        // shipped anyway, resolved-or-reused on import" treatment as the two
+        // catalogs above.
+        bundle.put("globalStatblocks", globalStatblocks.findAll());
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));
         // General-purpose documents (FR-50).
         bundle.put("documents", documents.findByWorld(worldId));

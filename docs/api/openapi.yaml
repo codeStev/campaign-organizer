@@ -1907,8 +1907,9 @@ paths:
       tags: [sheets]
       summary: Delete a global field template
       description: >
-        Fails if any character sheet or statblock (in any world) still
-        references it (RESTRICT, ADR-0093) — detach them first.
+        Fails if any character sheet or statblock (in any world), or any
+        global statblock (ADR-0096), still references it (RESTRICT,
+        ADR-0093) — detach them first.
       operationId: deleteGlobalFieldTemplate
       responses:
         '204':
@@ -1918,7 +1919,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Still referenced by at least one character sheet or statblock.
+          description: Still referenced by at least one character sheet, statblock, or global statblock.
           content:
             application/problem+json:
               schema:

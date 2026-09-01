@@ -1,6 +1,7 @@
 package com.campaignorganizer.characters.application.template.service;
 
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetTemplateRefPort;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockRefPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockTemplateRefPort;
 import com.campaignorganizer.characters.application.template.port.in.CreateGlobalFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.DeleteGlobalFieldTemplateUseCase;
@@ -47,6 +48,7 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     private final FieldTemplateRepositoryPort worldTemplates;
     private final CharacterSheetTemplateRefPort characterSheetRefs;
     private final StatblockTemplateRefPort statblockRefs;
+    private final GlobalStatblockRefPort globalStatblockRefs;
     private final GlobalFieldTemplateViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
@@ -55,11 +57,13 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
                                       FieldTemplateRepositoryPort worldTemplates,
                                       CharacterSheetTemplateRefPort characterSheetRefs,
                                       StatblockTemplateRefPort statblockRefs,
+                                      GlobalStatblockRefPort globalStatblockRefs,
                                       GlobalFieldTemplateViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.templates = templates;
         this.worldTemplates = worldTemplates;
         this.characterSheetRefs = characterSheetRefs;
         this.statblockRefs = statblockRefs;
+        this.globalStatblockRefs = globalStatblockRefs;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -86,9 +90,11 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     public void delete(UUID templateId) {
         GlobalFieldTemplate template = require(templateId);
         if (characterSheetRefs.existsReferencingGlobalTemplate(templateId)
-                || statblockRefs.existsReferencingGlobalTemplate(templateId)) {
+                || statblockRefs.existsReferencingGlobalTemplate(templateId)
+                || globalStatblockRefs.existsReferencingGlobalTemplate(templateId)) {
             throw new ConflictException(
-                    "Global template is still referenced by a character sheet or statblock");
+                    "Global template is still referenced by a character sheet, statblock, "
+                            + "or global statblock");
         }
         templates.delete(template);
     }

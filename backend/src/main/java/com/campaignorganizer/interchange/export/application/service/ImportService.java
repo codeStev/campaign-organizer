@@ -24,6 +24,8 @@ import com.campaignorganizer.characters.application.document.port.published.Docu
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockImportPort;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
@@ -110,6 +112,7 @@ public class ImportService implements ImportBackupUseCase {
     private final FieldTemplateImportPort fieldTemplateImportPort;
     private final GameSystemImportPort gameSystemImportPort;
     private final GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
+    private final GlobalStatblockImportPort globalStatblockImportPort;
     private final CharacterSheetImportPort characterSheetImportPort;
     private final DocumentImportPort documentImportPort;
     private final StatblockImportPort statblockImportPort;
@@ -136,6 +139,7 @@ public class ImportService implements ImportBackupUseCase {
             ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
             GameSystemImportPort gameSystemImportPort,
             GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
+            GlobalStatblockImportPort globalStatblockImportPort,
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
             StatblockImportPort statblockImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
@@ -163,6 +167,7 @@ public class ImportService implements ImportBackupUseCase {
         this.fieldTemplateImportPort = fieldTemplateImportPort;
         this.gameSystemImportPort = gameSystemImportPort;
         this.globalFieldTemplateImportPort = globalFieldTemplateImportPort;
+        this.globalStatblockImportPort = globalStatblockImportPort;
         this.characterSheetImportPort = characterSheetImportPort;
         this.documentImportPort = documentImportPort;
         this.statblockImportPort = statblockImportPort;
@@ -220,6 +225,8 @@ public class ImportService implements ImportBackupUseCase {
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<GlobalFieldTemplateView> globalFieldTemplates =
                 readList(root, "globalFieldTemplates", GlobalFieldTemplateView.class);
+        List<GlobalStatblockView> globalStatblocks =
+                readList(root, "globalStatblocks", GlobalStatblockView.class);
         List<CharacterSheetView> characterSheets =
                 readList(root, "characterSheets", CharacterSheetView.class);
         List<DocumentView> documents = readList(root, "documents", DocumentView.class);
@@ -403,6 +410,19 @@ public class ImportService implements ImportBackupUseCase {
                     g.updatedAt());
             GlobalFieldTemplateView resolved = globalFieldTemplateImportPort.importOrReuse(withResolvedSystem);
             globalTemplateResolution.put(g.id(), resolved.id());
+        }
+
+        // Global statblock catalog (ADR-0096): resolved-or-reused by (systemId,
+        // name), the same exception to the normal id-remap contract as the two
+        // catalogs above. Nothing downstream looks this map up — an imported
+        // world statblock carries no back-reference to the catalog entry it
+        // came from (copy-on-import, not a live link) — it's built purely so
+        // importOrReuse runs for every catalog entry in the bundle.
+        for (GlobalStatblockView g : globalStatblocks) {
+            GlobalStatblockView withResolved = new GlobalStatblockView(g.id(),
+                    gameSystemResolution.get(g.systemId()), globalTemplateResolution.get(g.globalTemplateId()),
+                    g.name(), g.stats(), g.notes(), g.createdAt(), g.updatedAt());
+            globalStatblockImportPort.importOrReuse(withResolved);
         }
 
         for (CharacterSheetView s : characterSheets) {
