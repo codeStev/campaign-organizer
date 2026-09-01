@@ -631,6 +631,81 @@ export function campaignsApi(worldId: string) {
   };
 }
 
+// ---- Players (FR-53): a world-scoped, reusable pool shared across campaigns ----
+
+export interface Player {
+  id: string;
+  worldId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlayerRequest {
+  name: string;
+}
+
+export function playersApi(worldId: string) {
+  const base = `/worlds/${worldId}/players`;
+  return {
+    list: () => request<Player[]>(base),
+    get: (id: string) => request<Player>(`${base}/${id}`),
+    create: (body: PlayerRequest) =>
+      request<Player>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: PlayerRequest) =>
+      request<Player>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+// ---- Campaign roster (FR-53): whole-set replace, players flagged regular/guest ----
+
+export interface RosterEntry {
+  playerId: string;
+  name: string;
+  guest: boolean;
+}
+
+export interface RosterEntryInput {
+  playerId: string;
+  guest?: boolean;
+}
+
+export function campaignRosterApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/roster`;
+  return {
+    get: () => request<RosterEntry[]>(base),
+    put: (entries: RosterEntryInput[]) =>
+      request<RosterEntry[]>(base, { method: 'PUT', body: JSON.stringify({ entries }) }),
+  };
+}
+
+// ---- Session attendance (FR-53): pre-populated from the roster, whole-set replace ----
+
+export interface AttendanceEntry {
+  playerId: string;
+  name: string;
+  guest: boolean;
+  present: boolean;
+  characterId?: string | null;
+  characterName?: string | null;
+}
+
+export interface AttendanceEntryInput {
+  playerId: string;
+  present: boolean;
+  characterId?: string | null;
+}
+
+export function sessionAttendanceApi(worldId: string, campaignId: string, sessionId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions/${sessionId}/attendance`;
+  return {
+    get: () => request<AttendanceEntry[]>(base),
+    put: (entries: AttendanceEntryInput[]) =>
+      request<AttendanceEntry[]>(base, { method: 'PUT', body: JSON.stringify({ entries }) }),
+  };
+}
+
 export interface PacketBeat {
   id: string;
   title: string;
