@@ -11,7 +11,8 @@ public final class FieldSchema {
     /** What a field template is for; drives which picker offers it. See ADR-0052. */
     public enum TemplateKind {
         CHARACTER,
-        STATBLOCK
+        STATBLOCK,
+        DOCUMENT
     }
 
     public enum FieldType {

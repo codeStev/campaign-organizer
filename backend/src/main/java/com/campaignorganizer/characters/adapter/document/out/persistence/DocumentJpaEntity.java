@@ -1,0 +1,110 @@
+package com.campaignorganizer.characters.adapter.document.out.persistence;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+/** Persistence model for a document (maps the {@code documents} table). */
+@Entity
+@Table(name = "documents")
+public class DocumentJpaEntity {
+
+    @Id
+    private UUID id;
+
+    @Column(name = "world_id", nullable = false, updatable = false)
+    private UUID worldId;
+
+    @Column(name = "template_id", nullable = false)
+    private UUID templateId;
+
+    @Column(name = "campaign_id")
+    private UUID campaignId;
+
+    @Column(nullable = false, length = 200)
+    private String name;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "field_values", nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> values = new HashMap<>();
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    protected DocumentJpaEntity() {
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public UUID getWorldId() {
+        return worldId;
+    }
+
+    public void setWorldId(UUID worldId) {
+        this.worldId = worldId;
+    }
+
+    public UUID getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(UUID templateId) {
+        this.templateId = templateId;
+    }
+
+    public UUID getCampaignId() {
+        return campaignId;
+    }
+
+    public void setCampaignId(UUID campaignId) {
+        this.campaignId = campaignId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Map<String, Object> getValues() {
+        return values;
+    }
+
+    public void setValues(Map<String, Object> values) {
+        this.values = values == null ? new HashMap<>() : values;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}
