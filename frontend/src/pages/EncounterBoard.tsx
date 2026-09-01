@@ -87,12 +87,7 @@ export function EncounterBoard({
         .filter((s): s is Statblock => Boolean(s))
     : [];
   const printInitialEntries = printing
-    ? Object.fromEntries(
-        printing.entries.map((entry) => [
-          entry.statblockId,
-          { qty: entry.quantity, maxHp: entry.maxHpOverride == null ? '' : String(entry.maxHpOverride) },
-        ]),
-      )
+    ? Object.fromEntries(printing.entries.map((entry) => [entry.statblockId, { qty: entry.quantity }]))
     : undefined;
 
   return (
@@ -168,7 +163,7 @@ function EncounterCard({ encounter, statblocks, onSave, onRemove, onPrint }: Enc
     onSave({
       name: encounter.name,
       notes: encounter.notes,
-      entries: [...encounter.entries, { statblockId, quantity: 1, maxHpOverride: null }],
+      entries: [...encounter.entries, { statblockId, quantity: 1 }],
     });
   }
 
@@ -216,15 +211,6 @@ function EncounterCard({ encounter, statblocks, onSave, onRemove, onPrint }: Enc
                   value={entry.quantity}
                   title="Quantity"
                   onChange={(e) => setEntry(i, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder="max HP (auto)"
-                  value={entry.maxHpOverride ?? ''}
-                  onChange={(e) =>
-                    setEntry(i, { maxHpOverride: e.target.value === '' ? null : Number(e.target.value) })
-                  }
                 />
                 <Button
                   type="button"

@@ -74,7 +74,7 @@ class EncounterServiceTest {
         when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(true);
         when(statblocks.existsInWorld(statblockId, worldId)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.create(command(List.of(new EntryInput(statblockId, 1, null)))))
+        assertThatThrownBy(() -> service.create(command(List.of(new EntryInput(statblockId, 1)))))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -86,13 +86,12 @@ class EncounterServiceTest {
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(encounters.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        EncounterView view = service.create(command(List.of(new EntryInput(statblockId, 3, 12))));
+        EncounterView view = service.create(command(List.of(new EntryInput(statblockId, 3))));
 
         assertThat(view.name()).isEqualTo("Goblin ambush");
         assertThat(view.entries()).hasSize(1);
         assertThat(view.entries().get(0).statblockId()).isEqualTo(statblockId);
         assertThat(view.entries().get(0).quantity()).isEqualTo(3);
-        assertThat(view.entries().get(0).maxHpOverride()).isEqualTo(12);
     }
 
     @Test
@@ -132,10 +131,10 @@ class EncounterServiceTest {
         when(encounters.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         EncounterView imported = new EncounterView(encounterId, campaignId, "Goblin ambush", "notes",
-                List.of(new EncounterEntryView(statblockId, 2, null)), clock.instant(), clock.instant());
+                List.of(new EncounterEntryView(statblockId, 2)), clock.instant(), clock.instant());
         EncounterView result = service.importEncounter(imported);
 
         assertThat(result.id()).isEqualTo(encounterId);
-        assertThat(result.entries()).containsExactly(new EncounterEntryView(statblockId, 2, null));
+        assertThat(result.entries()).containsExactly(new EncounterEntryView(statblockId, 2));
     }
 }

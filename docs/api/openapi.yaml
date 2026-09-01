@@ -5067,12 +5067,6 @@ components:
           type: integer
           minimum: 1
           maximum: 20
-        maxHpOverride:
-          type: [integer, "null"]
-          description: >
-            Optional per-entry max HP, saved so reprinting doesn't require
-            re-staging; when null the printed sheet auto-detects from the
-            statblock's stats, same as the ad-hoc flow (FR-44).
 
     EncounterRequest:
       type: object

@@ -27,13 +27,20 @@ aggregate with a list-valued child value object:
 
 ```java
 Encounter(id, campaignId, name, notes, List<EncounterEntry> entries, createdAt, updatedAt)
-EncounterEntry(statblockId, quantity, maxHpOverride)  // no own id
+EncounterEntry(statblockId, quantity)  // no own id
 ```
 
-**`maxHpOverride` is persisted per entry.** Today's ephemeral flow lets the
-GM overwrite an auto-detected max HP; the whole point of persisting an
-encounter is not re-doing that staging work on every reprint, so the
-override is saved per entry instead of re-typed each time.
+**No HP (or any other resource) override is persisted per entry.** An
+earlier version of this ADR persisted a `maxHpOverride`, mirroring the
+ad-hoc flow's staged max-HP field. That's wrong for this app's actual
+system range: HP isn't universal (Forbidden Lands, Vaesen, and other
+non-D&D-shaped systems don't track it, or track something else
+entirely). Baking "HP" into persisted schema presumes a specific kind of
+system. Instead, `EncounterEntry` only ever carries what's genuinely
+system-agnostic — which statblock, how many — and whatever a combatant's
+trackable resource is stays exactly where ADR-0069 already put it: live,
+auto-detected from the statblock's own stats, and freely editable at
+print time, for every entry, every time it's printed.
 
 **PC-sheet participation stays print-time-only, not persisted.** Who's
 actually at the table varies session to session even for a reused
@@ -46,8 +53,8 @@ Unlike `Clock.segments` (purely descriptive, JSONB is the right fit),
 needs the same existence-check and referential-integrity treatment
 `ArcBeat.statblockIds` already gets. `entries` is mapped as a JPA
 `@ElementCollection` of an `@Embeddable` — same DB shape a plain id list
-(`@CollectionTable`, real FK columns) would get, just with two extra
-non-FK columns (`quantity`, `max_hp_override`) riding along on each row.
+(`@CollectionTable`, real FK columns) would get, just with one extra
+non-FK column (`quantity`) riding along on each row.
 
 Validated the same way `ArcBeatCommandService.validateLinks` already
 validates `statblockIds`: each entry's `statblockId` must exist in the
@@ -87,14 +94,15 @@ like `Clock` or `Session`, always minting a fresh id via the standard
 
 ## Consequences
 - New tables `encounters`, `encounter_entries`, `beat_encounters`
-  (migration `V46`); new REST route family
-  `/worlds/{worldId}/campaigns/{campaignId}/encounters`; `Beat`
-  request/response gain `encounterIds`.
+  (migration `V46`, with `V47` dropping the initially-added
+  `max_hp_override` column once that design was reconsidered - see above);
+  new REST route family `/worlds/{worldId}/campaigns/{campaignId}/encounters`;
+  `Beat` request/response gain `encounterIds`.
 - New frontend `EncounterBoard.tsx` (campaign view, mirrors `ClockBoard`),
-  a small additive `initialEntries` prop on `EncounterSheetView.tsx` so
-  printing works from either a saved encounter or the original ad-hoc
-  ticked-selection flow, and a fourth "+ link encounter" affordance in
-  `ArcBoard.tsx`'s beat editor.
+  a small additive `initialEntries?: Record<string, {qty}>` prop on
+  `EncounterSheetView.tsx` (quantity-only) so printing works from either a
+  saved encounter or the original ad-hoc ticked-selection flow, and a
+  fourth "+ link encounter" affordance in `ArcBoard.tsx`'s beat editor.
 - The original ad-hoc "⚔ Encounter" flow from `StatblocksPanel.tsx`
   (ADR-0069) is untouched — it simply never passes `initialEntries`, so
   nothing about it persists, exactly as before.

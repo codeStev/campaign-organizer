@@ -49,14 +49,12 @@ class EncounterControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Goblin ambush\",\"notes\":\"watch the road\","
-                                + "\"entries\":[{\"statblockId\":\"" + goblin
-                                + "\",\"quantity\":3,\"maxHpOverride\":7}]}"))
+                                + "\"entries\":[{\"statblockId\":\"" + goblin + "\",\"quantity\":3}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Goblin ambush"))
                 .andExpect(jsonPath("$.entries.length()").value(1))
                 .andExpect(jsonPath("$.entries[0].statblockId").value(goblin))
                 .andExpect(jsonPath("$.entries[0].quantity").value(3))
-                .andExpect(jsonPath("$.entries[0].maxHpOverride").value(7))
                 .andReturn().getResponse().getContentAsString();
         String encounterId = JsonPath.read(created, "$.id");
 
@@ -73,8 +71,7 @@ class EncounterControllerIT extends AbstractIntegrationTest {
                                 + goblin + "\",\"quantity\":5}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Goblin ambush (revised)"))
-                .andExpect(jsonPath("$.entries[0].quantity").value(5))
-                .andExpect(jsonPath("$.entries[0].maxHpOverride").doesNotExist());
+                .andExpect(jsonPath("$.entries[0].quantity").value(5));
 
         mockMvc.perform(delete("/api/worlds/{w}/campaigns/{c}/encounters/{e}", worldId, campaignId, encounterId)
                         .header(HttpHeaders.AUTHORIZATION, auth))

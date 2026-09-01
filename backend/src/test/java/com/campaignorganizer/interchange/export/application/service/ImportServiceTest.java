@@ -474,7 +474,7 @@ class ImportServiceTest {
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
                 null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", "notes",
-                List.of(new EncounterEntryView(oldStatblockId, 3, 7)), now, now)));
+                List.of(new EncounterEntryView(oldStatblockId, 3)), now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats",
                 "fieldTemplates", "characterSheets", "whiteboards")) {
@@ -493,7 +493,6 @@ class ImportServiceTest {
         assertThat(imported.entries()).hasSize(1);
         assertThat(imported.entries().get(0).statblockId()).isNotEqualTo(oldStatblockId);
         assertThat(imported.entries().get(0).quantity()).isEqualTo(3);
-        assertThat(imported.entries().get(0).maxHpOverride()).isEqualTo(7);
     }
 
     @Test

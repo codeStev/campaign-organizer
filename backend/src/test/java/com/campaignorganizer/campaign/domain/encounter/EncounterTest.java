@@ -20,13 +20,13 @@ class EncounterTest {
     void updateBumpsUpdatedAt() {
         UUID statblockId = UUID.randomUUID();
         Encounter e = Encounter.create(UUID.randomUUID(), CAMPAIGN_ID, "Goblin ambush", "watch the road",
-                List.of(new EncounterEntry(statblockId, 3, 7)), T0);
+                List.of(new EncounterEntry(statblockId, 3)), T0);
         e.update("Goblin ambush (revised)", "watch the bridge",
-                List.of(new EncounterEntry(statblockId, 4, null)), T1);
+                List.of(new EncounterEntry(statblockId, 4)), T1);
 
         assertThat(e.getName()).isEqualTo("Goblin ambush (revised)");
         assertThat(e.getNotes()).isEqualTo("watch the bridge");
-        assertThat(e.getEntries()).containsExactly(new EncounterEntry(statblockId, 4, null));
+        assertThat(e.getEntries()).containsExactly(new EncounterEntry(statblockId, 4));
         assertThat(e.getCreatedAt()).isEqualTo(T0);
         assertThat(e.getUpdatedAt()).isEqualTo(T1);
     }
@@ -38,13 +38,6 @@ class EncounterTest {
     }
 
     @Test
-    void maxHpOverrideIsOptional() {
-        Encounter e = Encounter.create(UUID.randomUUID(), CAMPAIGN_ID, "Goblin ambush", null,
-                List.of(new EncounterEntry(UUID.randomUUID(), 2, null)), T0);
-        assertThat(e.getEntries().get(0).maxHpOverride()).isNull();
-    }
-
-    @Test
     void rejectsBlankName() {
         assertThatThrownBy(() -> Encounter.create(UUID.randomUUID(), CAMPAIGN_ID, " ", null, List.of(), T0))
                 .isInstanceOf(ValidationException.class);
@@ -53,7 +46,7 @@ class EncounterTest {
     @Test
     void rejectsEntryWithNoStatblock() {
         assertThatThrownBy(() -> Encounter.create(UUID.randomUUID(), CAMPAIGN_ID, "Ambush", null,
-                List.of(new EncounterEntry(null, 1, null)), T0))
+                List.of(new EncounterEntry(null, 1)), T0))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -61,7 +54,7 @@ class EncounterTest {
     void rejectsEntryWithZeroOrNegativeQuantity() {
         UUID statblockId = UUID.randomUUID();
         assertThatThrownBy(() -> Encounter.create(UUID.randomUUID(), CAMPAIGN_ID, "Ambush", null,
-                List.of(new EncounterEntry(statblockId, 0, null)), T0))
+                List.of(new EncounterEntry(statblockId, 0)), T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

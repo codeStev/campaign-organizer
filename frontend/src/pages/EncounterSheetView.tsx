@@ -18,12 +18,14 @@ interface Props {
   templates: FieldTemplate[];
   globalTemplates: GlobalFieldTemplate[];
   /**
-   * Pre-seeds quantity/maxHp per statblock id instead of the qty=1 /
-   * auto-detected-HP default — used when printing a saved Encounter
-   * (ADR-0097) so its quantities and HP overrides don't need re-staging.
-   * The ad-hoc flow from StatblocksPanel (ADR-0069) omits this.
+   * Pre-seeds quantity per statblock id instead of the default qty=1 —
+   * used when printing a saved Encounter (ADR-0097) so its quantities
+   * don't need re-picking. Deliberately quantity-only: max HP (or
+   * whatever a system's trackable resource is) always stays live/
+   * auto-detected here, since not every system tracks HP at all. The
+   * ad-hoc flow from StatblocksPanel (ADR-0069) omits this prop.
    */
-  initialEntries?: Record<string, EntryState>;
+  initialEntries?: Record<string, { qty: number }>;
   onClose: () => void;
 }
 
@@ -57,7 +59,7 @@ export function EncounterSheetView({
     Object.fromEntries(
       statblocks.map((sb) => [
         sb.id,
-        initialEntries?.[sb.id] ?? { qty: 1, maxHp: detectMaxHp(sb.stats) },
+        { qty: initialEntries?.[sb.id]?.qty ?? 1, maxHp: detectMaxHp(sb.stats) },
       ]),
     ),
   );

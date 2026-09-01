@@ -14,16 +14,12 @@ public class EncounterEntryEmbeddable {
     @Column(nullable = false)
     private int quantity;
 
-    @Column(name = "max_hp_override")
-    private Integer maxHpOverride;
-
     protected EncounterEntryEmbeddable() {
     }
 
-    public EncounterEntryEmbeddable(UUID statblockId, int quantity, Integer maxHpOverride) {
+    public EncounterEntryEmbeddable(UUID statblockId, int quantity) {
         this.statblockId = statblockId;
         this.quantity = quantity;
-        this.maxHpOverride = maxHpOverride;
     }
 
     public UUID getStatblockId() {
@@ -40,13 +36,5 @@ public class EncounterEntryEmbeddable {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
-    }
-
-    public Integer getMaxHpOverride() {
-        return maxHpOverride;
-    }
-
-    public void setMaxHpOverride(Integer maxHpOverride) {
-        this.maxHpOverride = maxHpOverride;
     }
 }

@@ -129,7 +129,7 @@ public class EncounterService implements CreateEncounterUseCase, UpdateEncounter
             return List.of();
         }
         return inputs.stream()
-                .map(e -> new EncounterEntry(e.statblockId(), e.quantity(), e.maxHpOverride()))
+                .map(e -> new EncounterEntry(e.statblockId(), e.quantity()))
                 .toList();
     }
 
@@ -138,7 +138,7 @@ public class EncounterService implements CreateEncounterUseCase, UpdateEncounter
             return List.of();
         }
         return views.stream()
-                .map(e -> new EncounterEntry(e.statblockId(), e.quantity(), e.maxHpOverride()))
+                .map(e -> new EncounterEntry(e.statblockId(), e.quantity()))
                 .toList();
     }
 

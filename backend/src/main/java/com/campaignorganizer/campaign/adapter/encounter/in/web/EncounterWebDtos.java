@@ -17,8 +17,7 @@ public final class EncounterWebDtos {
 
     public record EncounterEntryDto(
             @NotNull UUID statblockId,
-            @Min(1) @Max(20) int quantity,
-            Integer maxHpOverride) {
+            @Min(1) @Max(20) int quantity) {
     }
 
     public record EncounterRequest(

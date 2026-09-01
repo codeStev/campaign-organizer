@@ -622,10 +622,15 @@ export interface ClockRequest {
   position?: number | null;
 }
 
+/**
+ * No HP/resource override on purpose - not every system tracks HP
+ * (Forbidden Lands, Vaesen, ...). Whatever a combatant's trackable
+ * resource is stays live/auto-detected and editable at print time
+ * (EncounterSheetView, ADR-0069), not persisted schema.
+ */
 export interface EncounterEntry {
   statblockId: string;
   quantity: number;
-  maxHpOverride?: number | null;
 }
 
 /** A named, reusable, printable grouping of statblocks (ADR-0097). Linked to beats via ArcBeat.encounterIds. */

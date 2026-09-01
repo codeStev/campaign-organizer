@@ -319,11 +319,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   reference: the imported statblock and the catalog original are
   independent from that point on. (ADR-0096)
 - **FR-59 Encounter builder.** Build a named, reusable encounter from any
-  number of statblocks (with per-entry quantity and an optional max-HP
-  override), save it to a campaign, and link it to one or more arc beats.
-  A saved encounter prints through the same tracker FR-44 already
-  generates for ad-hoc selections, pre-seeded with its saved quantities
-  and HP overrides. (ADR-0097; extends FR-33, FR-44)
+  number of statblocks (with a per-entry quantity), save it to a
+  campaign, and link it to one or more arc beats. A saved encounter
+  prints through the same tracker FR-44 already generates for ad-hoc
+  selections, pre-seeded with its saved quantities; HP (or whatever a
+  system tracks instead) stays live/auto-detected at print time for
+  every system, not persisted. (ADR-0097; extends FR-33, FR-44)
 
 ---
 

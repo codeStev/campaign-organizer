@@ -458,8 +458,7 @@ public class ImportService implements ImportBackupUseCase {
         // must come after statblocks are persisted just above.
         for (EncounterView e : encounters) {
             List<EncounterEntryView> remappedEntries = e.entries().stream()
-                    .map(entry -> new EncounterEntryView(remap.get(entry.statblockId()), entry.quantity(),
-                            entry.maxHpOverride()))
+                    .map(entry -> new EncounterEntryView(remap.get(entry.statblockId()), entry.quantity()))
                     .toList();
             encounterImportPort.importEncounter(new EncounterView(remap.get(e.id()),
                     remap.get(e.campaignId()), e.name(), e.notes(), remappedEntries, e.createdAt(),

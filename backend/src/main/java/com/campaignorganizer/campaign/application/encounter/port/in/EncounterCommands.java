@@ -8,7 +8,7 @@ public final class EncounterCommands {
     private EncounterCommands() {
     }
 
-    public record EntryInput(UUID statblockId, int quantity, Integer maxHpOverride) {
+    public record EntryInput(UUID statblockId, int quantity) {
     }
 
     public record CreateEncounterCommand(UUID worldId, UUID campaignId, String name, String notes,
