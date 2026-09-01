@@ -18,6 +18,7 @@ import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
@@ -132,6 +133,8 @@ class ImportServiceTest {
     @Mock
     private StatblockImportPort statblockImportPort;
     @Mock
+    private EncounterImportPort encounterImportPort;
+    @Mock
     private ArcBeatImportPort arcBeatImportPort;
     @Mock
     private WhiteboardImportPort whiteboardImportPort;
@@ -166,7 +169,7 @@ class ImportServiceTest {
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
                 arcImportPort, fieldTemplateImportPort, gameSystemImportPort, globalFieldTemplateImportPort,
                 globalStatblockImportPort,
-                characterSheetImportPort, documentImportPort, statblockImportPort,
+                characterSheetImportPort, documentImportPort, statblockImportPort, encounterImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
                 cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,

@@ -10,13 +10,13 @@ public final class BeatCommands {
 
     public record CreateBeatCommand(UUID worldId, UUID campaignId, UUID arcId, String title, String body,
                                     boolean done, List<UUID> articleIds, List<UUID> statblockIds,
-                                    List<UUID> tableIds, List<UUID> deckIds,
+                                    List<UUID> encounterIds, List<UUID> tableIds, List<UUID> deckIds,
                                     UUID sessionId, Integer position) {
     }
 
     public record UpdateBeatCommand(UUID worldId, UUID campaignId, UUID arcId, UUID beatId, String title,
                                     String body, boolean done, List<UUID> articleIds,
-                                    List<UUID> statblockIds, List<UUID> tableIds, List<UUID> deckIds,
-                                    UUID sessionId, Integer position) {
+                                    List<UUID> statblockIds, List<UUID> encounterIds, List<UUID> tableIds,
+                                    List<UUID> deckIds, UUID sessionId, Integer position) {
     }
 }

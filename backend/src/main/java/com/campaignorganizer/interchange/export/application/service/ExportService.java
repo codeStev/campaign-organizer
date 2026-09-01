@@ -4,6 +4,7 @@ import com.campaignorganizer.worldbuilding.application.calendar.port.published.C
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockQueryPort;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterQueryPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
@@ -89,6 +90,7 @@ public class ExportService implements ExportWorldUseCase {
     private final CheatSheetQueryPort cheatSheets;
     private final TagQueryPort tags;
     private final ClockQueryPort clocks;
+    private final EncounterQueryPort encounters;
     private final LooseThreadQueryPort looseThreads;
     private final TodoQueryPort todos;
 
@@ -107,8 +109,8 @@ public class ExportService implements ExportWorldUseCase {
                          WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
                          HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
-                         TagQueryPort tags, ClockQueryPort clocks, LooseThreadQueryPort looseThreads,
-                         TodoQueryPort todos) {
+                         TagQueryPort tags, ClockQueryPort clocks, EncounterQueryPort encounters,
+                         LooseThreadQueryPort looseThreads, TodoQueryPort todos) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -139,6 +141,7 @@ public class ExportService implements ExportWorldUseCase {
         this.cheatSheets = cheatSheets;
         this.tags = tags;
         this.clocks = clocks;
+        this.encounters = encounters;
         this.looseThreads = looseThreads;
         this.todos = todos;
     }
@@ -178,6 +181,7 @@ public class ExportService implements ExportWorldUseCase {
         List<Object> allArcs = new ArrayList<>();
         List<Object> allBeats = new ArrayList<>();
         List<Object> allClocks = new ArrayList<>();
+        List<Object> allEncounters = new ArrayList<>();
         List<Object> allLooseThreads = new ArrayList<>();
         // Campaign rosters (ADR-0091): campaign-scoped membership rows.
         List<Object> allCampaignPlayers = new ArrayList<>();
@@ -191,6 +195,8 @@ public class ExportService implements ExportWorldUseCase {
             });
             // Clocks (FR-48): campaign-scoped, no beat linkage to walk.
             allClocks.addAll(clocks.findByCampaign(c.id()));
+            // Encounters (ADR-0097): campaign-scoped; beats link to them by id.
+            allEncounters.addAll(encounters.findByCampaign(c.id()));
             // Loose threads (FR-49): campaign-scoped via the denormalized column.
             allLooseThreads.addAll(looseThreads.findByCampaign(c.id()));
             allCampaignPlayers.addAll(campaignPlayers.findByCampaign(c.id()));
@@ -201,6 +207,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("arcs", allArcs);
         bundle.put("beats", allBeats);
         bundle.put("clocks", allClocks);
+        bundle.put("encounters", allEncounters);
         bundle.put("looseThreads", allLooseThreads);
         bundle.put("todos", allTodos);
         // Player pool (ADR-0091): world-scoped, reused across the world's campaigns.

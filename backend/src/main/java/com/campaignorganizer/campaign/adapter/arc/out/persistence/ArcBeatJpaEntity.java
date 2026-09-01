@@ -36,6 +36,12 @@ public class ArcBeatJpaEntity {
     @Column(name = "statblock_id")
     private List<UUID> statblockIds = new ArrayList<>();
 
+    /** Encounters linked to this beat; stored in beat_encounters (ADR-0097). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "beat_encounters", joinColumns = @JoinColumn(name = "beat_id"))
+    @Column(name = "encounter_id")
+    private List<UUID> encounterIds = new ArrayList<>();
+
     /** Roll tables referenced from this beat; stored in beat_roll_tables (FR-40). */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "beat_roll_tables", joinColumns = @JoinColumn(name = "beat_id"))
@@ -102,6 +108,14 @@ public class ArcBeatJpaEntity {
 
     public void setStatblockIds(List<UUID> statblockIds) {
         this.statblockIds = statblockIds == null ? new ArrayList<>() : statblockIds;
+    }
+
+    public List<UUID> getEncounterIds() {
+        return encounterIds;
+    }
+
+    public void setEncounterIds(List<UUID> encounterIds) {
+        this.encounterIds = encounterIds == null ? new ArrayList<>() : encounterIds;
     }
 
     public List<UUID> getTableIds() {

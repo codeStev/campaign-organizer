@@ -17,6 +17,7 @@ public final class BeatWebDtos {
             Boolean done,
             List<UUID> articleIds,
             List<UUID> statblockIds,
+            List<UUID> encounterIds,
             List<UUID> tableIds,
             List<UUID> deckIds,
             UUID sessionId,
@@ -32,6 +33,10 @@ public final class BeatWebDtos {
 
         public List<UUID> statblockIdsOrEmpty() {
             return statblockIds == null ? List.of() : statblockIds.stream().distinct().toList();
+        }
+
+        public List<UUID> encounterIdsOrEmpty() {
+            return encounterIds == null ? List.of() : encounterIds.stream().distinct().toList();
         }
 
         public List<UUID> tableIdsOrEmpty() {
@@ -51,6 +56,7 @@ public final class BeatWebDtos {
             boolean done,
             List<UUID> articleIds,
             List<UUID> statblockIds,
+            List<UUID> encounterIds,
             List<UUID> tableIds,
             List<UUID> deckIds,
             UUID sessionId,

@@ -10,6 +10,9 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterEntryView;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterImportPort;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterView;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
 import com.campaignorganizer.campaign.application.player.port.published.PlayerImportPort;
@@ -116,6 +119,7 @@ public class ImportService implements ImportBackupUseCase {
     private final CharacterSheetImportPort characterSheetImportPort;
     private final DocumentImportPort documentImportPort;
     private final StatblockImportPort statblockImportPort;
+    private final EncounterImportPort encounterImportPort;
     private final ArcBeatImportPort arcBeatImportPort;
     private final WhiteboardImportPort whiteboardImportPort;
     private final MediaImportPort mediaImportPort;
@@ -141,7 +145,7 @@ public class ImportService implements ImportBackupUseCase {
             GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
             GlobalStatblockImportPort globalStatblockImportPort,
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
-            StatblockImportPort statblockImportPort,
+            StatblockImportPort statblockImportPort, EncounterImportPort encounterImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
@@ -171,6 +175,7 @@ public class ImportService implements ImportBackupUseCase {
         this.characterSheetImportPort = characterSheetImportPort;
         this.documentImportPort = documentImportPort;
         this.statblockImportPort = statblockImportPort;
+        this.encounterImportPort = encounterImportPort;
         this.arcBeatImportPort = arcBeatImportPort;
         this.whiteboardImportPort = whiteboardImportPort;
         this.mediaImportPort = mediaImportPort;
@@ -231,6 +236,7 @@ public class ImportService implements ImportBackupUseCase {
                 readList(root, "characterSheets", CharacterSheetView.class);
         List<DocumentView> documents = readList(root, "documents", DocumentView.class);
         List<StatblockView> statblocks = readList(root, "statblocks", StatblockView.class);
+        List<EncounterView> encounters = readList(root, "encounters", EncounterView.class);
         List<ArcBeatView> beats = readList(root, "beats", ArcBeatView.class);
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
         List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
@@ -265,6 +271,7 @@ public class ImportService implements ImportBackupUseCase {
         characterSheets.forEach(s -> remap.assign(s.id()));
         documents.forEach(d -> remap.assign(d.id()));
         statblocks.forEach(s -> remap.assign(s.id()));
+        encounters.forEach(e -> remap.assign(e.id()));
         beats.forEach(b -> remap.assign(b.id()));
         whiteboards.forEach(w -> remap.assign(w.id()));
         rollTables.forEach(t -> remap.assign(t.id()));
@@ -446,6 +453,19 @@ public class ImportService implements ImportBackupUseCase {
                     s.name(), s.stats(), s.notes(), s.createdAt(), s.updatedAt()));
         }
 
+        // Encounters (ADR-0097): campaign-scoped, ordinary data (not resolve-or-reuse
+        // like the global catalogs) - each entry's statblockId is remapped, so this
+        // must come after statblocks are persisted just above.
+        for (EncounterView e : encounters) {
+            List<EncounterEntryView> remappedEntries = e.entries().stream()
+                    .map(entry -> new EncounterEntryView(remap.get(entry.statblockId()), entry.quantity(),
+                            entry.maxHpOverride()))
+                    .toList();
+            encounterImportPort.importEncounter(new EncounterView(remap.get(e.id()),
+                    remap.get(e.campaignId()), e.name(), e.notes(), remappedEntries, e.createdAt(),
+                    e.updatedAt()));
+        }
+
         // Folksonomy tags (FR-47): entityId points at an already-remapped
         // article or statblock id from the same pass.
         for (TagView t : tags) {
@@ -491,14 +511,16 @@ public class ImportService implements ImportBackupUseCase {
                     remap.getOrNull(a.characterId()), a.createdAt()));
         }
 
-        // Beats last among campaign data: they reference statblocks, which must exist first.
+        // Beats last among campaign data: they reference statblocks and encounters, which must exist first.
         for (ArcBeatView b : beats) {
             List<UUID> articleIds = b.articleIds().stream().map(remap::get).toList();
             List<UUID> statblockIds = b.statblockIds().stream().map(remap::get).toList();
+            List<UUID> encounterIds =
+                    b.encounterIds() == null ? List.of() : b.encounterIds().stream().map(remap::get).toList();
             List<UUID> tableIds = b.tableIds() == null ? List.of() : b.tableIds().stream().map(remap::get).toList();
             List<UUID> deckIds = b.deckIds() == null ? List.of() : b.deckIds().stream().map(remap::get).toList();
             arcBeatImportPort.importArcBeat(new ArcBeatView(remap.get(b.id()), remap.get(b.arcId()),
-                    b.title(), b.body(), b.done(), articleIds, statblockIds, tableIds, deckIds,
+                    b.title(), b.body(), b.done(), articleIds, statblockIds, encounterIds, tableIds, deckIds,
                     remap.getOrNull(b.sessionId()), b.position(), b.createdAt(), b.updatedAt()));
         }
 

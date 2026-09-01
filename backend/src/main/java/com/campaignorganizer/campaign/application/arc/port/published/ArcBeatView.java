@@ -13,6 +13,7 @@ public record ArcBeatView(
         boolean done,
         List<UUID> articleIds,
         List<UUID> statblockIds,
+        List<UUID> encounterIds,
         List<UUID> tableIds,
         List<UUID> deckIds,
         UUID sessionId,

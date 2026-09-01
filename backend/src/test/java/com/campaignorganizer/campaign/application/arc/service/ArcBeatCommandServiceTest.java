@@ -15,6 +15,7 @@ import com.campaignorganizer.campaign.application.arc.port.out.SessionExistsPort
 import com.campaignorganizer.campaign.application.arc.port.out.StatblockExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.out.TableExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
+import com.campaignorganizer.campaign.application.encounter.port.published.EncounterQueryPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -50,6 +51,8 @@ class ArcBeatCommandServiceTest {
     @Mock
     private SessionExistsPort sessions;
     @Mock
+    private EncounterQueryPort encounters;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -65,12 +68,17 @@ class ArcBeatCommandServiceTest {
     @BeforeEach
     void setUp() {
         service = new ArcBeatCommandService(beats, arcs, campaigns, articles, statblocks, tables,
-                decks, sessions, viewMapper, ids, clock);
+                decks, sessions, encounters, viewMapper, ids, clock);
     }
 
     private CreateBeatCommand command(List<UUID> articleIds, List<UUID> statblockIds, UUID sessionId) {
         return new CreateBeatCommand(worldId, campaignId, arcId, "Ambush", "body", false,
-                articleIds, statblockIds, List.of(), List.of(), sessionId, 0);
+                articleIds, statblockIds, List.of(), List.of(), List.of(), sessionId, 0);
+    }
+
+    private CreateBeatCommand commandWithEncounters(List<UUID> encounterIds) {
+        return new CreateBeatCommand(worldId, campaignId, arcId, "Ambush", "body", false,
+                List.of(), List.of(), encounterIds, List.of(), List.of(), null, 0);
     }
 
     @Test
@@ -103,5 +111,30 @@ class ArcBeatCommandServiceTest {
 
         assertThatThrownBy(() -> service.create(command(List.of(), List.of(statblockId), null)))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createRejectsForeignEncounter() {
+        UUID encounterId = UUID.randomUUID();
+        when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(true);
+        when(arcs.existsInCampaign(arcId, campaignId)).thenReturn(true);
+        when(encounters.existsInCampaign(encounterId, campaignId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(commandWithEncounters(List.of(encounterId))))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createSucceedsWithValidEncounter() {
+        UUID encounterId = UUID.randomUUID();
+        when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(true);
+        when(arcs.existsInCampaign(arcId, campaignId)).thenReturn(true);
+        when(encounters.existsInCampaign(encounterId, campaignId)).thenReturn(true);
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(beats.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ArcBeatView view = service.create(commandWithEncounters(List.of(encounterId)));
+
+        assertThat(view.encounterIds()).containsExactly(encounterId);
     }
 }
