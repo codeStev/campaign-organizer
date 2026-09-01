@@ -508,12 +508,16 @@ export function mediaApi(worldId: string) {
 
 // ---- GM campaign manager (mirrors docs/api/openapi.yaml) ----
 
+export type CampaignStatus = 'PLANNED' | 'ACTIVE' | 'ON_HIATUS' | 'COMPLETED';
+export const CAMPAIGN_STATUSES: CampaignStatus[] = ['PLANNED', 'ACTIVE', 'ON_HIATUS', 'COMPLETED'];
+
 export interface Campaign {
   id: string;
   worldId: string;
   name: string;
   description?: string | null;
   notes?: string | null;
+  status: CampaignStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -522,6 +526,7 @@ export interface CampaignRequest {
   name: string;
   description?: string | null;
   notes?: string | null;
+  status?: CampaignStatus;
 }
 
 export interface Session {
