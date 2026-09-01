@@ -327,9 +327,21 @@ public class ImportService implements ImportBackupUseCase {
                     r.createdAt(), r.updatedAt()));
         }
 
+        // Game systems (ADR-0094): resolved-or-reused by exact name, same
+        // exception to the normal id-remap contract as the global template
+        // catalog, and for the same reason (avoid fragmenting one shared
+        // system across re-imports). Built early since campaigns (below) and
+        // field templates/global templates (later) all resolve through it.
+        Map<UUID, UUID> gameSystemResolution = new HashMap<>();
+        for (GameSystemView sys : gameSystems) {
+            GameSystemView resolved = gameSystemImportPort.importOrReuse(sys);
+            gameSystemResolution.put(sys.id(), resolved.id());
+        }
+
         for (CampaignView c : campaigns) {
             campaignImportPort.importCampaign(new CampaignView(remap.get(c.id()), newWorldId, c.name(),
-                    c.description(), c.notes(), c.status(), c.createdAt(), c.updatedAt()));
+                    c.description(), c.notes(), c.status(), gameSystemResolution.get(c.systemId()),
+                    c.createdAt(), c.updatedAt()));
         }
 
         // Player pool (ADR-0091): world-scoped, no other id references inside.
@@ -372,16 +384,6 @@ public class ImportService implements ImportBackupUseCase {
         for (TodoView t : todos) {
             todoImportPort.importTodo(new TodoView(remap.get(t.id()), remap.get(t.campaignId()),
                     remap.getOrNull(t.sessionId()), t.text(), t.done(), t.createdAt(), t.updatedAt()));
-        }
-
-        // Game systems (ADR-0094): resolved-or-reused by exact name, same
-        // exception to the normal id-remap contract as the global template
-        // catalog, and for the same reason (avoid fragmenting one shared
-        // system across re-imports).
-        Map<UUID, UUID> gameSystemResolution = new HashMap<>();
-        for (GameSystemView sys : gameSystems) {
-            GameSystemView resolved = gameSystemImportPort.importOrReuse(sys);
-            gameSystemResolution.put(sys.id(), resolved.id());
         }
 
         for (FieldTemplateView f : fieldTemplates) {
