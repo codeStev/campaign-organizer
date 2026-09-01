@@ -51,7 +51,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         String created = mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Thalia\",\"templateId\":\"" + templateId + "\","
+                        .content("{\"name\":\"Thalia\",\"worldTemplateId\":\"" + templateId + "\","
                                 + "\"values\":{\"level\":5,\"class\":\"Wizard\",\"alive\":true}}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Thalia"))
@@ -69,7 +69,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(put("/api/worlds/{w}/character-sheets/{s}", worldId, id)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Thalia the Wise\",\"templateId\":\"" + templateId + "\","
+                        .content("{\"name\":\"Thalia the Wise\",\"worldTemplateId\":\"" + templateId + "\","
                                 + "\"values\":{\"level\":6}}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Thalia the Wise"))
@@ -92,7 +92,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Thalia\",\"templateId\":\"" + templateId + "\","
+                        .content("{\"name\":\"Thalia\",\"worldTemplateId\":\"" + templateId + "\","
                                 + "\"articleId\":\"" + articleId + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.articleId").value(articleId));
@@ -104,7 +104,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"X\",\"templateId\":\"" + UUID.randomUUID() + "\"}"))
+                        .content("{\"name\":\"X\",\"worldTemplateId\":\"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -114,7 +114,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Doomed\",\"templateId\":\"" + templateId + "\"}"))
+                        .content("{\"name\":\"Doomed\",\"worldTemplateId\":\"" + templateId + "\"}"))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(delete("/api/worlds/{w}/field-templates/{t}", worldId, templateId)
@@ -136,14 +136,14 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Thalia\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                        .content("{\"name\":\"Thalia\",\"worldTemplateId\":\"" + templateId + "\",\"campaignId\":\""
                                 + campA + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.campaignId").value(campA));
         mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Runa\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                        .content("{\"name\":\"Runa\",\"worldTemplateId\":\"" + templateId + "\",\"campaignId\":\""
                                 + campB + "\"}"))
                 .andExpect(status().isCreated());
 
@@ -166,7 +166,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"X\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                        .content("{\"name\":\"X\",\"worldTemplateId\":\"" + templateId + "\",\"campaignId\":\""
                                 + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isBadRequest());
     }
@@ -178,7 +178,7 @@ class CharacterSheetControllerIT extends AbstractIntegrationTest {
         String sheetId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Survivor\",\"templateId\":\"" + templateId + "\",\"campaignId\":\""
+                        .content("{\"name\":\"Survivor\",\"worldTemplateId\":\"" + templateId + "\",\"campaignId\":\""
                                 + camp + "\"}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
 

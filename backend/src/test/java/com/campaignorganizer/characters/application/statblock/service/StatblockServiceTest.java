@@ -15,6 +15,8 @@ import com.campaignorganizer.characters.application.statblock.port.out.WorldExis
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.domain.statblock.Statblock;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
@@ -48,6 +50,8 @@ class StatblockServiceTest {
     @Mock
     private FieldTemplateQueryPort templates;
     @Mock
+    private GlobalFieldTemplateQueryPort globalTemplates;
+    @Mock
     private CampaignStatblockRefPort campaignRefs;
     @Mock
     private StatblockTagLookupPort tagLookup;
@@ -65,12 +69,12 @@ class StatblockServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new StatblockService(statblocks, worlds, articles, campaigns, templates, campaignRefs,
-                tagLookup, viewMapper, ids, clock);
+        service = new StatblockService(statblocks, worlds, articles, campaigns, templates, globalTemplates,
+                campaignRefs, tagLookup, viewMapper, ids, clock);
     }
 
     private Statblock statblock(UUID id, UUID campaign) {
-        return Statblock.create(id, worldId, null, campaign, null, "SB", null, null, clock.instant());
+        return Statblock.create(id, worldId, null, campaign, null, null, "SB", null, null, clock.instant());
     }
 
     private FieldTemplateView templateView(TemplateKind kind) {
@@ -83,7 +87,7 @@ class StatblockServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, null, "SB", null, null)))
+                worldId, null, null, null, null, "SB", null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -93,7 +97,7 @@ class StatblockServiceTest {
         when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, campaignId, null, "SB", null, null)))
+                worldId, null, campaignId, null, null, "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -103,7 +107,7 @@ class StatblockServiceTest {
         when(templates.findByIdInWorld(templateId, worldId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, templateId, "SB", null, null)))
+                worldId, null, null, templateId, null, "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -114,7 +118,34 @@ class StatblockServiceTest {
                 .thenReturn(Optional.of(templateView(TemplateKind.CHARACTER)));
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, templateId, "SB", null, null)))
+                worldId, null, null, templateId, null, "SB", null, null)))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void createSucceedsWithValidGlobalTemplate() {
+        UUID globalTemplateId = UUID.randomUUID();
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(globalTemplates.findById(globalTemplateId)).thenReturn(Optional.of(
+                new GlobalFieldTemplateView(globalTemplateId, "D&D 5e Monster", TemplateKind.STATBLOCK,
+                        "dnd5e", List.of(), Instant.now(), Instant.now())));
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(statblocks.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        StatblockView view = service.create(new CreateStatblockCommand(
+                worldId, null, null, null, globalTemplateId, "SB", null, null));
+
+        assertThat(view.globalTemplateId()).isEqualTo(globalTemplateId);
+    }
+
+    @Test
+    void createRejectsBothWorldAndGlobalTemplateSet() {
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(templates.findByIdInWorld(templateId, worldId))
+                .thenReturn(Optional.of(templateView(TemplateKind.STATBLOCK)));
+
+        assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
+                worldId, null, null, templateId, UUID.randomUUID(), "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -138,7 +169,7 @@ class StatblockServiceTest {
     @Test
     void duplicateCopiesFieldsAndRenamesWithNewId() {
         UUID sourceId = UUID.randomUUID();
-        Statblock source = Statblock.create(sourceId, worldId, null, campaignId, null, "Goblin",
+        Statblock source = Statblock.create(sourceId, worldId, null, campaignId, null, null, "Goblin",
                 Map.of("hp", 7), "Sneaky", clock.instant());
         when(statblocks.findByIdAndWorld(sourceId, worldId)).thenReturn(Optional.of(source));
         when(worlds.exists(worldId)).thenReturn(true);

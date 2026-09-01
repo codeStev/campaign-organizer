@@ -13,7 +13,6 @@ import com.campaignorganizer.characters.application.template.port.in.UpdateGloba
 import com.campaignorganizer.characters.application.template.port.out.FieldTemplateRepositoryPort;
 import com.campaignorganizer.characters.application.template.port.out.GlobalFieldTemplateRepositoryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
-import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldTemplate;
@@ -31,13 +30,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Global field template use cases (ADR-0093); also implements the published
- * query/import ports and template promotion.
+ * import port and template promotion. The published query port is served by
+ * the separate {@link GlobalFieldTemplateQueryService} bean instead — this
+ * service depends on {@code CharacterSheetTemplateRefPort}/
+ * {@code StatblockTemplateRefPort} (implemented by {@code CharacterSheetService}
+ * /{@code StatblockService}), which themselves depend on the query port to
+ * validate template references, so implementing both here would be a Spring
+ * bean-construction cycle.
  */
 @Service
 public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseCase,
         UpdateGlobalFieldTemplateUseCase, DeleteGlobalFieldTemplateUseCase, GetGlobalFieldTemplateUseCase,
-        ListGlobalFieldTemplatesUseCase, PromoteFieldTemplateUseCase, GlobalFieldTemplateQueryPort,
-        GlobalFieldTemplateImportPort {
+        ListGlobalFieldTemplatesUseCase, PromoteFieldTemplateUseCase, GlobalFieldTemplateImportPort {
 
     private final GlobalFieldTemplateRepositoryPort templates;
     private final FieldTemplateRepositoryPort worldTemplates;
@@ -98,7 +102,8 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     @Override
     @Transactional(readOnly = true)
     public List<GlobalFieldTemplateView> list(TemplateKind kind) {
-        return kind == null ? findAll() : findByKind(kind);
+        List<GlobalFieldTemplate> result = kind == null ? templates.findAll() : templates.findByKind(kind);
+        return result.stream().map(viewMapper::toView).toList();
     }
 
     // --- promote a world-scoped template to global (ADR-0093) ---
@@ -135,32 +140,6 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
         GlobalFieldTemplate created = GlobalFieldTemplate.reconstitute(view.id(), view.name(), view.kind(),
                 view.system(), view.sections(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(templates.save(created));
-    }
-
-    // --- published query port ---
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<GlobalFieldTemplateView> findAll() {
-        return templates.findAll().stream().map(viewMapper::toView).toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<GlobalFieldTemplateView> findByKind(TemplateKind kind) {
-        return templates.findByKind(kind).stream().map(viewMapper::toView).toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<GlobalFieldTemplateView> findById(UUID templateId) {
-        return templates.findById(templateId).map(viewMapper::toView);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsById(UUID templateId) {
-        return templates.findById(templateId).isPresent();
     }
 
     private GlobalFieldTemplate require(UUID templateId) {

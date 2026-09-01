@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
@@ -33,6 +34,8 @@ import com.campaignorganizer.characters.application.sheet.port.published.Charact
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
@@ -113,6 +116,8 @@ class ImportServiceTest {
     @Mock
     private FieldTemplateImportPort fieldTemplateImportPort;
     @Mock
+    private GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
+    @Mock
     private CharacterSheetImportPort characterSheetImportPort;
     @Mock
     private DocumentImportPort documentImportPort;
@@ -151,8 +156,8 @@ class ImportServiceTest {
                 mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
-                arcImportPort, fieldTemplateImportPort, characterSheetImportPort, documentImportPort,
-                statblockImportPort,
+                arcImportPort, fieldTemplateImportPort, globalFieldTemplateImportPort,
+                characterSheetImportPort, documentImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
                 cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
@@ -250,7 +255,7 @@ class ImportServiceTest {
         bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, null, null,
                 "Tortuga", "tortuga", "LOCATION", "Plain.", now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
-                null, "Goblin", Map.of(), null, now, now)));
+                null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("tags", List.of(
                 new TagView(UUID.randomUUID(), oldWorldId, EntityType.ARTICLE, oldArticleId, "npc", now),
                 new TagView(UUID.randomUUID(), oldWorldId, EntityType.STATBLOCK, oldStatblockId, "npc",
@@ -280,6 +285,44 @@ class ImportServiceTest {
                 .containsExactlyInAnyOrder(newArticleId, newStatblockId);
         assertThat(importedTags).allMatch(t -> t.name().equals("npc") && t.worldId().equals(
                 articleCaptor.getValue().worldId()));
+    }
+
+    @Test
+    void resolvesGlobalTemplateThroughImportOrReuseNotTheNormalIdRemap() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldStatblockId = UUID.randomUUID();
+        UUID oldGlobalTemplateId = UUID.randomUUID();
+        UUID reusedGlobalTemplateId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        // Simulates the target instance already having an equivalent global
+        // template: importOrReuse resolves to a DIFFERENT id than the bundle's.
+        when(globalFieldTemplateImportPort.importOrReuse(any())).thenAnswer(inv -> {
+            GlobalFieldTemplateView v = inv.getArgument(0);
+            return new GlobalFieldTemplateView(reusedGlobalTemplateId, v.name(), v.kind(), v.system(),
+                    v.sections(), v.createdAt(), v.updatedAt());
+        });
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("globalFieldTemplates", List.of(new GlobalFieldTemplateView(oldGlobalTemplateId,
+                "D&D 5e Monster", TemplateKind.STATBLOCK, "dnd5e", List.of(), now, now)));
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+                null, oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "campaigns", "sessions", "arcs", "beats",
+                "fieldTemplates", "characterSheets", "whiteboards", "tags")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<StatblockView> statblockCaptor = ArgumentCaptor.forClass(StatblockView.class);
+        verify(statblockImportPort).importStatblock(statblockCaptor.capture());
+        assertThat(statblockCaptor.getValue().globalTemplateId()).isEqualTo(reusedGlobalTemplateId);
+        assertThat(statblockCaptor.getValue().worldTemplateId()).isNull();
     }
 
     @Test

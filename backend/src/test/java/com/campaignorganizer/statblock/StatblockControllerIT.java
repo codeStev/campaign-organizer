@@ -160,9 +160,9 @@ class StatblockControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Goblin\",\"templateId\":\"" + templateId + "\"}"))
+                        .content("{\"name\":\"Goblin\",\"worldTemplateId\":\"" + templateId + "\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.templateId").value(templateId));
+                .andExpect(jsonPath("$.worldTemplateId").value(templateId));
     }
 
     @Test
@@ -174,7 +174,7 @@ class StatblockControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Goblin\",\"templateId\":\"" + templateId + "\"}"))
+                        .content("{\"name\":\"Goblin\",\"worldTemplateId\":\"" + templateId + "\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -187,7 +187,7 @@ class StatblockControllerIT extends AbstractIntegrationTest {
         String id = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/statblocks", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Goblin\",\"templateId\":\"" + templateId + "\"}"))
+                        .content("{\"name\":\"Goblin\",\"worldTemplateId\":\"" + templateId + "\"}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
 
         mockMvc.perform(delete("/api/worlds/{w}/field-templates/{t}", worldId, templateId)
@@ -198,6 +198,6 @@ class StatblockControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Goblin"))
-                .andExpect(jsonPath("$.templateId").doesNotExist());
+                .andExpect(jsonPath("$.worldTemplateId").doesNotExist());
     }
 }

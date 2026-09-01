@@ -55,8 +55,8 @@ class SheetTest {
     void characterSheetUpdateBumpsUpdatedAt() {
         UUID templateId = UUID.randomUUID();
         CharacterSheet s = CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), templateId, null,
-                null, "Aria", Map.of("hp", 10), T0);
-        s.update(templateId, null, null, "Aria the Bold", Map.of("hp", 12), T1);
+                null, null, "Aria", Map.of("hp", 10), T0);
+        s.update(templateId, null, null, null, "Aria the Bold", Map.of("hp", 12), T1);
 
         assertThat(s.getName()).isEqualTo("Aria the Bold");
         assertThat(s.getValues()).containsEntry("hp", 12);
@@ -66,14 +66,30 @@ class SheetTest {
     @Test
     void characterSheetRejectsBlankName() {
         assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(),
-                UUID.randomUUID(), null, null, " ", null, T0))
+                UUID.randomUUID(), null, null, null, " ", null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void characterSheetRequiresTemplate() {
         assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
-                null, "Aria", null, T0))
+                null, null, "Aria", null, T0))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void characterSheetRejectsBothWorldAndGlobalTemplateSet() {
+        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), null, null, "Aria", null, T0))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void characterSheetAcceptsGlobalTemplateOnly() {
+        UUID globalTemplateId = UUID.randomUUID();
+        CharacterSheet s = CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null,
+                globalTemplateId, null, null, "Aria", null, T0);
+        assertThat(s.getGlobalTemplateId()).isEqualTo(globalTemplateId);
+        assertThat(s.getWorldTemplateId()).isNull();
     }
 }

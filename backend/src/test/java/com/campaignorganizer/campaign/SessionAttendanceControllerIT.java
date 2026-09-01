@@ -79,7 +79,7 @@ class SessionAttendanceControllerIT extends AbstractIntegrationTest {
         String sheet = mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"" + name + "\",\"templateId\":\"" + templateId + "\""
+                        .content("{\"name\":\"" + name + "\",\"worldTemplateId\":\"" + templateId + "\""
                                 + campaignField + "}"))
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(sheet, "$.id");

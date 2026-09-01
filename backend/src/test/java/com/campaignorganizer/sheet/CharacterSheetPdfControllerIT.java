@@ -33,7 +33,7 @@ class CharacterSheetPdfControllerIT extends AbstractIntegrationTest {
         return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Thalia\",\"templateId\":\"" + templateId + "\",\"values\":" + values + "}"))
+                        .content("{\"name\":\"Thalia\",\"worldTemplateId\":\"" + templateId + "\",\"values\":" + values + "}"))
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
 
