@@ -4,11 +4,13 @@ import {
   campaignsApi,
   articlesApi,
   statblocksApi,
+  gameSystemsApi,
   Campaign,
   CampaignStatus,
   CAMPAIGN_STATUSES,
   ArticleSummary,
   Statblock,
+  GameSystem,
   ApiError,
 } from '../api/client';
 import { SessionLog } from './SessionLog';
@@ -42,6 +44,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [statblocks, setStatblocks] = useState<Statblock[]>([]);
+  const [systems, setSystems] = useState<GameSystem[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +72,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     void refresh();
     articleApi.list().then(setArticles).catch(handleError);
     statblockApi.list().then(setStatblocks).catch(handleError);
+    gameSystemsApi.list().then(setSystems).catch(() => {});
   }, [refresh, articleApi, statblockApi, handleError]);
 
   function select(campaign: Campaign) {
@@ -129,6 +133,35 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     }
   }
 
+  async function setSystem(campaign: Campaign, systemId: string | null) {
+    try {
+      const updated = await api.update(campaign.id, {
+        name: campaign.name,
+        description: campaign.description,
+        notes: campaign.notes,
+        status: campaign.status,
+        systemId,
+      });
+      setSelected(updated);
+      await refresh();
+      toast.success(
+        systemId ? `"${campaign.name}" set to ${systemName(systemId)}` : `"${campaign.name}" system cleared`,
+      );
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  function systemName(systemId: string | null | undefined): string | null {
+    if (!systemId) return null;
+    return systems.find((s) => s.id === systemId)?.name ?? null;
+  }
+
+  function systemColor(systemId: string | null | undefined): string | null {
+    if (!systemId) return null;
+    return systems.find((s) => s.id === systemId)?.color ?? null;
+  }
+
   async function removeCampaign(campaign: Campaign) {
     try {
       await api.remove(campaign.id);
@@ -179,7 +212,12 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
         {selected && (
           <>
             <div className="map-bar">
-              <h2>{selected.name}</h2>
+              <h2>
+                {systemColor(selected.systemId) && (
+                  <span className="system-color-dot" style={{ backgroundColor: systemColor(selected.systemId)! }} />
+                )}
+                {selected.name}
+              </h2>
               <span className={`campaign-status campaign-${selected.status.toLowerCase().replace('_', '-')}`}>
                 {selected.status.toLowerCase().replace('_', ' ')}
               </span>
@@ -194,6 +232,22 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
                   {CAMPAIGN_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>
                       {s.toLowerCase().replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selected.systemId ?? 'none'}
+                onValueChange={(v) => void setSystem(selected, v === 'none' ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Game system…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— none —</SelectItem>
+                  {systems.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
