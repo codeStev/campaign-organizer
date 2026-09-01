@@ -57,6 +57,11 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     return systems.find((s) => s.id === systemId)?.name ?? 'custom';
   }
 
+  function systemColor(systemId: string | null | undefined): string | null {
+    if (!systemId) return null;
+    return systems.find((s) => s.id === systemId)?.color ?? null;
+  }
+
   /** Finds a game system by exact case-insensitive name, creating one if none matches. */
   async function resolveSystemId(name: string): Promise<string> {
     const existing = systems.find((s) => s.name.toLowerCase() === name.toLowerCase());
@@ -175,8 +180,14 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
           <div>
             <h3>{previewing.name}</h3>
             <small className="muted">
-              {KIND_LABEL[previewing.kind]} · {systemName(previewing.systemId)} · {previewing.sections.length}{' '}
-              sections
+              {KIND_LABEL[previewing.kind]} ·{' '}
+              {systemColor(previewing.systemId) && (
+                <span
+                  className="system-color-dot"
+                  style={{ backgroundColor: systemColor(previewing.systemId)! }}
+                />
+              )}
+              {systemName(previewing.systemId)} · {previewing.sections.length} sections
             </small>
           </div>
           <div className="editor-actions">
@@ -265,7 +276,11 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             >
               <strong>{t.name}</strong>{' '}
               <small className="muted">
-                {KIND_LABEL[t.kind]} · {systemName(t.systemId)} · {t.sections.length} sections
+                {KIND_LABEL[t.kind]} ·{' '}
+                {systemColor(t.systemId) && (
+                  <span className="system-color-dot" style={{ backgroundColor: systemColor(t.systemId)! }} />
+                )}
+                {systemName(t.systemId)} · {t.sections.length} sections
               </small>
             </Button>
             <Button variant="link" onClick={() => duplicate(t)} title="Duplicate this template">

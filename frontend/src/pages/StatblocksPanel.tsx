@@ -133,6 +133,10 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
     return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
   }
 
+  function systemColor(systemId: string): string | null {
+    return systems.find((s) => s.id === systemId)?.color ?? null;
+  }
+
   const statblockTemplates = templates.filter((t) => t.kind === 'STATBLOCK');
   const globalStatblockTemplates = globalTemplates.filter((t) => t.kind === 'STATBLOCK');
   const template =
@@ -451,6 +455,9 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
                       <SelectLabel>Global (system) templates</SelectLabel>
                       {globalStatblockTemplates.map((t) => (
                         <SelectItem key={t.id} value={`${GLOBAL_PREFIX}${t.id}`}>
+                          {systemColor(t.systemId) && (
+                            <span className="system-color-dot" style={{ backgroundColor: systemColor(t.systemId)! }} />
+                          )}
                           {t.name} · {systemName(t.systemId)}
                         </SelectItem>
                       ))}

@@ -86,6 +86,10 @@ export function CharacterSheetsPanel({
     return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
   }
 
+  function systemColor(systemId: string): string | null {
+    return systems.find((s) => s.id === systemId)?.color ?? null;
+  }
+
   const refresh = useCallback(async () => {
     try {
       setSheets(await api.list(filterCampaign || undefined));
@@ -289,6 +293,9 @@ export function CharacterSheetsPanel({
                       <SelectLabel>Global (system) templates</SelectLabel>
                       {globalCharacterTemplates.map((t) => (
                         <SelectItem key={t.id} value={`${GLOBAL_PREFIX}${t.id}`}>
+                          {systemColor(t.systemId) && (
+                            <span className="system-color-dot" style={{ backgroundColor: systemColor(t.systemId)! }} />
+                          )}
                           {t.name} · {systemName(t.systemId)}
                         </SelectItem>
                       ))}
