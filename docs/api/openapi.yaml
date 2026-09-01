@@ -4262,6 +4262,64 @@ components:
             clock has no beat linkage to filter by.
           items:
             $ref: '#/components/schemas/PacketClock'
+        cheatSheet:
+          allOf:
+            - $ref: '#/components/schemas/PacketCheatSheet'
+          nullable: true
+          description: >-
+            Absent/null when the session has no saved cheat sheet, or an
+            empty one (ADR-0086).
+
+    PacketCheatSheetFragment:
+      type: object
+      required: [type, missing]
+      description: >-
+        One fragment of the session's cheat sheet, resolved fresh from its
+        source at print time, same as the standalone cheat sheet view
+        (ADR-0071, ADR-0086).
+      properties:
+        type:
+          type: string
+          enum: [FREEFORM, STATBLOCK, TABLE_ROW, DECK_CARD]
+        missing:
+          type: boolean
+          description: True when the fragment's referenced content no longer exists.
+        text:
+          type: [string, "null"]
+          description: FREEFORM only.
+        statblock:
+          allOf:
+            - $ref: '#/components/schemas/Statblock'
+          nullable: true
+          description: STATBLOCK only.
+        tableTitle:
+          type: [string, "null"]
+          description: TABLE_ROW only - the containing table's title, for context.
+        tableEntry:
+          allOf:
+            - $ref: '#/components/schemas/PacketRollTableEntry'
+          nullable: true
+          description: TABLE_ROW only.
+        deckTitle:
+          type: [string, "null"]
+          description: DECK_CARD only - the containing deck's title, for context.
+        deckCard:
+          allOf:
+            - $ref: '#/components/schemas/PacketDeckCard'
+          nullable: true
+          description: DECK_CARD only.
+
+    PacketCheatSheet:
+      type: object
+      required: [id, fragments]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fragments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketCheatSheetFragment'
 
     RollTableEntryInput:
       type: object
