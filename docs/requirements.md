@@ -262,6 +262,15 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   shell without rebuilding field-by-field). No merge/diff UI; the copy is
   a plain field-for-field clone with `" (copy)"` appended to its name/
   title. (ADR-0089)
+- **FR-52 Campaign status.** A lifecycle field on campaigns — planned /
+  active / on hiatus / completed — so the campaign list distinguishes
+  what's actually being run right now from what's prepped-but-not-started
+  or long dormant, across running lots of oneshots and multiple concurrent
+  campaigns. "Planned" is its own state, distinct from "active": a
+  campaign being prepped that hasn't run its first session yet. Feeds a
+  future global landing page (FR-67-adjacent, not yet built), where a
+  campaign stuck in "planned" or "active" with nothing scheduled is a
+  signal worth surfacing. (ADR-0090)
 
 ---
 
