@@ -10,6 +10,7 @@ import {
   Session,
   ArticleSummary,
   Statblock,
+  Encounter,
 } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
@@ -36,11 +37,12 @@ interface Props {
   campaignId: string;
   articles: ArticleSummary[];
   statblocks: Statblock[];
+  encounters: Encounter[];
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
 }
 
-export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArticle, onError }: Props) {
+export function ArcBoard({ worldId, campaignId, articles, statblocks, encounters, onOpenArticle, onError }: Props) {
   const api = useMemo(() => arcsApi(worldId, campaignId), [worldId, campaignId]);
   const sessionApi = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
   const [arcs, setArcs] = useState<Arc[]>([]);
@@ -118,6 +120,7 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, onOpenArti
             arc={arc}
             articles={articles}
             statblocks={statblocks}
+            encounters={encounters}
             sessions={sessions}
             onOpenArticle={onOpenArticle}
             onError={onError}
@@ -142,6 +145,7 @@ interface ArcCardProps {
   arc: Arc;
   articles: ArticleSummary[];
   statblocks: Statblock[];
+  encounters: Encounter[];
   sessions: Session[];
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
@@ -154,6 +158,7 @@ interface BeatDraft {
   body: string;
   articleIds: string[];
   statblockIds: string[];
+  encounterIds: string[];
   sessionId: string;
 }
 
@@ -163,6 +168,7 @@ function ArcCard({
   arc,
   articles,
   statblocks,
+  encounters,
   sessions,
   onOpenArticle,
   onError,
@@ -179,12 +185,17 @@ function ArcCard({
     body: '',
     articleIds: [],
     statblockIds: [],
+    encounterIds: [],
     sessionId: '',
   });
   const titleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
   const statblockNameById = useMemo(
     () => new Map(statblocks.map((s) => [s.id, s.name])),
     [statblocks],
+  );
+  const encounterNameById = useMemo(
+    () => new Map(encounters.map((e) => [e.id, e.name])),
+    [encounters],
   );
   const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
 
@@ -221,6 +232,7 @@ function ArcCard({
         done: !beat.done,
         articleIds: beat.articleIds,
         statblockIds: beat.statblockIds,
+        encounterIds: beat.encounterIds,
         sessionId: beat.sessionId,
         position: beat.position,
       });
@@ -246,6 +258,7 @@ function ArcCard({
       body: beat.body ?? '',
       articleIds: beat.articleIds ?? [],
       statblockIds: beat.statblockIds ?? [],
+      encounterIds: beat.encounterIds ?? [],
       sessionId: beat.sessionId ?? '',
     });
   }
@@ -262,6 +275,12 @@ function ArcCard({
     }
   }
 
+  function addDraftEncounter(id: string) {
+    if (id && !draft.encounterIds.includes(id)) {
+      setDraft({ ...draft, encounterIds: [...draft.encounterIds, id] });
+    }
+  }
+
   async function saveEdit(beat: Beat) {
     try {
       await api.update(beat.id, {
@@ -270,6 +289,7 @@ function ArcCard({
         done: beat.done,
         articleIds: draft.articleIds,
         statblockIds: draft.statblockIds,
+        encounterIds: draft.encounterIds,
         sessionId: draft.sessionId || null,
         position: beat.position,
       });
@@ -337,6 +357,13 @@ function ArcCard({
                         ⚔ {statblockNameById.get(id)}
                       </span>
                     ))}
+                  {b.encounterIds
+                    .filter((id) => encounterNameById.has(id))
+                    .map((id) => (
+                      <span key={id} className="beat-encounter" title="Encounter">
+                        ⚔ {encounterNameById.get(id)}
+                      </span>
+                    ))}
                   {b.sessionId && sessionById.has(b.sessionId) && (
                     <span className="beat-session muted">{sessionLabel(sessionById.get(b.sessionId)!)}</span>
                   )}
@@ -371,7 +398,9 @@ function ArcCard({
                       onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                     />
                     <MarkdownEditor value={draft.body} onChange={(body) => setDraft({ ...draft, body })} />
-                    {(draft.articleIds.length > 0 || draft.statblockIds.length > 0) && (
+                    {(draft.articleIds.length > 0 ||
+                      draft.statblockIds.length > 0 ||
+                      draft.encounterIds.length > 0) && (
                       <div className="beat-article-chips">
                         {draft.articleIds.map((id) => (
                           <span key={id} className="beat-chip">
@@ -399,6 +428,24 @@ function ArcCard({
                                 setDraft({
                                   ...draft,
                                   statblockIds: draft.statblockIds.filter((x) => x !== id),
+                                })
+                              }
+                            >
+                              ✕
+                            </Button>
+                          </span>
+                        ))}
+                        {draft.encounterIds.map((id) => (
+                          <span key={id} className="beat-chip beat-chip-encounter">
+                            ⚔ {encounterNameById.get(id) ?? 'encounter'}
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() =>
+                                setDraft({
+                                  ...draft,
+                                  encounterIds: draft.encounterIds.filter((x) => x !== id),
                                 })
                               }
                             >
@@ -436,6 +483,20 @@ function ArcCard({
                             .map((s) => (
                               <SelectItem key={s.id} value={s.id}>
                                 {s.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value="" onValueChange={addDraftEncounter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="+ link encounter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {encounters
+                            .filter((e) => !draft.encounterIds.includes(e.id))
+                            .map((e) => (
+                              <SelectItem key={e.id} value={e.id}>
+                                {e.name}
                               </SelectItem>
                             ))}
                         </SelectContent>

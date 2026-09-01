@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import {
   encountersApi,
   Encounter,
@@ -14,7 +14,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
-import { Spinner } from '../components/ui/spinner';
 import { toast } from 'sonner';
 
 const NONE_VALUE = '__none__';
@@ -22,6 +21,8 @@ const NONE_VALUE = '__none__';
 interface Props {
   worldId: string;
   campaignId: string;
+  encounters: Encounter[];
+  onChanged: () => void;
   statblocks: Statblock[];
   templates: FieldTemplate[];
   globalTemplates: GlobalFieldTemplate[];
@@ -31,28 +32,23 @@ interface Props {
 /**
  * Persisted, printable groupings of statblocks (ADR-0097) - the reusable
  * counterpart to the ad-hoc "⚔ Encounter" flow (ADR-0069, still available
- * unchanged from StatblocksPanel). Linked to arc beats via ArcBoard.
+ * unchanged from StatblocksPanel). Linked to arc beats via ArcBoard, which
+ * is why the encounter list itself lives in CampaignsView (single source
+ * of truth for both boards) rather than being fetched here.
  */
-export function EncounterBoard({ worldId, campaignId, statblocks, templates, globalTemplates, onError }: Props) {
+export function EncounterBoard({
+  worldId,
+  campaignId,
+  encounters,
+  onChanged,
+  statblocks,
+  templates,
+  globalTemplates,
+  onError,
+}: Props) {
   const api = useMemo(() => encountersApi(worldId, campaignId), [worldId, campaignId]);
-  const [encounters, setEncounters] = useState<Encounter[]>([]);
-  const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
   const [printing, setPrinting] = useState<Encounter | null>(null);
-
-  const refresh = useCallback(async () => {
-    try {
-      setEncounters(await api.list());
-    } catch (err) {
-      onError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [api, onError]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   async function addEncounter(e: FormEvent) {
     e.preventDefault();
@@ -60,7 +56,7 @@ export function EncounterBoard({ worldId, campaignId, statblocks, templates, glo
     try {
       const created = await api.create({ name: newName, entries: [] });
       setNewName('');
-      await refresh();
+      onChanged();
       toast.success(`Encounter "${created.name}" created`);
     } catch (err) {
       onError(err);
@@ -69,8 +65,8 @@ export function EncounterBoard({ worldId, campaignId, statblocks, templates, glo
 
   async function saveEncounter(encounter: Encounter, request: EncounterRequest) {
     try {
-      const updated = await api.update(encounter.id, request);
-      setEncounters((es) => es.map((x) => (x.id === encounter.id ? updated : x)));
+      await api.update(encounter.id, request);
+      onChanged();
     } catch (err) {
       onError(err);
     }
@@ -79,7 +75,7 @@ export function EncounterBoard({ worldId, campaignId, statblocks, templates, glo
   async function removeEncounter(encounter: Encounter) {
     try {
       await api.remove(encounter.id);
-      await refresh();
+      onChanged();
     } catch (err) {
       onError(err);
     }
@@ -123,12 +119,7 @@ export function EncounterBoard({ worldId, campaignId, statblocks, templates, glo
             onPrint={() => setPrinting(encounter)}
           />
         ))}
-        {loading && (
-          <p className="muted loading-row">
-            <Spinner /> Loading…
-          </p>
-        )}
-        {!loading && encounters.length === 0 && <p className="muted">No encounters yet.</p>}
+        {encounters.length === 0 && <p className="muted">No encounters yet.</p>}
       </div>
 
       {printing && (

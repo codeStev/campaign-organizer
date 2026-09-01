@@ -1587,6 +1587,17 @@ button:disabled {
   border-color: #c9b78a;
 }
 
+/* Encounter reference on a beat (row label + editor chip, ADR-0097). */
+.beat-encounter {
+  font-size: 0.8rem;
+  color: #b87a7a;
+  white-space: nowrap;
+}
+
+.beat-chip-encounter {
+  border-color: #b87a7a;
+}
+
 .beat-form {
   display: flex;
   gap: 0.4rem;

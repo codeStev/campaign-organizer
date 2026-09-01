@@ -7,6 +7,7 @@ import {
   gameSystemsApi,
   fieldTemplatesApi,
   globalFieldTemplatesApi,
+  encountersApi,
   Campaign,
   CampaignStatus,
   CAMPAIGN_STATUSES,
@@ -15,6 +16,7 @@ import {
   GameSystem,
   FieldTemplate,
   GlobalFieldTemplate,
+  Encounter,
   ApiError,
 } from '../api/client';
 import { SessionLog } from './SessionLog';
@@ -53,6 +55,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const [systems, setSystems] = useState<GameSystem[]>([]);
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
+  const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +93,21 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     setNotes(campaign.notes ?? '');
     setNotesDirty(false);
   }
+
+  // Encounters are campaign-scoped (ADR-0097); shared as one source of truth
+  // between ArcBoard's "+ link encounter" picker and EncounterBoard itself.
+  const refreshEncounters = useCallback(() => {
+    if (!selected) return;
+    encountersApi(worldId, selected.id)
+      .list()
+      .then(setEncounters)
+      .catch(handleError);
+  }, [worldId, selected, handleError]);
+
+  useEffect(() => {
+    refreshEncounters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, selected?.id]);
 
   // The URL is the source of truth for which campaign is open (ADR-0053).
   useEffect(() => {
@@ -310,6 +328,7 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               campaignId={selected.id}
               articles={articles}
               statblocks={statblocks}
+              encounters={encounters}
               onOpenArticle={onOpenArticle}
               onError={handleError}
             />
@@ -317,6 +336,8 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
             <EncounterBoard
               worldId={worldId}
               campaignId={selected.id}
+              encounters={encounters}
+              onChanged={refreshEncounters}
               statblocks={statblocks}
               templates={templates}
               globalTemplates={globalTemplates}
