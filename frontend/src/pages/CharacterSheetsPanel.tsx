@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   characterSheetsApi,
   exportCharacterSheetPdf,
+  gameSystemsApi,
   CharacterSheet,
   FieldTemplate,
   GlobalFieldTemplate,
+  GameSystem,
   ArticleSummary,
   Campaign,
 } from '../api/client';
@@ -74,6 +76,15 @@ export function CharacterSheetsPanel({
   const [filterCampaign, setFilterCampaign] = useState('');
   // Read (rendered values) vs edit (the form) — mirrors WorldView's article mode.
   const [mode, setMode] = useState<'read' | 'edit'>('read');
+  const [systems, setSystems] = useState<GameSystem[]>([]);
+
+  useEffect(() => {
+    gameSystemsApi.list().then(setSystems).catch(() => {});
+  }, []);
+
+  function systemName(systemId: string): string {
+    return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -278,7 +289,7 @@ export function CharacterSheetsPanel({
                       <SelectLabel>Global (system) templates</SelectLabel>
                       {globalCharacterTemplates.map((t) => (
                         <SelectItem key={t.id} value={`${GLOBAL_PREFIX}${t.id}`}>
-                          {t.name} · {t.system}
+                          {t.name} · {systemName(t.systemId)}
                         </SelectItem>
                       ))}
                     </SelectGroup>

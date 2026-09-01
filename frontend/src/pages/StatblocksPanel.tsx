@@ -4,10 +4,12 @@ import {
   statblocksApi,
   statblockTagsApi,
   worldTagsApi,
+  gameSystemsApi,
   Statblock,
   Campaign,
   FieldTemplate,
   GlobalFieldTemplate,
+  GameSystem,
   FieldType,
 } from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
@@ -121,6 +123,15 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Read (rendered values) vs edit (the form) — mirrors WorldView's article mode.
   const [mode, setMode] = useState<'read' | 'edit'>('read');
+  const [systems, setSystems] = useState<GameSystem[]>([]);
+
+  useEffect(() => {
+    gameSystemsApi.list().then(setSystems).catch(() => {});
+  }, []);
+
+  function systemName(systemId: string): string {
+    return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
+  }
 
   const statblockTemplates = templates.filter((t) => t.kind === 'STATBLOCK');
   const globalStatblockTemplates = globalTemplates.filter((t) => t.kind === 'STATBLOCK');
@@ -440,7 +451,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
                       <SelectLabel>Global (system) templates</SelectLabel>
                       {globalStatblockTemplates.map((t) => (
                         <SelectItem key={t.id} value={`${GLOBAL_PREFIX}${t.id}`}>
-                          {t.name} · {t.system}
+                          {t.name} · {systemName(t.systemId)}
                         </SelectItem>
                       ))}
                     </SelectGroup>

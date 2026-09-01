@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   fieldTemplatesApi,
   builtinFieldTemplatesApi,
+  gameSystemsApi,
   FieldTemplate,
   FieldTemplateRequest,
   BuiltinFieldTemplate,
+  GameSystem,
   TemplateKind,
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
@@ -35,6 +37,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
   const { templateId: urlTemplateId } = useParams<{ templateId: string }>();
   const api = fieldTemplatesApi(worldId);
   const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
+  const [systems, setSystems] = useState<GameSystem[]>([]);
   // What kind of template a new one (starter or built-from-scratch) will be.
   const [newKind, setNewKind] = useState<TemplateKind>('CHARACTER');
   const [choice, setChoice] = useState('');
@@ -46,7 +49,22 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
 
   useEffect(() => {
     builtinFieldTemplatesApi.list().then(setBuiltins).catch(onError);
+    gameSystemsApi.list().then(setSystems).catch(onError);
   }, [onError]);
+
+  function systemName(systemId: string | null | undefined): string {
+    if (!systemId) return 'custom';
+    return systems.find((s) => s.id === systemId)?.name ?? 'custom';
+  }
+
+  /** Finds a game system by exact case-insensitive name, creating one if none matches. */
+  async function resolveSystemId(name: string): Promise<string> {
+    const existing = systems.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+    const created = await gameSystemsApi.create({ name });
+    setSystems((s) => [...s, created]);
+    return created.id;
+  }
 
   // The URL is the source of truth for which template is open (ADR-0053);
   // opening an existing template shows a read-only preview first - entering
@@ -65,7 +83,8 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     const b = buildersForKind.find((x) => x.name === choice);
     if (!b) return;
     try {
-      await api.create({ name: b.name, kind: b.kind, system: b.system, sections: b.sections });
+      const systemId = b.system ? await resolveSystemId(b.system) : null;
+      await api.create({ name: b.name, kind: b.kind, systemId, sections: b.sections });
       setChoice('');
       onChanged();
       toast.success(`Template "${b.name}" added`);
@@ -156,7 +175,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
           <div>
             <h3>{previewing.name}</h3>
             <small className="muted">
-              {KIND_LABEL[previewing.kind]} · {previewing.system ?? 'custom'} · {previewing.sections.length}{' '}
+              {KIND_LABEL[previewing.kind]} · {systemName(previewing.systemId)} · {previewing.sections.length}{' '}
               sections
             </small>
           </div>
@@ -246,7 +265,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             >
               <strong>{t.name}</strong>{' '}
               <small className="muted">
-                {KIND_LABEL[t.kind]} · {t.system ?? 'custom'} · {t.sections.length} sections
+                {KIND_LABEL[t.kind]} · {systemName(t.systemId)} · {t.sections.length} sections
               </small>
             </Button>
             <Button variant="link" onClick={() => duplicate(t)} title="Duplicate this template">
