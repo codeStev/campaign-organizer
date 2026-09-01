@@ -1017,10 +1017,29 @@ export interface BuiltinFieldTemplate {
   sections: TemplateSection[];
 }
 
+/** World-independent, system-scoped template catalog (ADR-0093). CHARACTER/STATBLOCK kinds only. */
+export interface GlobalFieldTemplate {
+  id: string;
+  name: string;
+  kind: TemplateKind;
+  system: string;
+  sections: TemplateSection[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlobalFieldTemplateRequest {
+  name: string;
+  kind: TemplateKind;
+  system: string;
+  sections: TemplateSection[];
+}
+
 export interface CharacterSheet {
   id: string;
   worldId: string;
-  templateId: string;
+  worldTemplateId: string | null;
+  globalTemplateId: string | null;
   articleId?: string | null;
   campaignId?: string | null;
   name: string;
@@ -1031,7 +1050,8 @@ export interface CharacterSheet {
 
 export interface CharacterSheetRequest {
   name: string;
-  templateId: string;
+  worldTemplateId?: string | null;
+  globalTemplateId?: string | null;
   articleId?: string | null;
   campaignId?: string | null;
   values?: Record<string, unknown>;
@@ -1060,7 +1080,8 @@ export interface Statblock {
   worldId: string;
   articleId?: string | null;
   campaignId?: string | null;
-  templateId?: string | null;
+  worldTemplateId?: string | null;
+  globalTemplateId?: string | null;
   name: string;
   stats: Record<string, unknown>;
   notes?: string | null;
@@ -1072,7 +1093,8 @@ export interface StatblockRequest {
   name: string;
   articleId?: string | null;
   campaignId?: string | null;
-  templateId?: string | null;
+  worldTemplateId?: string | null;
+  globalTemplateId?: string | null;
   stats?: Record<string, unknown>;
   notes?: string | null;
 }
@@ -1102,12 +1124,29 @@ export function fieldTemplatesApi(worldId: string) {
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) =>
       request<FieldTemplate>(`${base}/${id}/duplicate`, { method: 'POST' }),
+    promote: (id: string) =>
+      request<GlobalFieldTemplate>(`${base}/${id}/promote`, { method: 'POST' }),
   };
 }
 
 export const builtinFieldTemplatesApi = {
   list: (kind?: TemplateKind) =>
     request<BuiltinFieldTemplate[]>(kind ? `/field-templates/builtin?kind=${kind}` : '/field-templates/builtin'),
+};
+
+/** World-independent CRUD for the global template catalog (ADR-0093). */
+export const globalFieldTemplatesApi = {
+  list: (kind?: TemplateKind) =>
+    request<GlobalFieldTemplate[]>(kind ? `/field-templates/global?kind=${kind}` : '/field-templates/global'),
+  get: (id: string) => request<GlobalFieldTemplate>(`/field-templates/global/${id}`),
+  create: (body: GlobalFieldTemplateRequest) =>
+    request<GlobalFieldTemplate>('/field-templates/global', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: GlobalFieldTemplateRequest) =>
+    request<GlobalFieldTemplate>(`/field-templates/global/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => request<void>(`/field-templates/global/${id}`, { method: 'DELETE' }),
 };
 
 export function characterSheetsApi(worldId: string) {
