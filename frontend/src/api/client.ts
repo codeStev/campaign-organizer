@@ -580,6 +580,7 @@ export interface Beat {
   done: boolean;
   articleIds: string[];
   statblockIds: string[];
+  encounterIds: string[];
   sessionId?: string | null;
   position: number;
   createdAt: string;
@@ -592,6 +593,7 @@ export interface BeatRequest {
   done?: boolean;
   articleIds?: string[];
   statblockIds?: string[];
+  encounterIds?: string[];
   sessionId?: string | null;
   position?: number | null;
 }
@@ -618,6 +620,29 @@ export interface ClockRequest {
   description?: string | null;
   segments: ClockSegment[];
   position?: number | null;
+}
+
+export interface EncounterEntry {
+  statblockId: string;
+  quantity: number;
+  maxHpOverride?: number | null;
+}
+
+/** A named, reusable, printable grouping of statblocks (ADR-0097). Linked to beats via ArcBeat.encounterIds. */
+export interface Encounter {
+  id: string;
+  campaignId: string;
+  name: string;
+  notes?: string | null;
+  entries: EncounterEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EncounterRequest {
+  name: string;
+  notes?: string | null;
+  entries: EncounterEntry[];
 }
 
 export function campaignsApi(worldId: string) {
@@ -885,6 +910,18 @@ export function clocksApi(worldId: string, campaignId: string) {
       request<Clock>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: ClockRequest) =>
       request<Clock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function encountersApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/encounters`;
+  return {
+    list: () => request<Encounter[]>(base),
+    create: (body: EncounterRequest) =>
+      request<Encounter>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: EncounterRequest) =>
+      request<Encounter>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
