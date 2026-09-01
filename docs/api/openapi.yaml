@@ -1924,6 +1924,140 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
 
+  /statblocks/global:
+    get:
+      tags: [sheets]
+      summary: List the global, system-scoped statblock catalog (ADR-0096)
+      operationId: listGlobalStatblocks
+      parameters:
+        - name: systemId
+          in: query
+          required: false
+          description: Filter to statblocks belonging to one game system.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Global statblocks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GlobalStatblock'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [sheets]
+      summary: Add a statblock to the global catalog
+      operationId: createGlobalStatblock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalStatblockRequest'
+      responses:
+        '201':
+          description: Global statblock created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStatblock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /statblocks/global/{globalStatblockId}:
+    parameters:
+      - $ref: '#/components/parameters/GlobalStatblockId'
+    get:
+      tags: [sheets]
+      summary: Get a global statblock
+      operationId: getGlobalStatblock
+      responses:
+        '200':
+          description: The global statblock.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStatblock'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [sheets]
+      summary: Update a global statblock
+      operationId: updateGlobalStatblock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalStatblockRequest'
+      responses:
+        '200':
+          description: Global statblock updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStatblock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a global statblock
+      description: >
+        Always allowed — importing a statblock copies it, so nothing ever
+        references a global statblock afterward (ADR-0096).
+      operationId: deleteGlobalStatblock
+      responses:
+        '204':
+          description: Global statblock deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /statblocks/global/{globalStatblockId}/import:
+    parameters:
+      - $ref: '#/components/parameters/GlobalStatblockId'
+    post:
+      tags: [sheets]
+      summary: Import a global statblock into a campaign (copy, ADR-0096)
+      description: >
+        Creates a new world-scoped statblock by copying this catalog
+        entry's stats/notes/template link. The copy has no live link back
+        to the catalog entry — editing either afterward doesn't affect
+        the other.
+      operationId: importGlobalStatblock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportGlobalStatblockRequest'
+      responses:
+        '201':
+          description: The new world-scoped statblock.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statblock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /game-systems:
     get:
       tags: [sheets]
@@ -3911,6 +4045,14 @@ components:
       schema:
         type: string
         format: uuid
+    GlobalStatblockId:
+      name: globalStatblockId
+      in: path
+      required: true
+      description: Identifier of the global (catalog) statblock.
+      schema:
+        type: string
+        format: uuid
     GameSystemId:
       name: systemId
       in: path
@@ -4550,6 +4692,80 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    GlobalStatblockRequest:
+      type: object
+      required: [name, systemId]
+      description: World-independent statblock catalog, keyed by game system (ADR-0096).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        systemId:
+          type: string
+          format: uuid
+        globalTemplateId:
+          type: [string, "null"]
+          format: uuid
+          description: >
+            Optional global field template (kind=STATBLOCK) driving a
+            guided stats form; must belong to the same systemId.
+        stats:
+          type: object
+          additionalProperties: true
+          description: Freeform key/value stats (e.g. AC, HP, speed).
+        notes:
+          type: [string, "null"]
+          maxLength: 20000
+          description: Freeform notes (Markdown, see ADR-0054).
+
+    GlobalStatblock:
+      type: object
+      required: [id, name, systemId, stats, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        systemId:
+          type: string
+          format: uuid
+        globalTemplateId:
+          type: [string, "null"]
+          format: uuid
+        stats:
+          type: object
+          additionalProperties: true
+        notes:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ImportGlobalStatblockRequest:
+      type: object
+      required: [worldId, campaignId]
+      description: >
+        campaignId is required here (unlike Statblock's normally optional
+        campaignId) — an imported statblock is always imported for a
+        specific campaign (ADR-0096).
+      properties:
+        worldId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Optional name override; defaults to the catalog entry's name.
 
     EntityTags:
       type: object
