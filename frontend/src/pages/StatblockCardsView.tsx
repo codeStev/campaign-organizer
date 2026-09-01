@@ -1,13 +1,14 @@
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
-import { Statblock, FieldTemplate } from '../api/client';
-import { orderedStatEntries } from '../lib/statblockDisplay';
+import { Statblock, FieldTemplate, GlobalFieldTemplate } from '../api/client';
+import { orderedStatEntries, templateIdOf } from '../lib/statblockDisplay';
 import { renderMarkdown } from '../lib/markdown';
 
 interface Props {
   statblocks: Statblock[];
   templates: FieldTemplate[];
+  globalTemplates: GlobalFieldTemplate[];
   title: string;
   onClose: () => void;
 }
@@ -17,7 +18,7 @@ interface Props {
  * Cards tile several per page and never split across a page break. Portalled to
  * <body> so the print CSS (ADR-0035) can hide the app.
  */
-export function StatblockCardsView({ statblocks, templates, title, onClose }: Props) {
+export function StatblockCardsView({ statblocks, templates, globalTemplates, title, onClose }: Props) {
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
   return (
     <NewWindowPortal title={`Cards — ${title}`} onClose={onClose}>
@@ -35,7 +36,7 @@ export function StatblockCardsView({ statblocks, templates, title, onClose }: Pr
       <div className="print-doc card-sheet" {...printDocProps}>
         {statblocks.length === 0 && <p className="print-status">No statblocks to print.</p>}
         {statblocks.map((sb) => {
-          const stats = orderedStatEntries(sb.stats, sb.templateId, templates);
+          const stats = orderedStatEntries(sb.stats, templateIdOf(sb), [...templates, ...globalTemplates]);
           return (
             <div key={sb.id} className="stat-card">
               <div className="stat-card-name">{sb.name}</div>

@@ -7,12 +7,14 @@ import { CheckTreeNode, CheckTreeRow } from '../components/CheckTree';
 import {
   sessionsApi,
   fieldTemplatesApi,
+  globalFieldTemplatesApi,
   SessionPacket,
   FieldTemplate,
+  GlobalFieldTemplate,
   PacketArticle,
   Statblock,
 } from '../api/client';
-import { orderedStatEntries } from '../lib/statblockDisplay';
+import { orderedStatEntries, templateIdOf } from '../lib/statblockDisplay';
 import { cardLabel, entryRange, statblockLine } from '../lib/cheatSheetDisplay';
 import { renderMarkdown } from '../lib/markdown';
 
@@ -163,6 +165,7 @@ interface Props {
 export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onError }: Props) {
   const [packet, setPacket] = useState<SessionPacket | null>(null);
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
+  const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const { opts: printOpts, setOpts: setPrintOpts, docProps: printDocProps } = usePrintOptions();
   // Print-time filtering (client-side, over the already-fetched packet).
@@ -232,6 +235,10 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
     fieldTemplatesApi(worldId)
       .list('STATBLOCK')
       .then((t) => active && setTemplates(t))
+      .catch(onError);
+    globalFieldTemplatesApi
+      .list('STATBLOCK')
+      .then((t) => active && setGlobalTemplates(t))
       .catch(onError);
     return () => {
       active = false;
@@ -386,7 +393,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                   <div key={sb.id} className="print-statblock">
                     <h2>{sb.name}</h2>
                     <dl className="print-stats">
-                      {orderedStatEntries(sb.stats, sb.templateId, templates).map((entry) => (
+                      {orderedStatEntries(sb.stats, templateIdOf(sb), [...templates, ...globalTemplates]).map((entry) => (
                         <div key={entry.key} className="print-stat">
                           <dt>{entry.label}</dt>
                           {entry.type === 'TEXTAREA' ? (
@@ -532,9 +539,9 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                         ) : f.type === 'STATBLOCK' && f.statblock ? (
                           <>
                             <strong>{f.statblock.name}</strong>
-                            {statblockLine(f.statblock, templates) && (
+                            {statblockLine(f.statblock, [...templates, ...globalTemplates]) && (
                               <div className="cheatsheet-statline">
-                                {statblockLine(f.statblock, templates)}
+                                {statblockLine(f.statblock, [...templates, ...globalTemplates])}
                               </div>
                             )}
                           </>

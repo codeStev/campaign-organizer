@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import {
   fieldTemplatesApi,
+  globalFieldTemplatesApi,
   articlesApi,
   campaignsApi,
   FieldTemplate,
+  GlobalFieldTemplate,
   ArticleSummary,
   Campaign,
   ApiError,
@@ -32,6 +34,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const campaignApi = useMemo(() => campaignsApi(worldId), [worldId]);
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +53,8 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       .then(setTemplates)
       .catch(onError)
       .finally(() => setTemplatesLoading(false));
+    // Refreshed alongside world templates since "promote to global" (ADR-0093) changes both.
+    globalFieldTemplatesApi.list().then(setGlobalTemplates).catch(onError);
   }, [templatesApiRef, onError]);
 
   useEffect(() => {
@@ -62,6 +67,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     <CharacterSheetsPanel
       worldId={worldId}
       templates={templates}
+      globalTemplates={globalTemplates}
       articles={articles}
       campaigns={campaigns}
       onOpenArticle={onOpenArticle}
@@ -69,7 +75,13 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     />
   );
   const statblocksPane = (
-    <StatblocksPanel worldId={worldId} templates={templates} campaigns={campaigns} onError={onError} />
+    <StatblocksPanel
+      worldId={worldId}
+      templates={templates}
+      globalTemplates={globalTemplates}
+      campaigns={campaigns}
+      onError={onError}
+    />
   );
   const documentsPane = (
     <DocumentsPanel worldId={worldId} templates={templates} campaigns={campaigns} onError={onError} />

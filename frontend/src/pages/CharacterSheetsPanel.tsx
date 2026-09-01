@@ -5,13 +5,22 @@ import {
   exportCharacterSheetPdf,
   CharacterSheet,
   FieldTemplate,
+  GlobalFieldTemplate,
   ArticleSummary,
   Campaign,
 } from '../api/client';
 import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -21,9 +30,15 @@ import { Spinner } from '../components/ui/spinner';
 // so a meaningfully persistent "none" state goes through this sentinel.
 const NONE_VALUE = '__none__';
 
+// Encodes which catalog a picked template comes from into the Select's value,
+// since the id alone doesn't say whether to set worldTemplateId or globalTemplateId (ADR-0093).
+const WORLD_PREFIX = 'world:';
+const GLOBAL_PREFIX = 'global:';
+
 interface Props {
   worldId: string;
   templates: FieldTemplate[];
+  globalTemplates: GlobalFieldTemplate[];
   articles: ArticleSummary[];
   campaigns: Campaign[];
   onOpenArticle: (id: string) => void;
@@ -33,7 +48,8 @@ interface Props {
 interface Draft {
   id: string | null;
   name: string;
-  templateId: string;
+  worldTemplateId: string;
+  globalTemplateId: string;
   articleId: string;
   campaignId: string;
   values: Record<string, unknown>;
@@ -42,6 +58,7 @@ interface Draft {
 export function CharacterSheetsPanel({
   worldId,
   templates,
+  globalTemplates,
   articles,
   campaigns,
   onOpenArticle,
@@ -73,17 +90,22 @@ export function CharacterSheetsPanel({
   }, [refresh]);
 
   const characterTemplates = templates.filter((t) => t.kind === 'CHARACTER');
-  const template = characterTemplates.find((t) => t.id === draft?.templateId) ?? null;
+  const globalCharacterTemplates = globalTemplates.filter((t) => t.kind === 'CHARACTER');
+  const template =
+    characterTemplates.find((t) => t.id === draft?.worldTemplateId) ??
+    globalCharacterTemplates.find((t) => t.id === draft?.globalTemplateId) ??
+    null;
 
   function newSheet() {
-    if (characterTemplates.length === 0) {
+    if (characterTemplates.length === 0 && globalCharacterTemplates.length === 0) {
       onError(new Error('Create a character sheet template first (Templates tab).'));
       return;
     }
     setDraft({
       id: null,
       name: '',
-      templateId: characterTemplates[0].id,
+      worldTemplateId: characterTemplates[0]?.id ?? '',
+      globalTemplateId: characterTemplates.length === 0 ? globalCharacterTemplates[0].id : '',
       articleId: '',
       campaignId: filterCampaign, // default new sheets to the active campaign
       values: {},
@@ -96,7 +118,8 @@ export function CharacterSheetsPanel({
     return {
       id: sheet.id,
       name: sheet.name,
-      templateId: sheet.templateId,
+      worldTemplateId: sheet.worldTemplateId ?? '',
+      globalTemplateId: sheet.globalTemplateId ?? '',
       articleId: sheet.articleId ?? '',
       campaignId: sheet.campaignId ?? '',
       values: sheet.values ?? {},
@@ -127,7 +150,8 @@ export function CharacterSheetsPanel({
     const wasNew = !draft.id;
     const body = {
       name: draft.name,
-      templateId: draft.templateId,
+      worldTemplateId: draft.worldTemplateId || null,
+      globalTemplateId: draft.globalTemplateId || null,
       articleId: draft.articleId || null,
       campaignId: draft.campaignId || null,
       values: draft.values,
@@ -221,19 +245,44 @@ export function CharacterSheetsPanel({
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
               <Select
-                value={draft.templateId}
-                onValueChange={(v) => setDraft({ ...draft, templateId: v })}
+                value={
+                  draft.worldTemplateId
+                    ? `${WORLD_PREFIX}${draft.worldTemplateId}`
+                    : `${GLOBAL_PREFIX}${draft.globalTemplateId}`
+                }
+                onValueChange={(v) => {
+                  if (v.startsWith(WORLD_PREFIX)) {
+                    setDraft({ ...draft, worldTemplateId: v.slice(WORLD_PREFIX.length), globalTemplateId: '' });
+                  } else {
+                    setDraft({ ...draft, globalTemplateId: v.slice(GLOBAL_PREFIX.length), worldTemplateId: '' });
+                  }
+                }}
                 disabled={draft.id != null}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {characterTemplates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
+                  {characterTemplates.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>This world</SelectLabel>
+                      {characterTemplates.map((t) => (
+                        <SelectItem key={t.id} value={`${WORLD_PREFIX}${t.id}`}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {globalCharacterTemplates.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Global (system) templates</SelectLabel>
+                      {globalCharacterTemplates.map((t) => (
+                        <SelectItem key={t.id} value={`${GLOBAL_PREFIX}${t.id}`}>
+                          {t.name} · {t.system}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
                 </SelectContent>
               </Select>
             </div>

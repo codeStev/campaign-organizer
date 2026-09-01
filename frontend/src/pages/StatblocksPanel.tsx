@@ -7,6 +7,7 @@ import {
   Statblock,
   Campaign,
   FieldTemplate,
+  GlobalFieldTemplate,
   FieldType,
 } from '../api/client';
 import { StatblockCardsView } from './StatblockCardsView';
@@ -17,7 +18,15 @@ import { TagInput, TagList } from '../components/TagInput';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { Spinner } from '../components/ui/spinner';
@@ -32,6 +41,7 @@ const NONE_VALUE = '__none__';
 interface Props {
   worldId: string;
   templates: FieldTemplate[];
+  globalTemplates: GlobalFieldTemplate[];
   campaigns: Campaign[];
   onError: (err: unknown) => void;
 }
@@ -46,7 +56,8 @@ interface Draft {
   name: string;
   notes: string;
   campaignId: string;
-  templateId: string;
+  worldTemplateId: string;
+  globalTemplateId: string;
   rows: StatRow[];
   tags: string[];
 }
@@ -56,10 +67,16 @@ const EMPTY: Draft = {
   name: '',
   notes: '',
   campaignId: '',
-  templateId: '',
+  worldTemplateId: '',
+  globalTemplateId: '',
   rows: [{ key: '', value: '' }],
   tags: [],
 };
+
+// Encodes which catalog a picked template comes from into the Select's value,
+// since the id alone doesn't say whether to set worldTemplateId or globalTemplateId (ADR-0093).
+const WORLD_PREFIX = 'world:';
+const GLOBAL_PREFIX = 'global:';
 
 function toRows(stats: Record<string, unknown>): StatRow[] {
   const rows = Object.entries(stats).map(([key, value]) => ({ key, value: String(value) }));
@@ -67,7 +84,7 @@ function toRows(stats: Record<string, unknown>): StatRow[] {
 }
 
 /** Field types keyed by field key, for a template (empty map when none chosen). */
-function fieldTypesOf(template: FieldTemplate | null): Map<string, FieldType> {
+function fieldTypesOf(template: { sections: FieldTemplate['sections'] } | null): Map<string, FieldType> {
   const types = new Map<string, FieldType>();
   if (!template) return types;
   for (const section of template.sections) {
@@ -86,7 +103,7 @@ function coerceRowValue(type: FieldType | undefined, raw: string): unknown {
   return raw;
 }
 
-export function StatblocksPanel({ worldId, templates, campaigns, onError }: Props) {
+export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns, onError }: Props) {
   const navigate = useNavigate();
   const { statblockId: urlStatblockId } = useParams<{ statblockId: string }>();
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
@@ -106,7 +123,11 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
   const [mode, setMode] = useState<'read' | 'edit'>('read');
 
   const statblockTemplates = templates.filter((t) => t.kind === 'STATBLOCK');
-  const template = statblockTemplates.find((t) => t.id === draft.templateId) ?? null;
+  const globalStatblockTemplates = globalTemplates.filter((t) => t.kind === 'STATBLOCK');
+  const template =
+    statblockTemplates.find((t) => t.id === draft.worldTemplateId) ??
+    globalStatblockTemplates.find((t) => t.id === draft.globalTemplateId) ??
+    null;
   const fieldTypes = fieldTypesOf(template);
   const templateValues: Record<string, unknown> = {};
   const otherRows: { row: StatRow; index: number }[] = [];
@@ -165,7 +186,8 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       name: sb.name,
       notes: sb.notes ?? '',
       campaignId: sb.campaignId ?? '',
-      templateId: sb.templateId ?? '',
+      worldTemplateId: sb.worldTemplateId ?? '',
+      globalTemplateId: sb.globalTemplateId ?? '',
       rows: toRows(sb.stats),
       tags,
     });
@@ -199,7 +221,8 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
       stats,
       notes: draft.notes || null,
       campaignId: draft.campaignId || null,
-      templateId: draft.templateId || null,
+      worldTemplateId: draft.worldTemplateId || null,
+      globalTemplateId: draft.globalTemplateId || null,
     };
     const wasNew = !draft.id;
     try {
@@ -380,19 +403,48 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
             <label className="sheet-article">
               <span className="muted">Template</span>
               <Select
-                value={draft.templateId || NONE_VALUE}
-                onValueChange={(v) => setDraft({ ...draft, templateId: v === NONE_VALUE ? '' : v })}
+                value={
+                  draft.worldTemplateId
+                    ? `${WORLD_PREFIX}${draft.worldTemplateId}`
+                    : draft.globalTemplateId
+                      ? `${GLOBAL_PREFIX}${draft.globalTemplateId}`
+                      : NONE_VALUE
+                }
+                onValueChange={(v) => {
+                  if (v === NONE_VALUE) {
+                    setDraft({ ...draft, worldTemplateId: '', globalTemplateId: '' });
+                  } else if (v.startsWith(WORLD_PREFIX)) {
+                    setDraft({ ...draft, worldTemplateId: v.slice(WORLD_PREFIX.length), globalTemplateId: '' });
+                  } else {
+                    setDraft({ ...draft, globalTemplateId: v.slice(GLOBAL_PREFIX.length), worldTemplateId: '' });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE_VALUE}>None — free-form</SelectItem>
-                  {statblockTemplates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
+                  {statblockTemplates.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>This world</SelectLabel>
+                      {statblockTemplates.map((t) => (
+                        <SelectItem key={t.id} value={`${WORLD_PREFIX}${t.id}`}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {globalStatblockTemplates.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Global (system) templates</SelectLabel>
+                      {globalStatblockTemplates.map((t) => (
+                        <SelectItem key={t.id} value={`${GLOBAL_PREFIX}${t.id}`}>
+                          {t.name} · {t.system}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
                 </SelectContent>
               </Select>
             </label>
@@ -525,6 +577,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
         <StatblockCardsView
           statblocks={toPrint}
           templates={statblockTemplates}
+          globalTemplates={globalStatblockTemplates}
           title={
             selected.size
               ? `${toPrint.length} selected`
@@ -541,6 +594,7 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
           worldId={worldId}
           statblocks={toPrint}
           templates={statblockTemplates}
+          globalTemplates={globalStatblockTemplates}
           onClose={() => setEncounterOpen(false)}
         />
       )}

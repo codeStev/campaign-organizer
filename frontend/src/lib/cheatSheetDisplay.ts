@@ -1,5 +1,5 @@
 import { FieldTemplate, Statblock } from '../api/client';
-import { orderedStatEntries } from './statblockDisplay';
+import { orderedStatEntries, templateIdOf } from './statblockDisplay';
 
 /** "2–7" / "≤12" / "—" for a table row's printed range. */
 export function entryRange(e: { minResult?: number | null; maxResult?: number | null }): string {
@@ -22,9 +22,12 @@ export function cardLabel(c: { title?: string | null; body: string }): string {
   return plain.length > 48 ? `${plain.slice(0, 48)}…` : plain || '(untitled card)';
 }
 
-/** Condensed "AC 15 · HP 7 · Speed 30 ft" line for a referenced statblock. */
-export function statblockLine(sb: Statblock, templates: FieldTemplate[]): string {
-  return orderedStatEntries(sb.stats, sb.templateId, templates)
+/** Condensed "AC 15 · HP 7 · Speed 30 ft" line for a referenced statblock. Pass world+global templates merged. */
+export function statblockLine(
+  sb: Statblock,
+  templates: Array<{ id: string; sections: FieldTemplate['sections'] }>,
+): string {
+  return orderedStatEntries(sb.stats, templateIdOf(sb), templates)
     .filter((e) => e.type !== 'TEXTAREA' && String(e.value).trim() !== '')
     .slice(0, 8)
     .map((e) => `${e.label} ${String(e.value)}`)

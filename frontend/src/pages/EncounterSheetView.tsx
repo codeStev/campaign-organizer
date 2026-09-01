@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { characterSheetsApi, CharacterSheet, FieldTemplate, Statblock } from '../api/client';
+import { characterSheetsApi, CharacterSheet, FieldTemplate, GlobalFieldTemplate, Statblock } from '../api/client';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
-import { orderedStatEntries } from '../lib/statblockDisplay';
+import { orderedStatEntries, templateIdOf } from '../lib/statblockDisplay';
 
 interface Props {
   worldId: string;
   statblocks: Statblock[];
   templates: FieldTemplate[];
+  globalTemplates: GlobalFieldTemplate[];
   onClose: () => void;
 }
 
@@ -36,7 +37,8 @@ export function detectMaxHp(values: Record<string, unknown>): string {
  * and the statblock's quick numbers. Pure assembly, nothing persisted; run
  * from paper like the rest of the session material.
  */
-export function EncounterSheetView({ worldId, statblocks, templates, onClose }: Props) {
+export function EncounterSheetView({ worldId, statblocks, templates, globalTemplates, onClose }: Props) {
+  const allTemplates = useMemo(() => [...templates, ...globalTemplates], [templates, globalTemplates]);
   const [entries, setEntries] = useState<Record<string, EntryState>>(() =>
     Object.fromEntries(
       statblocks.map((sb) => [sb.id, { qty: 1, maxHp: detectMaxHp(sb.stats) }]),
@@ -74,7 +76,7 @@ export function EncounterSheetView({ worldId, statblocks, templates, onClose }: 
     for (const sb of statblocks) {
       const e = entries[sb.id];
       const qty = Math.max(0, Math.min(20, e?.qty ?? 1));
-      const quick = quickStats(sb.stats ?? {}, sb.templateId, templates);
+      const quick = quickStats(sb.stats ?? {}, templateIdOf(sb), allTemplates);
       for (let i = 0; i < qty; i++) {
         out.push({
           key: `${sb.id}#${i}`,
@@ -90,11 +92,11 @@ export function EncounterSheetView({ worldId, statblocks, templates, onClose }: 
         key: cs.id,
         name: cs.name,
         maxHp: detectMaxHp(cs.values ?? {}),
-        quickStats: quickStats(cs.values ?? {}, cs.templateId, templates),
+        quickStats: quickStats(cs.values ?? {}, templateIdOf(cs), allTemplates),
       });
     }
     return out;
-  }, [statblocks, entries, sheets, includedSheets, templates]);
+  }, [statblocks, entries, sheets, includedSheets, allTemplates]);
 
   return (
     <NewWindowPortal title="Encounter sheet" onClose={onClose}>
@@ -222,7 +224,7 @@ function HpBoxes({ maxHp }: { maxHp: string }) {
 function quickStats(
   values: Record<string, unknown>,
   templateId: string | null | undefined,
-  templates: FieldTemplate[],
+  templates: Array<{ id: string; sections: FieldTemplate['sections'] }>,
 ): string {
   return orderedStatEntries(values, templateId, templates)
     .filter((e) => e.type !== 'TEXTAREA' && String(e.value).trim() !== '')

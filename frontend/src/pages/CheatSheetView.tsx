@@ -20,7 +20,9 @@ import {
   CheatSheetFragment,
   CheatSheetFragmentType,
   fieldTemplatesApi,
+  globalFieldTemplatesApi,
   FieldTemplate,
+  GlobalFieldTemplate,
   rollTablesApi,
   RollTable,
   statblocksApi,
@@ -87,6 +89,7 @@ export function CheatSheetView({
   const [tables, setTables] = useState<RollTable[]>([]);
   const [decks, setDecks] = useState<CardDeck[]>([]);
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
+  const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
   // [[wiki-links]] in referenced rows/cards resolve against the world's articles.
   const [linkTitles, setLinkTitles] = useState<Map<string, string>>(new Map());
 
@@ -112,6 +115,10 @@ export function CheatSheetView({
     fieldTemplatesApi(worldId)
       .list('STATBLOCK')
       .then((t) => active && setTemplates(t))
+      .catch(onError);
+    globalFieldTemplatesApi
+      .list('STATBLOCK')
+      .then((t) => active && setGlobalTemplates(t))
       .catch(onError);
     articlesApi(worldId)
       .list()
@@ -223,7 +230,7 @@ export function CheatSheetView({
       case 'STATBLOCK': {
         const sb = f.statblockId ? statblockById.get(f.statblockId) : undefined;
         if (!sb) return <span className="cheatsheet-missing">Missing statblock</span>;
-        const line = statblockLine(sb, templates);
+        const line = statblockLine(sb, [...templates, ...globalTemplates]);
         return (
           <>
             <strong>{sb.name}</strong>

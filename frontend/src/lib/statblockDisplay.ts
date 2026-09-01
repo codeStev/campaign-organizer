@@ -7,16 +7,27 @@ export interface StatEntry {
   type?: FieldType;
 }
 
+/** Minimal shape shared by FieldTemplate and GlobalFieldTemplate (ADR-0093) for lookup. */
+type TemplateLike = { id: string; sections: FieldTemplate['sections'] };
+
+/** Resolves the one template reference set on a sheet/statblock (ADR-0093: world or global, not both meaningfully). */
+export function templateIdOf(entity: {
+  worldTemplateId?: string | null;
+  globalTemplateId?: string | null;
+}): string | null {
+  return entity.worldTemplateId ?? entity.globalTemplateId ?? null;
+}
+
 /**
  * A statblock's stats as ordered, labeled entries for print (ADR-0052): when it
- * has a template, fields are ordered and labeled per the template's sections,
- * followed by any stray keys the template doesn't cover; without one, stats
- * print in their raw map order.
+ * has a template — from either the world or the global catalog (ADR-0093) —
+ * fields are ordered and labeled per the template's sections, followed by any
+ * stray keys the template doesn't cover; without one, stats print in raw map order.
  */
 export function orderedStatEntries(
   stats: Record<string, unknown> | undefined | null,
   templateId: string | undefined | null,
-  templates: FieldTemplate[],
+  templates: TemplateLike[],
 ): StatEntry[] {
   const values = stats ?? {};
   const template = templateId ? templates.find((t) => t.id === templateId) : undefined;
