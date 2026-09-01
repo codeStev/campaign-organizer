@@ -248,6 +248,14 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   when a thread earns real content, that's just a normal new article. Not
   surfaced in ArcBoard for v1; a future per-campaign dashboard (FR-67, not
   yet built) will list open threads via the same query port. (ADR-0085)
+- **FR-50 General-purpose document template.** A third field-template kind
+  (`DOCUMENT`, alongside `CHARACTER` and `STATBLOCK`, FR-34) so
+  per-system reference documents — session-zero sheets, tone/safety-tools
+  handouts, and similar — get designed once per game system and reused,
+  instead of rebuilt as a one-off handout per campaign/oneshot. Reuses the
+  existing template builder unchanged; a filled document is its own
+  instance (optionally scoped to a campaign), printable as a fillable PDF
+  via the same generator character sheets already use. (ADR-0088)
 
 ---
 
