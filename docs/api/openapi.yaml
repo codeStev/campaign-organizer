@@ -1791,6 +1791,139 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/field-templates/{templateId}/promote:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/FieldTemplateId'
+    post:
+      tags: [sheets]
+      summary: Promote a world-scoped template to the global catalog (ADR-0093)
+      description: >
+        CHARACTER/STATBLOCK templates only. Creates a global template from
+        this one, repoints every character sheet/statblock in this world
+        that used it to the new global template, then deletes the source.
+      operationId: promoteFieldTemplateToGlobal
+      responses:
+        '201':
+          description: The new global template.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalFieldTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /field-templates/global:
+    get:
+      tags: [sheets]
+      summary: List the global, system-scoped field template catalog (ADR-0093)
+      operationId: listGlobalFieldTemplates
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: Filter to templates of one kind.
+          schema:
+            $ref: '#/components/schemas/TemplateKind'
+      responses:
+        '200':
+          description: Global templates.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GlobalFieldTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [sheets]
+      summary: Add a template to the global catalog
+      operationId: createGlobalFieldTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalFieldTemplateRequest'
+      responses:
+        '201':
+          description: Global template created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalFieldTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /field-templates/global/{templateId}:
+    parameters:
+      - $ref: '#/components/parameters/GlobalFieldTemplateId'
+    get:
+      tags: [sheets]
+      summary: Get a global field template
+      operationId: getGlobalFieldTemplate
+      responses:
+        '200':
+          description: The global template.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalFieldTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [sheets]
+      summary: Update a global field template
+      operationId: updateGlobalFieldTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalFieldTemplateRequest'
+      responses:
+        '200':
+          description: Global template updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalFieldTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a global field template
+      description: >
+        Fails if any character sheet or statblock (in any world) still
+        references it (RESTRICT, ADR-0093) — detach them first.
+      operationId: deleteGlobalFieldTemplate
+      responses:
+        '204':
+          description: Global template deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Still referenced by at least one character sheet or statblock.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
   /worlds/{worldId}/whiteboards:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -3657,6 +3790,14 @@ components:
       schema:
         type: string
         format: uuid
+    GlobalFieldTemplateId:
+      name: templateId
+      in: path
+      required: true
+      description: Identifier of the global field template.
+      schema:
+        type: string
+        format: uuid
     SheetId:
       name: sheetId
       in: path
@@ -4042,6 +4183,51 @@ components:
           type: string
           format: date-time
 
+    GlobalFieldTemplateRequest:
+      type: object
+      required: [name, kind, system]
+      description: CHARACTER/STATBLOCK kinds only (ADR-0093).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        kind:
+          $ref: '#/components/schemas/TemplateKind'
+        system:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Required here (unlike world-scoped templates) — it's the sharing key.
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateSection'
+
+    GlobalFieldTemplate:
+      type: object
+      required: [id, name, kind, system, sections, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/TemplateKind'
+        system:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateSection'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     BuiltinFieldTemplate:
       type: object
       required: [name, kind, sections]
@@ -4146,12 +4332,17 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional campaign this statblock belongs to; null = shared.
-        templateId:
+        worldTemplateId:
           type: [string, "null"]
           format: uuid
           description: >
-            Optional field template (kind=STATBLOCK) driving a guided stats form;
-            null = freeform stats.
+            Optional world-scoped field template (kind=STATBLOCK) driving a
+            guided stats form. At most one of worldTemplateId/globalTemplateId
+            may be set (ADR-0093); neither set = freeform stats.
+        globalTemplateId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional global-catalog field template (kind=STATBLOCK), see worldTemplateId.
         stats:
           type: object
           additionalProperties: true
@@ -4177,7 +4368,10 @@ components:
         campaignId:
           type: [string, "null"]
           format: uuid
-        templateId:
+        worldTemplateId:
+          type: [string, "null"]
+          format: uuid
+        globalTemplateId:
           type: [string, "null"]
           format: uuid
         name:
@@ -4233,14 +4427,20 @@ components:
 
     CharacterSheetRequest:
       type: object
-      required: [name, templateId]
+      required: [name]
+      description: >
+        Exactly one of worldTemplateId/globalTemplateId must be set
+        (ADR-0093) — a character sheet always needs a template.
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 200
-        templateId:
-          type: string
+        worldTemplateId:
+          type: [string, "null"]
+          format: uuid
+        globalTemplateId:
+          type: [string, "null"]
           format: uuid
         articleId:
           type: [string, "null"]
@@ -4257,7 +4457,7 @@ components:
 
     CharacterSheet:
       type: object
-      required: [id, worldId, templateId, name, values, createdAt, updatedAt]
+      required: [id, worldId, name, values, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -4265,8 +4465,11 @@ components:
         worldId:
           type: string
           format: uuid
-        templateId:
-          type: string
+        worldTemplateId:
+          type: [string, "null"]
+          format: uuid
+        globalTemplateId:
+          type: [string, "null"]
           format: uuid
         articleId:
           type: [string, "null"]
