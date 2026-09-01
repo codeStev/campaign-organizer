@@ -1,6 +1,7 @@
 package com.campaignorganizer.shared.web;
 
 import com.campaignorganizer.ai.domain.AiUnavailableException;
+import com.campaignorganizer.shared.domain.ConflictException;
 import com.campaignorganizer.shared.domain.DomainException;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -25,6 +26,11 @@ public class DomainExceptionAdvice {
     @ExceptionHandler(ValidationException.class)
     public ProblemDetail handleValidation(ValidationException ex) {
         return problem(HttpStatus.BAD_REQUEST, "Validation failed", ex);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail handleConflict(ConflictException ex) {
+        return problem(HttpStatus.CONFLICT, "Conflict", ex);
     }
 
     @ExceptionHandler(AiUnavailableException.class)
