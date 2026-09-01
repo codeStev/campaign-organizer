@@ -2518,7 +2518,10 @@ paths:
         - name: q
           in: query
           required: false
-          description: Full-text search query over title and body.
+          description: >-
+            Full-text search query over title, body, and tag names
+            (ADR-0087) - an article tagged "patron" matches a search for
+            "patron" even with no title/body hit.
           schema:
             type: string
         - name: campaignId
