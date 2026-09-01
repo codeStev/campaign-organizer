@@ -6,6 +6,7 @@ import { WorldsPage } from './pages/WorldsPage';
 import { WorldView } from './pages/WorldView';
 import { SettingsPage } from './pages/SettingsPage';
 import { GlobalTemplatesPanel } from './pages/GlobalTemplatesPanel';
+import { GlobalStatblocksPanel } from './pages/GlobalStatblocksPanel';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
 import { TooltipProvider } from './components/ui/tooltip';
@@ -67,7 +68,12 @@ export function App() {
   );
 }
 
-/** World-independent global template catalog (ADR-0093) — not nested under any world. */
+/**
+ * World-independent global catalogs — not nested under any world. Templates
+ * (ADR-0093) and statblocks (ADR-0096) are separate sub-pages sharing this
+ * nav, since both answer the same "what does this game system provide,
+ * independent of any world?" question.
+ */
 function TemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
   const navigate = useNavigate();
   return (
@@ -76,12 +82,23 @@ function TemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
         <Button variant="link" onClick={() => navigate('/worlds')}>
           ← Worlds
         </Button>
+        <Button variant="link" onClick={() => navigate('/templates/global')}>
+          Templates
+        </Button>
+        <Button variant="link" onClick={() => navigate('/templates/statblocks')}>
+          Statblocks
+        </Button>
       </nav>
       <div className="settings-content">
         <Routes>
           <Route index element={<Navigate to="global" replace />} />
           <Route path="global" element={<GlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
           <Route path="global/:globalTemplateId" element={<GlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
+          <Route path="statblocks" element={<GlobalStatblocksPanel onAuthExpired={onAuthExpired} />} />
+          <Route
+            path="statblocks/:globalStatblockId"
+            element={<GlobalStatblocksPanel onAuthExpired={onAuthExpired} />}
+          />
           <Route path="*" element={<Navigate to="global" replace />} />
         </Routes>
       </div>
