@@ -18,6 +18,7 @@ import com.campaignorganizer.campaign.application.clock.port.published.ClockImpo
 import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
+import com.campaignorganizer.campaign.application.todo.port.published.TodoImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
 import com.campaignorganizer.campaign.application.player.port.published.PlayerImportPort;
 import com.campaignorganizer.campaign.application.player.port.published.PlayerView;
@@ -137,6 +138,8 @@ class ImportServiceTest {
     private ClockImportPort clockImportPort;
     @Mock
     private LooseThreadImportPort looseThreadImportPort;
+    @Mock
+    private TodoImportPort todoImportPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -152,7 +155,8 @@ class ImportServiceTest {
                 statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
-                cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort);
+                cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
+                todoImportPort);
     }
 
     @Test
