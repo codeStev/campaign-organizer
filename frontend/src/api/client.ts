@@ -929,6 +929,47 @@ export function looseThreadsApi(worldId: string, campaignId: string, sessionId: 
   };
 }
 
+/** Null sessionId means a standing campaign-level todo (ADR-0092). */
+export interface Todo {
+  id: string;
+  campaignId: string;
+  sessionId: string | null;
+  text: string;
+  done: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TodoRequest {
+  text: string;
+}
+
+export interface TodoUpdateRequest {
+  text: string;
+  done: boolean;
+}
+
+/** Standing campaign todos, plus the shared update/delete route for any todo. */
+export function campaignTodosApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/todos`;
+  return {
+    list: () => request<Todo[]>(base),
+    create: (body: TodoRequest) => request<Todo>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: TodoUpdateRequest) =>
+      request<Todo>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+/** A session's todos; update/delete for these rows go through campaignTodosApi. */
+export function sessionTodosApi(worldId: string, campaignId: string, sessionId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions/${sessionId}/todos`;
+  return {
+    list: () => request<Todo[]>(base),
+    create: (body: TodoRequest) => request<Todo>(base, { method: 'POST', body: JSON.stringify(body) }),
+  };
+}
+
 // ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
 
 export type TemplateKind = 'CHARACTER' | 'STATBLOCK' | 'DOCUMENT';
