@@ -1221,6 +1221,28 @@ button:disabled {
   gap: 0.3rem;
 }
 
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.attendance-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem 0.4rem 0;
+}
+
+.attendance-table td {
+  padding: 0.3rem 0.5rem 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
 .beat-item {
   display: flex;
   flex-direction: column;

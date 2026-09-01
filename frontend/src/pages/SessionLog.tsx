@@ -4,6 +4,7 @@ import { SessionPacketView } from './SessionPacketView';
 import { RecapView } from './RecapView';
 import { CheatSheetView } from './CheatSheetView';
 import { LooseThreadsPanel } from '../components/LooseThreadsPanel';
+import { AttendancePanel } from '../components/AttendancePanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { fetchCampaignBeats } from '../lib/beats';
@@ -212,6 +213,14 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
             <MarkdownEditor value={draft.notes} onChange={(notes) => setDraft({ ...draft, notes })} />
           </label>
           {draft.id && (
+            <AttendancePanel
+              worldId={worldId}
+              campaignId={campaignId}
+              sessionId={draft.id}
+              onError={onError}
+            />
+          )}
+          {draft.id && (
             <LooseThreadsPanel
               worldId={worldId}
               campaignId={campaignId}
@@ -291,6 +300,14 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
               ))}
             </ul>
           )}
+
+          <AttendancePanel
+            worldId={worldId}
+            campaignId={campaignId}
+            sessionId={openSession.id}
+            onError={onError}
+            readOnly
+          />
 
           <strong className="muted">GM notes (private)</strong>
           {openSession.notes ? (
