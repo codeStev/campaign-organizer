@@ -5,6 +5,7 @@ import { RecapView } from './RecapView';
 import { CheatSheetView } from './CheatSheetView';
 import { LooseThreadsPanel } from '../components/LooseThreadsPanel';
 import { AttendancePanel } from '../components/AttendancePanel';
+import { TodoListPanel } from '../components/TodoListPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { fetchCampaignBeats } from '../lib/beats';
@@ -228,6 +229,14 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
               onError={onError}
             />
           )}
+          {draft.id && (
+            <TodoListPanel
+              worldId={worldId}
+              campaignId={campaignId}
+              sessionId={draft.id}
+              onError={onError}
+            />
+          )}
           <div className="editor-actions">
             <Button type="submit" disabled={!draft.title}>
               {draft.id ? 'Save session' : 'Add session'}
@@ -307,6 +316,13 @@ export function SessionLog({ worldId, campaignId, campaignName, onError }: Props
             sessionId={openSession.id}
             onError={onError}
             readOnly
+          />
+
+          <TodoListPanel
+            worldId={worldId}
+            campaignId={campaignId}
+            sessionId={openSession.id}
+            onError={onError}
           />
 
           <strong className="muted">GM notes (private)</strong>
