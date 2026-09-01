@@ -171,4 +171,44 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void promotesATemplateToGlobalAndRepointsExistingCharacterSheets() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(DND))
+                .andReturn().getResponse().getContentAsString();
+        String templateId = JsonPath.read(created, "$.id");
+
+        String sheetId = JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/character-sheets", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Thalia\",\"worldTemplateId\":\"" + templateId + "\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        String promoted = mockMvc.perform(post("/api/worlds/{w}/field-templates/{t}/promote", worldId,
+                        templateId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("D&D 5e"))
+                .andExpect(jsonPath("$.system").value("dnd5e"))
+                .andReturn().getResponse().getContentAsString();
+        String globalId = JsonPath.read(promoted, "$.id");
+
+        // The source world template is gone.
+        mockMvc.perform(get("/api/worlds/{w}/field-templates/{t}", worldId, templateId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNotFound());
+
+        // The existing character sheet now points at the global template instead.
+        mockMvc.perform(get("/api/worlds/{w}/character-sheets/{s}", worldId, sheetId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.globalTemplateId").value(globalId))
+                .andExpect(jsonPath("$.worldTemplateId").doesNotExist());
+    }
 }
