@@ -144,4 +144,31 @@ class FieldTemplateControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].kind").value("STATBLOCK"));
     }
+
+    @Test
+    void duplicatesATemplateCarryingOverKindAndRenamingIt() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String created = mockMvc.perform(post("/api/worlds/{w}/field-templates", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(DND))
+                .andReturn().getResponse().getContentAsString();
+        String sourceId = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(post("/api/worlds/{w}/field-templates/{t}/duplicate", worldId, sourceId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(sourceId)))
+                .andExpect(jsonPath("$.name").value("D&D 5e (copy)"))
+                .andExpect(jsonPath("$.kind").value("CHARACTER"))
+                .andExpect(jsonPath("$.system").value("dnd5e"))
+                .andExpect(jsonPath("$.sections[0].fields[1].key").value("level"));
+
+        mockMvc.perform(post("/api/worlds/{w}/field-templates/{t}/duplicate", worldId,
+                        UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNotFound());
+    }
 }

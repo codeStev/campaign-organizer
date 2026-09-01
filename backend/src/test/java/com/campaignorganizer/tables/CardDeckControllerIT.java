@@ -145,5 +145,42 @@ class CardDeckControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/worlds/{w}/card-decks/{d}", worldId, UUID.randomUUID())
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/worlds/{w}/card-decks/{d}/duplicate", worldId, UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void duplicatesADeckWithFreshCardIdsAndRenamedTitle() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String source = mockMvc.perform(post("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Omens","description":"Draw for foreshadowing",
+                                 "cards":[{"title":"The Fool","body":"A new beginning"},
+                                          {"title":"The Tower","body":"Disaster strikes"}]}
+                                """))
+                .andReturn().getResponse().getContentAsString();
+        String sourceId = JsonPath.read(source, "$.id");
+        String sourceCardId = JsonPath.read(source, "$.cards[0].id");
+
+        mockMvc.perform(post("/api/worlds/{w}/card-decks/{d}/duplicate", worldId, sourceId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(sourceId)))
+                .andExpect(jsonPath("$.title").value("Omens (copy)"))
+                .andExpect(jsonPath("$.description").value("Draw for foreshadowing"))
+                .andExpect(jsonPath("$.cards.length()").value(2))
+                .andExpect(jsonPath("$.cards[0].title").value("The Fool"))
+                .andExpect(jsonPath("$.cards[0].id").value(org.hamcrest.Matchers.not(sourceCardId)));
+
+        mockMvc.perform(get("/api/worlds/{w}/card-decks", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 }

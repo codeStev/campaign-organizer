@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -132,5 +133,24 @@ class StatblockServiceTest {
         List<StatblockView> result = service.list(worldId, campaignId, null);
 
         assertThat(result).extracting(StatblockView::id).containsExactly(scoped, referenced);
+    }
+
+    @Test
+    void duplicateCopiesFieldsAndRenamesWithNewId() {
+        UUID sourceId = UUID.randomUUID();
+        Statblock source = Statblock.create(sourceId, worldId, null, campaignId, null, "Goblin",
+                Map.of("hp", 7), "Sneaky", clock.instant());
+        when(statblocks.findByIdAndWorld(sourceId, worldId)).thenReturn(Optional.of(source));
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(true);
+        when(statblocks.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        StatblockView copy = service.duplicate(worldId, sourceId);
+
+        assertThat(copy.id()).isNotEqualTo(sourceId);
+        assertThat(copy.name()).isEqualTo("Goblin (copy)");
+        assertThat(copy.campaignId()).isEqualTo(campaignId);
+        assertThat(copy.stats()).isEqualTo(Map.of("hp", 7));
+        assertThat(copy.notes()).isEqualTo("Sneaky");
     }
 }

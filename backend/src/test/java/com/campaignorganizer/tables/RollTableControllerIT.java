@@ -191,6 +191,40 @@ class RollTableControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void duplicatesATableWithFreshEntryIdsAndRenamedTitle() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        String source = mockMvc.perform(post("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Weather","description":"Daily weather","diceExpression":"2d6",
+                                 "entries":[{"minResult":2,"maxResult":7,"body":"Rain"},
+                                            {"minResult":8,"maxResult":12,"body":"Clear skies"}]}
+                                """))
+                .andReturn().getResponse().getContentAsString();
+        String sourceId = JsonPath.read(source, "$.id");
+        String sourceEntryId = JsonPath.read(source, "$.entries[0].id");
+
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables/{t}/duplicate", worldId, sourceId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(sourceId)))
+                .andExpect(jsonPath("$.title").value("Weather (copy)"))
+                .andExpect(jsonPath("$.description").value("Daily weather"))
+                .andExpect(jsonPath("$.diceExpression").value("2d6"))
+                .andExpect(jsonPath("$.entries.length()").value(2))
+                .andExpect(jsonPath("$.entries[0].body").value("Rain"))
+                .andExpect(jsonPath("$.entries[0].id").value(org.hamcrest.Matchers.not(sourceEntryId)));
+
+        mockMvc.perform(get("/api/worlds/{w}/roll-tables", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
     void unknownTableReturns404AndForeignWorldIsIsolated() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
@@ -200,6 +234,10 @@ class RollTableControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound());
 
         mockMvc.perform(delete("/api/worlds/{w}/roll-tables/{t}", worldId, UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/worlds/{w}/roll-tables/{t}/duplicate", worldId, UUID.randomUUID())
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isNotFound());
     }

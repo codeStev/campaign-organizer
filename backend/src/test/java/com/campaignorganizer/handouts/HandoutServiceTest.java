@@ -146,6 +146,21 @@ class HandoutServiceTest {
     }
 
     @Test
+    void duplicateCopiesFieldsAndRenamesWithNewId() {
+        Handout source = saved();
+        when(repo.findByIdAndWorld(source.getId(), worldId)).thenReturn(Optional.of(source));
+        when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        HandoutView copy = service.duplicate(worldId, source.getId());
+
+        assertThat(copy.id()).isNotEqualTo(source.getId());
+        assertThat(copy.title()).isEqualTo("Wanted poster (copy)");
+        assertThat(copy.preset()).isEqualTo("POSTER");
+        assertThat(copy.body()).isEqualTo("**500 gold**");
+        assertThat(copy.revealed()).isFalse();
+    }
+
+    @Test
     void reorderRejectsAnIncompleteOrPartialIdList() {
         Handout a = saved();
         Handout b = saved();
