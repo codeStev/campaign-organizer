@@ -287,6 +287,16 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   attach to a specific session (its date is the implicit due date) and
   surface while prepping that session. Both will show on the future
   per-campaign dashboard (FR-67, not yet built). (ADR-0092)
+- **FR-55 Global field template catalog.** Character sheet and statblock
+  templates can live in a world-independent global catalog, keyed by game
+  system, instead of only inside one world — so running the same system
+  (e.g. D&D 5e) across multiple campaigns or multiple worlds means
+  building its templates once, not re-authoring them per world. Existing
+  per-world templates duplicated across worlds by system name are
+  consolidated into the catalog once; a world-scoped template can also be
+  explicitly promoted to global. Purely one-off/homebrew per-world
+  templates remain fully supported alongside the catalog. Document
+  templates (FR-50) are out of scope for now. (ADR-0093)
 
 ---
 

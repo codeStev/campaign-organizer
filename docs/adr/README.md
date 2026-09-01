@@ -82,6 +82,7 @@ the old one.
 | [0090](0090-campaign-status.md) | Campaign status (planned/active/on hiatus/completed), mirrors `ArcStatus` shape | Accepted |
 | [0091](0091-player-roster-attendance.md) | Player roster and per-session attendance (world-scoped players, whole-set roster/attendance replace) | Accepted |
 | [0092](0092-campaign-session-todos.md) | Campaign and session todos (one aggregate, nullable `sessionId`) | Accepted |
+| [0093](0093-global-field-template-catalog.md) | Global, system-scoped field template catalog for character sheets/statblocks | Accepted |
 
 ## Template
 
