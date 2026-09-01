@@ -850,7 +850,7 @@ export function looseThreadsApi(worldId: string, campaignId: string, sessionId: 
 
 // ---- Character sheets, statblocks, dice (mirrors docs/api/openapi.yaml) ----
 
-export type TemplateKind = 'CHARACTER' | 'STATBLOCK';
+export type TemplateKind = 'CHARACTER' | 'STATBLOCK' | 'DOCUMENT';
 
 export type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'CIRCLES';
 
@@ -911,6 +911,24 @@ export interface CharacterSheetRequest {
   name: string;
   templateId: string;
   articleId?: string | null;
+  campaignId?: string | null;
+  values?: Record<string, unknown>;
+}
+
+export interface Document {
+  id: string;
+  worldId: string;
+  templateId: string;
+  campaignId?: string | null;
+  name: string;
+  values: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentRequest {
+  name: string;
+  templateId: string;
   campaignId?: string | null;
   values?: Record<string, unknown>;
 }
@@ -978,6 +996,20 @@ export function characterSheetsApi(worldId: string) {
       request<CharacterSheet>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: CharacterSheetRequest) =>
       request<CharacterSheet>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export function documentsApi(worldId: string) {
+  const base = `/worlds/${worldId}/documents`;
+  return {
+    list: (params?: { campaignId?: string }) =>
+      request<Document[]>(params?.campaignId ? `${base}?campaignId=${params.campaignId}` : base),
+    get: (id: string) => request<Document>(`${base}/${id}`),
+    create: (body: DocumentRequest) =>
+      request<Document>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: DocumentRequest) =>
+      request<Document>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
@@ -1271,6 +1303,33 @@ export async function exportCharacterSheetPdf(worldId: string, sheetId: string):
   const disposition = response.headers.get('Content-Disposition') ?? '';
   const match = disposition.match(/filename="?([^"]+)"?/);
   const filename = match ? match[1] : `character-${sheetId}.pdf`;
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Downloads a document's filled fillable PDF. */
+export async function exportDocumentPdf(worldId: string, documentId: string): Promise<void> {
+  const token = getToken();
+  const response = await fetch(`/api/worlds/${worldId}/documents/${documentId}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (response.status === 401) {
+    clearToken();
+    throw new ApiError(401, 'Not authenticated');
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeProblemDetail(response));
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : `document-${documentId}.pdf`;
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
