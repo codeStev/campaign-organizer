@@ -3,15 +3,18 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   globalFieldTemplatesApi,
   builtinFieldTemplatesApi,
+  gameSystemsApi,
   GlobalFieldTemplate,
   GlobalFieldTemplateRequest,
   FieldTemplateRequest,
   BuiltinFieldTemplate,
+  GameSystem,
   ApiError,
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -37,6 +40,9 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
   const [templates, setTemplates] = useState<GlobalFieldTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
+  const [systems, setSystems] = useState<GameSystem[]>([]);
+  const [systemsLoading, setSystemsLoading] = useState(true);
+  const [newSystemName, setNewSystemName] = useState('');
   const [newKind, setNewKind] = useState<'CHARACTER' | 'STATBLOCK'>('CHARACTER');
   const [choice, setChoice] = useState('');
   const [editing, setEditing] = useState<GlobalFieldTemplate | null>(null);
@@ -60,13 +66,71 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
       .finally(() => setLoading(false));
   }, [onError]);
 
+  const refreshSystems = useCallback(() => {
+    gameSystemsApi
+      .list()
+      .then(setSystems)
+      .catch(onError)
+      .finally(() => setSystemsLoading(false));
+  }, [onError]);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   useEffect(() => {
+    refreshSystems();
+  }, [refreshSystems]);
+
+  useEffect(() => {
     builtinFieldTemplatesApi.list().then(setBuiltins).catch(onError);
   }, [onError]);
+
+  function systemName(systemId: string): string {
+    return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
+  }
+
+  /** Finds a game system by exact case-insensitive name, creating one if none matches. */
+  async function resolveSystemId(name: string): Promise<string> {
+    const existing = systems.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+    const created = await gameSystemsApi.create({ name });
+    setSystems((s) => [...s, created]);
+    return created.id;
+  }
+
+  async function addSystem() {
+    const name = newSystemName.trim();
+    if (!name) return;
+    try {
+      const created = await gameSystemsApi.create({ name });
+      setSystems((s) => [...s, created]);
+      setNewSystemName('');
+      toast.success(`Game system "${created.name}" added`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  async function renameSystem(system: GameSystem, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === system.name) return;
+    try {
+      const updated = await gameSystemsApi.update(system.id, { name: trimmed });
+      setSystems((s) => s.map((x) => (x.id === updated.id ? updated : x)));
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  async function removeSystem(system: GameSystem) {
+    try {
+      await gameSystemsApi.remove(system.id);
+      refreshSystems();
+    } catch (err) {
+      onError(err);
+    }
+  }
 
   useEffect(() => {
     if (!urlTemplateId || urlTemplateId === editing?.id || urlTemplateId === previewing?.id) return;
@@ -84,16 +148,17 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
       onError(new Error(`"${b.name}" has no system label and can't be added to the global catalog.`));
       return;
     }
-    const already = templates.find(
-      (t) => t.kind === b.kind && t.system === b.system && t.name === b.name,
-    );
-    if (already) {
-      toast.info(`"${b.name}" is already in the global catalog`);
-      setChoice('');
-      return;
-    }
     try {
-      await globalFieldTemplatesApi.create({ name: b.name, kind: b.kind, system: b.system, sections: b.sections });
+      const systemId = await resolveSystemId(b.system);
+      const already = templates.find(
+        (t) => t.kind === b.kind && t.systemId === systemId && t.name === b.name,
+      );
+      if (already) {
+        toast.info(`"${b.name}" is already in the global catalog`);
+        setChoice('');
+        return;
+      }
+      await globalFieldTemplatesApi.create({ name: b.name, kind: b.kind, systemId, sections: b.sections });
       setChoice('');
       refresh();
       toast.success(`"${b.name}" added to the global catalog`);
@@ -103,14 +168,18 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
   }
 
   // TemplateBuilder/TemplateForm are template-content-agnostic (ADR-0093) — reused
-  // as-is via a FieldTemplateRequest adapter, since `system` is required here.
+  // as-is via a FieldTemplateRequest adapter, since a system is required here.
   async function saveTemplate(body: FieldTemplateRequest) {
-    const system = body.system?.trim();
-    if (!system) {
+    if (!body.systemId) {
       onError(new Error('A game system is required for a global template.'));
       return;
     }
-    const request: GlobalFieldTemplateRequest = { name: body.name, kind: body.kind, system, sections: body.sections };
+    const request: GlobalFieldTemplateRequest = {
+      name: body.name,
+      kind: body.kind,
+      systemId: body.systemId,
+      sections: body.sections,
+    };
     try {
       if (editing) await globalFieldTemplatesApi.update(editing.id, request);
       else await globalFieldTemplatesApi.create(request);
@@ -157,7 +226,7 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
           <div>
             <h3>{previewing.name}</h3>
             <small className="muted">
-              {KIND_LABEL[previewing.kind as 'CHARACTER' | 'STATBLOCK']} · {previewing.system} ·{' '}
+              {KIND_LABEL[previewing.kind as 'CHARACTER' | 'STATBLOCK']} · {systemName(previewing.systemId)} ·{' '}
               {previewing.sections.length} sections
             </small>
           </div>
@@ -189,93 +258,148 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
   }
 
   return (
-    <div className="card">
-      <h3>Global templates</h3>
-      <p className="muted hint">
-        A system-scoped catalog shared across every world and campaign — build a game system&apos;s
-        character sheet or statblock once here instead of per world.
-      </p>
-      {error && <p className="error">{error}</p>}
-
-      <div className="editor-actions">
-        <label className="muted">
-          What are you building?{' '}
-          <Select
-            value={newKind}
-            onValueChange={(v) => {
-              setNewKind(v as 'CHARACTER' | 'STATBLOCK');
-              setChoice('');
+    <>
+      <section className="card">
+        <h3>Game systems</h3>
+        <p className="muted hint">
+          A top-level, world-independent list of the systems your templates are keyed by (ADR-0094).
+        </p>
+        <div className="editor-actions">
+          <Input
+            placeholder="New game system name…"
+            value={newSystemName}
+            onChange={(e) => setNewSystemName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void addSystem();
+              }
             }}
-          >
+          />
+          <Button type="button" disabled={!newSystemName.trim()} onClick={() => void addSystem()}>
+            Add
+          </Button>
+        </div>
+        <ul className="article-list">
+          {systems.map((s) => (
+            <li key={s.id} className="rel-row">
+              <Input
+                defaultValue={s.name}
+                onBlur={(e) => void renameSystem(s, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+              />
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    ✕
+                  </Button>
+                }
+                title="Delete game system?"
+                description={`This deletes "${s.name}". Blocked if any global template still uses it; world-scoped templates just lose the reference.`}
+                onConfirm={() => removeSystem(s)}
+              />
+            </li>
+          ))}
+          {systemsLoading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
+          {!systemsLoading && systems.length === 0 && <li className="muted">No game systems yet.</li>}
+        </ul>
+      </section>
+
+      <div className="card">
+        <h3>Global templates</h3>
+        <p className="muted hint">
+          A system-scoped catalog shared across every world and campaign — build a game system&apos;s
+          character sheet or statblock once here instead of per world.
+        </p>
+        {error && <p className="error">{error}</p>}
+
+        <div className="editor-actions">
+          <label className="muted">
+            What are you building?{' '}
+            <Select
+              value={newKind}
+              onValueChange={(v) => {
+                setNewKind(v as 'CHARACTER' | 'STATBLOCK');
+                setChoice('');
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CHARACTER">Character sheet</SelectItem>
+                <SelectItem value="STATBLOCK">Statblock</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          <Select value={choice} onValueChange={setChoice}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Starter system…" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="CHARACTER">Character sheet</SelectItem>
-              <SelectItem value="STATBLOCK">Statblock</SelectItem>
+              {buildersForKind.map((b) => (
+                <SelectItem key={b.name} value={b.name}>
+                  {b.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </label>
-        <Select value={choice} onValueChange={setChoice}>
-          <SelectTrigger>
-            <SelectValue placeholder="Starter system…" />
-          </SelectTrigger>
-          <SelectContent>
-            {buildersForKind.map((b) => (
-              <SelectItem key={b.name} value={b.name}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={addFromBuiltin} disabled={!choice}>
-          Add starter
-        </Button>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setPreviewing(null);
-            setBuilding(true);
-          }}
-        >
-          Build new
-        </Button>
-      </div>
+          <Button onClick={addFromBuiltin} disabled={!choice}>
+            Add starter
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setPreviewing(null);
+              setBuilding(true);
+            }}
+          >
+            Build new
+          </Button>
+        </div>
 
-      <ul className="article-list">
-        {templates.map((t) => (
-          <li key={t.id} className="rel-row">
-            <Button
-              variant="link"
-              className="template-open"
-              onClick={() => navigate(`/templates/global/${t.id}`)}
-            >
-              <strong>{t.name}</strong>{' '}
-              <small className="muted">
-                {KIND_LABEL[t.kind as 'CHARACTER' | 'STATBLOCK']} · {t.system} · {t.sections.length} sections
-              </small>
-            </Button>
-            <ConfirmDeleteDialog
-              trigger={
-                <Button variant="link" className="text-destructive hover:text-destructive">
-                  ✕
-                </Button>
-              }
-              title="Delete global template?"
-              description={`This deletes "${t.name}" from the shared catalog. Blocked if any character sheet or statblock in any world still uses it.`}
-              onConfirm={() => remove(t)}
-            />
-          </li>
-        ))}
-        {loading && (
-          <li className="muted loading-row">
-            <Spinner /> Loading…
-          </li>
-        )}
-        {!loading && templates.length === 0 && (
-          <li className="muted">No global templates yet. Add a starter or build one.</li>
-        )}
-      </ul>
-    </div>
+        <ul className="article-list">
+          {templates.map((t) => (
+            <li key={t.id} className="rel-row">
+              <Button
+                variant="link"
+                className="template-open"
+                onClick={() => navigate(`/templates/global/${t.id}`)}
+              >
+                <strong>{t.name}</strong>{' '}
+                <small className="muted">
+                  {KIND_LABEL[t.kind as 'CHARACTER' | 'STATBLOCK']} · {systemName(t.systemId)} ·{' '}
+                  {t.sections.length} sections
+                </small>
+              </Button>
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button variant="link" className="text-destructive hover:text-destructive">
+                    ✕
+                  </Button>
+                }
+                title="Delete global template?"
+                description={`This deletes "${t.name}" from the shared catalog. Blocked if any character sheet or statblock in any world still uses it.`}
+                onConfirm={() => remove(t)}
+              />
+            </li>
+          ))}
+          {loading && (
+            <li className="muted loading-row">
+              <Spinner /> Loading…
+            </li>
+          )}
+          {!loading && templates.length === 0 && (
+            <li className="muted">No global templates yet. Add a starter or build one.</li>
+          )}
+        </ul>
+      </div>
+    </>
   );
 }
