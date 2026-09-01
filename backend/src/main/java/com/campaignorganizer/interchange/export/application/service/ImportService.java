@@ -5,11 +5,17 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerImportPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
+import com.campaignorganizer.campaign.application.player.port.published.PlayerImportPort;
+import com.campaignorganizer.campaign.application.player.port.published.PlayerView;
+import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
@@ -89,7 +95,10 @@ public class ImportService implements ImportBackupUseCase {
     private final TimelineEventImportPort timelineEventImportPort;
     private final RelationshipImportPort relationshipImportPort;
     private final CampaignImportPort campaignImportPort;
+    private final PlayerImportPort playerImportPort;
+    private final CampaignPlayerImportPort campaignPlayerImportPort;
     private final SessionImportPort sessionImportPort;
+    private final SessionAttendanceImportPort sessionAttendanceImportPort;
     private final ArcImportPort arcImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
     private final CharacterSheetImportPort characterSheetImportPort;
@@ -111,7 +120,9 @@ public class ImportService implements ImportBackupUseCase {
             MapImportPort mapImportPort, MapPinImportPort mapPinImportPort,
             CalendarImportPort calendarImportPort, TimelineImportPort timelineImportPort,
             TimelineEventImportPort timelineEventImportPort, RelationshipImportPort relationshipImportPort,
-            CampaignImportPort campaignImportPort, SessionImportPort sessionImportPort,
+            CampaignImportPort campaignImportPort, PlayerImportPort playerImportPort,
+            CampaignPlayerImportPort campaignPlayerImportPort, SessionImportPort sessionImportPort,
+            SessionAttendanceImportPort sessionAttendanceImportPort,
             ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
             StatblockImportPort statblockImportPort,
@@ -131,7 +142,10 @@ public class ImportService implements ImportBackupUseCase {
         this.timelineEventImportPort = timelineEventImportPort;
         this.relationshipImportPort = relationshipImportPort;
         this.campaignImportPort = campaignImportPort;
+        this.playerImportPort = playerImportPort;
+        this.campaignPlayerImportPort = campaignPlayerImportPort;
         this.sessionImportPort = sessionImportPort;
+        this.sessionAttendanceImportPort = sessionAttendanceImportPort;
         this.arcImportPort = arcImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
         this.characterSheetImportPort = characterSheetImportPort;
@@ -179,7 +193,12 @@ public class ImportService implements ImportBackupUseCase {
         List<TimelineEventView> timelineEvents = readList(root, "timelineEvents", TimelineEventView.class);
         List<RelationshipView> relationships = readList(root, "relationships", RelationshipView.class);
         List<CampaignView> campaigns = readList(root, "campaigns", CampaignView.class);
+        List<PlayerView> players = readList(root, "players", PlayerView.class);
+        List<CampaignPlayerView> campaignPlayers =
+                readList(root, "campaignPlayers", CampaignPlayerView.class);
         List<SessionView> sessions = readList(root, "sessions", SessionView.class);
+        List<SessionAttendanceView> sessionAttendance =
+                readList(root, "sessionAttendance", SessionAttendanceView.class);
         List<ArcView> arcs = readList(root, "arcs", ArcView.class);
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<CharacterSheetView> characterSheets =
@@ -210,7 +229,10 @@ public class ImportService implements ImportBackupUseCase {
         timelineEvents.forEach(e -> remap.assign(e.id()));
         relationships.forEach(r -> remap.assign(r.id()));
         campaigns.forEach(c -> remap.assign(c.id()));
+        players.forEach(p -> remap.assign(p.id()));
+        campaignPlayers.forEach(cp -> remap.assign(cp.id()));
         sessions.forEach(s -> remap.assign(s.id()));
+        sessionAttendance.forEach(a -> remap.assign(a.id()));
         arcs.forEach(a -> remap.assign(a.id()));
         fieldTemplates.forEach(f -> remap.assign(f.id()));
         characterSheets.forEach(s -> remap.assign(s.id()));
@@ -287,6 +309,18 @@ public class ImportService implements ImportBackupUseCase {
         for (CampaignView c : campaigns) {
             campaignImportPort.importCampaign(new CampaignView(remap.get(c.id()), newWorldId, c.name(),
                     c.description(), c.notes(), c.status(), c.createdAt(), c.updatedAt()));
+        }
+
+        // Player pool (ADR-0091): world-scoped, no other id references inside.
+        for (PlayerView p : players) {
+            playerImportPort.importPlayer(new PlayerView(remap.get(p.id()), newWorldId, p.name(),
+                    p.createdAt(), p.updatedAt()));
+        }
+
+        // Campaign rosters (ADR-0091): both campaignId and playerId are remapped.
+        for (CampaignPlayerView cp : campaignPlayers) {
+            campaignPlayerImportPort.importCampaignPlayer(new CampaignPlayerView(remap.get(cp.id()),
+                    remap.get(cp.campaignId()), remap.get(cp.playerId()), cp.guest(), cp.createdAt()));
         }
 
         for (SessionView s : sessions) {
@@ -374,6 +408,14 @@ public class ImportService implements ImportBackupUseCase {
         for (CheatSheetView cs : cheatSheets) {
             cheatSheetImportPort.importCheatSheet(new CheatSheetView(remap.get(cs.id()),
                     remap.get(cs.sessionId()), cs.fragments(), cs.createdAt(), cs.updatedAt()));
+        }
+
+        // Session attendance (ADR-0091): sessionId and playerId are remapped; a linked
+        // character sheet, when present, was already imported above.
+        for (SessionAttendanceView a : sessionAttendance) {
+            sessionAttendanceImportPort.importAttendance(new SessionAttendanceView(remap.get(a.id()),
+                    remap.get(a.sessionId()), remap.get(a.playerId()), a.present(),
+                    remap.getOrNull(a.characterId()), a.createdAt()));
         }
 
         // Beats last among campaign data: they reference statblocks, which must exist first.

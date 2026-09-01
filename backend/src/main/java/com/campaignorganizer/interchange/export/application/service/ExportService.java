@@ -9,7 +9,10 @@ import com.campaignorganizer.campaign.application.session.port.published.CheatSh
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerQueryPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
+import com.campaignorganizer.campaign.application.player.port.published.PlayerQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceQueryPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -62,7 +65,10 @@ public class ExportService implements ExportWorldUseCase {
     private final CalendarQueryPort calendars;
     private final RelationshipQueryPort relationships;
     private final CampaignQueryPort campaigns;
+    private final PlayerQueryPort players;
+    private final CampaignPlayerQueryPort campaignPlayers;
     private final SessionQueryPort sessions;
+    private final SessionAttendanceQueryPort sessionAttendance;
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
     private final FieldTemplateQueryPort fieldTemplates;
@@ -82,7 +88,9 @@ public class ExportService implements ExportWorldUseCase {
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
                          TimelineEventQueryPort events, CalendarQueryPort calendars,
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
-                         SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
+                         PlayerQueryPort players, CampaignPlayerQueryPort campaignPlayers,
+                         SessionQueryPort sessions, SessionAttendanceQueryPort sessionAttendance,
+                         ArcQueryPort arcs, ArcBeatQueryPort beats,
                          FieldTemplateQueryPort fieldTemplates, CharacterSheetQueryPort characterSheets,
                          DocumentQueryPort documents, StatblockQueryPort statblocks,
                          WhiteboardQueryPort whiteboards,
@@ -99,7 +107,10 @@ public class ExportService implements ExportWorldUseCase {
         this.calendars = calendars;
         this.relationships = relationships;
         this.campaigns = campaigns;
+        this.players = players;
+        this.campaignPlayers = campaignPlayers;
         this.sessions = sessions;
+        this.sessionAttendance = sessionAttendance;
         this.arcs = arcs;
         this.beats = beats;
         this.fieldTemplates = fieldTemplates;
@@ -152,6 +163,8 @@ public class ExportService implements ExportWorldUseCase {
         List<Object> allBeats = new ArrayList<>();
         List<Object> allClocks = new ArrayList<>();
         List<Object> allLooseThreads = new ArrayList<>();
+        // Campaign rosters (ADR-0091): campaign-scoped membership rows.
+        List<Object> allCampaignPlayers = new ArrayList<>();
         worldCampaigns.forEach(c -> {
             allSessions.addAll(sessions.findOrdered(c.id()));
             arcs.findByCampaign(c.id()).forEach(a -> {
@@ -162,6 +175,7 @@ public class ExportService implements ExportWorldUseCase {
             allClocks.addAll(clocks.findByCampaign(c.id()));
             // Loose threads (FR-49): campaign-scoped via the denormalized column.
             allLooseThreads.addAll(looseThreads.findByCampaign(c.id()));
+            allCampaignPlayers.addAll(campaignPlayers.findByCampaign(c.id()));
         });
         bundle.put("campaigns", worldCampaigns);
         bundle.put("sessions", allSessions);
@@ -169,12 +183,20 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("beats", allBeats);
         bundle.put("clocks", allClocks);
         bundle.put("looseThreads", allLooseThreads);
+        // Player pool (ADR-0091): world-scoped, reused across the world's campaigns.
+        bundle.put("players", players.findByWorld(worldId));
+        bundle.put("campaignPlayers", allCampaignPlayers);
         // Session cheat sheets (FR-37): one per session, when present.
         List<CheatSheetView> cheatSheetViews = new ArrayList<>();
+        // Session attendance (ADR-0091): zero or more rows per session.
+        List<Object> allAttendance = new ArrayList<>();
         for (Object s : allSessions) {
-            cheatSheets.findBySession(((SessionView) s).id()).ifPresent(cheatSheetViews::add);
+            UUID sessionId = ((SessionView) s).id();
+            cheatSheets.findBySession(sessionId).ifPresent(cheatSheetViews::add);
+            allAttendance.addAll(sessionAttendance.findBySession(sessionId));
         }
         bundle.put("cheatSheets", cheatSheetViews);
+        bundle.put("sessionAttendance", allAttendance);
 
         bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));

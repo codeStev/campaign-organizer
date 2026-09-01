@@ -10,6 +10,8 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImpo
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerImportPort;
+import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockImportPort;
@@ -17,7 +19,11 @@ import com.campaignorganizer.campaign.application.clock.port.published.ClockSegm
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadImportPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
+import com.campaignorganizer.campaign.application.player.port.published.PlayerImportPort;
+import com.campaignorganizer.campaign.application.player.port.published.PlayerView;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
@@ -94,7 +100,13 @@ class ImportServiceTest {
     @Mock
     private CampaignImportPort campaignImportPort;
     @Mock
+    private PlayerImportPort playerImportPort;
+    @Mock
+    private CampaignPlayerImportPort campaignPlayerImportPort;
+    @Mock
     private SessionImportPort sessionImportPort;
+    @Mock
+    private SessionAttendanceImportPort sessionAttendanceImportPort;
     @Mock
     private ArcImportPort arcImportPort;
     @Mock
@@ -134,7 +146,8 @@ class ImportServiceTest {
     void setUp() {
         service = new ImportService(objectMapper, worldImportPort, categoryImportPort, articleImportPort,
                 mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
-                timelineEventImportPort, relationshipImportPort, campaignImportPort, sessionImportPort,
+                timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
+                campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
                 arcImportPort, fieldTemplateImportPort, characterSheetImportPort, documentImportPort,
                 statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
