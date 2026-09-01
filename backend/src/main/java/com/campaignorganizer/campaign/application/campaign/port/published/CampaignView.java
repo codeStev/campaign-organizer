@@ -1,5 +1,6 @@
 package com.campaignorganizer.campaign.application.campaign.port.published;
 
+import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ public record CampaignView(
         String name,
         String description,
         String notes,
+        CampaignStatus status,
         Instant createdAt,
         Instant updatedAt) {
 }

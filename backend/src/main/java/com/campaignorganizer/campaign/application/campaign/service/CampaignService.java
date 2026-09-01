@@ -48,7 +48,7 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     public CampaignView create(CreateCampaignCommand command) {
         requireWorld(command.worldId());
         Campaign created = Campaign.create(ids.newId(), command.worldId(), command.name(),
-                command.description(), command.notes(), clock.instant());
+                command.description(), command.notes(), command.status(), clock.instant());
         return viewMapper.toView(campaigns.save(created));
     }
 
@@ -56,7 +56,8 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     @Transactional
     public CampaignView update(UpdateCampaignCommand command) {
         Campaign campaign = require(command.worldId(), command.campaignId());
-        campaign.update(command.name(), command.description(), command.notes(), clock.instant());
+        campaign.update(command.name(), command.description(), command.notes(), command.status(),
+                clock.instant());
         return viewMapper.toView(campaigns.save(campaign));
     }
 
@@ -85,7 +86,7 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     @Transactional
     public CampaignView importCampaign(CampaignView view) {
         Campaign campaign = Campaign.reconstitute(view.id(), view.worldId(), view.name(),
-                view.description(), view.notes(), view.createdAt(), view.updatedAt());
+                view.description(), view.notes(), view.status(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(campaigns.save(campaign));
     }
 

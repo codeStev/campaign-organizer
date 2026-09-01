@@ -286,7 +286,7 @@ public class ImportService implements ImportBackupUseCase {
 
         for (CampaignView c : campaigns) {
             campaignImportPort.importCampaign(new CampaignView(remap.get(c.id()), newWorldId, c.name(),
-                    c.description(), c.notes(), c.createdAt(), c.updatedAt()));
+                    c.description(), c.notes(), c.status(), c.createdAt(), c.updatedAt()));
         }
 
         for (SessionView s : sessions) {
