@@ -188,6 +188,18 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  async function duplicate() {
+    if (!draft.id) return;
+    try {
+      const copy = await api.duplicate(draft.id);
+      await refresh();
+      navigate(`/worlds/${worldId}/handouts/${copy.id}`);
+      toast.success(`Handout "${copy.title}" created`);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   async function remove() {
     if (!draft.id) return;
     try {
@@ -335,6 +347,11 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
                 {(editingExisting || draft.body) && (
                   <Button type="button" variant="outline" onClick={() => setPrinting(true)} disabled={!draft.title}>
                     🖨 Print
+                  </Button>
+                )}
+                {editingExisting && (
+                  <Button type="button" variant="link" onClick={() => void duplicate()}>
+                    Duplicate
                   </Button>
                 )}
                 {editingExisting && (

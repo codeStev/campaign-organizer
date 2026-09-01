@@ -89,6 +89,17 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     }
   }
 
+  async function duplicate(t: FieldTemplate) {
+    try {
+      const copy = await api.duplicate(t.id);
+      onChanged();
+      navigate(`/worlds/${worldId}/sheets/templates/${copy.id}`);
+      toast.success(`Template "${copy.name}" created`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   async function remove(t: FieldTemplate) {
     try {
       await api.remove(t.id);
@@ -221,6 +232,9 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
               <small className="muted">
                 {KIND_LABEL[t.kind]} · {t.system ?? 'custom'} · {t.sections.length} sections
               </small>
+            </Button>
+            <Button variant="link" onClick={() => duplicate(t)} title="Duplicate this template">
+              ⎘
             </Button>
             <ConfirmDeleteDialog
               trigger={

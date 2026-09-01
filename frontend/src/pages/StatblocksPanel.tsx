@@ -215,6 +215,17 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
     }
   }
 
+  async function duplicate(sb: Statblock) {
+    try {
+      const copy = await api.duplicate(sb.id);
+      await refresh();
+      navigate(`/worlds/${worldId}/sheets/statblocks/${copy.id}`);
+      toast.success(`Statblock "${copy.name}" created`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   async function remove(sb: Statblock) {
     try {
       await api.remove(sb.id);
@@ -437,6 +448,15 @@ export function StatblocksPanel({ worldId, templates, campaigns, onError }: Prop
                   }}
                 >
                   Cancel
+                </Button>
+              )}
+              {draft.id && (
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => duplicate(list.find((s) => s.id === draft.id)!)}
+                >
+                  Duplicate
                 </Button>
               )}
               {draft.id && (

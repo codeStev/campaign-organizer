@@ -635,6 +635,27 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  async function duplicate() {
+    if (draft.id == null) return;
+    try {
+      if (draft.kind === 'table') {
+        const copy = await tablesApi.duplicate(draft.id);
+        edit('table', copy);
+        navigate(`/worlds/${worldId}/tables/table/${copy.id}`);
+        await refresh();
+        markSaved(`Table "${copy.title}" created`);
+      } else {
+        const copy = await decksApi.duplicate(draft.id);
+        edit('deck', copy);
+        navigate(`/worlds/${worldId}/tables/deck/${copy.id}`);
+        await refresh();
+        markSaved(`Deck "${copy.title}" created`);
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   async function remove() {
     if (draft.id == null) return;
     try {
@@ -1086,6 +1107,11 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 data-testid="table-print-button"
               >
                 🖨 Print
+              </Button>
+            )}
+            {editingExisting && (
+              <Button type="button" variant="link" onClick={() => void duplicate()}>
+                Duplicate
               </Button>
             )}
             {editingExisting && (
