@@ -997,7 +997,7 @@ export interface FieldTemplate {
   worldId: string;
   name: string;
   kind: TemplateKind;
-  system?: string | null;
+  systemId?: string | null;
   sections: TemplateSection[];
   createdAt: string;
   updatedAt: string;
@@ -1006,7 +1006,7 @@ export interface FieldTemplate {
 export interface FieldTemplateRequest {
   name: string;
   kind: TemplateKind;
-  system?: string | null;
+  systemId?: string | null;
   sections: TemplateSection[];
 }
 
@@ -1017,12 +1017,24 @@ export interface BuiltinFieldTemplate {
   sections: TemplateSection[];
 }
 
+/** A real, top-level, world-independent game system entity (ADR-0094). */
+export interface GameSystem {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GameSystemRequest {
+  name: string;
+}
+
 /** World-independent, system-scoped template catalog (ADR-0093). CHARACTER/STATBLOCK kinds only. */
 export interface GlobalFieldTemplate {
   id: string;
   name: string;
   kind: TemplateKind;
-  system: string;
+  systemId: string;
   sections: TemplateSection[];
   createdAt: string;
   updatedAt: string;
@@ -1031,7 +1043,7 @@ export interface GlobalFieldTemplate {
 export interface GlobalFieldTemplateRequest {
   name: string;
   kind: TemplateKind;
-  system: string;
+  systemId: string;
   sections: TemplateSection[];
 }
 
@@ -1132,6 +1144,17 @@ export function fieldTemplatesApi(worldId: string) {
 export const builtinFieldTemplatesApi = {
   list: (kind?: TemplateKind) =>
     request<BuiltinFieldTemplate[]>(kind ? `/field-templates/builtin?kind=${kind}` : '/field-templates/builtin'),
+};
+
+/** World-independent CRUD for game systems (ADR-0094). */
+export const gameSystemsApi = {
+  list: () => request<GameSystem[]>('/game-systems'),
+  get: (id: string) => request<GameSystem>(`/game-systems/${id}`),
+  create: (body: GameSystemRequest) =>
+    request<GameSystem>('/game-systems', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: GameSystemRequest) =>
+    request<GameSystem>(`/game-systems/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string) => request<void>(`/game-systems/${id}`, { method: 'DELETE' }),
 };
 
 /** World-independent CRUD for the global template catalog (ADR-0093). */
