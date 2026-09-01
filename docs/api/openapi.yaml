@@ -1427,6 +1427,26 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/field-templates/{templateId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/FieldTemplateId'
+    post:
+      tags: [sheets]
+      summary: Duplicate a field template (copy-then-rename, ADR-0089)
+      operationId: duplicateFieldTemplate
+      responses:
+        '201':
+          description: The new copy, named "<source> (copy)".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/whiteboards:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1623,6 +1643,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/roll-tables/{tableId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/RollTableId'
+    post:
+      tags: [roll-tables]
+      summary: Duplicate a roll table (copy-then-rename, ADR-0089)
+      operationId: duplicateRollTable
+      description: >-
+        Entries in the copy get fresh ids, same as any newly created table;
+        nested table/deck chaining references copy through unchanged.
+      responses:
+        '201':
+          description: The new copy, named "<source> (copy)".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollTable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/card-decks:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1716,6 +1759,29 @@ paths:
       responses:
         '204':
           description: Card deck deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/card-decks/{deckId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CardDeckId'
+    post:
+      tags: [card-decks]
+      summary: Duplicate a card deck (copy-then-rename, ADR-0089)
+      operationId: duplicateCardDeck
+      description: >-
+        Cards in the copy get fresh ids, same as any newly created deck;
+        nested table/deck chaining references copy through unchanged.
+      responses:
+        '201':
+          description: The new copy, named "<source> (copy)".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardDeck'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -1846,6 +1912,29 @@ paths:
       responses:
         '204':
           description: Handout deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/handouts/{handoutId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/HandoutId'
+    post:
+      tags: [handouts]
+      summary: Duplicate a handout (copy-then-rename, ADR-0089)
+      operationId: duplicateHandout
+      description: >-
+        A straight field-for-field copy, including its session tag and
+        revealed flag - no smart defaults (ADR-0089).
+      responses:
+        '201':
+          description: The new copy, named "<source> (copy)".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Handout'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -1983,6 +2072,26 @@ paths:
       responses:
         '204':
           description: Statblock deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/statblocks/{statblockId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/StatblockId'
+    post:
+      tags: [statblocks]
+      summary: Duplicate a statblock (copy-then-rename, ADR-0089)
+      operationId: duplicateStatblock
+      responses:
+        '201':
+          description: The new copy, named "<source> (copy)".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statblock'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
