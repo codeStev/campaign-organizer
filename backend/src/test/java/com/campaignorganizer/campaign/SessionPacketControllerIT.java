@@ -1,5 +1,6 @@
 package com.campaignorganizer.campaign;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -13,6 +14,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 class SessionPacketControllerIT extends AbstractIntegrationTest {
 
@@ -31,11 +33,15 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
 
     /** POST a body and return the created entity's id. */
     private String create(String path, String body) throws Exception {
-        return JsonPath.read(mockMvc.perform(post(path)
-                        .header(HttpHeaders.AUTHORIZATION, auth)
+        return JsonPath.read(response(post(path), body), "$.id");
+    }
+
+    /** Perform a request with a JSON body and return the raw response body. */
+    private String response(MockHttpServletRequestBuilder req, String body) throws Exception {
+        return mockMvc.perform(req.header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString();
     }
 
     @Test
@@ -271,5 +277,76 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.articles[*].title",
                         Matchers.containsInAnyOrder("The Rusty Tankard", "Elara the Grey")))
                 .andExpect(jsonPath("$.articles[0].id").value(tavern));
+    }
+
+    @Test
+    void resolvesCheatSheetFragmentsFreshAndFlagsDanglingOnes() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        String statblockId = create("/api/worlds/" + worldId + "/statblocks",
+                "{\"name\":\"Klarg\",\"campaignId\":\"" + campaignId + "\"}");
+        String tableResponse = response(post("/api/worlds/" + worldId + "/roll-tables"),
+                "{\"title\":\"Weather\",\"diceExpression\":\"1d1\",\"entries\":"
+                        + "[{\"minResult\":1,\"maxResult\":1,\"body\":\"Storm over [[Phandalin]]\"}]}");
+        String tableId = JsonPath.read(tableResponse, "$.id");
+        String entryId = JsonPath.read(tableResponse, "$.entries[0].id");
+        String deckResponse = response(post("/api/worlds/" + worldId + "/card-decks"),
+                "{\"title\":\"Omens\",\"cards\":[{\"title\":\"The Tower\",\"body\":\"Disaster.\"}]}");
+        String deckId = JsonPath.read(deckResponse, "$.id");
+        String cardId = JsonPath.read(deckResponse, "$.cards[0].id");
+        // A reference must exist to be saved (ADR-0071); it only dangles once
+        // the statblock is deleted afterward.
+        String doomedStatblockId = create("/api/worlds/" + worldId + "/statblocks",
+                "{\"name\":\"Doomed\",\"campaignId\":\"" + campaignId + "\"}");
+
+        response(put("/api/worlds/" + worldId + "/campaigns/" + campaignId
+                        + "/sessions/" + sessionId + "/cheat-sheet"),
+                "{\"fragments\":["
+                        + "{\"type\":\"FREEFORM\",\"text\":\"Check the harbor door first\"},"
+                        + "{\"type\":\"STATBLOCK\",\"statblockId\":\"" + statblockId + "\"},"
+                        + "{\"type\":\"TABLE_ROW\",\"tableId\":\"" + tableId + "\",\"entryId\":\"" + entryId + "\"},"
+                        + "{\"type\":\"DECK_CARD\",\"deckId\":\"" + deckId + "\",\"cardId\":\"" + cardId + "\"},"
+                        + "{\"type\":\"STATBLOCK\",\"statblockId\":\"" + doomedStatblockId + "\"}"
+                        + "]}");
+        mockMvc.perform(delete("/api/worlds/" + worldId + "/statblocks/" + doomedStatblockId)
+                        .header(HttpHeaders.AUTHORIZATION, auth));
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cheatSheet.fragments.length()").value(5))
+                .andExpect(jsonPath("$.cheatSheet.fragments[0].type").value("FREEFORM"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[0].text").value("Check the harbor door first"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[0].missing").value(false))
+                .andExpect(jsonPath("$.cheatSheet.fragments[1].type").value("STATBLOCK"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[1].statblock.name").value("Klarg"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[1].missing").value(false))
+                .andExpect(jsonPath("$.cheatSheet.fragments[2].type").value("TABLE_ROW"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[2].tableTitle").value("Weather"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[2].tableEntry.bodyHtml")
+                        .value(Matchers.containsString("Storm over")))
+                .andExpect(jsonPath("$.cheatSheet.fragments[3].type").value("DECK_CARD"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[3].deckTitle").value("Omens"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[3].deckCard.title").value("The Tower"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[3].deckCard.bodyHtml")
+                        .value(Matchers.containsString("Disaster.")))
+                .andExpect(jsonPath("$.cheatSheet.fragments[4].type").value("STATBLOCK"))
+                .andExpect(jsonPath("$.cheatSheet.fragments[4].missing").value(true))
+                .andExpect(jsonPath("$.cheatSheet.fragments[4].statblock").doesNotExist());
+    }
+
+    @Test
+    void omitsCheatSheetWhenSessionHasNoneSaved() throws Exception {
+        setup();
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cheatSheet").doesNotExist());
     }
 }
