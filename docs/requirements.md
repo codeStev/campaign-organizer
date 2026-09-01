@@ -104,7 +104,8 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   (ADR-0035)
 - **FR-28 Session prep packet.** One-click printable packet for a session: its
   scheduled beats, the articles they reference, maps those articles are pinned on,
-  and campaign statblocks. (ADR-0036, ADR-0046)
+  campaign statblocks, and (opt-out, included by default) the session's cheat
+  sheet (FR-37). (ADR-0036, ADR-0046, ADR-0086)
 - **FR-29 Statblock cards.** Print statblocks as cut-out reference cards; tick
   specific statblocks to print a chosen subset, or print the whole filtered list.
   (ADR-0037, ADR-0041)
@@ -141,12 +142,14 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   and in-app import of that ZIP, either additive (new worlds alongside
   existing ones) or full-overwrite (replaces everything). (ADR-0061,
   supersedes ADR-0055)
-- **FR-37 Session cheat sheet.** A condensed, one-page print view separate
-  from the full session packet (FR-28): a hand-curated, ordered list of
-  fragments per session — freeform snippets plus live references to existing
-  content (statblocks, single roll-table rows, single deck cards), rendered
-  fresh from their sources at print time. Built as a per-session composer
-  with explicit ordering and one-dense-page output (ADR-0071).
+- **FR-37 Session cheat sheet.** A condensed, one-page print view: a
+  hand-curated, ordered list of fragments per session — freeform snippets
+  plus live references to existing content (statblocks, single roll-table
+  rows, single deck cards), rendered fresh from their sources at print
+  time. Built as a per-session composer with explicit ordering and
+  one-dense-page output (ADR-0071). Also prints standalone via its own
+  button, and — opt-out, included by default — as another section of the
+  full session packet's (FR-28) print selection (ADR-0086).
   Goal: cut mid-session lookups — which currently compete with the
   GM's own attention to take notes on what's happening at the table — down to
   a glance instead of flipping through the full packet. Live voice-note
