@@ -16,6 +16,7 @@ import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -68,11 +69,15 @@ public class CampaignRosterService implements GetCampaignRosterUseCase, SetCampa
             }
         }
         roster.deleteByCampaign(command.campaignId());
+        // Built from what was just saved, not re-read: a query here would force
+        // Hibernate to auto-flush, and it flushes pending inserts before pending
+        // deletes, so a re-read would collide with the not-yet-deleted old rows.
+        List<CampaignPlayer> saved = new ArrayList<>();
         for (RosterEntryInput in : command.entries()) {
-            roster.save(CampaignPlayer.create(ids.newId(), command.campaignId(), in.playerId(),
-                    in.guest(), clock.instant()));
+            saved.add(roster.save(CampaignPlayer.create(ids.newId(), command.campaignId(),
+                    in.playerId(), in.guest(), clock.instant())));
         }
-        return toEntries(command.worldId(), roster.findByCampaign(command.campaignId()));
+        return toEntries(command.worldId(), saved);
     }
 
     // --- published import port (ADR-0061) ---

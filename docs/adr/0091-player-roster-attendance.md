@@ -78,12 +78,17 @@ absences") as bulk state, not row-by-row management.
   submitted set (each `playerId` validated to exist in the world via a
   new `PlayerExistsPort` ACL).
 - **Attendance** (`GET`/`PUT /sessions/{sessionId}/attendance`): `GET`
-  unions persisted `session_attendance` rows with any roster player who
-  has no row yet, synthesizing `present=true, characterId=null` for the
-  gap (matching "pre-populated... defaulting to everyone present," and
-  `CheatSheet`'s "unsaved sentinel" idea applied per-row instead of to
-  the whole object). `PUT` deletes and recreates the whole set for that
-  session from `{playerId, present, characterId}` triples.
+  unions persisted `session_attendance` rows with the campaign's current
+  roster, in both directions — a roster player with no row yet gets a
+  synthesized `present=true, characterId=null` entry (matching
+  "pre-populated... defaulting to everyone present," and `CheatSheet`'s
+  "unsaved sentinel" idea applied per-row instead of to the whole
+  object); a saved row for a player no longer on the roster still
+  appears too (missing only the guest flag the roster would have
+  supplied, which defaults to `false`) — otherwise a roster edit would
+  silently hide exactly the history this feature exists to keep. `PUT`
+  deletes and recreates the whole set for that session from
+  `{playerId, present, characterId}` triples.
 
 ### Historical accuracy: attendance outlives roster membership
 `SessionAttendance.playerId` is a direct FK to `players(id)`, **not** to

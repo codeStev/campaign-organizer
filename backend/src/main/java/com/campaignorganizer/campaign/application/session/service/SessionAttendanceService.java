@@ -23,8 +23,10 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,7 +72,11 @@ public class SessionAttendanceService implements GetSessionAttendanceUseCase, Pu
     @Transactional(readOnly = true)
     public List<AttendanceEntry> get(UUID worldId, UUID campaignId, UUID sessionId) {
         requireSession(worldId, campaignId, sessionId);
-        return buildEntries(worldId, campaignId, sessionId);
+        Map<UUID, SessionAttendance> saved = new HashMap<>();
+        for (SessionAttendance row : attendance.findBySession(sessionId)) {
+            saved.put(row.getPlayerId(), row);
+        }
+        return buildEntries(worldId, campaignId, saved);
     }
 
     @Override
@@ -88,11 +94,16 @@ public class SessionAttendanceService implements GetSessionAttendanceUseCase, Pu
             }
         }
         attendance.deleteBySession(command.sessionId());
+        // Built from what was just saved, not re-read: a query here would force
+        // Hibernate to auto-flush, and it flushes pending inserts before pending
+        // deletes, so a re-read would collide with the not-yet-deleted old rows.
+        Map<UUID, SessionAttendance> saved = new HashMap<>();
         for (AttendanceEntryInput in : command.entries()) {
-            attendance.save(SessionAttendance.create(ids.newId(), command.sessionId(), in.playerId(),
-                    in.present(), in.characterId(), clock.instant()));
+            SessionAttendance row = attendance.save(SessionAttendance.create(ids.newId(),
+                    command.sessionId(), in.playerId(), in.present(), in.characterId(), clock.instant()));
+            saved.put(row.getPlayerId(), row);
         }
-        return buildEntries(command.worldId(), command.campaignId(), command.sessionId());
+        return buildEntries(command.worldId(), command.campaignId(), saved);
     }
 
     // --- published import port (ADR-0061) ---
@@ -113,23 +124,32 @@ public class SessionAttendanceService implements GetSessionAttendanceUseCase, Pu
         return attendance.findBySession(sessionId).stream().map(this::toView).toList();
     }
 
-    /** Unions the campaign roster with any saved attendance rows for the session. */
-    private List<AttendanceEntry> buildEntries(UUID worldId, UUID campaignId, UUID sessionId) {
-        List<CampaignPlayerView> rosterRows = roster.findByCampaign(campaignId);
-        Map<UUID, SessionAttendance> saved = new HashMap<>();
-        for (SessionAttendance row : attendance.findBySession(sessionId)) {
-            saved.put(row.getPlayerId(), row);
+    /**
+     * Unions the campaign roster with any saved attendance rows for the session.
+     * A roster player with no saved row yet defaults to present with no
+     * character. A saved row for a player no longer on the roster still
+     * appears (historical accuracy, ADR-0091) — it's just missing the guest
+     * flag the roster would have supplied, so that defaults to {@code false}.
+     */
+    private List<AttendanceEntry> buildEntries(UUID worldId, UUID campaignId,
+                                               Map<UUID, SessionAttendance> saved) {
+        Map<UUID, Boolean> guestByPlayer = new HashMap<>();
+        for (CampaignPlayerView r : roster.findByCampaign(campaignId)) {
+            guestByPlayer.put(r.playerId(), r.guest());
         }
+        Set<UUID> playerIds = new LinkedHashSet<>(guestByPlayer.keySet());
+        playerIds.addAll(saved.keySet());
+
         List<AttendanceEntry> out = new ArrayList<>();
-        for (CampaignPlayerView r : rosterRows) {
-            SessionAttendance row = saved.get(r.playerId());
+        for (UUID playerId : playerIds) {
+            SessionAttendance row = saved.get(playerId);
             boolean present = row == null || row.isPresent();
             UUID characterId = row == null ? null : row.getCharacterId();
-            String name = players.findName(r.playerId(), worldId).orElse("Unknown player");
+            boolean guest = guestByPlayer.getOrDefault(playerId, false);
+            String name = players.findName(playerId, worldId).orElse("Unknown player");
             String characterName = characterId == null ? null
                     : characterSheets.findName(characterId, worldId).orElse(null);
-            out.add(new AttendanceEntry(r.playerId(), name, r.guest(), present, characterId,
-                    characterName));
+            out.add(new AttendanceEntry(playerId, name, guest, present, characterId, characterName));
         }
         return out.stream().sorted(Comparator.comparing(AttendanceEntry::name,
                 String.CASE_INSENSITIVE_ORDER)).toList();
