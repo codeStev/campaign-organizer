@@ -1152,6 +1152,31 @@ button:disabled {
   border-color: var(--destructive);
 }
 
+.campaign-status {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--input);
+  color: var(--muted-foreground);
+}
+
+.campaign-planned {
+  color: var(--muted-foreground);
+}
+.campaign-active {
+  color: #6ad39f;
+  border-color: #6ad39f;
+}
+.campaign-on-hiatus {
+  color: #e0b04f;
+  border-color: #e0b04f;
+}
+.campaign-completed {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
 .loose-threads {
   display: flex;
   flex-direction: column;

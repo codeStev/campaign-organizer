@@ -5,6 +5,8 @@ import {
   articlesApi,
   statblocksApi,
   Campaign,
+  CampaignStatus,
+  CAMPAIGN_STATUSES,
   ArticleSummary,
   Statblock,
   ApiError,
@@ -14,6 +16,7 @@ import { ArcBoard } from './ArcBoard';
 import { ClockBoard } from './ClockBoard';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
@@ -108,6 +111,22 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     }
   }
 
+  async function setStatus(campaign: Campaign, status: CampaignStatus) {
+    try {
+      const updated = await api.update(campaign.id, {
+        name: campaign.name,
+        description: campaign.description,
+        notes: campaign.notes,
+        status,
+      });
+      setSelected(updated);
+      await refresh();
+      toast.success(`"${campaign.name}" marked ${status.toLowerCase().replace('_', ' ')}`);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   async function removeCampaign(campaign: Campaign) {
     try {
       await api.remove(campaign.id);
@@ -159,6 +178,24 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
           <>
             <div className="map-bar">
               <h2>{selected.name}</h2>
+              <span className={`campaign-status campaign-${selected.status.toLowerCase().replace('_', '-')}`}>
+                {selected.status.toLowerCase().replace('_', ' ')}
+              </span>
+              <Select
+                value={selected.status}
+                onValueChange={(v) => void setStatus(selected, v as CampaignStatus)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CAMPAIGN_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s.toLowerCase().replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <ConfirmDeleteDialog
                 trigger={
                   <Button variant="link" className="text-destructive hover:text-destructive">
