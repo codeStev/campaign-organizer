@@ -31,7 +31,9 @@ non-functional). Each maps to a roadmap phase.
   into cross-links.
 - **FR-6 Media library.** Upload images and reuse them across articles and maps;
   stored on a local volume. (ADR-0007)
-- **FR-7 Search.** Full-text search across a world's articles.
+- **FR-7 Search.** Full-text search across a world's articles; also matches
+  an article's tags (FR-47), so searching a tag name finds articles marked
+  with it even with no title/body hit. (ADR-0087)
 
 ### Worldbuilding tools (Phase 2)
 - **FR-8 Interactive maps.** Upload a map image, place pins (edited inline for

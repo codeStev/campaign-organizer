@@ -76,6 +76,7 @@ the old one.
 | [0084](0084-clocks.md) | Clocks — segmented, labeled progress trackers (amends ADR-0036) | Accepted |
 | [0085](0085-loose-threads.md) | Loose threads — retrospective session tracker, denormalized campaign_id | Accepted |
 | [0086](0086-cheat-sheet-in-packet.md) | Fold the cheat sheet into the session packet (amends ADR-0036, ADR-0071) | Accepted |
+| [0087](0087-tag-name-search.md) | Article search matches tag names | Accepted |
 
 ## Template
 
