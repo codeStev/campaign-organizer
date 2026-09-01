@@ -8,6 +8,7 @@ import com.campaignorganizer.tables.application.carddeck.port.in.CardDeckCommand
 import com.campaignorganizer.tables.application.carddeck.port.in.CardDeckCommands.UpdateCardDeckCommand;
 import com.campaignorganizer.tables.application.carddeck.port.in.CreateCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.DeleteCardDeckUseCase;
+import com.campaignorganizer.tables.application.carddeck.port.in.DuplicateCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.GetCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.ListCardDecksUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.UpdateCardDeckUseCase;
@@ -30,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Card-deck use cases; also implements the published query/import ports. */
 @Service
 public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUseCase,
-        DeleteCardDeckUseCase, ListCardDecksUseCase, GetCardDeckUseCase,
+        DeleteCardDeckUseCase, DuplicateCardDeckUseCase, ListCardDecksUseCase, GetCardDeckUseCase,
         CardDeckQueryPort, CardDeckImportPort {
 
     private final CardDeckRepositoryPort decks;
@@ -77,6 +78,17 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     @Transactional
     public void delete(UUID worldId, UUID deckId) {
         decks.delete(require(worldId, deckId));
+    }
+
+    @Override
+    @Transactional
+    public CardDeckView duplicate(UUID worldId, UUID deckId) {
+        CardDeck source = require(worldId, deckId);
+        List<CardInput> cards = source.getCards().stream()
+                .map(c -> new CardInput(c.title(), c.body(), c.nestedTableIds(), c.nestedDeckIds()))
+                .toList();
+        return create(new CreateCardDeckCommand(worldId, source.getTitle() + " (copy)",
+                source.getDescription(), cards));
     }
 
     @Override

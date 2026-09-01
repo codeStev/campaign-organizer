@@ -6,6 +6,7 @@ import com.campaignorganizer.tables.adapter.rolltable.in.web.RollTableWebDtos.Ro
 import com.campaignorganizer.tables.adapter.rolltable.in.web.RollTableWebDtos.RollTableResponse;
 import com.campaignorganizer.tables.application.rolltable.port.in.CreateRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.DeleteRollTableUseCase;
+import com.campaignorganizer.tables.application.rolltable.port.in.DuplicateRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.GetRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.ListRollTablesUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.UpdateRollTableUseCase;
@@ -35,18 +36,20 @@ public class RollTableController {
     private final DeleteRollTableUseCase deleteUseCase;
     private final ListRollTablesUseCase listUseCase;
     private final GetRollTableUseCase getUseCase;
+    private final DuplicateRollTableUseCase duplicateUseCase;
     private final RollTableWebMapper mapper;
 
     public RollTableController(CreateRollTableUseCase createUseCase,
                                UpdateRollTableUseCase updateUseCase,
                                DeleteRollTableUseCase deleteUseCase,
                                ListRollTablesUseCase listUseCase, GetRollTableUseCase getUseCase,
-                               RollTableWebMapper mapper) {
+                               DuplicateRollTableUseCase duplicateUseCase, RollTableWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
+        this.duplicateUseCase = duplicateUseCase;
         this.mapper = mapper;
     }
 
@@ -81,5 +84,11 @@ public class RollTableController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID tableId) {
         deleteUseCase.delete(worldId, tableId);
+    }
+
+    @PostMapping("/{tableId}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public RollTableResponse duplicate(@PathVariable UUID worldId, @PathVariable UUID tableId) {
+        return mapper.toResponse(duplicateUseCase.duplicate(worldId, tableId));
     }
 }

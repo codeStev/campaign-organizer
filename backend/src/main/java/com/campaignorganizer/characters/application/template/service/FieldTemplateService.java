@@ -2,6 +2,7 @@ package com.campaignorganizer.characters.application.template.service;
 
 import com.campaignorganizer.characters.application.template.port.in.CreateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.DeleteFieldTemplateUseCase;
+import com.campaignorganizer.characters.application.template.port.in.DuplicateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.GetFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.ListFieldTemplatesUseCase;
 import com.campaignorganizer.characters.application.template.port.in.FieldTemplateCommands.CreateFieldTemplateCommand;
@@ -26,8 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Field template use cases; also implements the published query port for consumers. */
 @Service
 public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateFieldTemplateUseCase,
-        DeleteFieldTemplateUseCase, GetFieldTemplateUseCase, ListFieldTemplatesUseCase,
-        FieldTemplateQueryPort, FieldTemplateImportPort {
+        DeleteFieldTemplateUseCase, DuplicateFieldTemplateUseCase, GetFieldTemplateUseCase,
+        ListFieldTemplatesUseCase, FieldTemplateQueryPort, FieldTemplateImportPort {
 
     private final FieldTemplateRepositoryPort templates;
     private final WorldExistsPort worlds;
@@ -65,6 +66,14 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional
     public void delete(UUID worldId, UUID templateId) {
         templates.delete(require(worldId, templateId));
+    }
+
+    @Override
+    @Transactional
+    public FieldTemplateView duplicate(UUID worldId, UUID templateId) {
+        FieldTemplate source = require(worldId, templateId);
+        return create(new CreateFieldTemplateCommand(worldId, source.getName() + " (copy)",
+                source.getKind(), source.getSystem(), source.getSections()));
     }
 
     @Override

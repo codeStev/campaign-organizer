@@ -2,6 +2,7 @@ package com.campaignorganizer.handouts.application.service;
 
 import com.campaignorganizer.handouts.application.port.in.CreateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.DeleteHandoutUseCase;
+import com.campaignorganizer.handouts.application.port.in.DuplicateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.GetHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.CreateHandoutCommand;
 import com.campaignorganizer.handouts.application.port.in.HandoutCommands.ReorderHandoutsCommand;
@@ -35,8 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Handout use cases; also implements the published query/import ports. */
 @Service
 public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCase,
-        DeleteHandoutUseCase, ListHandoutsUseCase, GetHandoutUseCase, ReorderHandoutsUseCase,
-        HandoutQueryPort, HandoutImportPort {
+        DeleteHandoutUseCase, DuplicateHandoutUseCase, ListHandoutsUseCase, GetHandoutUseCase,
+        ReorderHandoutsUseCase, HandoutQueryPort, HandoutImportPort {
 
     private final HandoutRepositoryPort handouts;
     private final WorldExistsPort worlds;
@@ -81,6 +82,15 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     @Transactional
     public void delete(UUID worldId, UUID handoutId) {
         handouts.delete(require(worldId, handoutId));
+    }
+
+    @Override
+    @Transactional
+    public HandoutView duplicate(UUID worldId, UUID handoutId) {
+        Handout source = require(worldId, handoutId);
+        return create(new CreateHandoutCommand(worldId, source.getTitle() + " (copy)",
+                source.getPreset().name(), source.getBody(), source.getSessionId(),
+                source.isRevealed()));
     }
 
     @Override

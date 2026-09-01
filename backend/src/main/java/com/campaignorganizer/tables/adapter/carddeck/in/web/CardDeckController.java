@@ -4,6 +4,7 @@ import com.campaignorganizer.tables.adapter.carddeck.in.web.CardDeckWebDtos.Card
 import com.campaignorganizer.tables.adapter.carddeck.in.web.CardDeckWebDtos.CardDeckResponse;
 import com.campaignorganizer.tables.application.carddeck.port.in.CreateCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.DeleteCardDeckUseCase;
+import com.campaignorganizer.tables.application.carddeck.port.in.DuplicateCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.GetCardDeckUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.ListCardDecksUseCase;
 import com.campaignorganizer.tables.application.carddeck.port.in.UpdateCardDeckUseCase;
@@ -33,18 +34,20 @@ public class CardDeckController {
     private final DeleteCardDeckUseCase deleteUseCase;
     private final ListCardDecksUseCase listUseCase;
     private final GetCardDeckUseCase getUseCase;
+    private final DuplicateCardDeckUseCase duplicateUseCase;
     private final CardDeckWebMapper mapper;
 
     public CardDeckController(CreateCardDeckUseCase createUseCase,
                               UpdateCardDeckUseCase updateUseCase,
                               DeleteCardDeckUseCase deleteUseCase,
                               ListCardDecksUseCase listUseCase, GetCardDeckUseCase getUseCase,
-                              CardDeckWebMapper mapper) {
+                              DuplicateCardDeckUseCase duplicateUseCase, CardDeckWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
+        this.duplicateUseCase = duplicateUseCase;
         this.mapper = mapper;
     }
 
@@ -79,5 +82,11 @@ public class CardDeckController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID deckId) {
         deleteUseCase.delete(worldId, deckId);
+    }
+
+    @PostMapping("/{deckId}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CardDeckResponse duplicate(@PathVariable UUID worldId, @PathVariable UUID deckId) {
+        return mapper.toResponse(duplicateUseCase.duplicate(worldId, deckId));
     }
 }

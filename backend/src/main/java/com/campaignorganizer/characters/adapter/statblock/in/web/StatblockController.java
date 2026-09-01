@@ -4,6 +4,7 @@ import com.campaignorganizer.characters.adapter.statblock.in.web.StatblockWebDto
 import com.campaignorganizer.characters.adapter.statblock.in.web.StatblockWebDtos.StatblockResponse;
 import com.campaignorganizer.characters.application.statblock.port.in.CreateStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.DeleteStatblockUseCase;
+import com.campaignorganizer.characters.application.statblock.port.in.DuplicateStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.GetStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.ListStatblocksUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.UpdateStatblockUseCase;
@@ -33,16 +34,19 @@ public class StatblockController {
     private final DeleteStatblockUseCase deleteUseCase;
     private final GetStatblockUseCase getUseCase;
     private final ListStatblocksUseCase listUseCase;
+    private final DuplicateStatblockUseCase duplicateUseCase;
     private final StatblockWebMapper mapper;
 
     public StatblockController(CreateStatblockUseCase createUseCase, UpdateStatblockUseCase updateUseCase,
                               DeleteStatblockUseCase deleteUseCase, GetStatblockUseCase getUseCase,
-                              ListStatblocksUseCase listUseCase, StatblockWebMapper mapper) {
+                              ListStatblocksUseCase listUseCase, DuplicateStatblockUseCase duplicateUseCase,
+                              StatblockWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.getUseCase = getUseCase;
         this.listUseCase = listUseCase;
+        this.duplicateUseCase = duplicateUseCase;
         this.mapper = mapper;
     }
 
@@ -79,5 +83,11 @@ public class StatblockController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID statblockId) {
         deleteUseCase.delete(worldId, statblockId);
+    }
+
+    @PostMapping("/{statblockId}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public StatblockResponse duplicate(@PathVariable UUID worldId, @PathVariable UUID statblockId) {
+        return mapper.toResponse(duplicateUseCase.duplicate(worldId, statblockId));
     }
 }

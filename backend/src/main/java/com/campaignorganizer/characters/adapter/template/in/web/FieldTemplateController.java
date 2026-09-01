@@ -4,6 +4,7 @@ import com.campaignorganizer.characters.adapter.template.in.web.FieldTemplateWeb
 import com.campaignorganizer.characters.adapter.template.in.web.FieldTemplateWebDtos.FieldTemplateResponse;
 import com.campaignorganizer.characters.application.template.port.in.CreateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.DeleteFieldTemplateUseCase;
+import com.campaignorganizer.characters.application.template.port.in.DuplicateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.GetFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.ListFieldTemplatesUseCase;
 import com.campaignorganizer.characters.application.template.port.in.UpdateFieldTemplateUseCase;
@@ -34,18 +35,22 @@ public class FieldTemplateController {
     private final DeleteFieldTemplateUseCase deleteUseCase;
     private final GetFieldTemplateUseCase getUseCase;
     private final ListFieldTemplatesUseCase listUseCase;
+    private final DuplicateFieldTemplateUseCase duplicateUseCase;
     private final FieldTemplateWebMapper mapper;
 
     public FieldTemplateController(CreateFieldTemplateUseCase createUseCase,
                                    UpdateFieldTemplateUseCase updateUseCase,
                                    DeleteFieldTemplateUseCase deleteUseCase,
                                    GetFieldTemplateUseCase getUseCase,
-                                   ListFieldTemplatesUseCase listUseCase, FieldTemplateWebMapper mapper) {
+                                   ListFieldTemplatesUseCase listUseCase,
+                                   DuplicateFieldTemplateUseCase duplicateUseCase,
+                                   FieldTemplateWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.getUseCase = getUseCase;
         this.listUseCase = listUseCase;
+        this.duplicateUseCase = duplicateUseCase;
         this.mapper = mapper;
     }
 
@@ -81,5 +86,11 @@ public class FieldTemplateController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID templateId) {
         deleteUseCase.delete(worldId, templateId);
+    }
+
+    @PostMapping("/{templateId}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public FieldTemplateResponse duplicate(@PathVariable UUID worldId, @PathVariable UUID templateId) {
+        return mapper.toResponse(duplicateUseCase.duplicate(worldId, templateId));
     }
 }

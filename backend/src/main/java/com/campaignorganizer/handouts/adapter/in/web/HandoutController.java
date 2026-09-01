@@ -5,6 +5,7 @@ import com.campaignorganizer.handouts.adapter.in.web.HandoutWebDtos.HandoutRespo
 import com.campaignorganizer.handouts.adapter.in.web.HandoutWebDtos.ReorderHandoutsRequest;
 import com.campaignorganizer.handouts.application.port.in.CreateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.DeleteHandoutUseCase;
+import com.campaignorganizer.handouts.application.port.in.DuplicateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.GetHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.in.ListHandoutsUseCase;
 import com.campaignorganizer.handouts.application.port.in.ReorderHandoutsUseCase;
@@ -45,19 +46,21 @@ public class HandoutController {
     private final ListHandoutsUseCase listUseCase;
     private final GetHandoutUseCase getUseCase;
     private final ReorderHandoutsUseCase reorderUseCase;
+    private final DuplicateHandoutUseCase duplicateUseCase;
     private final HandoutWebMapper mapper;
 
     public HandoutController(CreateHandoutUseCase createUseCase,
                              UpdateHandoutUseCase updateUseCase,
                              DeleteHandoutUseCase deleteUseCase, ListHandoutsUseCase listUseCase,
                              GetHandoutUseCase getUseCase, ReorderHandoutsUseCase reorderUseCase,
-                             HandoutWebMapper mapper) {
+                             DuplicateHandoutUseCase duplicateUseCase, HandoutWebMapper mapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
         this.reorderUseCase = reorderUseCase;
+        this.duplicateUseCase = duplicateUseCase;
         this.mapper = mapper;
     }
 
@@ -100,5 +103,11 @@ public class HandoutController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID worldId, @PathVariable UUID handoutId) {
         deleteUseCase.delete(worldId, handoutId);
+    }
+
+    @PostMapping("/{handoutId:" + UUID_PATTERN + "}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public HandoutResponse duplicate(@PathVariable UUID worldId, @PathVariable UUID handoutId) {
+        return mapper.toResponse(duplicateUseCase.duplicate(worldId, handoutId));
     }
 }

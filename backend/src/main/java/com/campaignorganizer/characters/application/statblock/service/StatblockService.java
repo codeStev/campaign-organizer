@@ -2,6 +2,7 @@ package com.campaignorganizer.characters.application.statblock.service;
 
 import com.campaignorganizer.characters.application.statblock.port.in.CreateStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.DeleteStatblockUseCase;
+import com.campaignorganizer.characters.application.statblock.port.in.DuplicateStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.GetStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.ListStatblocksUseCase;
 import com.campaignorganizer.characters.application.statblock.port.in.StatblockCommands.CreateStatblockCommand;
@@ -36,8 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Statblock use cases; also implements the published query port for consumers. */
 @Service
 public class StatblockService implements CreateStatblockUseCase, UpdateStatblockUseCase,
-        DeleteStatblockUseCase, GetStatblockUseCase, ListStatblocksUseCase, StatblockQueryPort,
-        StatblockImportPort {
+        DeleteStatblockUseCase, DuplicateStatblockUseCase, GetStatblockUseCase, ListStatblocksUseCase,
+        StatblockQueryPort, StatblockImportPort {
 
     private final StatblockRepositoryPort statblocks;
     private final WorldExistsPort worlds;
@@ -92,6 +93,15 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public void delete(UUID worldId, UUID statblockId) {
         statblocks.delete(require(worldId, statblockId));
+    }
+
+    @Override
+    @Transactional
+    public StatblockView duplicate(UUID worldId, UUID statblockId) {
+        Statblock source = require(worldId, statblockId);
+        return create(new CreateStatblockCommand(worldId, source.getArticleId(),
+                source.getCampaignId(), source.getTemplateId(), source.getName() + " (copy)",
+                source.getStats(), source.getNotes()));
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.tables.application.carddeck.port.out.CardDeckRepositoryPort;
 import com.campaignorganizer.tables.application.rolltable.port.in.CreateRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.DeleteRollTableUseCase;
+import com.campaignorganizer.tables.application.rolltable.port.in.DuplicateRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.GetRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.ListRollTablesUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.RollTableCommands.CreateRollTableCommand;
@@ -29,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Roll-table use cases; also implements the published query/import ports. */
 @Service
 public class RollTableService implements CreateRollTableUseCase, UpdateRollTableUseCase,
-        DeleteRollTableUseCase, ListRollTablesUseCase, GetRollTableUseCase,
+        DeleteRollTableUseCase, DuplicateRollTableUseCase, ListRollTablesUseCase, GetRollTableUseCase,
         RollTableQueryPort, RollTableImportPort {
 
     private final RollTableRepositoryPort tables;
@@ -78,6 +79,18 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
     @Transactional
     public void delete(UUID worldId, UUID tableId) {
         tables.delete(require(worldId, tableId));
+    }
+
+    @Override
+    @Transactional
+    public RollTableView duplicate(UUID worldId, UUID tableId) {
+        RollTable source = require(worldId, tableId);
+        List<EntryInput> entries = source.getEntries().stream()
+                .map(e -> new EntryInput(e.minResult(), e.maxResult(), e.body(),
+                        e.nestedTableIds(), e.nestedDeckIds()))
+                .toList();
+        return create(new CreateRollTableCommand(worldId, source.getTitle() + " (copy)",
+                source.getDescription(), source.getDiceExpression(), entries));
     }
 
     @Override
