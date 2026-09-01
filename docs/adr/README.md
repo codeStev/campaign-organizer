@@ -86,6 +86,7 @@ the old one.
 | [0094](0094-game-system-entity.md) | Game system as a real entity (replaces the free-text `system` field) | Accepted |
 | [0095](0095-game-system-details-and-campaign-link.md) | Game system details (tagline/color/notes) and `Campaign.systemId` | Accepted |
 | [0096](0096-global-statblock-catalog.md) | Global, system-scoped statblock catalog with copy-on-import | Accepted |
+| [0097](0097-encounter-builder.md) | Persisted encounter builder, linkable to arc beats | Accepted |
 
 ## Template
 

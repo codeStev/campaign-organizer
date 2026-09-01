@@ -123,7 +123,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **FR-33 Beat statblock references.** Attach statblocks to a beat directly (no
   article needed). A statblock referenced by a campaign's beats is treated as
   relevant to that campaign — its statblock list and session packets include such
-  shared statblocks. (ADR-0043; refines FR-14, FR-18.)
+  shared statblocks. (ADR-0043; refines FR-14, FR-18.) Extended, not superseded,
+  by FR-59 — a loose statblock reference and a structured encounter are separate
+  things a beat can carry.
 - **FR-34 Statblock templates.** Reuse the character sheet engine's field
   template (renamed `FieldTemplate`, ADR-0052) to build reusable statblock
   layouts — sections of typed fields (text, number, select, circle trackers,
@@ -209,7 +211,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   tick-boxes, an initiative column, and key defenses cribbed from the
   statblock — pure assembly over existing content, run from paper like the
   rest of the session material; quantities and max-HP prefill are staged
-  before printing, nothing is persisted. (ADR-0069)
+  before printing, nothing is persisted. (ADR-0069) This ad-hoc,
+  nothing-persisted flow still exists unchanged alongside FR-59's saved
+  encounters — printing a saved encounter reuses the same tracker.
 - **FR-45 Session chronicle / recap builder.** One click renders "the
   story so far" from completed beats and past sessions' summaries as a
   printable recap to open the next session with — read-only over existing
@@ -314,6 +318,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   into a campaign is an explicit, one-time copy ("import"), not a live
   reference: the imported statblock and the catalog original are
   independent from that point on. (ADR-0096)
+- **FR-59 Encounter builder.** Build a named, reusable encounter from any
+  number of statblocks (with per-entry quantity and an optional max-HP
+  override), save it to a campaign, and link it to one or more arc beats.
+  A saved encounter prints through the same tracker FR-44 already
+  generates for ad-hoc selections, pre-seeded with its saved quantities
+  and HP overrides. (ADR-0097; extends FR-33, FR-44)
 
 ---
 
