@@ -325,7 +325,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
           </Button>
         )}
         {importOpen && (
-          <div className="editor-actions">
+          <div className="import-catalog-picker">
             <Select value={importCatalogId || NONE_VALUE} onValueChange={(v) => setImportCatalogId(v === NONE_VALUE ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose a statblock…" />
@@ -359,16 +359,18 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              type="button"
-              onClick={() => void importFromCatalog()}
-              disabled={!importCatalogId || !importCampaignId}
-            >
-              Import
-            </Button>
-            <Button type="button" variant="link" onClick={() => setImportOpen(false)}>
-              Cancel
-            </Button>
+            <div className="editor-actions">
+              <Button
+                type="button"
+                onClick={() => void importFromCatalog()}
+                disabled={!importCatalogId || !importCampaignId}
+              >
+                Import
+              </Button>
+              <Button type="button" variant="link" onClick={() => setImportOpen(false)}>
+                Cancel
+              </Button>
+            </div>
           </div>
         )}
         {campaigns.length > 0 && (

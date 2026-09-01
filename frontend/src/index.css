@@ -1661,6 +1661,15 @@ button:disabled {
   min-width: 0;
 }
 
+/* Narrow sidebar column — stack instead of the row layout .editor-actions
+   uses elsewhere, which would overflow this column's fixed width. */
+.import-catalog-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .sheet-detail {
   min-width: 0;
 }
