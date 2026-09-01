@@ -50,7 +50,8 @@ public class GameSystemService implements CreateGameSystemUseCase, UpdateGameSys
     @Transactional
     public GameSystemView create(CreateGameSystemCommand command) {
         requireNameAvailable(command.name(), null);
-        GameSystem created = GameSystem.create(ids.newId(), command.name(), clock.instant());
+        GameSystem created = GameSystem.create(ids.newId(), command.name(), command.tagline(),
+                command.color(), command.notes(), clock.instant());
         return viewMapper.toView(systems.save(created));
     }
 
@@ -59,7 +60,7 @@ public class GameSystemService implements CreateGameSystemUseCase, UpdateGameSys
     public GameSystemView update(UpdateGameSystemCommand command) {
         GameSystem system = require(command.systemId());
         requireNameAvailable(command.name(), command.systemId());
-        system.update(command.name(), clock.instant());
+        system.update(command.name(), command.tagline(), command.color(), command.notes(), clock.instant());
         return viewMapper.toView(systems.save(system));
     }
 
@@ -94,8 +95,8 @@ public class GameSystemService implements CreateGameSystemUseCase, UpdateGameSys
         if (existing.isPresent()) {
             return viewMapper.toView(existing.get());
         }
-        GameSystem created = GameSystem.reconstitute(view.id(), view.name(), view.createdAt(),
-                view.updatedAt());
+        GameSystem created = GameSystem.reconstitute(view.id(), view.name(), view.tagline(), view.color(),
+                view.notes(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(systems.save(created));
     }
 

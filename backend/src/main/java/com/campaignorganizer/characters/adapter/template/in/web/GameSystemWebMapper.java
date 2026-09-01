@@ -14,10 +14,12 @@ public interface GameSystemWebMapper {
     GameSystemResponse toResponse(GameSystemView view);
 
     default CreateGameSystemCommand toCreateCommand(GameSystemRequest request) {
-        return new CreateGameSystemCommand(request.name());
+        return new CreateGameSystemCommand(request.name(), request.tagline(), request.color(),
+                request.notes());
     }
 
     default UpdateGameSystemCommand toUpdateCommand(UUID systemId, GameSystemRequest request) {
-        return new UpdateGameSystemCommand(systemId, request.name());
+        return new UpdateGameSystemCommand(systemId, request.name(), request.tagline(), request.color(),
+                request.notes());
     }
 }

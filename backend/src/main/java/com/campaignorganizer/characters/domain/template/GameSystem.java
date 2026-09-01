@@ -8,40 +8,49 @@ import java.util.UUID;
  * A game system (D&D 5e, Pirate Borg, ...) — a real, top-level, world-
  * independent entity (aggregate root) rather than a free-text label, so
  * system-level metadata (e.g. rule references) has somewhere stable to
- * attach later. See ADR-0094.
+ * attach later. See ADR-0094, ADR-0095.
  */
 public final class GameSystem {
 
     private final UUID id;
     private String name;
+    private String tagline;
+    private String color;
+    private String notes;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private GameSystem(UUID id, String name, Instant createdAt, Instant updatedAt) {
+    private GameSystem(UUID id, String name, String tagline, String color, String notes, Instant createdAt,
+                       Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(name);
+        apply(name, tagline, color, notes);
     }
 
-    public static GameSystem create(UUID id, String name, Instant now) {
-        return new GameSystem(id, name, now, now);
+    public static GameSystem create(UUID id, String name, String tagline, String color, String notes,
+                                    Instant now) {
+        return new GameSystem(id, name, tagline, color, notes, now, now);
     }
 
-    public static GameSystem reconstitute(UUID id, String name, Instant createdAt, Instant updatedAt) {
-        return new GameSystem(id, name, createdAt, updatedAt);
+    public static GameSystem reconstitute(UUID id, String name, String tagline, String color, String notes,
+                                          Instant createdAt, Instant updatedAt) {
+        return new GameSystem(id, name, tagline, color, notes, createdAt, updatedAt);
     }
 
-    public void update(String name, Instant now) {
-        apply(name);
+    public void update(String name, String tagline, String color, String notes, Instant now) {
+        apply(name, tagline, color, notes);
         this.updatedAt = now;
     }
 
-    private void apply(String name) {
+    private void apply(String name, String tagline, String color, String notes) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Game system name must not be blank");
         }
         this.name = name;
+        this.tagline = tagline;
+        this.color = color;
+        this.notes = notes;
     }
 
     public UUID getId() {
@@ -50,6 +59,18 @@ public final class GameSystem {
 
     public String getName() {
         return name;
+    }
+
+    public String getTagline() {
+        return tagline;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public String getNotes() {
+        return notes;
     }
 
     public Instant getCreatedAt() {

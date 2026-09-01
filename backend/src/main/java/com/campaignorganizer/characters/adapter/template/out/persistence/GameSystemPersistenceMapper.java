@@ -12,6 +12,7 @@ public interface GameSystemPersistenceMapper {
         if (e == null) {
             return null;
         }
-        return GameSystem.reconstitute(e.getId(), e.getName(), e.getCreatedAt(), e.getUpdatedAt());
+        return GameSystem.reconstitute(e.getId(), e.getName(), e.getTagline(), e.getColor(), e.getNotes(),
+                e.getCreatedAt(), e.getUpdatedAt());
     }
 }

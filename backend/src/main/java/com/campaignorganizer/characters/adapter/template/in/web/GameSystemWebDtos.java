@@ -10,9 +10,20 @@ public final class GameSystemWebDtos {
     private GameSystemWebDtos() {
     }
 
-    public record GameSystemRequest(@NotBlank @Size(max = 200) String name) {
+    public record GameSystemRequest(
+            @NotBlank @Size(max = 200) String name,
+            @Size(max = 200) String tagline,
+            @Size(max = 20) String color,
+            String notes) {
     }
 
-    public record GameSystemResponse(UUID id, String name, Instant createdAt, Instant updatedAt) {
+    public record GameSystemResponse(
+            UUID id,
+            String name,
+            String tagline,
+            String color,
+            String notes,
+            Instant createdAt,
+            Instant updatedAt) {
     }
 }

@@ -7,9 +7,10 @@ public final class GameSystemCommands {
     private GameSystemCommands() {
     }
 
-    public record CreateGameSystemCommand(String name) {
+    public record CreateGameSystemCommand(String name, String tagline, String color, String notes) {
     }
 
-    public record UpdateGameSystemCommand(UUID systemId, String name) {
+    public record UpdateGameSystemCommand(UUID systemId, String name, String tagline, String color,
+                                          String notes) {
     }
 }

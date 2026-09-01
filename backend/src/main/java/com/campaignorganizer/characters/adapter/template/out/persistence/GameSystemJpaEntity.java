@@ -18,6 +18,15 @@ public class GameSystemJpaEntity {
     @Column(nullable = false, length = 200)
     private String name;
 
+    @Column(length = 200)
+    private String tagline;
+
+    @Column(length = 20)
+    private String color;
+
+    @Column(columnDefinition = "text")
+    private String notes;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -41,6 +50,30 @@ public class GameSystemJpaEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getTagline() {
+        return tagline;
+    }
+
+    public void setTagline(String tagline) {
+        this.tagline = tagline;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Instant getCreatedAt() {
