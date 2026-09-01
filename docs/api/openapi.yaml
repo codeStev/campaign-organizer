@@ -55,6 +55,10 @@ tags:
     description: >-
       Retrospective, session-scoped notes on improvised details players
       latched onto (ADR-0085).
+  - name: todos
+    description: >-
+      Lightweight GM task-list items — standing campaign chores, or things
+      to do before a specific session (ADR-0092).
   - name: sheets
     description: Schema-driven character sheet templates and character sheets.
   - name: dice
@@ -1479,6 +1483,137 @@ paths:
       responses:
         '204':
           description: Loose thread deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/todos:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [todos]
+      summary: List the campaign's standing todos (not tied to any session)
+      operationId: listCampaignTodos
+      responses:
+        '200':
+          description: Standing todos, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [todos]
+      summary: Add a standing todo to the campaign
+      operationId: createCampaignTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoRequest'
+      responses:
+        '201':
+          description: Todo created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/todos/{todoId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/TodoId'
+    put:
+      tags: [todos]
+      summary: Update a todo's text and/or done flag
+      operationId: updateTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoUpdateRequest'
+      responses:
+        '200':
+          description: Todo updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [todos]
+      summary: Delete a todo
+      operationId: deleteTodo
+      responses:
+        '204':
+          description: Todo deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/todos:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [todos]
+      summary: List a session's todos
+      operationId: listSessionTodos
+      responses:
+        '200':
+          description: This session's todos, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [todos]
+      summary: Add a todo attached to this session
+      operationId: createSessionTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoRequest'
+      responses:
+        '201':
+          description: Todo created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -3506,6 +3641,14 @@ components:
       schema:
         type: string
         format: uuid
+    TodoId:
+      name: todoId
+      in: path
+      required: true
+      description: Identifier of the todo.
+      schema:
+        type: string
+        format: uuid
     FieldTemplateId:
       name: templateId
       in: path
@@ -4690,6 +4833,52 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/LooseThreadStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TodoRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    TodoUpdateRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        done:
+          type: boolean
+          default: false
+
+    Todo:
+      type: object
+      required: [id, campaignId, text, done, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        sessionId:
+          type: [string, "null"]
+          format: uuid
+          description: Null for a standing campaign-level todo.
+        text:
+          type: string
+        done:
+          type: boolean
         createdAt:
           type: string
           format: date-time
