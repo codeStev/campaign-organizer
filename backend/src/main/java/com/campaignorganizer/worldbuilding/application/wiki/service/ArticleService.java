@@ -15,6 +15,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.in.RestoreArtic
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.UpdateArticleUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRevisionRepositoryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleTagLookupPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.WorldExistsPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleImportPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
@@ -27,6 +28,7 @@ import com.campaignorganizer.worldbuilding.domain.wiki.ArticleRevision;
 import com.campaignorganizer.worldbuilding.domain.wiki.ArticleTemplate;
 import com.campaignorganizer.worldbuilding.domain.wiki.Slugs;
 import java.time.Clock;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,17 +51,20 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     private final ArticleRevisionRepositoryPort revisions;
     private final CategoryQueryPort categories;
     private final WorldExistsPort worlds;
+    private final ArticleTagLookupPort tagLookup;
     private final ArticleViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public ArticleService(ArticleRepositoryPort articles, ArticleRevisionRepositoryPort revisions,
                           CategoryQueryPort categories, WorldExistsPort worlds,
-                          ArticleViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                          ArticleTagLookupPort tagLookup, ArticleViewMapper viewMapper,
+                          IdGenerator ids, Clock clock) {
         this.articles = articles;
         this.revisions = revisions;
         this.categories = categories;
         this.worlds = worlds;
+        this.tagLookup = tagLookup;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -113,7 +119,18 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
                     .filter(a -> query.restrictToIds().contains(a.getId()))
                     .toList();
         } else if (query.query() != null && !query.query().isBlank()) {
-            result = articles.search(query.worldId(), query.query().trim());
+            String q = query.query().trim();
+            List<Article> textMatches = articles.search(query.worldId(), q);
+            Set<UUID> matchedIds = textMatches.stream().map(Article::getId)
+                    .collect(Collectors.toSet());
+            // Tag-only matches (ADR-0087) are appended after the ranked text matches,
+            // sorted by recency - not interleaved into the trigram/substring ranking.
+            Set<UUID> tagMatchedIds = tagLookup.articleIdsTaggedContaining(query.worldId(), q);
+            List<Article> tagOnlyMatches = articles.findByWorld(query.worldId()).stream()
+                    .filter(a -> tagMatchedIds.contains(a.getId()) && !matchedIds.contains(a.getId()))
+                    .sorted(Comparator.comparing(Article::getUpdatedAt).reversed())
+                    .toList();
+            result = Stream.concat(textMatches.stream(), tagOnlyMatches.stream()).toList();
         } else if (query.categoryId() != null) {
             result = articles.findByWorldAndCategory(query.worldId(), query.categoryId());
         } else {

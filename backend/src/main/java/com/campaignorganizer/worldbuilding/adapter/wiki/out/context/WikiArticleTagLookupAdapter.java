@@ -21,4 +21,9 @@ public class WikiArticleTagLookupAdapter implements ArticleTagLookupPort {
     public Set<UUID> articleIdsTaggedWith(UUID worldId, String tag) {
         return Set.copyOf(tags.entityIdsTaggedWith(worldId, EntityType.ARTICLE, tag));
     }
+
+    @Override
+    public Set<UUID> articleIdsTaggedContaining(UUID worldId, String fragment) {
+        return Set.copyOf(tags.entityIdsWhereTagContains(worldId, EntityType.ARTICLE, fragment));
+    }
 }
