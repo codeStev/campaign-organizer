@@ -5,10 +5,12 @@ import {
   statblockTagsApi,
   worldTagsApi,
   gameSystemsApi,
+  globalStatblocksApi,
   Statblock,
   Campaign,
   FieldTemplate,
   GlobalFieldTemplate,
+  GlobalStatblock,
   GameSystem,
   FieldType,
 } from '../api/client';
@@ -124,10 +126,32 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
   // Read (rendered values) vs edit (the form) — mirrors WorldView's article mode.
   const [mode, setMode] = useState<'read' | 'edit'>('read');
   const [systems, setSystems] = useState<GameSystem[]>([]);
+  const [catalog, setCatalog] = useState<GlobalStatblock[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importCatalogId, setImportCatalogId] = useState('');
+  const [importCampaignId, setImportCampaignId] = useState('');
 
   useEffect(() => {
     gameSystemsApi.list().then(setSystems).catch(() => {});
+    globalStatblocksApi.list().then(setCatalog).catch(() => {});
   }, []);
+
+  async function importFromCatalog() {
+    if (!importCatalogId || !importCampaignId) return;
+    try {
+      const copy = await globalStatblocksApi.import(importCatalogId, {
+        worldId,
+        campaignId: importCampaignId,
+      });
+      setImportOpen(false);
+      setImportCatalogId('');
+      await refresh();
+      navigate(`/worlds/${worldId}/sheets/statblocks/${copy.id}`);
+      toast.success(`Imported "${copy.name}" into the campaign`);
+    } catch (err) {
+      onError(err);
+    }
+  }
 
   function systemName(systemId: string): string {
     return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
@@ -295,6 +319,58 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
         >
           + New statblock
         </Button>
+        {campaigns.length > 0 && catalog.length > 0 && (
+          <Button variant="link" onClick={() => setImportOpen((v) => !v)}>
+            Import from catalog
+          </Button>
+        )}
+        {importOpen && (
+          <div className="editor-actions">
+            <Select value={importCatalogId || NONE_VALUE} onValueChange={(v) => setImportCatalogId(v === NONE_VALUE ? '' : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a statblock…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE} disabled>
+                  Choose a statblock…
+                </SelectItem>
+                {catalog.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} · {systemName(s.systemId)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={importCampaignId || NONE_VALUE}
+              onValueChange={(v) => setImportCampaignId(v === NONE_VALUE ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Into which campaign…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE} disabled>
+                  Into which campaign…
+                </SelectItem>
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              onClick={() => void importFromCatalog()}
+              disabled={!importCatalogId || !importCampaignId}
+            >
+              Import
+            </Button>
+            <Button type="button" variant="link" onClick={() => setImportOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        )}
         {campaigns.length > 0 && (
           <Select
             value={filterCampaign || NONE_VALUE}
