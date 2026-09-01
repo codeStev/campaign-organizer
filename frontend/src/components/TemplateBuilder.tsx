@@ -1,14 +1,18 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { PromptDialog } from './PromptDialog';
 import {
   FieldTemplate,
   FieldTemplateRequest,
   FieldType,
   FieldWidth,
+  GameSystem,
   TemplateKind,
+  gameSystemsApi,
 } from '../api/client';
+import { toast } from 'sonner';
 
 interface Props {
   initial: FieldTemplate | null;
@@ -96,12 +100,31 @@ function toDrafts(t: FieldTemplate | null): SectionDraft[] {
   }));
 }
 
+const NONE_VALUE = '__none__';
+
 export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [system, setSystem] = useState(initial?.system ?? '');
+  const [systemId, setSystemId] = useState<string | null>(initial?.systemId ?? null);
   const [sections, setSections] = useState<SectionDraft[]>(toDrafts(initial));
   const [dropHover, setDropHover] = useState<DropTarget | null>(null);
+  const [systems, setSystems] = useState<GameSystem[]>([]);
+  const [newSystemOpen, setNewSystemOpen] = useState(false);
   const drag = useRef<Drag | null>(null);
+
+  useEffect(() => {
+    gameSystemsApi.list().then(setSystems).catch(() => {});
+  }, []);
+
+  async function createSystem(name: string) {
+    try {
+      const created = await gameSystemsApi.create({ name });
+      setSystems((s) => [...s, created]);
+      setSystemId(created.id);
+      toast.success(`Game system "${created.name}" added`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not add game system');
+    }
+  }
 
   function mutateSection(i: number, patch: Partial<SectionDraft>) {
     setSections((s) => s.map((sec, j) => (j === i ? { ...sec, ...patch } : sec)));
@@ -182,7 +205,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
     const body: FieldTemplateRequest = {
       name,
       kind,
-      system: system || null,
+      systemId,
       sections: sections.map((sec) => {
         const used = new Set<string>();
         return {
@@ -212,11 +235,36 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
     <div className="card template-builder" onPointerMove={onBuilderPointerMove} onPointerUp={endDrag}>
       <div className="builder-head">
         <Input className="title-input" placeholder="Template name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Input placeholder="system (e.g. homebrew)" value={system} onChange={(e) => setSystem(e.target.value)} />
+        <Select
+          value={systemId ?? NONE_VALUE}
+          onValueChange={(v) => (v === NONE_VALUE ? setSystemId(null) : setSystemId(v))}
+        >
+          <SelectTrigger className="system-select">
+            <SelectValue placeholder="Game system…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_VALUE}>— none —</SelectItem>
+            {systems.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="link" onClick={() => setNewSystemOpen(true)}>
+          + New system
+        </Button>
         <small className="muted">
           {kind === 'CHARACTER' ? 'Character sheet' : kind === 'STATBLOCK' ? 'Statblock' : 'Document'} template
         </small>
       </div>
+      <PromptDialog
+        open={newSystemOpen}
+        onOpenChange={setNewSystemOpen}
+        title="New game system"
+        label="Name"
+        onSubmit={(value) => void createSystem(value)}
+      />
 
       <div className="field-palette">
         <span className="muted">Drag a component into a section:</span>

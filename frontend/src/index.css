@@ -2752,6 +2752,10 @@ button:disabled {
   flex: 1;
 }
 
+.builder-head .system-select {
+  flex: 1;
+}
+
 .builder-section {
   border: 1px solid var(--border);
   border-radius: 8px;
