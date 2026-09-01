@@ -94,6 +94,28 @@ public final class SessionPacketDtos {
             String description,
             List<PacketClockSegment> segments) {}
 
+    /**
+     * One fragment of the session's cheat sheet, resolved fresh from its
+     * source at print time, same as the standalone cheat sheet view
+     * (ADR-0071, ADR-0086). Only the fields relevant to {@code type} are
+     * populated; {@code missing} is true when the fragment's referenced
+     * content no longer exists.
+     */
+    public record PacketCheatSheetFragment(
+            String type,
+            boolean missing,
+            String text,
+            StatblockView statblock,
+            String tableTitle,
+            PacketRollTableEntry tableEntry,
+            String deckTitle,
+            PacketDeckCard deckCard) {}
+
+    /** The session's cheat sheet folded into the packet (ADR-0086). */
+    public record PacketCheatSheet(
+            UUID id,
+            List<PacketCheatSheetFragment> fragments) {}
+
     public record SessionPacketResponse(
             SessionView session,
             String campaignName,
@@ -104,5 +126,6 @@ public final class SessionPacketDtos {
             List<PacketRollTable> rollTables,
             List<PacketCardDeck> cardDecks,
             List<PacketHandout> handouts,
-            List<PacketClock> clocks) {}
+            List<PacketClock> clocks,
+            PacketCheatSheet cheatSheet) {}
 }

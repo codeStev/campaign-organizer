@@ -9,6 +9,8 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.clock.port.published.ClockQueryPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockSegmentView;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockView;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
@@ -19,6 +21,8 @@ import com.campaignorganizer.interchange.packet.application.port.in.BuildSession
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketBeat;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCardDeck;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCheatSheet;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCheatSheetFragment;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketClock;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketClockSegment;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketDeckCard;
@@ -72,13 +76,15 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     private final MapPinQueryPort pins;
     private final HandoutQueryPort handouts;
     private final ClockQueryPort clocks;
+    private final CheatSheetQueryPort cheatSheets;
 
     public SessionPacketService(CampaignQueryPort campaigns, SessionQueryPort sessions,
                                 ArcQueryPort arcs, ArcBeatQueryPort beats,
                                 ArticleQueryPort articles, ArticleRenderPort articleRenderer,
                                 StatblockQueryPort statblocks, RollTableQueryPort rollTables,
                                 CardDeckQueryPort cardDecks, MapQueryPort maps, MapPinQueryPort pins,
-                                HandoutQueryPort handouts, ClockQueryPort clocks) {
+                                HandoutQueryPort handouts, ClockQueryPort clocks,
+                                CheatSheetQueryPort cheatSheets) {
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.arcs = arcs;
@@ -92,6 +98,7 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
         this.pins = pins;
         this.handouts = handouts;
         this.clocks = clocks;
+        this.cheatSheets = cheatSheets;
     }
 
     @Override
@@ -205,9 +212,17 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
                 .map(this::toPacketClock)
                 .toList();
 
+        // Session-scoped, like handouts. Absent when nothing was ever saved,
+        // or the sheet was explicitly cleared to an empty fragment list
+        // (ADR-0071) - there's nothing for the GM to include either way.
+        PacketCheatSheet packetCheatSheet = cheatSheets.findBySession(sessionId)
+                .filter(sheet -> !sheet.fragments().isEmpty())
+                .map(sheet -> toPacketCheatSheet(sheet, worldId))
+                .orElse(null);
+
         return new SessionPacketResponse(session, campaign.name(),
                 packetBeats, packetArticles, packetMaps, packetStatblocks, packetTables, packetDecks,
-                packetHandouts, packetClocks);
+                packetHandouts, packetClocks, packetCheatSheet);
     }
 
     /** Entry outcome bodies go through the same render pipeline as article bodies. */
@@ -263,5 +278,48 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
 
     private PacketClockSegment toPacketClockSegment(ClockSegmentView s) {
         return new PacketClockSegment(s.title(), s.description());
+    }
+
+    /** Resolves each fragment fresh from its source at print time (ADR-0071, ADR-0086). */
+    private PacketCheatSheet toPacketCheatSheet(CheatSheetView sheet, UUID worldId) {
+        List<PacketCheatSheetFragment> fragments = sheet.fragments().stream()
+                .map(f -> toPacketCheatSheetFragment(f, worldId))
+                .toList();
+        return new PacketCheatSheet(sheet.id(), fragments);
+    }
+
+    private PacketCheatSheetFragment toPacketCheatSheetFragment(CheatSheetView.FragmentView f, UUID worldId) {
+        return switch (f.type()) {
+            case "FREEFORM" -> new PacketCheatSheetFragment("FREEFORM", false, f.text(),
+                    null, null, null, null, null);
+            case "STATBLOCK" -> statblocks.findByIdInWorld(f.statblockId(), worldId)
+                    .map(sb -> new PacketCheatSheetFragment("STATBLOCK", false, null,
+                            sb, null, null, null, null))
+                    .orElseGet(() -> missingCheatSheetFragment("STATBLOCK"));
+            case "TABLE_ROW" -> rollTables.findByIdInWorld(f.tableId(), worldId)
+                    .flatMap(table -> table.entries().stream()
+                            .filter(e -> e.id().equals(f.entryId()))
+                            .findFirst()
+                            .map(entry -> new PacketCheatSheetFragment("TABLE_ROW", false, null,
+                                    null, table.title(),
+                                    new PacketRollTableEntry(entry.minResult(), entry.maxResult(),
+                                            articleRenderer.renderBody(table.worldId(), entry.body())),
+                                    null, null)))
+                    .orElseGet(() -> missingCheatSheetFragment("TABLE_ROW"));
+            case "DECK_CARD" -> cardDecks.findByIdInWorld(f.deckId(), worldId)
+                    .flatMap(deck -> deck.cards().stream()
+                            .filter(c -> c.id().equals(f.cardId()))
+                            .findFirst()
+                            .map(card -> new PacketCheatSheetFragment("DECK_CARD", false, null,
+                                    null, null, null, deck.title(),
+                                    new PacketDeckCard(card.title(),
+                                            articleRenderer.renderBody(deck.worldId(), card.body())))))
+                    .orElseGet(() -> missingCheatSheetFragment("DECK_CARD"));
+            default -> missingCheatSheetFragment(f.type());
+        };
+    }
+
+    private PacketCheatSheetFragment missingCheatSheetFragment(String type) {
+        return new PacketCheatSheetFragment(type, true, null, null, null, null, null, null);
     }
 }
