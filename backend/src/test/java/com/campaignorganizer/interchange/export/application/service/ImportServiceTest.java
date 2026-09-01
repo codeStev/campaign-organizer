@@ -31,6 +31,8 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockImportPort;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
@@ -122,6 +124,8 @@ class ImportServiceTest {
     @Mock
     private GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
     @Mock
+    private GlobalStatblockImportPort globalStatblockImportPort;
+    @Mock
     private CharacterSheetImportPort characterSheetImportPort;
     @Mock
     private DocumentImportPort documentImportPort;
@@ -161,6 +165,7 @@ class ImportServiceTest {
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
                 arcImportPort, fieldTemplateImportPort, gameSystemImportPort, globalFieldTemplateImportPort,
+                globalStatblockImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
@@ -327,6 +332,48 @@ class ImportServiceTest {
         verify(statblockImportPort).importStatblock(statblockCaptor.capture());
         assertThat(statblockCaptor.getValue().globalTemplateId()).isEqualTo(reusedGlobalTemplateId);
         assertThat(statblockCaptor.getValue().worldTemplateId()).isNull();
+    }
+
+    @Test
+    void resolvesGlobalStatblockSystemThroughGameSystemResolutionMap() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldSystemId = UUID.randomUUID();
+        UUID reusedSystemId = UUID.randomUUID();
+        UUID oldStatblockId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        // Simulates the target instance already having an equivalent game
+        // system: importOrReuse resolves to a DIFFERENT id than the bundle's,
+        // and the global statblock catalog entry must be resolved against
+        // THAT id, not the bundle's original systemId.
+        when(gameSystemImportPort.importOrReuse(any())).thenAnswer(inv -> {
+            GameSystemView v = inv.getArgument(0);
+            return new GameSystemView(reusedSystemId, v.name(), v.tagline(), v.color(), v.notes(),
+                    v.createdAt(), v.updatedAt());
+        });
+        when(globalStatblockImportPort.importOrReuse(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
+                now, now)));
+        bundle.put("globalStatblocks", List.of(new GlobalStatblockView(oldStatblockId, oldSystemId, null,
+                "The Vaettir", Map.of("HP", 10), null, now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "campaigns", "sessions", "arcs", "beats",
+                "fieldTemplates", "globalFieldTemplates", "characterSheets", "statblocks", "whiteboards",
+                "tags")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<GlobalStatblockView> statblockCaptor = ArgumentCaptor.forClass(GlobalStatblockView.class);
+        verify(globalStatblockImportPort).importOrReuse(statblockCaptor.capture());
+        assertThat(statblockCaptor.getValue().systemId()).isEqualTo(reusedSystemId);
+        assertThat(statblockCaptor.getValue().name()).isEqualTo("The Vaettir");
     }
 
     @Test

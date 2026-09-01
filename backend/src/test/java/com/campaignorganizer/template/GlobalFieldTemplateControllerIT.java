@@ -132,6 +132,31 @@ class GlobalFieldTemplateControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void deleteFailsWhileAGlobalStatblockStillReferencesIt() throws Exception {
+        String auth = authHeader();
+        String systemId = createGameSystem(auth, "D&D 5e (delete-restrict-global-statblock)");
+
+        String created = mockMvc.perform(post("/api/field-templates/global")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Monster\",\"kind\":\"STATBLOCK\",\"systemId\":\"" + systemId
+                                + "\",\"sections\":[]}"))
+                .andReturn().getResponse().getContentAsString();
+        String globalId = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(post("/api/statblocks/global")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Goblin\",\"systemId\":\"" + systemId + "\",\"globalTemplateId\":\""
+                                + globalId + "\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(delete("/api/field-templates/global/{t}", globalId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void notFoundForUnknownTemplate() throws Exception {
         String auth = authHeader();
         mockMvc.perform(get("/api/field-templates/global/{t}", UUID.randomUUID())
