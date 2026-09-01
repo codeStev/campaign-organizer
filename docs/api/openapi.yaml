@@ -40,6 +40,10 @@ tags:
     description: Custom fantasy calendars with named months.
   - name: relationships
     description: Directed or undirected links between articles (relationship webs).
+  - name: players
+    description: >-
+      A world-scoped, reusable pool of players; campaign rosters, guest
+      flags, and per-session attendance are exposed under campaigns (ADR-0091).
   - name: campaigns
     description: Gamemaster campaigns and their play sessions.
   - name: arcs
@@ -926,6 +930,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/players:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [players]
+      summary: List a world's players
+      operationId: listPlayers
+      responses:
+        '200':
+          description: Players in the world.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Player'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [players]
+      summary: Add a player to the world's pool
+      operationId: createPlayer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerRequest'
+      responses:
+        '201':
+          description: Player created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/players/{playerId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/PlayerId'
+    get:
+      tags: [players]
+      summary: Get a player
+      operationId: getPlayer
+      responses:
+        '200':
+          description: The player.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [players]
+      summary: Rename a player
+      operationId: updatePlayer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerRequest'
+      responses:
+        '200':
+          description: Player updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [players]
+      summary: Delete a player (and their roster memberships and attendance history)
+      operationId: deletePlayer
+      responses:
+        '204':
+          description: Player deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -1019,6 +1121,57 @@ paths:
       responses:
         '204':
           description: Campaign deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/roster:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      summary: The campaign's player roster
+      operationId: getCampaignRoster
+      responses:
+        '200':
+          description: Roster entries, each naming the player and its guest flag.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RosterEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [campaigns]
+      summary: Replace the campaign's player roster
+      description: >
+        Whole-set replace: every player referenced must already exist in
+        the world. Promoting a guest to regular (or back) is just
+        resubmitting the set with a different guest flag on that entry.
+      operationId: putCampaignRoster
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RosterRequest'
+      responses:
+        '200':
+          description: The saved roster.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RosterEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -1183,6 +1336,62 @@ paths:
       responses:
         '204':
           description: Cheat sheet deleted (or nothing to delete).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/attendance:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [campaigns]
+      summary: The session's attendance, pre-populated from the campaign roster
+      description: >
+        Every current roster player appears here even if no attendance
+        row has been saved yet, defaulting to present with no character
+        linked.
+      operationId: getSessionAttendance
+      responses:
+        '200':
+          description: Attendance entries, one per roster player.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttendanceEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [campaigns]
+      summary: Replace the session's attendance
+      description: >
+        Whole-set replace. Each player must exist in the world; each
+        linked character sheet, if any, must exist in the world and
+        belong to this campaign or be shared (no campaign).
+      operationId: putSessionAttendance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceRequest'
+      responses:
+        '200':
+          description: The saved attendance.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttendanceEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -3281,6 +3490,14 @@ components:
       schema:
         type: string
         format: uuid
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      description: Identifier of the player.
+      schema:
+        type: string
+        format: uuid
     LooseThreadId:
       name: threadId
       in: path
@@ -4177,6 +4394,34 @@ components:
           type: string
           format: date-time
 
+    PlayerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    Player:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     CampaignStatus:
       type: string
       enum: [PLANNED, ACTIVE, ON_HIATUS, COMPLETED]
@@ -4224,6 +4469,82 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    RosterEntryInput:
+      type: object
+      required: [playerId]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        guest:
+          type: boolean
+          default: false
+
+    RosterRequest:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/RosterEntryInput'
+
+    RosterEntry:
+      type: object
+      required: [playerId, name, guest]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: The player's name, denormalized for display.
+        guest:
+          type: boolean
+
+    AttendanceEntryInput:
+      type: object
+      required: [playerId, present]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        present:
+          type: boolean
+        characterId:
+          type: [string, "null"]
+          format: uuid
+
+    AttendanceRequest:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceEntryInput'
+
+    AttendanceEntry:
+      type: object
+      required: [playerId, name, guest, present]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: The player's name, denormalized for display.
+        guest:
+          type: boolean
+        present:
+          type: boolean
+        characterId:
+          type: [string, "null"]
+          format: uuid
+        characterName:
+          type: [string, "null"]
+          description: The linked character sheet's name, denormalized for display.
 
     SessionRequest:
       type: object
