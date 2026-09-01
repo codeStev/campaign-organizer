@@ -518,6 +518,7 @@ export interface Campaign {
   description?: string | null;
   notes?: string | null;
   status: CampaignStatus;
+  systemId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -527,6 +528,7 @@ export interface CampaignRequest {
   description?: string | null;
   notes?: string | null;
   status?: CampaignStatus;
+  systemId?: string | null;
 }
 
 export interface Session {
@@ -1017,16 +1019,22 @@ export interface BuiltinFieldTemplate {
   sections: TemplateSection[];
 }
 
-/** A real, top-level, world-independent game system entity (ADR-0094). */
+/** A real, top-level, world-independent game system entity (ADR-0094, ADR-0095). */
 export interface GameSystem {
   id: string;
   name: string;
+  tagline?: string | null;
+  color?: string | null;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface GameSystemRequest {
   name: string;
+  tagline?: string | null;
+  color?: string | null;
+  notes?: string | null;
 }
 
 /** World-independent, system-scoped template catalog (ADR-0093). CHARACTER/STATBLOCK kinds only. */
