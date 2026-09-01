@@ -86,7 +86,7 @@ class ConsistencyReportServiceTest {
         lenient().when(worlds.exists(worldId)).thenReturn(true);
         lenient().when(campaigns.findByWorld(worldId))
                 .thenReturn(List.of(new CampaignView(campaignId, worldId, "Main", null, null,
-                        CampaignStatus.ACTIVE, Instant.EPOCH, Instant.EPOCH)));
+                        CampaignStatus.ACTIVE, null, Instant.EPOCH, Instant.EPOCH)));
         lenient().when(arcs.findByCampaign(campaignId))
                 .thenReturn(List.of(new ArcView(arcId, campaignId, "Act I", null, null, 0,
                         Instant.EPOCH, Instant.EPOCH)));

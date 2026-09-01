@@ -53,6 +53,28 @@ class GameSystemControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void roundTripsTaglineColorAndNotes() throws Exception {
+        String auth = authHeader();
+
+        String created = mockMvc.perform(post("/api/game-systems")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Vaesen (details test)\",\"tagline\":\"Gothic horror mystery\","
+                                + "\"color\":\"#2c3e50\",\"notes\":\"SRD: https://example.com\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tagline").value("Gothic horror mystery"))
+                .andExpect(jsonPath("$.color").value("#2c3e50"))
+                .andExpect(jsonPath("$.notes").value("SRD: https://example.com"))
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(get("/api/game-systems/{s}", id).header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tagline").value("Gothic horror mystery"))
+                .andExpect(jsonPath("$.color").value("#2c3e50"));
+    }
+
+    @Test
     void rejectsDuplicateNameCaseInsensitively() throws Exception {
         String auth = authHeader();
         mockMvc.perform(post("/api/game-systems")

@@ -7,11 +7,13 @@ import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.campaign.port.in.CampaignCommands.CreateCampaignCommand;
 import com.campaignorganizer.campaign.application.campaign.port.out.CampaignRepositoryPort;
+import com.campaignorganizer.campaign.application.campaign.port.out.GameSystemExistsPort;
 import com.campaignorganizer.campaign.application.campaign.port.out.WorldExistsPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignView;
 import com.campaignorganizer.campaign.domain.campaign.CampaignStatus;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -31,6 +33,8 @@ class CampaignServiceTest {
     @Mock
     private WorldExistsPort worlds;
     @Mock
+    private GameSystemExistsPort gameSystems;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -42,7 +46,7 @@ class CampaignServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CampaignService(campaigns, worlds, viewMapper, ids, clock);
+        service = new CampaignService(campaigns, worlds, gameSystems, viewMapper, ids, clock);
     }
 
     @Test
@@ -53,7 +57,7 @@ class CampaignServiceTest {
         when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CampaignView view = service.create(
-                new CreateCampaignCommand(worldId, "Rise", "desc", "notes", CampaignStatus.ACTIVE));
+                new CreateCampaignCommand(worldId, "Rise", "desc", "notes", CampaignStatus.ACTIVE, null));
 
         assertThat(view.id()).isEqualTo(id);
         assertThat(view.name()).isEqualTo("Rise");
@@ -67,7 +71,8 @@ class CampaignServiceTest {
         when(ids.newId()).thenReturn(id);
         when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CampaignView view = service.create(new CreateCampaignCommand(worldId, "Rise", null, null, null));
+        CampaignView view = service.create(
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, null));
 
         assertThat(view.status()).isEqualTo(CampaignStatus.PLANNED);
     }
@@ -77,7 +82,33 @@ class CampaignServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(
-                new CreateCampaignCommand(worldId, "Rise", null, null, null)))
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, null)))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void createSucceedsWithValidGameSystem() {
+        UUID id = UUID.randomUUID();
+        UUID systemId = UUID.randomUUID();
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(gameSystems.exists(systemId)).thenReturn(true);
+        when(ids.newId()).thenReturn(id);
+        when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CampaignView view = service.create(
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, systemId));
+
+        assertThat(view.systemId()).isEqualTo(systemId);
+    }
+
+    @Test
+    void createRejectsUnknownGameSystem() {
+        UUID systemId = UUID.randomUUID();
+        when(worlds.exists(worldId)).thenReturn(true);
+        when(gameSystems.exists(systemId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, systemId)))
+                .isInstanceOf(ValidationException.class);
     }
 }

@@ -70,4 +70,28 @@ class CampaignControllerIT extends AbstractIntegrationTest {
                         .content("{\"notes\":\"no name\"}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void acceptsAValidGameSystemAndRejectsAnUnknownOne() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String systemId = JsonPath.read(mockMvc.perform(post("/api/game-systems")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Vaesen\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"The Society\",\"systemId\":\"" + systemId + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.systemId").value(systemId));
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Bad System\",\"systemId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

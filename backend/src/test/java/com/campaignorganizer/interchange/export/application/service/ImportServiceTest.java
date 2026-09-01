@@ -35,6 +35,7 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.GameSystemImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GameSystemView;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
@@ -329,6 +330,44 @@ class ImportServiceTest {
     }
 
     @Test
+    void resolvesCampaignSystemThroughImportOrReuseNotTheNormalIdRemap() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldSystemId = UUID.randomUUID();
+        UUID reusedSystemId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        // Simulates the target instance already having an equivalent game
+        // system: importOrReuse resolves to a DIFFERENT id than the bundle's.
+        when(gameSystemImportPort.importOrReuse(any())).thenAnswer(inv -> {
+            GameSystemView v = inv.getArgument(0);
+            return new GameSystemView(reusedSystemId, v.name(), v.tagline(), v.color(), v.notes(),
+                    v.createdAt(), v.updatedAt());
+        });
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
+                now, now)));
+        bundle.put("campaigns", List.of(new CampaignView(oldCampaignId, oldWorldId, "The Society", null,
+                null, CampaignStatus.ACTIVE, oldSystemId, now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats",
+                "fieldTemplates", "globalFieldTemplates", "characterSheets", "statblocks", "whiteboards",
+                "tags")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<CampaignView> campaignCaptor = ArgumentCaptor.forClass(CampaignView.class);
+        verify(campaignImportPort).importCampaign(campaignCaptor.capture());
+        assertThat(campaignCaptor.getValue().systemId()).isEqualTo(reusedSystemId);
+    }
+
+    @Test
     void remapsClockCampaignIdAndKeepsSegmentsIntact() throws Exception {
         UUID oldWorldId = UUID.randomUUID();
         UUID oldCampaignId = UUID.randomUUID();
@@ -340,7 +379,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, now, now)));
+                        CampaignStatus.ACTIVE, null, now, now)));
         bundle.put("clocks", List.of(new ClockView(oldClockId, oldCampaignId, "Doom", null,
                 List.of(new ClockSegmentView(true, null, null),
                         new ClockSegmentView(false, "Alarm", "Guards notice")),
@@ -378,7 +417,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, now, now)));
+                        CampaignStatus.ACTIVE, null, now, now)));
         bundle.put("sessions", List.of(
                 new SessionView(oldSessionId, oldCampaignId, "Session 1", 1, null, null, null, now, now)));
         bundle.put("looseThreads", List.of(new LooseThreadView(oldThreadId, oldSessionId, oldCampaignId,
@@ -415,7 +454,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, now, now)));
+                        CampaignStatus.ACTIVE, null, now, now)));
         bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId,
                 "Session Zero", TemplateKind.DOCUMENT, null, List.of(), now, now)));
         bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, oldTemplateId,
