@@ -18,4 +18,9 @@ public interface CharacterSheetRepositoryPort {
     CharacterSheet save(CharacterSheet sheet);
 
     void delete(CharacterSheet sheet);
+
+    /** Bulk-repoints every sheet referencing {@code worldTemplateId} to {@code globalTemplateId} instead. */
+    void repointWorldTemplateToGlobal(UUID worldTemplateId, UUID globalTemplateId);
+
+    boolean existsByGlobalTemplateId(UUID globalTemplateId);
 }

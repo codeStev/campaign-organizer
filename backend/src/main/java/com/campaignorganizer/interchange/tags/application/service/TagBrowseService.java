@@ -70,6 +70,7 @@ public class TagBrowseService implements BrowseTagUseCase {
 
     private static StatblockSummary toSummary(StatblockView s) {
         return new StatblockSummary(s.id(), s.worldId(), s.articleId(), s.campaignId(),
-                s.templateId(), s.name(), s.stats(), s.notes(), s.createdAt(), s.updatedAt());
+                s.worldTemplateId(), s.globalTemplateId(), s.name(), s.stats(), s.notes(), s.createdAt(),
+                s.updatedAt());
     }
 }

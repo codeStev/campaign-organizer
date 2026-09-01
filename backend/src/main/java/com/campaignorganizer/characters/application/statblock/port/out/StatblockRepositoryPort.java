@@ -21,4 +21,9 @@ public interface StatblockRepositoryPort {
     Statblock save(Statblock statblock);
 
     void delete(Statblock statblock);
+
+    /** Bulk-repoints every statblock referencing {@code worldTemplateId} to {@code globalTemplateId} instead. */
+    void repointWorldTemplateToGlobal(UUID worldTemplateId, UUID globalTemplateId);
+
+    boolean existsByGlobalTemplateId(UUID globalTemplateId);
 }

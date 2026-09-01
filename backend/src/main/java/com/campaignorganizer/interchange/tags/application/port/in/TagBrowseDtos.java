@@ -17,8 +17,9 @@ public final class TagBrowseDtos {
     }
 
     public record StatblockSummary(UUID id, UUID worldId, UUID articleId, UUID campaignId,
-                                   UUID templateId, String name, Map<String, Object> stats,
-                                   String notes, Instant createdAt, Instant updatedAt) {
+                                   UUID worldTemplateId, UUID globalTemplateId, String name,
+                                   Map<String, Object> stats, String notes, Instant createdAt,
+                                   Instant updatedAt) {
     }
 
     public record TagBrowseResult(String tag, List<ArticleSummary> articles,

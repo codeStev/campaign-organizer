@@ -1,7 +1,6 @@
 package com.campaignorganizer.characters.adapter.sheet.in.web;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Map;
@@ -14,7 +13,8 @@ public final class CharacterSheetWebDtos {
 
     public record CharacterSheetRequest(
             @NotBlank @Size(max = 200) String name,
-            @NotNull UUID templateId,
+            UUID worldTemplateId,
+            UUID globalTemplateId,
             UUID articleId,
             UUID campaignId,
             Map<String, Object> values) {
@@ -23,7 +23,8 @@ public final class CharacterSheetWebDtos {
     public record CharacterSheetResponse(
             UUID id,
             UUID worldId,
-            UUID templateId,
+            UUID worldTemplateId,
+            UUID globalTemplateId,
             UUID articleId,
             UUID campaignId,
             String name,

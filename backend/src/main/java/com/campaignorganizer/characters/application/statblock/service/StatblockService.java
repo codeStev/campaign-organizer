@@ -16,8 +16,10 @@ import com.campaignorganizer.characters.application.statblock.port.out.Statblock
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.StatblockTemplateRefPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.statblock.Statblock;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
@@ -38,13 +40,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StatblockService implements CreateStatblockUseCase, UpdateStatblockUseCase,
         DeleteStatblockUseCase, DuplicateStatblockUseCase, GetStatblockUseCase, ListStatblocksUseCase,
-        StatblockQueryPort, StatblockImportPort {
+        StatblockQueryPort, StatblockImportPort, StatblockTemplateRefPort {
 
     private final StatblockRepositoryPort statblocks;
     private final WorldExistsPort worlds;
     private final ArticleExistsPort articles;
     private final CampaignExistsPort campaigns;
     private final FieldTemplateQueryPort templates;
+    private final GlobalFieldTemplateQueryPort globalTemplates;
     private final CampaignStatblockRefPort campaignRefs;
     private final StatblockTagLookupPort tagLookup;
     private final StatblockViewMapper viewMapper;
@@ -53,14 +56,15 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
 
     public StatblockService(StatblockRepositoryPort statblocks, WorldExistsPort worlds,
                             ArticleExistsPort articles, CampaignExistsPort campaigns,
-                            FieldTemplateQueryPort templates, CampaignStatblockRefPort campaignRefs,
-                            StatblockTagLookupPort tagLookup, StatblockViewMapper viewMapper,
-                            IdGenerator ids, Clock clock) {
+                            FieldTemplateQueryPort templates, GlobalFieldTemplateQueryPort globalTemplates,
+                            CampaignStatblockRefPort campaignRefs, StatblockTagLookupPort tagLookup,
+                            StatblockViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.statblocks = statblocks;
         this.worlds = worlds;
         this.articles = articles;
         this.campaigns = campaigns;
         this.templates = templates;
+        this.globalTemplates = globalTemplates;
         this.campaignRefs = campaignRefs;
         this.tagLookup = tagLookup;
         this.viewMapper = viewMapper;
@@ -72,10 +76,11 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public StatblockView create(CreateStatblockCommand command) {
         requireWorld(command.worldId());
-        validateLinks(command.worldId(), command.articleId(), command.campaignId(), command.templateId());
+        validateLinks(command.worldId(), command.articleId(), command.campaignId(),
+                command.worldTemplateId(), command.globalTemplateId());
         Statblock created = Statblock.create(ids.newId(), command.worldId(), command.articleId(),
-                command.campaignId(), command.templateId(), command.name(), command.stats(), command.notes(),
-                clock.instant());
+                command.campaignId(), command.worldTemplateId(), command.globalTemplateId(), command.name(),
+                command.stats(), command.notes(), clock.instant());
         return viewMapper.toView(statblocks.save(created));
     }
 
@@ -83,9 +88,11 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public StatblockView update(UpdateStatblockCommand command) {
         Statblock statblock = require(command.worldId(), command.statblockId());
-        validateLinks(command.worldId(), command.articleId(), command.campaignId(), command.templateId());
-        statblock.update(command.articleId(), command.campaignId(), command.templateId(), command.name(),
-                command.stats(), command.notes(), clock.instant());
+        validateLinks(command.worldId(), command.articleId(), command.campaignId(),
+                command.worldTemplateId(), command.globalTemplateId());
+        statblock.update(command.articleId(), command.campaignId(), command.worldTemplateId(),
+                command.globalTemplateId(), command.name(), command.stats(), command.notes(),
+                clock.instant());
         return viewMapper.toView(statblocks.save(statblock));
     }
 
@@ -100,8 +107,8 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     public StatblockView duplicate(UUID worldId, UUID statblockId) {
         Statblock source = require(worldId, statblockId);
         return create(new CreateStatblockCommand(worldId, source.getArticleId(),
-                source.getCampaignId(), source.getTemplateId(), source.getName() + " (copy)",
-                source.getStats(), source.getNotes()));
+                source.getCampaignId(), source.getWorldTemplateId(), source.getGlobalTemplateId(),
+                source.getName() + " (copy)", source.getStats(), source.getNotes()));
     }
 
     @Override
@@ -149,8 +156,8 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public StatblockView importStatblock(StatblockView view) {
         Statblock statblock = Statblock.reconstitute(view.id(), view.worldId(), view.articleId(),
-                view.campaignId(), view.templateId(), view.name(), view.stats(), view.notes(),
-                view.createdAt(), view.updatedAt());
+                view.campaignId(), view.worldTemplateId(), view.globalTemplateId(), view.name(),
+                view.stats(), view.notes(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(statblocks.save(statblock));
     }
 
@@ -199,20 +206,40 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
         }
     }
 
-    private void validateLinks(UUID worldId, UUID articleId, UUID campaignId, UUID templateId) {
+    private void validateLinks(UUID worldId, UUID articleId, UUID campaignId, UUID worldTemplateId,
+                               UUID globalTemplateId) {
         if (articleId != null && !articles.existsInWorld(articleId, worldId)) {
             throw new ValidationException("Article not found in this world");
         }
         if (campaignId != null && !campaigns.existsInWorld(campaignId, worldId)) {
             throw new ValidationException("Campaign not found in this world");
         }
-        if (templateId != null) {
-            TemplateKind kind = templates.findByIdInWorld(templateId, worldId)
+        TemplateKind kind = null;
+        if (worldTemplateId != null) {
+            kind = templates.findByIdInWorld(worldTemplateId, worldId)
                     .orElseThrow(() -> new ValidationException("Template not found in this world"))
                     .kind();
-            if (kind != TemplateKind.STATBLOCK) {
-                throw new ValidationException("Template is not a statblock template");
-            }
+        } else if (globalTemplateId != null) {
+            kind = globalTemplates.findById(globalTemplateId)
+                    .orElseThrow(() -> new ValidationException("Global template not found"))
+                    .kind();
         }
+        if (kind != null && kind != TemplateKind.STATBLOCK) {
+            throw new ValidationException("Template is not a statblock template");
+        }
+    }
+
+    // --- published template-ref port (ADR-0093, used by template promotion) ---
+
+    @Override
+    @Transactional
+    public void repointWorldTemplateToGlobal(UUID worldTemplateId, UUID globalTemplateId) {
+        statblocks.repointWorldTemplateToGlobal(worldTemplateId, globalTemplateId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsReferencingGlobalTemplate(UUID globalTemplateId) {
+        return statblocks.existsByGlobalTemplateId(globalTemplateId);
     }
 }

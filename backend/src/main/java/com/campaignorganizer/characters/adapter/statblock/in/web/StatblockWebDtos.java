@@ -15,7 +15,8 @@ public final class StatblockWebDtos {
             @NotBlank @Size(max = 200) String name,
             UUID articleId,
             UUID campaignId,
-            UUID templateId,
+            UUID worldTemplateId,
+            UUID globalTemplateId,
             Map<String, Object> stats,
             @Size(max = 20000) String notes) {
     }
@@ -25,7 +26,8 @@ public final class StatblockWebDtos {
             UUID worldId,
             UUID articleId,
             UUID campaignId,
-            UUID templateId,
+            UUID worldTemplateId,
+            UUID globalTemplateId,
             String name,
             Map<String, Object> stats,
             String notes,

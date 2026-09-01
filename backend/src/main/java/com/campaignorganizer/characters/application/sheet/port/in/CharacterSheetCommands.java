@@ -8,11 +8,13 @@ public final class CharacterSheetCommands {
     private CharacterSheetCommands() {
     }
 
-    public record CreateCharacterSheetCommand(UUID worldId, UUID templateId, UUID articleId,
-                                               UUID campaignId, String name, Map<String, Object> values) {
+    public record CreateCharacterSheetCommand(UUID worldId, UUID worldTemplateId, UUID globalTemplateId,
+                                               UUID articleId, UUID campaignId, String name,
+                                               Map<String, Object> values) {
     }
 
-    public record UpdateCharacterSheetCommand(UUID worldId, UUID sheetId, UUID templateId, UUID articleId,
-                                               UUID campaignId, String name, Map<String, Object> values) {
+    public record UpdateCharacterSheetCommand(UUID worldId, UUID sheetId, UUID worldTemplateId,
+                                               UUID globalTemplateId, UUID articleId, UUID campaignId,
+                                               String name, Map<String, Object> values) {
     }
 }

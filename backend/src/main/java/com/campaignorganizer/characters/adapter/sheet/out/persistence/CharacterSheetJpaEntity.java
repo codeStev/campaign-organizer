@@ -22,8 +22,11 @@ public class CharacterSheetJpaEntity {
     @Column(name = "world_id", nullable = false, updatable = false)
     private UUID worldId;
 
-    @Column(name = "template_id", nullable = false)
-    private UUID templateId;
+    @Column(name = "world_template_id")
+    private UUID worldTemplateId;
+
+    @Column(name = "global_template_id")
+    private UUID globalTemplateId;
 
     @Column(name = "article_id")
     private UUID articleId;
@@ -63,12 +66,20 @@ public class CharacterSheetJpaEntity {
         this.worldId = worldId;
     }
 
-    public UUID getTemplateId() {
-        return templateId;
+    public UUID getWorldTemplateId() {
+        return worldTemplateId;
     }
 
-    public void setTemplateId(UUID templateId) {
-        this.templateId = templateId;
+    public void setWorldTemplateId(UUID worldTemplateId) {
+        this.worldTemplateId = worldTemplateId;
+    }
+
+    public UUID getGlobalTemplateId() {
+        return globalTemplateId;
+    }
+
+    public void setGlobalTemplateId(UUID globalTemplateId) {
+        this.globalTemplateId = globalTemplateId;
     }
 
     public UUID getArticleId() {

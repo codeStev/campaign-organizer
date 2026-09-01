@@ -50,4 +50,14 @@ public class CharacterSheetPersistenceAdapter implements CharacterSheetRepositor
     public void delete(CharacterSheet sheet) {
         repository.deleteById(sheet.getId());
     }
+
+    @Override
+    public void repointWorldTemplateToGlobal(UUID worldTemplateId, UUID globalTemplateId) {
+        repository.repointWorldTemplateToGlobal(worldTemplateId, globalTemplateId);
+    }
+
+    @Override
+    public boolean existsByGlobalTemplateId(UUID globalTemplateId) {
+        return repository.existsByGlobalTemplateId(globalTemplateId);
+    }
 }

@@ -28,8 +28,11 @@ public class StatblockJpaEntity {
     @Column(name = "campaign_id")
     private UUID campaignId;
 
-    @Column(name = "template_id")
-    private UUID templateId;
+    @Column(name = "world_template_id")
+    private UUID worldTemplateId;
+
+    @Column(name = "global_template_id")
+    private UUID globalTemplateId;
 
     @Column(nullable = false, length = 200)
     private String name;
@@ -82,12 +85,20 @@ public class StatblockJpaEntity {
         this.campaignId = campaignId;
     }
 
-    public UUID getTemplateId() {
-        return templateId;
+    public UUID getWorldTemplateId() {
+        return worldTemplateId;
     }
 
-    public void setTemplateId(UUID templateId) {
-        this.templateId = templateId;
+    public void setWorldTemplateId(UUID worldTemplateId) {
+        this.worldTemplateId = worldTemplateId;
+    }
+
+    public UUID getGlobalTemplateId() {
+        return globalTemplateId;
+    }
+
+    public void setGlobalTemplateId(UUID globalTemplateId) {
+        this.globalTemplateId = globalTemplateId;
     }
 
     public String getName() {

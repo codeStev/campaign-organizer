@@ -13,8 +13,10 @@ import com.campaignorganizer.characters.application.sheet.port.out.CharacterShee
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
+import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetTemplateRefPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.sheet.CharacterSheet;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.shared.application.IdGenerator;
@@ -31,10 +33,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CharacterSheetService implements CreateCharacterSheetUseCase, UpdateCharacterSheetUseCase,
         DeleteCharacterSheetUseCase, GetCharacterSheetUseCase, ListCharacterSheetsUseCase,
-        CharacterSheetQueryPort, CharacterSheetImportPort {
+        CharacterSheetQueryPort, CharacterSheetImportPort, CharacterSheetTemplateRefPort {
 
     private final CharacterSheetRepositoryPort sheets;
     private final FieldTemplateQueryPort templates;
+    private final GlobalFieldTemplateQueryPort globalTemplates;
     private final WorldExistsPort worlds;
     private final ArticleExistsPort articles;
     private final CampaignExistsPort campaigns;
@@ -43,11 +46,12 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     private final Clock clock;
 
     public CharacterSheetService(CharacterSheetRepositoryPort sheets, FieldTemplateQueryPort templates,
-                                 WorldExistsPort worlds, ArticleExistsPort articles,
-                                 CampaignExistsPort campaigns, CharacterSheetViewMapper viewMapper,
-                                 IdGenerator ids, Clock clock) {
+                                 GlobalFieldTemplateQueryPort globalTemplates, WorldExistsPort worlds,
+                                 ArticleExistsPort articles, CampaignExistsPort campaigns,
+                                 CharacterSheetViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.sheets = sheets;
         this.templates = templates;
+        this.globalTemplates = globalTemplates;
         this.worlds = worlds;
         this.articles = articles;
         this.campaigns = campaigns;
@@ -60,10 +64,11 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     @Transactional
     public CharacterSheetView create(CreateCharacterSheetCommand command) {
         requireWorld(command.worldId());
-        validateLinks(command.worldId(), command.templateId(), command.articleId(), command.campaignId());
+        validateLinks(command.worldId(), command.worldTemplateId(), command.globalTemplateId(),
+                command.articleId(), command.campaignId());
         CharacterSheet created = CharacterSheet.create(ids.newId(), command.worldId(),
-                command.templateId(), command.articleId(), command.campaignId(), command.name(),
-                command.values(), clock.instant());
+                command.worldTemplateId(), command.globalTemplateId(), command.articleId(),
+                command.campaignId(), command.name(), command.values(), clock.instant());
         return viewMapper.toView(sheets.save(created));
     }
 
@@ -71,9 +76,10 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     @Transactional
     public CharacterSheetView update(UpdateCharacterSheetCommand command) {
         CharacterSheet sheet = require(command.worldId(), command.sheetId());
-        validateLinks(command.worldId(), command.templateId(), command.articleId(), command.campaignId());
-        sheet.update(command.templateId(), command.articleId(), command.campaignId(), command.name(),
-                command.values(), clock.instant());
+        validateLinks(command.worldId(), command.worldTemplateId(), command.globalTemplateId(),
+                command.articleId(), command.campaignId());
+        sheet.update(command.worldTemplateId(), command.globalTemplateId(), command.articleId(),
+                command.campaignId(), command.name(), command.values(), clock.instant());
         return viewMapper.toView(sheets.save(sheet));
     }
 
@@ -104,9 +110,9 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     @Override
     @Transactional
     public CharacterSheetView importCharacterSheet(CharacterSheetView view) {
-        CharacterSheet sheet = CharacterSheet.reconstitute(view.id(), view.worldId(), view.templateId(),
-                view.articleId(), view.campaignId(), view.name(), view.values(), view.createdAt(),
-                view.updatedAt());
+        CharacterSheet sheet = CharacterSheet.reconstitute(view.id(), view.worldId(), view.worldTemplateId(),
+                view.globalTemplateId(), view.articleId(), view.campaignId(), view.name(), view.values(),
+                view.createdAt(), view.updatedAt());
         return viewMapper.toView(sheets.save(sheet));
     }
 
@@ -147,10 +153,20 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         }
     }
 
-    private void validateLinks(UUID worldId, UUID templateId, UUID articleId, UUID campaignId) {
-        TemplateKind kind = templates.findByIdInWorld(templateId, worldId)
-                .orElseThrow(() -> new ValidationException("Template not found in this world"))
-                .kind();
+    private void validateLinks(UUID worldId, UUID worldTemplateId, UUID globalTemplateId, UUID articleId,
+                               UUID campaignId) {
+        TemplateKind kind;
+        if (worldTemplateId != null) {
+            kind = templates.findByIdInWorld(worldTemplateId, worldId)
+                    .orElseThrow(() -> new ValidationException("Template not found in this world"))
+                    .kind();
+        } else if (globalTemplateId != null) {
+            kind = globalTemplates.findById(globalTemplateId)
+                    .orElseThrow(() -> new ValidationException("Global template not found"))
+                    .kind();
+        } else {
+            throw new ValidationException("Character sheet requires a template");
+        }
         if (kind != TemplateKind.CHARACTER) {
             throw new ValidationException("Template is not a character sheet template");
         }
@@ -160,5 +176,19 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         if (campaignId != null && !campaigns.existsInWorld(campaignId, worldId)) {
             throw new ValidationException("Campaign not found in this world");
         }
+    }
+
+    // --- published template-ref port (ADR-0093, used by template promotion) ---
+
+    @Override
+    @Transactional
+    public void repointWorldTemplateToGlobal(UUID worldTemplateId, UUID globalTemplateId) {
+        sheets.repointWorldTemplateToGlobal(worldTemplateId, globalTemplateId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsReferencingGlobalTemplate(UUID globalTemplateId) {
+        return sheets.existsByGlobalTemplateId(globalTemplateId);
     }
 }

@@ -14,13 +14,14 @@ public interface CharacterSheetWebMapper {
     CharacterSheetResponse toResponse(CharacterSheetView view);
 
     default CreateCharacterSheetCommand toCreateCommand(UUID worldId, CharacterSheetRequest request) {
-        return new CreateCharacterSheetCommand(worldId, request.templateId(), request.articleId(),
-                request.campaignId(), request.name(), request.values());
+        return new CreateCharacterSheetCommand(worldId, request.worldTemplateId(), request.globalTemplateId(),
+                request.articleId(), request.campaignId(), request.name(), request.values());
     }
 
     default UpdateCharacterSheetCommand toUpdateCommand(UUID worldId, UUID sheetId,
                                                          CharacterSheetRequest request) {
-        return new UpdateCharacterSheetCommand(worldId, sheetId, request.templateId(),
-                request.articleId(), request.campaignId(), request.name(), request.values());
+        return new UpdateCharacterSheetCommand(worldId, sheetId, request.worldTemplateId(),
+                request.globalTemplateId(), request.articleId(), request.campaignId(), request.name(),
+                request.values());
     }
 }

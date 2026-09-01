@@ -12,7 +12,8 @@ public interface CharacterSheetPersistenceMapper {
         if (e == null) {
             return null;
         }
-        return CharacterSheet.reconstitute(e.getId(), e.getWorldId(), e.getTemplateId(), e.getArticleId(),
-                e.getCampaignId(), e.getName(), e.getValues(), e.getCreatedAt(), e.getUpdatedAt());
+        return CharacterSheet.reconstitute(e.getId(), e.getWorldId(), e.getWorldTemplateId(),
+                e.getGlobalTemplateId(), e.getArticleId(), e.getCampaignId(), e.getName(), e.getValues(),
+                e.getCreatedAt(), e.getUpdatedAt());
     }
 }

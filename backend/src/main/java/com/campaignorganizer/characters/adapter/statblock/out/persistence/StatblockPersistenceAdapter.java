@@ -56,4 +56,14 @@ public class StatblockPersistenceAdapter implements StatblockRepositoryPort {
     public void delete(Statblock statblock) {
         repository.deleteById(statblock.getId());
     }
+
+    @Override
+    public void repointWorldTemplateToGlobal(UUID worldTemplateId, UUID globalTemplateId) {
+        repository.repointWorldTemplateToGlobal(worldTemplateId, globalTemplateId);
+    }
+
+    @Override
+    public boolean existsByGlobalTemplateId(UUID globalTemplateId) {
+        return repository.existsByGlobalTemplateId(globalTemplateId);
+    }
 }

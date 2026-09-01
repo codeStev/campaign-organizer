@@ -13,6 +13,7 @@ public interface StatblockPersistenceMapper {
             return null;
         }
         return Statblock.reconstitute(e.getId(), e.getWorldId(), e.getArticleId(), e.getCampaignId(),
-                e.getTemplateId(), e.getName(), e.getStats(), e.getNotes(), e.getCreatedAt(), e.getUpdatedAt());
+                e.getWorldTemplateId(), e.getGlobalTemplateId(), e.getName(), e.getStats(), e.getNotes(),
+                e.getCreatedAt(), e.getUpdatedAt());
     }
 }

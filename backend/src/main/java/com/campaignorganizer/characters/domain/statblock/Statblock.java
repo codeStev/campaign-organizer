@@ -13,48 +13,58 @@ public final class Statblock {
     private final UUID worldId;
     private UUID articleId;
     private UUID campaignId;
-    private UUID templateId;
+    private UUID worldTemplateId;
+    private UUID globalTemplateId;
     private String name;
     private Map<String, Object> stats;
     private String notes;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Statblock(UUID id, UUID worldId, UUID articleId, UUID campaignId, UUID templateId, String name,
-                      Map<String, Object> stats, String notes, Instant createdAt, Instant updatedAt) {
+    private Statblock(UUID id, UUID worldId, UUID articleId, UUID campaignId, UUID worldTemplateId,
+                      UUID globalTemplateId, String name, Map<String, Object> stats, String notes,
+                      Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(articleId, campaignId, templateId, name, stats, notes);
+        apply(articleId, campaignId, worldTemplateId, globalTemplateId, name, stats, notes);
     }
 
-    public static Statblock create(UUID id, UUID worldId, UUID articleId, UUID campaignId, UUID templateId,
-                                   String name, Map<String, Object> stats, String notes, Instant now) {
-        return new Statblock(id, worldId, articleId, campaignId, templateId, name, stats, notes, now, now);
+    public static Statblock create(UUID id, UUID worldId, UUID articleId, UUID campaignId,
+                                   UUID worldTemplateId, UUID globalTemplateId, String name,
+                                   Map<String, Object> stats, String notes, Instant now) {
+        return new Statblock(id, worldId, articleId, campaignId, worldTemplateId, globalTemplateId, name,
+                stats, notes, now, now);
     }
 
     public static Statblock reconstitute(UUID id, UUID worldId, UUID articleId, UUID campaignId,
-                                         UUID templateId, String name, Map<String, Object> stats, String notes,
-                                         Instant createdAt, Instant updatedAt) {
-        return new Statblock(id, worldId, articleId, campaignId, templateId, name, stats, notes, createdAt,
-                updatedAt);
+                                         UUID worldTemplateId, UUID globalTemplateId, String name,
+                                         Map<String, Object> stats, String notes, Instant createdAt,
+                                         Instant updatedAt) {
+        return new Statblock(id, worldId, articleId, campaignId, worldTemplateId, globalTemplateId, name,
+                stats, notes, createdAt, updatedAt);
     }
 
-    public void update(UUID articleId, UUID campaignId, UUID templateId, String name,
-                       Map<String, Object> stats, String notes, Instant now) {
-        apply(articleId, campaignId, templateId, name, stats, notes);
+    public void update(UUID articleId, UUID campaignId, UUID worldTemplateId, UUID globalTemplateId,
+                       String name, Map<String, Object> stats, String notes, Instant now) {
+        apply(articleId, campaignId, worldTemplateId, globalTemplateId, name, stats, notes);
         this.updatedAt = now;
     }
 
-    private void apply(UUID articleId, UUID campaignId, UUID templateId, String name,
-                       Map<String, Object> stats, String notes) {
+    private void apply(UUID articleId, UUID campaignId, UUID worldTemplateId, UUID globalTemplateId,
+                       String name, Map<String, Object> stats, String notes) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Statblock name must not be blank");
         }
+        if (worldTemplateId != null && globalTemplateId != null) {
+            throw new ValidationException(
+                    "Statblock cannot have both worldTemplateId and globalTemplateId set");
+        }
         this.articleId = articleId;
         this.campaignId = campaignId;
-        this.templateId = templateId;
+        this.worldTemplateId = worldTemplateId;
+        this.globalTemplateId = globalTemplateId;
         this.name = name;
         this.stats = stats == null ? new HashMap<>() : stats;
         this.notes = notes;
@@ -76,8 +86,12 @@ public final class Statblock {
         return campaignId;
     }
 
-    public UUID getTemplateId() {
-        return templateId;
+    public UUID getWorldTemplateId() {
+        return worldTemplateId;
+    }
+
+    public UUID getGlobalTemplateId() {
+        return globalTemplateId;
     }
 
     public String getName() {

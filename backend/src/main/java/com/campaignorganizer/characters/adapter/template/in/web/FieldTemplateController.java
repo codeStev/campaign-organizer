@@ -2,11 +2,13 @@ package com.campaignorganizer.characters.adapter.template.in.web;
 
 import com.campaignorganizer.characters.adapter.template.in.web.FieldTemplateWebDtos.FieldTemplateRequest;
 import com.campaignorganizer.characters.adapter.template.in.web.FieldTemplateWebDtos.FieldTemplateResponse;
+import com.campaignorganizer.characters.adapter.template.in.web.GlobalFieldTemplateWebDtos.GlobalFieldTemplateResponse;
 import com.campaignorganizer.characters.application.template.port.in.CreateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.DeleteFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.DuplicateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.GetFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.ListFieldTemplatesUseCase;
+import com.campaignorganizer.characters.application.template.port.in.PromoteFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.in.UpdateFieldTemplateUseCase;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import jakarta.validation.Valid;
@@ -36,7 +38,9 @@ public class FieldTemplateController {
     private final GetFieldTemplateUseCase getUseCase;
     private final ListFieldTemplatesUseCase listUseCase;
     private final DuplicateFieldTemplateUseCase duplicateUseCase;
+    private final PromoteFieldTemplateUseCase promoteUseCase;
     private final FieldTemplateWebMapper mapper;
+    private final GlobalFieldTemplateWebMapper globalMapper;
 
     public FieldTemplateController(CreateFieldTemplateUseCase createUseCase,
                                    UpdateFieldTemplateUseCase updateUseCase,
@@ -44,14 +48,17 @@ public class FieldTemplateController {
                                    GetFieldTemplateUseCase getUseCase,
                                    ListFieldTemplatesUseCase listUseCase,
                                    DuplicateFieldTemplateUseCase duplicateUseCase,
-                                   FieldTemplateWebMapper mapper) {
+                                   PromoteFieldTemplateUseCase promoteUseCase,
+                                   FieldTemplateWebMapper mapper, GlobalFieldTemplateWebMapper globalMapper) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.getUseCase = getUseCase;
         this.listUseCase = listUseCase;
         this.duplicateUseCase = duplicateUseCase;
+        this.promoteUseCase = promoteUseCase;
         this.mapper = mapper;
+        this.globalMapper = globalMapper;
     }
 
     @GetMapping
@@ -92,5 +99,11 @@ public class FieldTemplateController {
     @ResponseStatus(HttpStatus.CREATED)
     public FieldTemplateResponse duplicate(@PathVariable UUID worldId, @PathVariable UUID templateId) {
         return mapper.toResponse(duplicateUseCase.duplicate(worldId, templateId));
+    }
+
+    @PostMapping("/{templateId}/promote")
+    @ResponseStatus(HttpStatus.CREATED)
+    public GlobalFieldTemplateResponse promote(@PathVariable UUID worldId, @PathVariable UUID templateId) {
+        return globalMapper.toResponse(promoteUseCase.promote(worldId, templateId));
     }
 }
