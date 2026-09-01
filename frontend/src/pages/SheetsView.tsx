@@ -12,6 +12,7 @@ import {
 import { DiceRollerWidget } from '../components/DiceRollerWidget';
 import { CharacterSheetsPanel } from './CharacterSheetsPanel';
 import { StatblocksPanel } from './StatblocksPanel';
+import { DocumentsPanel } from './DocumentsPanel';
 import { FieldTemplatesPanel } from './FieldTemplatesPanel';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 
@@ -21,7 +22,7 @@ interface Props {
   onAuthExpired: () => void;
 }
 
-const SUBTABS = ['characters', 'statblocks', 'templates'] as const;
+const SUBTABS = ['characters', 'statblocks', 'documents', 'templates'] as const;
 
 export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const location = useLocation();
@@ -70,6 +71,9 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const statblocksPane = (
     <StatblocksPanel worldId={worldId} templates={templates} campaigns={campaigns} onError={onError} />
   );
+  const documentsPane = (
+    <DocumentsPanel worldId={worldId} templates={templates} campaigns={campaigns} onError={onError} />
+  );
   const templatesPane = (
     <FieldTemplatesPanel
       worldId={worldId}
@@ -103,6 +107,8 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           <Route path="characters/:sheetId" element={charactersPane} />
           <Route path="statblocks" element={statblocksPane} />
           <Route path="statblocks/:statblockId" element={statblocksPane} />
+          <Route path="documents" element={documentsPane} />
+          <Route path="documents/:documentId" element={documentsPane} />
           <Route path="templates" element={templatesPane} />
           <Route path="templates/:templateId" element={templatesPane} />
           <Route path="*" element={<Navigate to="characters" replace />} />
