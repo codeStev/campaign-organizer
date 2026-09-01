@@ -13,6 +13,7 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
 import com.campaignorganizer.campaign.application.player.port.published.PlayerQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceQueryPort;
+import com.campaignorganizer.campaign.application.todo.port.published.TodoQueryPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -83,6 +84,7 @@ public class ExportService implements ExportWorldUseCase {
     private final TagQueryPort tags;
     private final ClockQueryPort clocks;
     private final LooseThreadQueryPort looseThreads;
+    private final TodoQueryPort todos;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
@@ -96,7 +98,8 @@ public class ExportService implements ExportWorldUseCase {
                          WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
                          HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
-                         TagQueryPort tags, ClockQueryPort clocks, LooseThreadQueryPort looseThreads) {
+                         TagQueryPort tags, ClockQueryPort clocks, LooseThreadQueryPort looseThreads,
+                         TodoQueryPort todos) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
@@ -125,6 +128,7 @@ public class ExportService implements ExportWorldUseCase {
         this.tags = tags;
         this.clocks = clocks;
         this.looseThreads = looseThreads;
+        this.todos = todos;
     }
 
     @Override
@@ -165,6 +169,8 @@ public class ExportService implements ExportWorldUseCase {
         List<Object> allLooseThreads = new ArrayList<>();
         // Campaign rosters (ADR-0091): campaign-scoped membership rows.
         List<Object> allCampaignPlayers = new ArrayList<>();
+        // Todos (FR-54): standing and session-attached rows, campaign-scoped.
+        List<Object> allTodos = new ArrayList<>();
         worldCampaigns.forEach(c -> {
             allSessions.addAll(sessions.findOrdered(c.id()));
             arcs.findByCampaign(c.id()).forEach(a -> {
@@ -176,6 +182,7 @@ public class ExportService implements ExportWorldUseCase {
             // Loose threads (FR-49): campaign-scoped via the denormalized column.
             allLooseThreads.addAll(looseThreads.findByCampaign(c.id()));
             allCampaignPlayers.addAll(campaignPlayers.findByCampaign(c.id()));
+            allTodos.addAll(todos.findByCampaign(c.id()));
         });
         bundle.put("campaigns", worldCampaigns);
         bundle.put("sessions", allSessions);
@@ -183,6 +190,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("beats", allBeats);
         bundle.put("clocks", allClocks);
         bundle.put("looseThreads", allLooseThreads);
+        bundle.put("todos", allTodos);
         // Player pool (ADR-0091): world-scoped, reused across the world's campaigns.
         bundle.put("players", players.findByWorld(worldId));
         bundle.put("campaignPlayers", allCampaignPlayers);

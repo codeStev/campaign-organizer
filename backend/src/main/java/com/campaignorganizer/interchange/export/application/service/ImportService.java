@@ -18,6 +18,8 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.campaign.application.todo.port.published.TodoImportPort;
+import com.campaignorganizer.campaign.application.todo.port.published.TodoView;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -114,6 +116,7 @@ public class ImportService implements ImportBackupUseCase {
     private final TagImportPort tagImportPort;
     private final ClockImportPort clockImportPort;
     private final LooseThreadImportPort looseThreadImportPort;
+    private final TodoImportPort todoImportPort;
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
@@ -130,7 +133,8 @@ public class ImportService implements ImportBackupUseCase {
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
             CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
-            ClockImportPort clockImportPort, LooseThreadImportPort looseThreadImportPort) {
+            ClockImportPort clockImportPort, LooseThreadImportPort looseThreadImportPort,
+            TodoImportPort todoImportPort) {
         this.objectMapper = objectMapper;
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
@@ -161,6 +165,7 @@ public class ImportService implements ImportBackupUseCase {
         this.tagImportPort = tagImportPort;
         this.clockImportPort = clockImportPort;
         this.looseThreadImportPort = looseThreadImportPort;
+        this.todoImportPort = todoImportPort;
     }
 
     @Override
@@ -214,6 +219,7 @@ public class ImportService implements ImportBackupUseCase {
         List<TagView> tags = readList(root, "tags", TagView.class);
         List<ClockView> clocks = readList(root, "clocks", ClockView.class);
         List<LooseThreadView> looseThreads = readList(root, "looseThreads", LooseThreadView.class);
+        List<TodoView> todos = readList(root, "todos", TodoView.class);
 
         // Pass 1: every entity in the bundle gets a fresh id before anything is persisted,
         // so forward- and self-references resolve regardless of insert order.
@@ -247,6 +253,7 @@ public class ImportService implements ImportBackupUseCase {
         tags.forEach(t -> remap.assign(t.id()));
         clocks.forEach(c -> remap.assign(c.id()));
         looseThreads.forEach(t -> remap.assign(t.id()));
+        todos.forEach(t -> remap.assign(t.id()));
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
@@ -345,6 +352,12 @@ public class ImportService implements ImportBackupUseCase {
             looseThreadImportPort.importLooseThread(new LooseThreadView(remap.get(t.id()),
                     remap.get(t.sessionId()), remap.get(t.campaignId()), t.text(), t.status(),
                     t.createdAt(), t.updatedAt()));
+        }
+
+        // Todos (FR-54): campaignId is required, sessionId is remapped only when present.
+        for (TodoView t : todos) {
+            todoImportPort.importTodo(new TodoView(remap.get(t.id()), remap.get(t.campaignId()),
+                    remap.getOrNull(t.sessionId()), t.text(), t.done(), t.createdAt(), t.updatedAt()));
         }
 
         for (FieldTemplateView f : fieldTemplates) {
