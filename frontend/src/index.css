@@ -899,6 +899,24 @@ button:disabled {
   border-radius: 6px;
 }
 
+.system-color-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.game-system-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
 .settings-layout {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr);

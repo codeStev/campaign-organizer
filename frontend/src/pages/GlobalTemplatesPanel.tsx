@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { TemplateForm } from '../components/TemplateForm';
+import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -43,6 +44,11 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
   const [systems, setSystems] = useState<GameSystem[]>([]);
   const [systemsLoading, setSystemsLoading] = useState(true);
   const [newSystemName, setNewSystemName] = useState('');
+  const [editingSystemId, setEditingSystemId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editTagline, setEditTagline] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [editNotes, setEditNotes] = useState('');
   const [newKind, setNewKind] = useState<'CHARACTER' | 'STATBLOCK'>('CHARACTER');
   const [choice, setChoice] = useState('');
   const [editing, setEditing] = useState<GlobalFieldTemplate | null>(null);
@@ -90,6 +96,10 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
     return systems.find((s) => s.id === systemId)?.name ?? '(unknown system)';
   }
 
+  function systemColor(systemId: string): string | null {
+    return systems.find((s) => s.id === systemId)?.color ?? null;
+  }
+
   /** Finds a game system by exact case-insensitive name, creating one if none matches. */
   async function resolveSystemId(name: string): Promise<string> {
     const existing = systems.find((s) => s.name.toLowerCase() === name.toLowerCase());
@@ -112,12 +122,27 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
     }
   }
 
-  async function renameSystem(system: GameSystem, name: string) {
-    const trimmed = name.trim();
-    if (!trimmed || trimmed === system.name) return;
+  function startEditSystem(system: GameSystem) {
+    setEditingSystemId(system.id);
+    setEditName(system.name);
+    setEditTagline(system.tagline ?? '');
+    setEditColor(system.color ?? '');
+    setEditNotes(system.notes ?? '');
+  }
+
+  async function saveEditSystem(system: GameSystem) {
+    const trimmed = editName.trim();
+    if (!trimmed) return;
     try {
-      const updated = await gameSystemsApi.update(system.id, { name: trimmed });
+      const updated = await gameSystemsApi.update(system.id, {
+        name: trimmed,
+        tagline: editTagline.trim() || null,
+        color: editColor.trim() || null,
+        notes: editNotes.trim() || null,
+      });
       setSystems((s) => s.map((x) => (x.id === updated.id ? updated : x)));
+      setEditingSystemId(null);
+      toast.success(`Game system "${updated.name}" saved`);
     } catch (err) {
       onError(err);
     }
@@ -226,8 +251,14 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
           <div>
             <h3>{previewing.name}</h3>
             <small className="muted">
-              {KIND_LABEL[previewing.kind as 'CHARACTER' | 'STATBLOCK']} · {systemName(previewing.systemId)} ·{' '}
-              {previewing.sections.length} sections
+              {KIND_LABEL[previewing.kind as 'CHARACTER' | 'STATBLOCK']} ·{' '}
+              {systemColor(previewing.systemId) && (
+                <span
+                  className="system-color-dot"
+                  style={{ backgroundColor: systemColor(previewing.systemId)! }}
+                />
+              )}
+              {systemName(previewing.systemId)} · {previewing.sections.length} sections
             </small>
           </div>
           <div className="editor-actions">
@@ -281,27 +312,62 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
           </Button>
         </div>
         <ul className="article-list">
-          {systems.map((s) => (
-            <li key={s.id} className="rel-row">
-              <Input
-                defaultValue={s.name}
-                onBlur={(e) => void renameSystem(s, e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                }}
-              />
-              <ConfirmDeleteDialog
-                trigger={
-                  <Button variant="link" className="text-destructive hover:text-destructive">
-                    ✕
+          {systems.map((s) =>
+            editingSystemId === s.id ? (
+              <li key={s.id} className="game-system-edit">
+                <div className="editor-actions">
+                  <Input
+                    placeholder="Name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Tagline (optional)"
+                    value={editTagline}
+                    onChange={(e) => setEditTagline(e.target.value)}
+                  />
+                  <input
+                    type="color"
+                    value={editColor || '#888888'}
+                    onChange={(e) => setEditColor(e.target.value)}
+                    title="Badge color"
+                  />
+                </div>
+                <MarkdownEditor value={editNotes} onChange={setEditNotes} />
+                <div className="editor-actions">
+                  <Button type="button" disabled={!editName.trim()} onClick={() => void saveEditSystem(s)}>
+                    Save
                   </Button>
-                }
-                title="Delete game system?"
-                description={`This deletes "${s.name}". Blocked if any global template still uses it; world-scoped templates just lose the reference.`}
-                onConfirm={() => removeSystem(s)}
-              />
-            </li>
-          ))}
+                  <Button type="button" variant="link" onClick={() => setEditingSystemId(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </li>
+            ) : (
+              <li key={s.id} className="rel-row">
+                {s.color && (
+                  <span className="system-color-dot" style={{ backgroundColor: s.color }} title={s.name} />
+                )}
+                <span>
+                  <strong>{s.name}</strong>{' '}
+                  {s.tagline && <small className="muted">— {s.tagline}</small>}
+                </span>
+                <Button type="button" variant="link" onClick={() => startEditSystem(s)}>
+                  ✎ Edit
+                </Button>
+                <ConfirmDeleteDialog
+                  trigger={
+                    <Button variant="link" className="text-destructive hover:text-destructive">
+                      ✕
+                    </Button>
+                  }
+                  title="Delete game system?"
+                  description={`This deletes "${s.name}". Blocked if any global template still uses it; world-scoped templates just lose the reference.`}
+                  onConfirm={() => removeSystem(s)}
+                />
+              </li>
+            ),
+          )}
           {systemsLoading && (
             <li className="muted loading-row">
               <Spinner /> Loading…
@@ -374,8 +440,11 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
               >
                 <strong>{t.name}</strong>{' '}
                 <small className="muted">
-                  {KIND_LABEL[t.kind as 'CHARACTER' | 'STATBLOCK']} · {systemName(t.systemId)} ·{' '}
-                  {t.sections.length} sections
+                  {KIND_LABEL[t.kind as 'CHARACTER' | 'STATBLOCK']} ·{' '}
+                  {systemColor(t.systemId) && (
+                    <span className="system-color-dot" style={{ backgroundColor: systemColor(t.systemId)! }} />
+                  )}
+                  {systemName(t.systemId)} · {t.sections.length} sections
                 </small>
               </Button>
               <ConfirmDeleteDialog
