@@ -7,17 +7,24 @@ import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
 import { orderedStatEntries, templateIdOf } from '../lib/statblockDisplay';
 
+interface EntryState {
+  qty: number;
+  maxHp: string;
+}
+
 interface Props {
   worldId: string;
   statblocks: Statblock[];
   templates: FieldTemplate[];
   globalTemplates: GlobalFieldTemplate[];
+  /**
+   * Pre-seeds quantity/maxHp per statblock id instead of the qty=1 /
+   * auto-detected-HP default — used when printing a saved Encounter
+   * (ADR-0097) so its quantities and HP overrides don't need re-staging.
+   * The ad-hoc flow from StatblocksPanel (ADR-0069) omits this.
+   */
+  initialEntries?: Record<string, EntryState>;
   onClose: () => void;
-}
-
-interface EntryState {
-  qty: number;
-  maxHp: string;
 }
 
 /** First numeric value under an HP-like key ("hp", "max_hp", "Hit Points"). */
@@ -37,11 +44,21 @@ export function detectMaxHp(values: Record<string, unknown>): string {
  * and the statblock's quick numbers. Pure assembly, nothing persisted; run
  * from paper like the rest of the session material.
  */
-export function EncounterSheetView({ worldId, statblocks, templates, globalTemplates, onClose }: Props) {
+export function EncounterSheetView({
+  worldId,
+  statblocks,
+  templates,
+  globalTemplates,
+  initialEntries,
+  onClose,
+}: Props) {
   const allTemplates = useMemo(() => [...templates, ...globalTemplates], [templates, globalTemplates]);
   const [entries, setEntries] = useState<Record<string, EntryState>>(() =>
     Object.fromEntries(
-      statblocks.map((sb) => [sb.id, { qty: 1, maxHp: detectMaxHp(sb.stats) }]),
+      statblocks.map((sb) => [
+        sb.id,
+        initialEntries?.[sb.id] ?? { qty: 1, maxHp: detectMaxHp(sb.stats) },
+      ]),
     ),
   );
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);

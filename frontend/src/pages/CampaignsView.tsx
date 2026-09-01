@@ -5,17 +5,22 @@ import {
   articlesApi,
   statblocksApi,
   gameSystemsApi,
+  fieldTemplatesApi,
+  globalFieldTemplatesApi,
   Campaign,
   CampaignStatus,
   CAMPAIGN_STATUSES,
   ArticleSummary,
   Statblock,
   GameSystem,
+  FieldTemplate,
+  GlobalFieldTemplate,
   ApiError,
 } from '../api/client';
 import { SessionLog } from './SessionLog';
 import { ArcBoard } from './ArcBoard';
 import { ClockBoard } from './ClockBoard';
+import { EncounterBoard } from './EncounterBoard';
 import { RosterPanel } from '../components/RosterPanel';
 import { TodoListPanel } from '../components/TodoListPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
@@ -39,12 +44,15 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
   const api = useMemo(() => campaignsApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const statblockApi = useMemo(() => statblocksApi(worldId), [worldId]);
+  const fieldTemplateApi = useMemo(() => fieldTemplatesApi(worldId), [worldId]);
   const [list, setList] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [statblocks, setStatblocks] = useState<Statblock[]>([]);
   const [systems, setSystems] = useState<GameSystem[]>([]);
+  const [templates, setTemplates] = useState<FieldTemplate[]>([]);
+  const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +81,9 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
     articleApi.list().then(setArticles).catch(handleError);
     statblockApi.list().then(setStatblocks).catch(handleError);
     gameSystemsApi.list().then(setSystems).catch(() => {});
-  }, [refresh, articleApi, statblockApi, handleError]);
+    fieldTemplateApi.list().then(setTemplates).catch(() => {});
+    globalFieldTemplatesApi.list().then(setGlobalTemplates).catch(() => {});
+  }, [refresh, articleApi, statblockApi, fieldTemplateApi, handleError]);
 
   function select(campaign: Campaign) {
     setSelected(campaign);
@@ -304,6 +314,14 @@ export function CampaignsView({ worldId, onOpenArticle, onAuthExpired }: Props) 
               onError={handleError}
             />
             <ClockBoard worldId={worldId} campaignId={selected.id} onError={handleError} />
+            <EncounterBoard
+              worldId={worldId}
+              campaignId={selected.id}
+              statblocks={statblocks}
+              templates={templates}
+              globalTemplates={globalTemplates}
+              onError={handleError}
+            />
           </>
         )}
       </div>
