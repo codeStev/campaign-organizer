@@ -78,6 +78,7 @@ the old one.
 | [0086](0086-cheat-sheet-in-packet.md) | Fold the cheat sheet into the session packet (amends ADR-0036, ADR-0071) | Accepted |
 | [0087](0087-tag-name-search.md) | Article search matches tag names | Accepted |
 | [0088](0088-document-templates.md) | General-purpose document templates (new `DOCUMENT` TemplateKind + `Document` aggregate) | Accepted |
+| [0089](0089-duplicate-action.md) | Duplicate action for statblocks/handouts/tables/decks/templates (routes through existing `create`) | Accepted |
 
 ## Template
 

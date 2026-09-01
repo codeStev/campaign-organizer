@@ -256,6 +256,12 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   existing template builder unchanged; a filled document is its own
   instance (optionally scoped to a campaign), printable as a fillable PDF
   via the same generator character sheets already use. (ADR-0088)
+- **FR-51 Duplicate action.** A straightforward copy-then-rename action on
+  statblocks, handouts, roll tables/card decks, and field templates —
+  pays off most for oneshot-heavy play (reskin a monster, reuse a handout
+  shell without rebuilding field-by-field). No merge/diff UI; the copy is
+  a plain field-for-field clone with `" (copy)"` appended to its name/
+  title. (ADR-0089)
 
 ---
 
