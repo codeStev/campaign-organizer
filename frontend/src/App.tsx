@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { WorldsPage } from './pages/WorldsPage';
 import { WorldView } from './pages/WorldView';
 import { SettingsPage } from './pages/SettingsPage';
+import { GlobalTemplatesPanel } from './pages/GlobalTemplatesPanel';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
 import { TooltipProvider } from './components/ui/tooltip';
@@ -27,6 +28,13 @@ export function App() {
             <ThemeToggle />
             {authed && (
               <Button variant="link" asChild>
+                <Link to="/templates/global" title="Global, system-scoped templates shared across every world">
+                  🧩 Templates
+                </Link>
+              </Button>
+            )}
+            {authed && (
+              <Button variant="link" asChild>
                 <Link to="/settings" title="Settings">
                   ⚙ Settings
                 </Link>
@@ -47,6 +55,7 @@ export function App() {
               <Route path="/" element={<Navigate to="/worlds" replace />} />
               <Route path="/worlds" element={<WorldsPageRoute onAuthExpired={handleLogout} />} />
               <Route path="/worlds/:worldId/*" element={<WorldViewRoute onAuthExpired={handleLogout} />} />
+              <Route path="/templates/*" element={<TemplatesPageRoute onAuthExpired={handleLogout} />} />
               <Route path="/settings/*" element={<SettingsPage onAuthExpired={handleLogout} />} />
               <Route path="*" element={<Navigate to="/worlds" replace />} />
             </Routes>
@@ -55,6 +64,28 @@ export function App() {
         <Toaster position="bottom-right" />
       </div>
     </TooltipProvider>
+  );
+}
+
+/** World-independent global template catalog (ADR-0093) — not nested under any world. */
+function TemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <section className="settings-layout">
+      <nav className="settings-nav">
+        <Button variant="link" onClick={() => navigate('/worlds')}>
+          ← Worlds
+        </Button>
+      </nav>
+      <div className="settings-content">
+        <Routes>
+          <Route index element={<Navigate to="global" replace />} />
+          <Route path="global" element={<GlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
+          <Route path="global/:globalTemplateId" element={<GlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
+          <Route path="*" element={<Navigate to="global" replace />} />
+        </Routes>
+      </div>
+    </section>
   );
 }
 
