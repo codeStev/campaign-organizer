@@ -19,10 +19,14 @@ import com.campaignorganizer.campaign.application.loosethread.port.published.Loo
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
+import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
+import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
+import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
@@ -97,6 +101,8 @@ class ImportServiceTest {
     @Mock
     private CharacterSheetImportPort characterSheetImportPort;
     @Mock
+    private DocumentImportPort documentImportPort;
+    @Mock
     private StatblockImportPort statblockImportPort;
     @Mock
     private ArcBeatImportPort arcBeatImportPort;
@@ -128,7 +134,8 @@ class ImportServiceTest {
         service = new ImportService(objectMapper, worldImportPort, categoryImportPort, articleImportPort,
                 mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, sessionImportPort,
-                arcImportPort, fieldTemplateImportPort, characterSheetImportPort, statblockImportPort,
+                arcImportPort, fieldTemplateImportPort, characterSheetImportPort, documentImportPort,
+                statblockImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutImportPort,
                 cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort);
@@ -327,6 +334,42 @@ class ImportServiceTest {
         assertThat(imported.campaignId()).isNotEqualTo(oldCampaignId);
         assertThat(imported.text()).isEqualTo("A stranger left a coin");
         assertThat(imported.status()).isEqualTo("OPEN");
+    }
+
+    @Test
+    void remapsDocumentTemplateAndCampaignIds() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldTemplateId = UUID.randomUUID();
+        UUID oldDocumentId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null, now, now)));
+        bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId,
+                "Session Zero", TemplateKind.DOCUMENT, null, List.of(), now, now)));
+        bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, oldTemplateId,
+                oldCampaignId, "Ashes Zero", Map.of("lines", "No animal harm"), now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats", "clocks",
+                "looseThreads", "characterSheets", "statblocks", "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<DocumentView> documentCaptor = ArgumentCaptor.forClass(DocumentView.class);
+        verify(documentImportPort).importDocument(documentCaptor.capture());
+        DocumentView imported = documentCaptor.getValue();
+        assertThat(imported.id()).isNotEqualTo(oldDocumentId);
+        assertThat(imported.templateId()).isNotEqualTo(oldTemplateId);
+        assertThat(imported.campaignId()).isNotEqualTo(oldCampaignId);
+        assertThat(imported.name()).isEqualTo("Ashes Zero");
+        assertThat(imported.values()).containsEntry("lines", "No animal harm");
     }
 
     /** Chains live in JSONB without FKs — dangling ids import as dropped refs. */

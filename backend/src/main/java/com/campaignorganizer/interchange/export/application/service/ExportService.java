@@ -10,6 +10,7 @@ import com.campaignorganizer.campaign.application.session.port.published.CheatSh
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
+import com.campaignorganizer.characters.application.document.port.published.DocumentQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
@@ -66,6 +67,7 @@ public class ExportService implements ExportWorldUseCase {
     private final ArcBeatQueryPort beats;
     private final FieldTemplateQueryPort fieldTemplates;
     private final CharacterSheetQueryPort characterSheets;
+    private final DocumentQueryPort documents;
     private final StatblockQueryPort statblocks;
     private final WhiteboardQueryPort whiteboards;
     private final RollTableQueryPort rollTables;
@@ -82,7 +84,8 @@ public class ExportService implements ExportWorldUseCase {
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                          SessionQueryPort sessions, ArcQueryPort arcs, ArcBeatQueryPort beats,
                          FieldTemplateQueryPort fieldTemplates, CharacterSheetQueryPort characterSheets,
-                         StatblockQueryPort statblocks, WhiteboardQueryPort whiteboards,
+                         DocumentQueryPort documents, StatblockQueryPort statblocks,
+                         WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
                          HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
                          TagQueryPort tags, ClockQueryPort clocks, LooseThreadQueryPort looseThreads) {
@@ -101,6 +104,7 @@ public class ExportService implements ExportWorldUseCase {
         this.beats = beats;
         this.fieldTemplates = fieldTemplates;
         this.characterSheets = characterSheets;
+        this.documents = documents;
         this.statblocks = statblocks;
         this.whiteboards = whiteboards;
         this.rollTables = rollTables;
@@ -174,6 +178,8 @@ public class ExportService implements ExportWorldUseCase {
 
         bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
         bundle.put("characterSheets", characterSheets.findByWorld(worldId));
+        // General-purpose documents (FR-50).
+        bundle.put("documents", documents.findByWorld(worldId));
         bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorld(worldId));
         // Randomizers (FR-40): beats reference them, so they ship with the world.

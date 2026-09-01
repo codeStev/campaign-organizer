@@ -12,6 +12,8 @@ import com.campaignorganizer.campaign.application.loosethread.port.published.Loo
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
+import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockImportPort;
@@ -91,6 +93,7 @@ public class ImportService implements ImportBackupUseCase {
     private final ArcImportPort arcImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
     private final CharacterSheetImportPort characterSheetImportPort;
+    private final DocumentImportPort documentImportPort;
     private final StatblockImportPort statblockImportPort;
     private final ArcBeatImportPort arcBeatImportPort;
     private final WhiteboardImportPort whiteboardImportPort;
@@ -110,7 +113,8 @@ public class ImportService implements ImportBackupUseCase {
             TimelineEventImportPort timelineEventImportPort, RelationshipImportPort relationshipImportPort,
             CampaignImportPort campaignImportPort, SessionImportPort sessionImportPort,
             ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
-            CharacterSheetImportPort characterSheetImportPort, StatblockImportPort statblockImportPort,
+            CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
+            StatblockImportPort statblockImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
@@ -131,6 +135,7 @@ public class ImportService implements ImportBackupUseCase {
         this.arcImportPort = arcImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
         this.characterSheetImportPort = characterSheetImportPort;
+        this.documentImportPort = documentImportPort;
         this.statblockImportPort = statblockImportPort;
         this.arcBeatImportPort = arcBeatImportPort;
         this.whiteboardImportPort = whiteboardImportPort;
@@ -179,6 +184,7 @@ public class ImportService implements ImportBackupUseCase {
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<CharacterSheetView> characterSheets =
                 readList(root, "characterSheets", CharacterSheetView.class);
+        List<DocumentView> documents = readList(root, "documents", DocumentView.class);
         List<StatblockView> statblocks = readList(root, "statblocks", StatblockView.class);
         List<ArcBeatView> beats = readList(root, "beats", ArcBeatView.class);
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
@@ -208,6 +214,7 @@ public class ImportService implements ImportBackupUseCase {
         arcs.forEach(a -> remap.assign(a.id()));
         fieldTemplates.forEach(f -> remap.assign(f.id()));
         characterSheets.forEach(s -> remap.assign(s.id()));
+        documents.forEach(d -> remap.assign(d.id()));
         statblocks.forEach(s -> remap.assign(s.id()));
         beats.forEach(b -> remap.assign(b.id()));
         whiteboards.forEach(w -> remap.assign(w.id()));
@@ -316,6 +323,13 @@ public class ImportService implements ImportBackupUseCase {
             characterSheetImportPort.importCharacterSheet(new CharacterSheetView(remap.get(s.id()),
                     newWorldId, remap.getOrNull(s.templateId()), remap.getOrNull(s.articleId()),
                     remap.getOrNull(s.campaignId()), s.name(), s.values(), s.createdAt(), s.updatedAt()));
+        }
+
+        // General-purpose documents (FR-50): templateId and campaignId are remapped.
+        for (DocumentView d : documents) {
+            documentImportPort.importDocument(new DocumentView(remap.get(d.id()), newWorldId,
+                    remap.getOrNull(d.templateId()), remap.getOrNull(d.campaignId()), d.name(),
+                    d.values(), d.createdAt(), d.updatedAt()));
         }
 
         for (StatblockView s : statblocks) {
