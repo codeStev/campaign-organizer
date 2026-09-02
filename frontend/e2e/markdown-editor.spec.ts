@@ -56,12 +56,21 @@ test('italic text actually renders italic, and the button reflects it', async ({
 
 test('H2 actually renders as a heading, and the button reflects it', async ({ page }) => {
   const content = page.getByTestId('md-content');
-  const h2Btn = page.getByTestId('md-toolbar-h2');
+  const textStyle = page.getByTestId('md-toolbar-text-style');
 
   await page.keyboard.type('normal paragraph');
   await page.keyboard.press('Enter');
-  await h2Btn.click();
-  await expect(h2Btn).toHaveAttribute('aria-pressed', 'true');
+  await textStyle.click();
+  await page.getByRole('option', { name: 'Heading 2' }).click();
+  await expect(textStyle).toHaveText('Heading 2');
+  // Picking from the Select moves focus to its portaled dropdown, same as a
+  // real click would — the editor isn't a descendant of the toolbar for
+  // focus-retention purposes (see the toolbar's onMouseDown comment), so a
+  // real user has to focus back into it before typing. Use .focus(), not
+  // .click(): a click hit-tests a coordinate and could land on either the
+  // first line or the (now-empty, now-h2) second line, whereas ProseMirror
+  // restores its own last selection on focus.
+  await content.locator('.ProseMirror').focus();
   await page.keyboard.type('Section Title');
 
   const heading = content.locator('h2', { hasText: 'Section Title' });
