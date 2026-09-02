@@ -62,8 +62,8 @@ paths) — see Phase 6.
 
 ## Decisions (confirmed 2026-09-03)
 
-Three open questions from the mockup review, now resolved — recorded here
-for context, not left as live questions:
+Open questions from the mockup review, now resolved — recorded here for
+context, not left as live questions:
 
 - **Library merge → keep pages separate, but adopt the mockup's grouping
   philosophy.** Game Systems, Statblocks, and Field Templates stay three
@@ -85,6 +85,20 @@ for context, not left as live questions:
   built entirely from existing free-tag data. Still a Phase 6 build (needs
   the parser + tree-rendering component), but the approach itself is
   locked in, not open.
+- **Beat `kind` → user-defined, not a fixed enum, but visually prominent
+  like the mockup.** Same shape as Game Systems' color field: GMs create
+  their own named kinds (not just SCENE/COMBAT/REVEAL) with a color, and
+  beats render with that color the way the mockup shows — small CRUD, own
+  table/entity, not a hardcoded enum. Bigger than originally scoped in
+  Phase 3; still lands there, alongside its own ADR + FR.
+- **Scratch/sandbox worlds → cosmetic only.** A flag/badge in the World
+  list and switcher, nothing more — no functional exclusion from search,
+  backups, or export. Simplest version, matches the mockup's "Sketchbook"
+  entry exactly.
+- **World Overview's "word count" stat → dropped.** Not worth building
+  (on-read cost grows with world size; a cached/denormalized count is too
+  much machinery for one stat). The Overview stats strip ships with
+  article count, sessions run, loose threads, and flags only.
 
 ## Phases
 
@@ -123,17 +137,16 @@ Each gets its own ADR + FR + Flyway migration before any UI work:
 - **Clocks** (progress/countdown trackers) — from the brainstormed backlog
   (memory `feature-backlog-brainstorm`), never built.
 - **Loose Threads** (dangling plot hooks) — same backlog, never built.
-- **Beat `kind`** (SCENE/COMBAT/REVEAL/…, each with a color) on the
-  existing StoryArc/Beat domain — check current schema first; this may be
-  additive (one new column) rather than a new concept.
-- **Scratch/sandbox world flag** — a boolean or enum on `World`
-  distinguishing real campaign worlds from a scratch/brainstorming world
-  (the mockup's "Sketchbook · scratch" world switcher entry). Affects the
-  Worlds list and World switcher UI.
+- **Beat kinds** — a small user-managed catalog (name + color, same shape
+  as `GameSystem`'s color field), referenced by a new `kindId` on the
+  existing StoryArc/Beat domain. Not a fixed enum — own table, own CRUD.
+- **Scratch/sandbox world flag** — a boolean on `World`, cosmetic only
+  (no functional exclusion from search/backup/export). Affects the Worlds
+  list and World switcher UI only.
 - **World overview aggregate stats** — read endpoint(s) for article count,
-  word count, sessions-run count, "recently edited" feed. Likely
-  derivable from existing tables (revision history, article `updatedAt`)
-  without new persisted state.
+  sessions-run count, "recently edited" feed. No word count (dropped —
+  see Decisions). Likely derivable from existing tables (revision history,
+  article `updatedAt`) without new persisted state.
 
 ### Phase 4 — Overview dashboard + Table Tools dock
 Consumes Phase 3's new data: world Overview screen (stats strip,
