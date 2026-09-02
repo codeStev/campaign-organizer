@@ -1037,6 +1037,9 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         <Button variant="link" className="export-btn" onClick={handleExport} title="Download world as JSON">
           ⭳ Export
         </Button>
+        <Button variant="link" asChild title="Preview the in-progress UI overhaul (docs/ui-overhaul-plan.md)">
+          <NavLink to={`/next/worlds/${worldId}`}>✨ Try the new UI</NavLink>
+        </Button>
       </div>
 
       {error && <p className="error">{error}</p>}
