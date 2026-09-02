@@ -50,7 +50,7 @@ body {
 }
 
 .app {
-  max-width: 1400px;
+  max-width: 2400px;
   margin: 0 auto;
   padding: clamp(0.75rem, 2vw, 2rem);
 }
