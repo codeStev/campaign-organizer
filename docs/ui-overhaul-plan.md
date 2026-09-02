@@ -60,31 +60,31 @@ counterpart, that old route/component is deleted and, if the whole nav
 area is done, the `/next` prefix is dropped (routes promoted to the real
 paths) — see Phase 6.
 
-## Open decisions to confirm before/during Phase 1
+## Decisions (confirmed 2026-09-03)
 
-These came out of reviewing the mockup and directly affect Phase 1 — flag
-and confirm rather than assuming:
+Three open questions from the mockup review, now resolved — recorded here
+for context, not left as live questions:
 
-- **Library merge.** The mockup merges Game Systems + Statblocks + Field
-  Templates into one tabbed "Library" page. This is the *opposite* of
-  ADR-0098, which just gave Game Systems its own top-level page. Pick one:
-  keep them separate (current state) or merge under the new nav. Default
-  assumption until told otherwise: **keep them separate** — ADR-0098 was a
-  deliberate, recent, user-confirmed decision; the mockup wasn't built
-  knowing that.
-- **Nav grouping: World/Play/Library vs. current World/Play/Tools.** The
-  mockup folds Consistency into "World" and has no separate "Tools" group;
-  our current sidebar (ADR-0098) has a three-group World/Play/Tools split.
-  Default assumption: adopt the mockup's two-group World/Play shape (drop
-  "Tools", fold Consistency into World) for consistency with everything
-  else adopted from it — revisit if it feels wrong once built.
-- **Wiki's nested category tree.** The mockup shows a hierarchical
-  category tree (Characters → Reckoners, Guild factors, …) which doesn't
-  map to any existing data field — our closest concept is `ArticleTemplate`
-  (flat: Character/Location/etc.) plus free tags. Needs its own small
-  design pass (a tag-prefix convention like `Characters/Reckoners`, or a
-  real parent-category field) before Phase 6 — not blocking earlier phases,
-  since Wiki can ship with the current flat filter list first.
+- **Library merge → keep pages separate, but adopt the mockup's grouping
+  philosophy.** Game Systems, Statblocks, and Field Templates stay three
+  separate top-level pages (ADR-0098 stands) — but `AppSidebarNext` groups
+  their three nav entries under a labeled **"Library · all worlds"**
+  section, matching the mockup's framing that these are world-independent
+  shared catalogs, distinct from World/Play. This is a nav-grouping change
+  only, not new merged-page functionality — it belongs in **Phase 1**, not
+  Phase 6.
+- **Nav grouping → adopt the mockup's shape.** Two groups, **World** and
+  **Play** — no separate "Tools" group; Consistency folds into World.
+  Combined with the point above, `AppSidebarNext`'s in-world sidebar ends
+  up World / Play, and the top-level `AppSidebarNext` ends up Worlds /
+  Library (Game Systems, Statblocks, Templates) / Settings.
+- **Wiki's nested category tree → tag-prefix convention, arbitrary depth.**
+  A tag like `Characters/Reckoners/Retired` parses into a tree at render
+  time on its `/`-delimited segments — not capped at one level of nesting,
+  so the tree can go as deep as the user's tags do. No new backend field;
+  built entirely from existing free-tag data. Still a Phase 6 build (needs
+  the parser + tree-rendering component), but the approach itself is
+  locked in, not open.
 
 ## Phases
 
@@ -92,12 +92,16 @@ Each phase is its own set of granular commits. Don't start a phase's
 backend work without its ADR + requirements.md entry first (ground rule 4).
 
 ### Phase 1 — Shell + basic navigation
-New `/next` shell: `AppSidebarNext` (World/Play/Library-or-Tools per the
-decision above) and `WorldViewNext`'s in-world sidebar, both against
-**stub/placeholder pages** (just a heading per screen, no real content
-yet). Goal: the new nav itself is navigable and reviewable before any
-feature work starts. Resolves the two nav-shape open decisions above as
-part of doing this.
+New `/next` shell, per the decisions above:
+- Top-level `AppSidebarNext`: Worlds, a **Library** section (Game Systems,
+  Statblocks, Templates — three links, one label), Settings.
+- In-world `WorldViewNext` sidebar: **World** (Articles/Wiki, Maps/Atlas,
+  Chronicle, Relations, Consistency) and **Play** (Campaigns, Encounters,
+  Whiteboards) — no separate Tools group.
+
+Both against **stub/placeholder pages** (just a heading per screen, no
+real content yet). Goal: the new nav itself is navigable and reviewable
+before any feature work starts.
 
 ### Phase 2 — Reskin migrations (mostly-existing functionality)
 Screens that are close to 1:1 with what already exists — port real content
@@ -158,15 +162,12 @@ roll logic.
   consolidated to match the mockup).
 
 ### Phase 6 — Deferred / needs its own design pass
-- **Wiki's nested category tree** — pick the tag-prefix-vs-real-field
-  approach (see Open decisions), then build it.
+- **Wiki's nested category tree** — build the `/`-delimited tag-prefix
+  parser + tree component (see Decisions above; approach is locked in,
+  this is just the build).
 - **Hierarchical Atlas** — one or more world/region maps linking down to
   more specific location sub-maps. The user explicitly flagged this as
   "a feature I want later," not blocking the rest of the overhaul.
-- **Library merge** — if the open decision above ends up "yes, merge,"
-  do it here (touches Game Systems/Statblocks/Templates nav placement,
-  a second reversal of ADR-0098 territory, worth doing deliberately and
-  separately).
 
 ### Phase 7 — Retirement
 Once every screen has a confirmed-equivalent `/next` replacement: delete
