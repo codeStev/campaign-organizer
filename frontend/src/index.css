@@ -88,11 +88,17 @@ body {
 /* Baseline reset for the few native <input>s left after the shadcn Input
    conversion (checkbox/color/hidden-file — see index.css commit history for
    why background/border/padding were removed here: same unlayered-CSS vs.
-   @layer-utilities collision as the button {} rule had). */
+   @layer-utilities collision as the button {} rule had). max-width also
+   applies here since shadcn Input/Textarea are w-full by default — without
+   a cap, a plain one-line name field stretches to fill however wide its
+   container is, which looks absurd now that .app can be 2400px wide.
+   Wider single-purpose surfaces (MarkdownEditor's TipTap body, dialogs with
+   their own width) aren't native <input>/<textarea> and are unaffected. */
 input,
 textarea {
   color: inherit;
   font: inherit;
+  max-width: 30rem;
 }
 
 textarea {
