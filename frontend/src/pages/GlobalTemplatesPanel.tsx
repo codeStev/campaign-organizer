@@ -13,9 +13,7 @@ import {
 } from '../api/client';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { TemplateForm } from '../components/TemplateForm';
-import { MarkdownEditor } from '../components/MarkdownEditor';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -42,13 +40,6 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
   const [systems, setSystems] = useState<GameSystem[]>([]);
-  const [systemsLoading, setSystemsLoading] = useState(true);
-  const [newSystemName, setNewSystemName] = useState('');
-  const [editingSystemId, setEditingSystemId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editTagline, setEditTagline] = useState('');
-  const [editColor, setEditColor] = useState('');
-  const [editNotes, setEditNotes] = useState('');
   const [newKind, setNewKind] = useState<'CHARACTER' | 'STATBLOCK'>('CHARACTER');
   const [choice, setChoice] = useState('');
   const [editing, setEditing] = useState<GlobalFieldTemplate | null>(null);
@@ -73,11 +64,7 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
   }, [onError]);
 
   const refreshSystems = useCallback(() => {
-    gameSystemsApi
-      .list()
-      .then(setSystems)
-      .catch(onError)
-      .finally(() => setSystemsLoading(false));
+    gameSystemsApi.list().then(setSystems).catch(onError);
   }, [onError]);
 
   useEffect(() => {
@@ -107,54 +94,6 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
     const created = await gameSystemsApi.create({ name });
     setSystems((s) => [...s, created]);
     return created.id;
-  }
-
-  async function addSystem() {
-    const name = newSystemName.trim();
-    if (!name) return;
-    try {
-      const created = await gameSystemsApi.create({ name });
-      setSystems((s) => [...s, created]);
-      setNewSystemName('');
-      toast.success(`Game system "${created.name}" added`);
-    } catch (err) {
-      onError(err);
-    }
-  }
-
-  function startEditSystem(system: GameSystem) {
-    setEditingSystemId(system.id);
-    setEditName(system.name);
-    setEditTagline(system.tagline ?? '');
-    setEditColor(system.color ?? '');
-    setEditNotes(system.notes ?? '');
-  }
-
-  async function saveEditSystem(system: GameSystem) {
-    const trimmed = editName.trim();
-    if (!trimmed) return;
-    try {
-      const updated = await gameSystemsApi.update(system.id, {
-        name: trimmed,
-        tagline: editTagline.trim() || null,
-        color: editColor.trim() || null,
-        notes: editNotes.trim() || null,
-      });
-      setSystems((s) => s.map((x) => (x.id === updated.id ? updated : x)));
-      setEditingSystemId(null);
-      toast.success(`Game system "${updated.name}" saved`);
-    } catch (err) {
-      onError(err);
-    }
-  }
-
-  async function removeSystem(system: GameSystem) {
-    try {
-      await gameSystemsApi.remove(system.id);
-      refreshSystems();
-    } catch (err) {
-      onError(err);
-    }
   }
 
   useEffect(() => {
@@ -290,93 +229,6 @@ export function GlobalTemplatesPanel({ onAuthExpired }: Props) {
 
   return (
     <>
-      <section className="card">
-        <h3>Game systems</h3>
-        <p className="muted hint">
-          A top-level, world-independent list of the systems your templates are keyed by (ADR-0094).
-        </p>
-        <div className="editor-actions">
-          <Input
-            placeholder="New game system name…"
-            value={newSystemName}
-            onChange={(e) => setNewSystemName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void addSystem();
-              }
-            }}
-          />
-          <Button type="button" disabled={!newSystemName.trim()} onClick={() => void addSystem()}>
-            Add
-          </Button>
-        </div>
-        <ul className="article-list">
-          {systems.map((s) =>
-            editingSystemId === s.id ? (
-              <li key={s.id} className="game-system-edit">
-                <div className="editor-actions">
-                  <Input
-                    placeholder="Name"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Tagline (optional)"
-                    value={editTagline}
-                    onChange={(e) => setEditTagline(e.target.value)}
-                  />
-                  <input
-                    type="color"
-                    value={editColor || '#888888'}
-                    onChange={(e) => setEditColor(e.target.value)}
-                    title="Badge color"
-                  />
-                </div>
-                <MarkdownEditor value={editNotes} onChange={setEditNotes} />
-                <div className="editor-actions">
-                  <Button type="button" disabled={!editName.trim()} onClick={() => void saveEditSystem(s)}>
-                    Save
-                  </Button>
-                  <Button type="button" variant="link" onClick={() => setEditingSystemId(null)}>
-                    Cancel
-                  </Button>
-                </div>
-              </li>
-            ) : (
-              <li key={s.id} className="rel-row">
-                {s.color && (
-                  <span className="system-color-dot" style={{ backgroundColor: s.color }} title={s.name} />
-                )}
-                <span>
-                  <strong>{s.name}</strong>{' '}
-                  {s.tagline && <small className="muted">— {s.tagline}</small>}
-                </span>
-                <Button type="button" variant="link" onClick={() => startEditSystem(s)}>
-                  ✎ Edit
-                </Button>
-                <ConfirmDeleteDialog
-                  trigger={
-                    <Button variant="link" className="text-destructive hover:text-destructive">
-                      ✕
-                    </Button>
-                  }
-                  title="Delete game system?"
-                  description={`This deletes "${s.name}". Blocked if any global template still uses it; world-scoped templates just lose the reference.`}
-                  onConfirm={() => removeSystem(s)}
-                />
-              </li>
-            ),
-          )}
-          {systemsLoading && (
-            <li className="muted loading-row">
-              <Spinner /> Loading…
-            </li>
-          )}
-          {!systemsLoading && systems.length === 0 && <li className="muted">No game systems yet.</li>}
-        </ul>
-      </section>
-
       <div className="card">
         <h3>Global templates</h3>
         <p className="muted hint">
