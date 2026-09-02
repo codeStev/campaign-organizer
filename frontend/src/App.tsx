@@ -8,7 +8,11 @@ import { SettingsPage } from './pages/SettingsPage';
 import { GlobalTemplatesPanel } from './pages/GlobalTemplatesPanel';
 import { GlobalStatblocksPanel } from './pages/GlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
+import { WorldsNextPage } from './pages/WorldsNextPage';
+import { WorldViewNext } from './pages/WorldViewNext';
 import { AppSidebar } from './components/AppSidebar';
+import { AppSidebarNext } from './components/AppSidebarNext';
+import { NextStubPage } from './components/NextStubPage';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
 import { TooltipProvider } from './components/ui/tooltip';
@@ -44,6 +48,8 @@ export function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/worlds" replace />} />
               <Route path="/worlds/:worldId/*" element={<WorldViewRoute onAuthExpired={handleLogout} />} />
+              <Route path="/next/worlds/:worldId/*" element={<NextWorldViewRoute onAuthExpired={handleLogout} />} />
+              <Route path="/next/*" element={<AppShellNext onAuthExpired={handleLogout} />} />
               <Route path="*" element={<AppShell onAuthExpired={handleLogout} />} />
             </Routes>
           )}
@@ -73,6 +79,57 @@ function AppShell({ onAuthExpired }: { onAuthExpired: () => void }) {
         </Routes>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+/**
+ * /next shell (docs/ui-overhaul-plan.md Phase 1) — same shape as AppShell,
+ * separate sidebar/routes so the old UI stays untouched as a reference
+ * throughout the migration.
+ */
+function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
+  return (
+    <SidebarProvider className="min-h-0 gap-6 sidebar-shell">
+      <AppSidebarNext />
+      <SidebarInset className="app-shell-content">
+        <Routes>
+          <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
+          <Route path="settings" element={<NextStubPage title="Settings" note="Phase 5 — reskin of the existing settings categories." />} />
+          <Route path="*" element={<Navigate to="/next/worlds" replace />} />
+        </Routes>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+/** Resolves :worldId to a World, then renders the /next world shell. */
+function NextWorldViewRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
+  const { worldId } = useParams<{ worldId: string }>();
+  const navigate = useNavigate();
+  const [world, setWorld] = useState<World | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!worldId) return;
+    setWorld(null);
+    setNotFound(false);
+    worldsApi
+      .get(worldId)
+      .then(setWorld)
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          onAuthExpired();
+          return;
+        }
+        setNotFound(true);
+      });
+  }, [worldId, onAuthExpired]);
+
+  if (!worldId || notFound) return <Navigate to="/next/worlds" replace />;
+  if (!world) return <p className="muted">Loading…</p>;
+
+  return (
+    <WorldViewNext worldId={world.id} worldName={world.name} onBack={() => navigate('/next/worlds')} />
   );
 }
 
