@@ -27,7 +27,18 @@ import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from '../components/ui/sidebar';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { TagInput, TagList } from '../components/TagInput';
 import { TruncatedLabel } from '../components/TruncatedLabel';
@@ -188,22 +199,26 @@ type Tab =
   | 'tags'
   | 'consistency';
 
-/** Route path segments, in nav order. */
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'articles', label: 'Articles' },
-  { key: 'maps', label: 'Maps' },
-  { key: 'timelines', label: 'Timelines' },
-  { key: 'calendars', label: 'Calendars' },
-  { key: 'relationships', label: 'Relationships' },
-  { key: 'campaigns', label: 'Campaigns' },
-  { key: 'players', label: 'Players' },
-  { key: 'sheets', label: 'Sheets' },
-  { key: 'whiteboards', label: 'Whiteboards' },
-  { key: 'tables', label: 'Tables & Decks' },
-  { key: 'handouts', label: 'Handouts' },
-  { key: 'tags', label: 'Tags' },
-  { key: 'consistency', label: 'Consistency' },
+type TabGroup = 'World' | 'Play' | 'Tools';
+
+/** Route path segments, in nav order, grouped for the in-world sidebar (ADR-0098). */
+const TABS: { key: Tab; label: string; group: TabGroup }[] = [
+  { key: 'articles', label: 'Articles', group: 'World' },
+  { key: 'maps', label: 'Maps', group: 'World' },
+  { key: 'timelines', label: 'Timelines', group: 'World' },
+  { key: 'calendars', label: 'Calendars', group: 'World' },
+  { key: 'relationships', label: 'Relationships', group: 'World' },
+  { key: 'tags', label: 'Tags', group: 'World' },
+  { key: 'campaigns', label: 'Campaigns', group: 'Play' },
+  { key: 'players', label: 'Players', group: 'Play' },
+  { key: 'sheets', label: 'Sheets', group: 'Play' },
+  { key: 'whiteboards', label: 'Whiteboards', group: 'Play' },
+  { key: 'tables', label: 'Tables & Decks', group: 'Play' },
+  { key: 'handouts', label: 'Handouts', group: 'Play' },
+  { key: 'consistency', label: 'Consistency', group: 'Tools' },
 ];
+
+const TAB_GROUPS: TabGroup[] = ['World', 'Play', 'Tools'];
 
 export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) {
   const api = articlesApi(worldId);
@@ -1022,60 +1037,74 @@ export function WorldView({ worldId, worldName, onBack, onAuthExpired }: Props) 
         <Button variant="link" className="export-btn" onClick={handleExport} title="Download world as JSON">
           ⭳ Export
         </Button>
-        <Tabs value={activeTab} className="tabs">
-          <TabsList variant="line">
-            {TABS.map((t) => (
-              <TabsTrigger key={t.key} value={t.key} asChild>
-                <NavLink to={t.key === 'articles' && articleId ? `articles/${articleId}` : t.key}>
-                  {t.label}
-                </NavLink>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
       </div>
 
       {error && <p className="error">{error}</p>}
 
-      <Routes>
-        <Route index element={<Navigate to="articles" replace />} />
-        <Route path="articles" element={articlesPane} />
-        <Route path="articles/:articleId" element={articlesPane} />
-        <Route path="maps" element={mapsPane} />
-        <Route path="maps/:mapId" element={mapsPane} />
-        <Route path="timelines" element={timelinesPane} />
-        <Route path="timelines/:timelineId" element={timelinesPane} />
-        <Route path="calendars" element={calendarsPane} />
-        <Route path="calendars/:calendarId" element={calendarsPane} />
-        <Route
-          path="relationships"
-          element={<RelationshipsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />}
-        />
-        <Route path="campaigns" element={campaignsPane} />
-        <Route path="campaigns/:campaignId" element={campaignsPane} />
-        <Route path="players" element={playersPane} />
-        <Route
-          path="sheets/*"
-          element={<SheetsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />}
-        />
-        <Route path="whiteboards" element={whiteboardsPane} />
-        <Route path="whiteboards/:whiteboardId" element={whiteboardsPane} />
-        <Route path="tables" element={tablesPane} />
-        <Route path="tables/:kind" element={tablesPane} />
-        <Route path="tables/:kind/:entityId" element={tablesPane} />
-        <Route
-          path="handouts"
-          element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
-        />
-        <Route
-          path="handouts/:handoutId"
-          element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
-        />
-        <Route path="tags" element={tagsPane} />
-        <Route path="tags/:tagName" element={tagsPane} />
-        <Route path="consistency" element={consistencyPane} />
-        <Route path="*" element={<Navigate to="articles" replace />} />
-      </Routes>
+      <SidebarProvider className="min-h-0 sidebar-shell world-shell">
+        <Sidebar collapsible="none" className="border-r border-sidebar-border">
+          <SidebarContent>
+            {TAB_GROUPS.map((group) => (
+              <SidebarGroup key={group}>
+                <SidebarGroupLabel>{group}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {TABS.filter((t) => t.group === group).map((t) => (
+                      <SidebarMenuItem key={t.key}>
+                        <SidebarMenuButton asChild isActive={activeTab === t.key}>
+                          <NavLink to={t.key === 'articles' && articleId ? `articles/${articleId}` : t.key}>
+                            {t.label}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+        </Sidebar>
+        <SidebarInset className="world-main-inset">
+          <Routes>
+            <Route index element={<Navigate to="articles" replace />} />
+            <Route path="articles" element={articlesPane} />
+            <Route path="articles/:articleId" element={articlesPane} />
+            <Route path="maps" element={mapsPane} />
+            <Route path="maps/:mapId" element={mapsPane} />
+            <Route path="timelines" element={timelinesPane} />
+            <Route path="timelines/:timelineId" element={timelinesPane} />
+            <Route path="calendars" element={calendarsPane} />
+            <Route path="calendars/:calendarId" element={calendarsPane} />
+            <Route
+              path="relationships"
+              element={
+                <RelationshipsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />
+              }
+            />
+            <Route path="campaigns" element={campaignsPane} />
+            <Route path="campaigns/:campaignId" element={campaignsPane} />
+            <Route path="players" element={playersPane} />
+            <Route
+              path="sheets/*"
+              element={<SheetsView worldId={worldId} onOpenArticle={openFromMap} onAuthExpired={onAuthExpired} />}
+            />
+            <Route path="whiteboards" element={whiteboardsPane} />
+            <Route path="whiteboards/:whiteboardId" element={whiteboardsPane} />
+            <Route path="tables" element={tablesPane} />
+            <Route path="tables/:kind" element={tablesPane} />
+            <Route path="tables/:kind/:entityId" element={tablesPane} />
+            <Route path="handouts" element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="handouts/:handoutId"
+              element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route path="tags" element={tagsPane} />
+            <Route path="tags/:tagName" element={tagsPane} />
+            <Route path="consistency" element={consistencyPane} />
+            <Route path="*" element={<Navigate to="articles" replace />} />
+          </Routes>
+        </SidebarInset>
+      </SidebarProvider>
     </section>
   );
 }
