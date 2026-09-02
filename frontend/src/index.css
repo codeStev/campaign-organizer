@@ -1,41 +1,47 @@
 @import 'tailwindcss';
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
-/* Light and dark palettes, both built from the app's existing brand purple
-   (#6d54c9) and the dark theme's original hand-picked colors (ADR-0063) —
-   not the shadcn CLI's generic "Nova" neutral-gray defaults. */
+/* shadcn's "mira" style/stone base color (ADR-0099) — a neutral starting
+   palette, deliberately not a hand-picked brand color, so it stays easy to
+   swap wholesale later via the shadcn CLI instead of hand-edited hex values. */
 :root {
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #1b1826;
-  --card: #ffffff;
-  --card-foreground: #1b1826;
-  --popover: #ffffff;
-  --popover-foreground: #1b1826;
-  --primary: #6d54c9;
-  --primary-foreground: #ffffff;
-  --secondary: #f3f1ea;
-  --secondary-foreground: #1b1826;
-  --muted: #f1eff7;
-  --muted-foreground: #6b6480;
-  --accent: #efeaf9;
-  --accent-foreground: #1b1826;
-  --destructive: #c2455f;
-  --border: #e4e0ee;
-  --input: #e4e0ee;
-  --ring: #6d54c9;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.147 0.004 49.25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.147 0.004 49.25);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.147 0.004 49.25);
+  --primary: oklch(0.216 0.006 56.043);
+  --primary-foreground: oklch(0.985 0.001 106.423);
+  --secondary: oklch(0.97 0.001 106.424);
+  --secondary-foreground: oklch(0.216 0.006 56.043);
+  --muted: oklch(0.97 0.001 106.424);
+  --muted-foreground: oklch(0.553 0.013 58.071);
+  --accent: oklch(0.97 0.001 106.424);
+  --accent-foreground: oklch(0.216 0.006 56.043);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.923 0.003 48.717);
+  --input: oklch(0.923 0.003 48.717);
+  --ring: oklch(0.709 0.01 56.259);
   --radius: 0.625rem;
-  --sidebar: #f1eff7;
-  --sidebar-foreground: #1b1826;
-  --sidebar-primary: #6d54c9;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #efeaf9;
-  --sidebar-accent-foreground: #1b1826;
-  --sidebar-border: #e4e0ee;
-  --sidebar-ring: #6d54c9;
+  --sidebar: oklch(0.985 0.001 106.423);
+  --sidebar-foreground: oklch(0.147 0.004 49.25);
+  --sidebar-primary: oklch(0.216 0.006 56.043);
+  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
+  --sidebar-accent: oklch(0.97 0.001 106.424);
+  --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
+  --sidebar-border: oklch(0.923 0.003 48.717);
+  --sidebar-ring: oklch(0.709 0.01 56.259);
+  --chart-1: oklch(0.869 0.005 56.366);
+  --chart-2: oklch(0.553 0.013 58.071);
+  --chart-3: oklch(0.444 0.011 73.639);
+  --chart-4: oklch(0.374 0.01 67.558);
+  --chart-5: oklch(0.268 0.007 34.298);
 }
 
 * {
@@ -2932,14 +2938,14 @@ button:disabled {
 }
 
 @theme inline {
-  /* Tailwind's default font-sans (theme.css) plus a self-hosted symbol-font
-     fallback: system/emoji fonts often lack glyphs for plain-text symbols
-     like arrows, so without this some system+browser combos render tofu. */
+  /* Inter Variable (mira preset) plus a self-hosted symbol-font fallback:
+     system/emoji fonts often lack glyphs for plain-text symbols like
+     arrows, so without this some system+browser combos render tofu. */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-    'Noto Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-    'Segoe UI Symbol', 'Noto Color Emoji', 'Noto Sans Symbols',
-    'Noto Sans Symbols 2';
+    'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', 'Noto Sans', Arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji',
+    'Noto Sans Symbols', 'Noto Sans Symbols 2';
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -2973,36 +2979,47 @@ button:disabled {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --font-heading: var(--font-sans);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #14121a;
-  --foreground: #eae7f2;
-  --card: #1d1a27;
-  --card-foreground: #eae7f2;
-  --popover: #1d1a27;
-  --popover-foreground: #eae7f2;
-  --primary: #6d54c9;
-  --primary-foreground: #ffffff;
-  --secondary: #2c2838;
-  --secondary-foreground: #eae7f2;
-  --muted: #2c2838;
-  --muted-foreground: #9a93ad;
-  --accent: #2c2740;
-  --accent-foreground: #eae7f2;
-  --destructive: #d9647a;
-  --border: #2c2838;
-  --input: #3a3550;
-  --ring: #6d54c9;
-  --sidebar: #1d1a27;
-  --sidebar-foreground: #eae7f2;
-  --sidebar-primary: #6d54c9;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #2c2740;
-  --sidebar-accent-foreground: #eae7f2;
-  --sidebar-border: #2c2838;
-  --sidebar-ring: #6d54c9;
+  --background: oklch(0.147 0.004 49.25);
+  --foreground: oklch(0.985 0.001 106.423);
+  --card: oklch(0.216 0.006 56.043);
+  --card-foreground: oklch(0.985 0.001 106.423);
+  --popover: oklch(0.216 0.006 56.043);
+  --popover-foreground: oklch(0.985 0.001 106.423);
+  --primary: oklch(0.923 0.003 48.717);
+  --primary-foreground: oklch(0.216 0.006 56.043);
+  --secondary: oklch(0.268 0.007 34.298);
+  --secondary-foreground: oklch(0.985 0.001 106.423);
+  --muted: oklch(0.268 0.007 34.298);
+  --muted-foreground: oklch(0.709 0.01 56.259);
+  --accent: oklch(0.268 0.007 34.298);
+  --accent-foreground: oklch(0.985 0.001 106.423);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.553 0.013 58.071);
+  --sidebar: oklch(0.216 0.006 56.043);
+  --sidebar-foreground: oklch(0.985 0.001 106.423);
+  --sidebar-primary: oklch(0.923 0.003 48.717);
+  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
+  --sidebar-accent: oklch(0.268 0.007 34.298);
+  --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.553 0.013 58.071);
+  --chart-1: oklch(0.869 0.005 56.366);
+  --chart-2: oklch(0.553 0.013 58.071);
+  --chart-3: oklch(0.444 0.011 73.639);
+  --chart-4: oklch(0.374 0.01 67.558);
+  --chart-5: oklch(0.268 0.007 34.298);
 }
 
 @layer base {

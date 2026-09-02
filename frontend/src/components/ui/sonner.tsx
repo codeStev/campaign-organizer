@@ -1,27 +1,47 @@
-import { Toaster as SonnerToaster, type ToasterProps } from 'sonner';
-import { useTheme } from '../ThemeProvider';
+import { useTheme } from "next-themes"
+import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { CheckCircle2Icon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2 } from "lucide-react";
 
-// Adapted from shadcn's sonner registry component: that scaffold assumes
-// Next.js (next-themes + an app-specific icon set), neither of which this
-// Vite app has. Wired to the app's own ThemeProvider instead.
-function Toaster(props: ToasterProps) {
-  const { theme } = useTheme();
+const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme = "system" } = useTheme()
 
   return (
-    <SonnerToaster
-      theme={theme}
+    <Sonner
+      theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      icons={{
+        success: (
+          <CheckCircle2Icon className="size-4" />
+        ),
+        info: (
+          <InfoIcon className="size-4" />
+        ),
+        warning: (
+          <TriangleAlertIcon className="size-4" />
+        ),
+        error: (
+          <OctagonXIcon className="size-4" />
+        ),
+        loading: (
+          <Loader2 className="size-4 animate-spin" />
+        ),
+      }}
       style={
         {
-          '--normal-bg': 'var(--popover)',
-          '--normal-text': 'var(--popover-foreground)',
-          '--normal-border': 'var(--border)',
-          '--border-radius': 'var(--radius)',
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      toastOptions={{
+        classNames: {
+          toast: "cn-toast",
+        },
+      }}
       {...props}
     />
-  );
+  )
 }
 
-export { Toaster };
+export { Toaster }
