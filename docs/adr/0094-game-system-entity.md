@@ -1,7 +1,9 @@
 # 0094. Game system as a real entity
 
 ## Status
-Accepted
+Accepted. The frontend-nav paragraph below (Game Systems as a section of
+the Templates page) is superseded by ADR-0098 — Game Systems now has its
+own top-level page.
 
 ## Context
 ADR-0093 made `system` the sharing key for the global field template
