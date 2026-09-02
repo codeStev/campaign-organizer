@@ -28,6 +28,14 @@
   --input: #e4e0ee;
   --ring: #6d54c9;
   --radius: 0.625rem;
+  --sidebar: #f1eff7;
+  --sidebar-foreground: #1b1826;
+  --sidebar-primary: #6d54c9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efeaf9;
+  --sidebar-accent-foreground: #1b1826;
+  --sidebar-border: #e4e0ee;
+  --sidebar-ring: #6d54c9;
 }
 
 * {
@@ -162,6 +170,19 @@ button:disabled {
 
 .world-open strong {
   color: var(--primary);
+}
+
+/* App-wide and in-world sidebars (ADR-0098) share this width; both use the
+   shadcn Sidebar primitive with collapsible="none" — always-visible, no
+   offcanvas/mobile-drawer state to manage. */
+.sidebar-shell {
+  --sidebar-width: clamp(11rem, 18vw, 15rem);
+}
+
+.world-main-inset,
+.app-shell-content {
+  padding: 0.25rem;
+  min-width: 0;
 }
 
 /* World / wiki view */
@@ -415,13 +436,6 @@ button:disabled {
 }
 
 /* Tabs */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-left: auto;
-}
-
 .preview-body img {
   max-width: 100%;
   height: auto;
@@ -624,18 +638,6 @@ button:disabled {
 .preview-body input[type='checkbox'] {
   accent-color: var(--primary);
   margin-top: 0.3rem;
-}
-
-.tab {
-  background: var(--card);
-  border: 1px solid var(--border);
-  padding: 0.35rem 0.9rem;
-  color: var(--foreground);
-}
-
-.tab.active {
-  background: var(--primary);
-  color: var(--primary-foreground);
 }
 
 /* Maps */
@@ -1015,25 +1017,20 @@ button:disabled {
     flex-wrap: wrap;
   }
 
-  /* Header/tabs wrap to their own row and scroll horizontally if needed. */
+  /* Header wraps to its own row if needed. */
   .world-view-bar {
     flex-wrap: wrap;
   }
 
-  .tabs {
-    margin-left: 0;
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .tab {
-    white-space: nowrap;
+  /* Stack the app-wide and in-world sidebars above their content instead of
+     squeezing a fixed-width column beside it. */
+  .sidebar-shell {
+    flex-direction: column;
+    --sidebar-width: 100%;
   }
 
   /* Give tappable controls more height on touch devices. */
-  button,
-  .tab {
+  button {
     padding-top: 0.6rem;
     padding-bottom: 0.6rem;
   }
@@ -2955,6 +2952,14 @@ button:disabled {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -2984,6 +2989,14 @@ button:disabled {
   --border: #2c2838;
   --input: #3a3550;
   --ring: #6d54c9;
+  --sidebar: #1d1a27;
+  --sidebar-foreground: #eae7f2;
+  --sidebar-primary: #6d54c9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2c2740;
+  --sidebar-accent-foreground: #eae7f2;
+  --sidebar-border: #2c2838;
+  --sidebar-ring: #6d54c9;
 }
 
 @layer base {
