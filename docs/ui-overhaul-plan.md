@@ -1,7 +1,8 @@
 # UI overhaul migration plan
 
-Status: Draft, in progress. Living document — update it as phases complete
-or decisions change, rather than letting it drift out of sync with reality.
+Status: In progress — **Phase 1 done**, Phase 2 up next. Living document —
+update it as phases complete or decisions change, rather than letting it
+drift out of sync with reality.
 
 ## Context
 
@@ -105,7 +106,7 @@ context, not left as live questions:
 Each phase is its own set of granular commits. Don't start a phase's
 backend work without its ADR + requirements.md entry first (ground rule 4).
 
-### Phase 1 — Shell + basic navigation
+### Phase 1 — Shell + basic navigation ✅ done
 New `/next` shell, per the decisions above:
 - Top-level `AppSidebarNext`: Worlds, a **Library** section (Game Systems,
   Statblocks, Templates — three links, one label), Settings.
