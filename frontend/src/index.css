@@ -633,6 +633,27 @@ button:disabled {
   color: var(--destructive);
 }
 
+/* Drag-and-drop (@dnd-kit/core): highlight a category row while an article
+   is dragged over it, and a small floating chip that follows the pointer. */
+.category-tree-row.drop-over {
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.category-tree-article {
+  touch-action: none;
+}
+
+.category-tree-drag-overlay {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: var(--card);
+  border: 1px solid var(--primary);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+  font-size: 0.85rem;
+  cursor: grabbing;
+}
+
 /* Compact leaf row for an article nested in the category tree — a plain
    truncated line, not the heavier `.article-link` card. */
 .category-tree-article {

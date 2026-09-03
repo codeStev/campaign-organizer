@@ -1,6 +1,17 @@
 import { MouseEvent, useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
   articlesApi,
   articleTagsApi,
   categoriesApi,
@@ -16,29 +27,14 @@ import { Spinner } from '../components/ui/spinner';
 import { TagList } from '../components/TagInput';
 import { PromptDialog } from '../components/PromptDialog';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 
-const NONE_VALUE = '__none__';
 const ROOT_KEY = '__root__';
 const UNCATEGORIZED_KEY = '__none__';
 
 interface Props {
   worldId: string;
   onAuthExpired: () => void;
-}
-
-/** "Characters / Reckoners" — the nearest thing to a breadcrumb for a Select option. */
-function categoryPath(category: Category, byId: Map<string, Category>): string {
-  const parts: string[] = [category.name];
-  let cur = category;
-  while (cur.parentId) {
-    const parent = byId.get(cur.parentId);
-    if (!parent) break;
-    parts.unshift(parent.name);
-    cur = parent;
-  }
-  return parts.join(' / ');
 }
 
 /**
@@ -50,7 +46,9 @@ function categoryPath(category: Category, byId: Map<string, Category>): string {
  * Article body editing still stays on the old UI's richer editor (draft
  * handling, revisions, GM-only block, AI draft); category assignment is a
  * narrow, additive exception since there was previously no way at all to
- * set an article's category.
+ * set an article's category — done by dragging an article onto a category
+ * row (@dnd-kit/core), replacing an earlier Select-based picker on the
+ * read pane entirely.
  */
 export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const navigate = useNavigate();
@@ -65,6 +63,9 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [worldTags, setWorldTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null | undefined>(undefined);
+  const [draggingArticle, setDraggingArticle] = useState<ArticleSummary | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const onError = (err: unknown) => {
     if (err instanceof ApiError && err.status === 401) return onAuthExpired();
@@ -102,8 +103,12 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, articleId]);
 
+  // Absolute path, not a bare relative navigate(id): with flat sibling
+  // routes ("wiki" and "wiki/:articleId"), React Router's default
+  // route-tree-aware relative resolution breaks once already on
+  // wiki/:articleId — same class of bug fixed elsewhere in this app.
   function openArticle(id: string) {
-    navigate(id);
+    navigate(`/next/worlds/${worldId}/wiki/${id}`);
   }
 
   function openTag(tag: string) {
@@ -148,22 +153,40 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     }
   }
 
-  async function setArticleCategory(categoryId: string | null) {
-    if (!article) return;
+  // Fetches full article detail first (the tree only holds ArticleSummary,
+  // which has no body) so the update never clobbers body with an omitted
+  // field — ArticleRequest.body isn't defaulted server-side to the
+  // existing value when left out.
+  async function moveArticleToCategory(articleToMove: ArticleSummary, categoryId: string | null) {
+    if (articleToMove.categoryId === categoryId) return;
     try {
-      const updated = await articlesApi(worldId).update(article.id, {
-        title: article.title,
-        slug: article.slug,
-        template: article.template,
+      const full =
+        article && articleToMove.id === article.id ? article : await articlesApi(worldId).get(articleToMove.id);
+      const updated = await articlesApi(worldId).update(full.id, {
+        title: full.title,
+        slug: full.slug,
+        template: full.template,
         categoryId,
-        parentArticleId: article.parentArticleId,
-        body: article.body ?? undefined,
+        parentArticleId: full.parentArticleId,
+        body: full.body ?? undefined,
       });
-      setArticle(updated);
+      if (article?.id === updated.id) setArticle(updated);
       await refresh();
     } catch (err) {
       onError(err);
     }
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingArticle((event.active.data.current?.article as ArticleSummary | undefined) ?? null);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingArticle(null);
+    const dropped = event.active.data.current?.article as ArticleSummary | undefined;
+    if (!dropped || !event.over) return;
+    const categoryId = event.over.id === UNCATEGORIZED_KEY ? null : String(event.over.id);
+    void moveArticleToCategory(dropped, categoryId);
   }
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
@@ -219,107 +242,95 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const searching = categoryHasMatch !== null;
 
   return (
-    <div className="wiki-layout">
-      <aside className="wiki-sidebar">
-        <Input placeholder="Search articles…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        {error && <p className="error">{error}</p>}
-        <Button variant="outline" size="sm" onClick={() => setNewCategoryParentId(null)}>
-          + New category
-        </Button>
-        <PromptDialog
-          open={newCategoryParentId !== undefined}
-          onOpenChange={(open) => !open && setNewCategoryParentId(undefined)}
-          title={newCategoryParentId ? 'New sub-category' : 'New category'}
-          label="Category name"
-          onSubmit={(name) => void createCategory(name)}
-        />
-        <ul className="category-tree">
-          {rootCategories.map((c) => (
-            <CategoryTreeNode
-              key={c.id}
-              category={c}
-              childrenByCategory={childrenByCategory}
-              articlesByCategory={articlesByCategory}
-              expandedIds={expandedIds}
-              onToggleExpand={toggleExpanded}
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="wiki-layout">
+        <aside className="wiki-sidebar">
+          <Input placeholder="Search articles…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {error && <p className="error">{error}</p>}
+          <Button variant="outline" size="sm" onClick={() => setNewCategoryParentId(null)}>
+            + New category
+          </Button>
+          <PromptDialog
+            open={newCategoryParentId !== undefined}
+            onOpenChange={(open) => !open && setNewCategoryParentId(undefined)}
+            title={newCategoryParentId ? 'New sub-category' : 'New category'}
+            label="Category name"
+            onSubmit={(name) => void createCategory(name)}
+          />
+          <ul className="category-tree">
+            {rootCategories.map((c) => (
+              <CategoryTreeNode
+                key={c.id}
+                category={c}
+                childrenByCategory={childrenByCategory}
+                articlesByCategory={articlesByCategory}
+                expandedIds={expandedIds}
+                onToggleExpand={toggleExpanded}
+                activeArticleId={articleId ?? null}
+                onOpenArticle={openArticle}
+                onAddSubcategory={(parentId) => setNewCategoryParentId(parentId)}
+                onRemoveCategory={removeCategory}
+                forceExpand={searching}
+              />
+            ))}
+            <CategoryLeaf
+              dropId={UNCATEGORIZED_KEY}
+              label="Uncategorised"
+              articles={uncategorized}
+              expanded={searching || expandedIds.has(UNCATEGORIZED_KEY)}
+              onToggleExpand={() => toggleExpanded(UNCATEGORIZED_KEY)}
               activeArticleId={articleId ?? null}
               onOpenArticle={openArticle}
-              onAddSubcategory={(parentId) => setNewCategoryParentId(parentId)}
-              onRemoveCategory={removeCategory}
-              forceExpand={searching}
             />
-          ))}
-          <CategoryLeaf
-            label="Uncategorised"
-            articles={uncategorized}
-            expanded={searching || expandedIds.has(UNCATEGORIZED_KEY)}
-            onToggleExpand={() => toggleExpanded(UNCATEGORIZED_KEY)}
-            activeArticleId={articleId ?? null}
-            onOpenArticle={openArticle}
-          />
-          {loading && (
-            <li className="muted loading-row">
-              <Spinner /> Loading…
-            </li>
-          )}
-          {!loading && rootCategories.length === 0 && uncategorized.length === 0 && (
-            <li className="muted">No articles found.</li>
-          )}
-        </ul>
-        {worldTags.length > 0 && (
-          <div className="wiki-tags-section">
-            <p className="eyebrow">Tags</p>
-            <div className="beat-article-chips">
-              {worldTags.map((t) => (
-                <button key={t} type="button" className="beat-chip tag-chip-link" onClick={() => openTag(t)}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </aside>
-      {article ? (
-        <article className="card article-read">
-          <div className="article-read-head">
-            <div>
-              <h3>{article.title}</h3>
-              <small className="muted">{article.template.toLowerCase()}</small>
-              <TagList worldId={worldId} tags={tags} />
-            </div>
-            <Button variant="link" size="sm" asChild>
-              <NavLink to={`/worlds/${worldId}/articles/${article.id}`}>Edit in current UI →</NavLink>
-            </Button>
-          </div>
-          <label className="wiki-category-picker">
-            Category
-            <Select
-              value={article.categoryId ?? NONE_VALUE}
-              onValueChange={(v) => void setArticleCategory(v === NONE_VALUE ? null : v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE}>— uncategorised —</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {categoryPath(c, categoryById)}
-                  </SelectItem>
+            {loading && (
+              <li className="muted loading-row">
+                <Spinner /> Loading…
+              </li>
+            )}
+            {!loading && rootCategories.length === 0 && uncategorized.length === 0 && (
+              <li className="muted">No articles found.</li>
+            )}
+          </ul>
+          {worldTags.length > 0 && (
+            <div className="wiki-tags-section">
+              <p className="eyebrow">Tags</p>
+              <div className="beat-article-chips">
+                {worldTags.map((t) => (
+                  <button key={t} type="button" className="beat-chip tag-chip-link" onClick={() => openTag(t)}>
+                    {t}
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
-          </label>
-          <div
-            className="preview-body"
-            onClick={handleBodyClick}
-            dangerouslySetInnerHTML={{ __html: article.bodyHtml || '<p class="muted">(empty)</p>' }}
-          />
-        </article>
-      ) : (
-        <p className="muted">Select an article from the list, or create one in the current UI.</p>
-      )}
-    </div>
+              </div>
+            </div>
+          )}
+        </aside>
+        {article ? (
+          <article className="card article-read">
+            <div className="article-read-head">
+              <div>
+                <h3>{article.title}</h3>
+                <small className="muted">
+                  {article.template.toLowerCase()}
+                  {article.categoryId && ` · ${categoryById.get(article.categoryId)?.name ?? ''}`}
+                </small>
+                <TagList worldId={worldId} tags={tags} />
+              </div>
+              <Button variant="link" size="sm" asChild>
+                <NavLink to={`/worlds/${worldId}/articles/${article.id}`}>Edit in current UI →</NavLink>
+              </Button>
+            </div>
+            <div
+              className="preview-body"
+              onClick={handleBodyClick}
+              dangerouslySetInnerHTML={{ __html: article.bodyHtml || '<p class="muted">(empty)</p>' }}
+            />
+          </article>
+        ) : (
+          <p className="muted">Select an article from the list, or create one in the current UI.</p>
+        )}
+      </div>
+      <DragOverlay>{draggingArticle && <div className="category-tree-drag-overlay">{draggingArticle.title}</div>}</DragOverlay>
+    </DndContext>
   );
 }
 
@@ -352,10 +363,11 @@ function CategoryTreeNode({
   const directArticles = articlesByCategory.get(category.id) ?? [];
   const hasContent = subCategories.length > 0 || directArticles.length > 0;
   const expanded = forceExpand || expandedIds.has(category.id);
+  const { setNodeRef, isOver } = useDroppable({ id: category.id });
 
   return (
     <li>
-      <div className="category-tree-row">
+      <div ref={setNodeRef} className={isOver ? 'category-tree-row drop-over' : 'category-tree-row'}>
         {hasContent ? (
           <button
             type="button"
@@ -422,6 +434,7 @@ function CategoryTreeNode({
 }
 
 function CategoryLeaf({
+  dropId,
   label,
   articles,
   expanded,
@@ -429,6 +442,7 @@ function CategoryLeaf({
   activeArticleId,
   onOpenArticle,
 }: {
+  dropId: string;
   label: string;
   articles: ArticleSummary[];
   expanded: boolean;
@@ -436,22 +450,26 @@ function CategoryLeaf({
   activeArticleId: string | null;
   onOpenArticle: (id: string) => void;
 }) {
-  if (articles.length === 0) return null;
+  const { setNodeRef, isOver } = useDroppable({ id: dropId });
   return (
     <li>
-      <div className="category-tree-row">
-        <button
-          type="button"
-          className="article-tree-toggle"
-          onClick={onToggleExpand}
-          title={expanded ? 'Collapse' : 'Expand'}
-        >
-          {expanded ? '▾' : '▸'}
-        </button>
+      <div ref={setNodeRef} className={isOver ? 'category-tree-row drop-over' : 'category-tree-row'}>
+        {articles.length > 0 ? (
+          <button
+            type="button"
+            className="article-tree-toggle"
+            onClick={onToggleExpand}
+            title={expanded ? 'Collapse' : 'Expand'}
+          >
+            {expanded ? '▾' : '▸'}
+          </button>
+        ) : (
+          <span className="article-tree-toggle-spacer" />
+        )}
         <span className="category-tree-label muted">{label}</span>
-        <span className="muted category-tree-count">{articles.length}</span>
+        {articles.length > 0 && <span className="muted category-tree-count">{articles.length}</span>}
       </div>
-      {expanded && (
+      {expanded && articles.length > 0 && (
         <ul className="article-list-nested">
           {articles.map((a) => (
             <CategoryTreeArticleRow key={a.id} article={a} active={a.id === activeArticleId} onOpen={onOpenArticle} />
@@ -471,10 +489,18 @@ function CategoryTreeArticleRow({
   active: boolean;
   onOpen: (id: string) => void;
 }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: article.id,
+    data: { article },
+  });
   return (
     <li>
       <button
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
         className={active ? 'category-tree-article active' : 'category-tree-article'}
+        style={isDragging ? { opacity: 0.4 } : undefined}
         onClick={() => onOpen(article.id)}
       >
         <TruncatedLabel label={article.title}>{article.title}</TruncatedLabel>
