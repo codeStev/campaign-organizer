@@ -296,6 +296,7 @@ export interface MediaAsset {
 export interface WorldMap {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   name: string;
   mediaId?: string | null;
   imageUrl?: string | null;
@@ -306,6 +307,7 @@ export interface WorldMap {
 export interface MapRequest {
   name: string;
   mediaId: string;
+  categoryId?: string | null;
 }
 
 export interface MapPin {
@@ -337,6 +339,33 @@ export function mapsApi(worldId: string) {
       request<WorldMap>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: MapRequest) =>
       request<WorldMap>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+/** A world's map category taxonomy (ADR-0105) — separate from Wiki's `categoriesApi`. */
+export interface MapCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MapCategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+export function mapCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/map-categories`;
+  return {
+    list: () => request<MapCategory[]>(base),
+    create: (body: MapCategoryRequest) =>
+      request<MapCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: MapCategoryRequest) =>
+      request<MapCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }

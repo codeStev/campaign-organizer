@@ -497,6 +497,89 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/map-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [maps]
+      summary: List a world's map categories (ADR-0105, separate from Wiki's categories)
+      operationId: listMapCategories
+      responses:
+        '200':
+          description: Map categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MapCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [maps]
+      summary: Create a map category
+      operationId: createMapCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapCategoryRequest'
+      responses:
+        '201':
+          description: Map category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/map-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [maps]
+      summary: Update a map category
+      operationId: updateMapCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapCategoryRequest'
+      responses:
+        '200':
+          description: Map category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [maps]
+      summary: Delete a map category (its maps are kept, uncategorized)
+      operationId: deleteMapCategory
+      responses:
+        '204':
+          description: Map category deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/maps/{mapId}/pins:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -7025,6 +7108,10 @@ components:
           type: string
           format: uuid
           description: The uploaded image used as the map's base layer.
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Map category for the Atlas tree (ADR-0105), or null for uncategorized.
 
     Map:
       type: object
@@ -7036,6 +7123,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         name:
           type: string
         mediaId:
@@ -7044,6 +7134,41 @@ components:
         imageUrl:
           type: [string, "null"]
           description: Public URL of the base image (null if the image was deleted).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MapCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent map category for nesting, or null for a root category.
+
+    MapCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
         createdAt:
           type: string
           format: date-time
