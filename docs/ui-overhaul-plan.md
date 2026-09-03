@@ -1,9 +1,13 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–5, 5b, 5c, and 5d done**, Phase 6 deferred
-by the user, so Phase 7 (Retirement) is next. Living document — update it as
-phases complete or decisions change, rather than letting it drift out of
-sync with reality.
+Status: In progress — **Phases 1–5, 5b, 5c, 5d, and 5e done**, Phase 6
+deferred by the user. Phase 7 (Retirement)'s precondition — every screen has
+a confirmed-equivalent `/next` replacement, and (per Phase 5e/ADR-0106) each
+is now its own independent component, not a shared instance — is met; Phase
+7 itself hasn't started and needs an explicit go-ahead given its size (delete
+all of old UI, rewrite the Playwright suite, drop the `/next` prefix). Living
+document — update it as phases complete or decisions change, rather than
+letting it drift out of sync with reality.
 
 ## Context
 
@@ -390,6 +394,21 @@ reused machinery the first built:
 See ADR-0105 for the full per-screen rationale and the backend taxonomy
 tables (`map_categories`, `handout_categories`, `table_deck_categories`,
 `sheet_categories`).
+
+### Phase 5e — Un-share every screen still reused from old UI ✅ done
+
+Reverses Phase 5b's "reuse as-is" shortcut: the user decided mid-session
+that `/next` must not mount the same component instance old UI uses, even
+for screens that look identical — *"i do not want the views between old and
+new to be shared."* All nine Phase 5b screens (`SheetsView` + its 4
+sub-panels, `TablesView`, `HandoutsView`, `PlayersPanel`, `TagBrowseView`,
+`RelationshipsView`, `WhiteboardsView`, `ConsistencyView`, `MapsView`) were
+forked into `Next`-prefixed copies (`NextSheetsPage`, `NextTablesView`, …),
+one screen at a time, each its own commit, each verified via build +
+Playwright + a live click-through before moving to the next. Old UI's
+originals are untouched. See ADR-0106 for the full rationale — this is a
+component-decoupling pass, not a visual redesign; both UIs already share the
+same `.card`/shadcn CSS vocabulary (ADR-0099).
 
 ### Phase 6 — Deferred / needs its own design pass
 - **Hierarchical Atlas** — one or more world/region maps linking down to
