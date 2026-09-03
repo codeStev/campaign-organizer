@@ -139,7 +139,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
           {list.map((c) => (
             <li key={c.id}>
               <button
-                className={c.id === draft.id ? 'article-link active' : 'article-link'}
+                className={c.id === draft.id ? 'chronicle-list-link active' : 'chronicle-list-link'}
                 onClick={() => navigate(urlCalendarId ? `../${c.id}` : c.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>

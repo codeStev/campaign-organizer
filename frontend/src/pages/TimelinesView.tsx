@@ -226,7 +226,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
           {list.map((t) => (
             <li key={t.id}>
               <button
-                className={t.id === selected?.id ? 'article-link active' : 'article-link'}
+                className={t.id === selected?.id ? 'chronicle-list-link active' : 'chronicle-list-link'}
                 onClick={() => navigate(urlTimelineId ? `../${t.id}` : t.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={t.name}>{t.name}</TruncatedLabel>
