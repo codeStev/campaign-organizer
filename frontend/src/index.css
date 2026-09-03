@@ -1506,6 +1506,13 @@ button:disabled {
   color: var(--muted-foreground);
 }
 
+.beat-kind-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
 .beat-link {
   font-size: 0.8rem;
 }

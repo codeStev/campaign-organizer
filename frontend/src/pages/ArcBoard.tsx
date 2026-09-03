@@ -2,11 +2,13 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   arcsApi,
   beatsApi,
+  beatKindsApi,
   sessionsApi,
   Arc,
   ArcStatus,
   ARC_STATUSES,
   Beat,
+  BeatKind,
   Session,
   ArticleSummary,
   Statblock,
@@ -20,6 +22,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { Spinner } from '../components/ui/spinner';
+import { PromptDialog } from '../components/PromptDialog';
 import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -45,9 +48,11 @@ interface Props {
 export function ArcBoard({ worldId, campaignId, articles, statblocks, encounters, onOpenArticle, onError }: Props) {
   const api = useMemo(() => arcsApi(worldId, campaignId), [worldId, campaignId]);
   const sessionApi = useMemo(() => sessionsApi(worldId, campaignId), [worldId, campaignId]);
+  const beatKindApi = useMemo(() => beatKindsApi(worldId), [worldId]);
   const [arcs, setArcs] = useState<Arc[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [beatKinds, setBeatKinds] = useState<BeatKind[]>([]);
   const [newTitle, setNewTitle] = useState('');
 
   const refresh = useCallback(async () => {
@@ -63,7 +68,8 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, encounters
   useEffect(() => {
     void refresh();
     sessionApi.list().then(setSessions).catch(onError);
-  }, [refresh, sessionApi, onError]);
+    beatKindApi.list().then(setBeatKinds).catch(onError);
+  }, [refresh, sessionApi, beatKindApi, onError]);
 
   async function addArc(e: FormEvent) {
     e.preventDefault();
@@ -97,6 +103,18 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, encounters
     }
   }
 
+  async function createBeatKind(name: string): Promise<BeatKind | undefined> {
+    try {
+      const created = await beatKindApi.create({ name });
+      setBeatKinds((k) => [...k, created]);
+      toast.success(`Beat kind "${created.name}" added`);
+      return created;
+    } catch (err) {
+      onError(err);
+      return undefined;
+    }
+  }
+
   return (
     <section className="card">
       <h3>Story arcs</h3>
@@ -122,6 +140,8 @@ export function ArcBoard({ worldId, campaignId, articles, statblocks, encounters
             statblocks={statblocks}
             encounters={encounters}
             sessions={sessions}
+            beatKinds={beatKinds}
+            onCreateBeatKind={createBeatKind}
             onOpenArticle={onOpenArticle}
             onError={onError}
             onStatus={(s) => setStatus(arc, s)}
@@ -147,6 +167,8 @@ interface ArcCardProps {
   statblocks: Statblock[];
   encounters: Encounter[];
   sessions: Session[];
+  beatKinds: BeatKind[];
+  onCreateBeatKind: (name: string) => Promise<BeatKind | undefined>;
   onOpenArticle: (id: string) => void;
   onError: (err: unknown) => void;
   onStatus: (status: ArcStatus) => void;
@@ -160,6 +182,7 @@ interface BeatDraft {
   statblockIds: string[];
   encounterIds: string[];
   sessionId: string;
+  kindId: string;
 }
 
 function ArcCard({
@@ -170,6 +193,8 @@ function ArcCard({
   statblocks,
   encounters,
   sessions,
+  beatKinds,
+  onCreateBeatKind,
   onOpenArticle,
   onError,
   onStatus,
@@ -187,7 +212,9 @@ function ArcCard({
     statblockIds: [],
     encounterIds: [],
     sessionId: '',
+    kindId: '',
   });
+  const [newKindOpen, setNewKindOpen] = useState(false);
   const titleById = useMemo(() => new Map(articles.map((a) => [a.id, a.title])), [articles]);
   const statblockNameById = useMemo(
     () => new Map(statblocks.map((s) => [s.id, s.name])),
@@ -198,6 +225,7 @@ function ArcCard({
     [encounters],
   );
   const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
+  const kindById = useMemo(() => new Map(beatKinds.map((k) => [k.id, k])), [beatKinds]);
 
   const refresh = useCallback(async () => {
     try {
@@ -234,6 +262,7 @@ function ArcCard({
         statblockIds: beat.statblockIds,
         encounterIds: beat.encounterIds,
         sessionId: beat.sessionId,
+        kindId: beat.kindId,
         position: beat.position,
       });
       await refresh();
@@ -260,6 +289,7 @@ function ArcCard({
       statblockIds: beat.statblockIds ?? [],
       encounterIds: beat.encounterIds ?? [],
       sessionId: beat.sessionId ?? '',
+      kindId: beat.kindId ?? '',
     });
   }
 
@@ -291,6 +321,7 @@ function ArcCard({
         statblockIds: draft.statblockIds,
         encounterIds: draft.encounterIds,
         sessionId: draft.sessionId || null,
+        kindId: draft.kindId || null,
         position: beat.position,
       });
       setEditingId(null);
@@ -341,6 +372,13 @@ function ArcCard({
                 <div className="beat-row">
                   <label className="beat-check">
                     <Checkbox checked={b.done} onCheckedChange={() => toggle(b)} />
+                    {b.kindId && kindById.has(b.kindId) && (
+                      <span
+                        className="beat-kind-dot"
+                        title={kindById.get(b.kindId)!.name}
+                        style={{ backgroundColor: kindById.get(b.kindId)!.color ?? '#888888' }}
+                      />
+                    )}
                     <span className={b.done ? 'beat-done' : ''}>{b.title}</span>
                   </label>
                   {b.articleIds
@@ -517,7 +555,37 @@ function ArcCard({
                           ))}
                         </SelectContent>
                       </Select>
+                      <Select
+                        value={draft.kindId || NONE_VALUE}
+                        onValueChange={(v) => setDraft({ ...draft, kindId: v === NONE_VALUE ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Beat kind…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NONE_VALUE}>— none —</SelectItem>
+                          {beatKinds.map((k) => (
+                            <SelectItem key={k.id} value={k.id}>
+                              {k.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="link" onClick={() => setNewKindOpen(true)}>
+                        + New kind
+                      </Button>
                     </div>
+                    <PromptDialog
+                      open={newKindOpen}
+                      onOpenChange={setNewKindOpen}
+                      title="New beat kind"
+                      label="Name"
+                      onSubmit={(value) =>
+                        void onCreateBeatKind(value).then((created) => {
+                          if (created) setDraft((d) => ({ ...d, kindId: created.id }));
+                        })
+                      }
+                    />
                     <div className="editor-actions">
                       <Button onClick={() => saveEdit(b)}>Save beat</Button>
                       <Button variant="link" onClick={() => setEditingId(null)}>

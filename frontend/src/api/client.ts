@@ -584,7 +584,11 @@ export interface Beat {
   articleIds: string[];
   statblockIds: string[];
   encounterIds: string[];
+  tableIds: string[];
+  deckIds: string[];
   sessionId?: string | null;
+  /** Optional GM-defined beat kind tag (ADR-0101), informational only. */
+  kindId?: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;
@@ -597,7 +601,10 @@ export interface BeatRequest {
   articleIds?: string[];
   statblockIds?: string[];
   encounterIds?: string[];
+  tableIds?: string[];
+  deckIds?: string[];
   sessionId?: string | null;
+  kindId?: string | null;
   position?: number | null;
 }
 
@@ -942,6 +949,35 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
       request<Beat>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: BeatRequest) =>
       request<Beat>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+// ---- Beat kinds (ADR-0101): a world-scoped, GM-defined catalog a beat can optionally be tagged with ----
+
+export interface BeatKind {
+  id: string;
+  worldId: string;
+  name: string;
+  color?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BeatKindRequest {
+  name: string;
+  color?: string | null;
+}
+
+export function beatKindsApi(worldId: string) {
+  const base = `/worlds/${worldId}/beat-kinds`;
+  return {
+    list: () => request<BeatKind[]>(base),
+    get: (id: string) => request<BeatKind>(`${base}/${id}`),
+    create: (body: BeatKindRequest) =>
+      request<BeatKind>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: BeatKindRequest) =>
+      request<BeatKind>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
