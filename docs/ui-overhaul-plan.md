@@ -1,7 +1,7 @@
 # UI overhaul migration plan
 
 Status: In progress — **Phases 1–2 done**, Phase 3 in progress (scratch
-world flag ✅, beat kinds and world overview stats remaining). Living
+world flag ✅, beat kinds ✅, world overview stats remaining). Living
 document — update it as phases complete or decisions change, rather than
 letting it drift out of sync with reality.
 
@@ -180,9 +180,11 @@ reskins. This is exactly the kind of drift the memory system's own
 
 Genuinely new backend work, each gets its own ADR + FR + Flyway migration
 before any UI work:
-- **Beat kinds** — a small user-managed catalog (name + color, same shape
-  as `GameSystem`'s color field), referenced by a new `kindId` on the
-  existing StoryArc/Beat domain. Not a fixed enum — own table, own CRUD.
+- ~~**Beat kinds**~~ ✅ done — ADR-0101, FR-61, world-scoped `BeatKind`
+  catalog (name + color), `kindId` on `ArcBeat`. Kind picker + inline
+  quick-add + colored dot wired into the old UI's `ArcBoard.tsx` (still
+  the only place beats are created/edited — Campaigns/beats move to
+  `/next` in Phase 5).
 - ~~**Scratch/sandbox world flag**~~ ✅ done — ADR-0100, FR-60, boolean on
   `World`, cosmetic only (no functional exclusion from search/backup/
   export). Creation checkbox + badge on the old Worlds page and in the
