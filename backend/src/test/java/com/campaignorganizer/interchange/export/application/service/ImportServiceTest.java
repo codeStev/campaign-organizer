@@ -50,6 +50,7 @@ import com.campaignorganizer.characters.application.template.port.published.Fiel
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
@@ -155,6 +156,8 @@ class ImportServiceTest {
     @Mock
     private CardDeckImportPort cardDeckImportPort;
     @Mock
+    private HandoutCategoryImportPort handoutCategoryImportPort;
+    @Mock
     private HandoutImportPort handoutImportPort;
     @Mock
     private CheatSheetImportPort cheatSheetImportPort;
@@ -182,7 +185,7 @@ class ImportServiceTest {
                 globalStatblockImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort, encounterImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
-                cardDeckImportPort, handoutImportPort,
+                cardDeckImportPort, handoutCategoryImportPort, handoutImportPort,
                 cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
                 todoImportPort);
     }

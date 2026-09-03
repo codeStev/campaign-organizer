@@ -26,6 +26,7 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
 import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.tagging.application.port.published.TagQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
@@ -90,6 +91,7 @@ public class ExportService implements ExportWorldUseCase {
     private final WhiteboardQueryPort whiteboards;
     private final RollTableQueryPort rollTables;
     private final CardDeckQueryPort cardDecks;
+    private final HandoutCategoryQueryPort handoutCategories;
     private final HandoutQueryPort handouts;
     private final CheatSheetQueryPort cheatSheets;
     private final TagQueryPort tags;
@@ -113,7 +115,8 @@ public class ExportService implements ExportWorldUseCase {
                          GlobalStatblockQueryPort globalStatblocks,
                          WhiteboardQueryPort whiteboards,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
-                         HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
+                         HandoutCategoryQueryPort handoutCategories, HandoutQueryPort handouts,
+                         CheatSheetQueryPort cheatSheets,
                          TagQueryPort tags, ClockQueryPort clocks, EncounterQueryPort encounters,
                          LooseThreadQueryPort looseThreads, TodoQueryPort todos) {
         this.worlds = worlds;
@@ -144,6 +147,7 @@ public class ExportService implements ExportWorldUseCase {
         this.whiteboards = whiteboards;
         this.rollTables = rollTables;
         this.cardDecks = cardDecks;
+        this.handoutCategories = handoutCategories;
         this.handouts = handouts;
         this.cheatSheets = cheatSheets;
         this.tags = tags;
@@ -256,6 +260,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("rollTables", rollTables.findByWorld(worldId));
         bundle.put("cardDecks", cardDecks.findByWorld(worldId));
         // Player-facing props (FR-46).
+        bundle.put("handoutCategories", handoutCategories.findByWorld(worldId));
         bundle.put("handouts", handouts.findByWorld(worldId));
         // Folksonomy tags on articles/statblocks (FR-47).
         bundle.put("tags", tags.findByWorld(worldId));

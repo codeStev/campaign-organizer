@@ -44,6 +44,8 @@ import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryImportPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryView;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
@@ -131,6 +133,7 @@ public class ImportService implements ImportBackupUseCase {
     private final MediaImportPort mediaImportPort;
     private final RollTableImportPort rollTableImportPort;
     private final CardDeckImportPort cardDeckImportPort;
+    private final HandoutCategoryImportPort handoutCategoryImportPort;
     private final HandoutImportPort handoutImportPort;
     private final CheatSheetImportPort cheatSheetImportPort;
     private final TagImportPort tagImportPort;
@@ -156,7 +159,8 @@ public class ImportService implements ImportBackupUseCase {
             StatblockImportPort statblockImportPort, EncounterImportPort encounterImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
             MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
-            CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
+            CardDeckImportPort cardDeckImportPort,
+            HandoutCategoryImportPort handoutCategoryImportPort, HandoutImportPort handoutImportPort,
             CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
             ClockImportPort clockImportPort, LooseThreadImportPort looseThreadImportPort,
             TodoImportPort todoImportPort) {
@@ -191,6 +195,7 @@ public class ImportService implements ImportBackupUseCase {
         this.mediaImportPort = mediaImportPort;
         this.rollTableImportPort = rollTableImportPort;
         this.cardDeckImportPort = cardDeckImportPort;
+        this.handoutCategoryImportPort = handoutCategoryImportPort;
         this.handoutImportPort = handoutImportPort;
         this.cheatSheetImportPort = cheatSheetImportPort;
         this.tagImportPort = tagImportPort;
@@ -253,6 +258,8 @@ public class ImportService implements ImportBackupUseCase {
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
         List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
         List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
+        List<HandoutCategoryView> handoutCategories =
+                readList(root, "handoutCategories", HandoutCategoryView.class);
         List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
         List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
         List<TagView> tags = readList(root, "tags", TagView.class);
@@ -290,6 +297,7 @@ public class ImportService implements ImportBackupUseCase {
         whiteboards.forEach(w -> remap.assign(w.id()));
         rollTables.forEach(t -> remap.assign(t.id()));
         cardDecks.forEach(d -> remap.assign(d.id()));
+        handoutCategories.forEach(c -> remap.assign(c.id()));
         handouts.forEach(h -> remap.assign(h.id()));
         cheatSheets.forEach(cs -> remap.assign(cs.id()));
         tags.forEach(t -> remap.assign(t.id()));
@@ -512,12 +520,18 @@ public class ImportService implements ImportBackupUseCase {
                     d.updatedAt()));
         }
 
+        for (HandoutCategoryView c : handoutCategories) {
+            handoutCategoryImportPort.importHandoutCategory(new HandoutCategoryView(remap.get(c.id()),
+                    newWorldId, remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         // Handouts (FR-46/ADR-0077): after sessions, so an optional session tag
         // remaps along with everything else.
         for (HandoutView h : handouts) {
             handoutImportPort.importHandout(new HandoutView(remap.get(h.id()), newWorldId,
-                    h.title(), h.preset(), h.body(), remap.getOrNull(h.sessionId()), h.sortOrder(),
-                    h.revealed(), h.createdAt(), h.updatedAt()));
+                    remap.getOrNull(h.categoryId()), h.title(), h.preset(), h.body(),
+                    remap.getOrNull(h.sessionId()), h.sortOrder(), h.revealed(), h.createdAt(),
+                    h.updatedAt()));
         }
 
         // Cheat sheets (FR-37) after sessions: their session id is remapped.
