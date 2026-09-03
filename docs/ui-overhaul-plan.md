@@ -1,8 +1,9 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–5 done**, Phase 6 up next. Living
-document — update it as phases complete or decisions change, rather than
-letting it drift out of sync with reality.
+Status: In progress — **Phases 1–5 done**, Phase 5b (correction: five
+missed screens) up next, before Phase 7 can start. Living document —
+update it as phases complete or decisions change, rather than letting it
+drift out of sync with reality.
 
 ## Context
 
@@ -250,6 +251,30 @@ implied by "Phase 4 done."
   worlds list (current UI) where backup/import already lives. Every
   `/next` route now renders real content — `NextStubPage` was dead code
   and got removed.
+
+### Phase 5b — Remaining reskins (correction, 2026-09-03)
+
+**Gap found while checking Phase 7's precondition** ("every screen has a
+confirmed-equivalent `/next` replacement"): the original phase list never
+covered five of the old UI's 13 in-world tabs — **Tags, Players, Sheets,
+Tables & Decks, Handouts**. None of Phases 1–5 mention them; they were
+simply missed when the phase list was first drafted (same class of gap as
+the earlier Atlas/Print-Shop omission and the Clocks/Loose-Threads
+memory-drift, both caught and corrected mid-flight rather than shipped
+wrong). Since Phase 7 (Retirement) explicitly can't start until every
+screen has a `/next` equivalent, these need to land first. All five are
+reused as-is (Phase 2's treatment), not rebuilt — each is already a
+simple `{worldId, onOpenArticle?, onOpenStatblock?, onAuthExpired}`
+self-contained component (`PlayersPanel`, `TagBrowseView`, `SheetsView`,
+`TablesView`, `HandoutsView`), the same shape Whiteboards/Relations/
+Consistency already were.
+- **Players** — world-scoped player pool (FR-53), reuse as-is.
+- **Tags** — folksonomy cross-entity browse (FR-47), reuse as-is.
+- **Sheets** — character sheets/statblocks/documents/templates sub-tabs,
+  reuse as-is.
+- **Tables & Decks** — roll tables + card decks (FR-19, FR-40/41), reuse
+  as-is.
+- **Handouts** — player-facing printables (FR-46), reuse as-is.
 
 ### Phase 6 — Deferred / needs its own design pass
 - **Hierarchical Atlas** — one or more world/region maps linking down to
