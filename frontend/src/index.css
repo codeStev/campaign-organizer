@@ -1501,6 +1501,30 @@ button:disabled {
   min-height: 6rem;
 }
 
+/* Mockup fidelity: session tools (log/beats/clocks) as the main column,
+   roster/todos/GM notes as a narrower side "cheat sheet" column, instead of
+   one long vertical stack. */
+.campaign-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.campaign-workspace-main,
+.campaign-workspace-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .campaign-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
 .session-form-row {
   display: flex;
   gap: 0.5rem;

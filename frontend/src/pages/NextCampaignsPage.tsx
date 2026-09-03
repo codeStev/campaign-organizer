@@ -298,46 +298,52 @@ export function NextCampaignsPage({ worldId, onOpenArticle, onAuthExpired }: Pro
             </div>
             {selected.description && <p className="muted">{selected.description}</p>}
 
-            <section className="card">
-              <h3>GM notes</h3>
-              <div className="gm-notes">
-                <MarkdownEditor
-                  value={notes}
-                  onChange={(value) => {
-                    setNotes(value);
-                    setNotesDirty(true);
-                  }}
+            <div className="campaign-workspace">
+              <div className="campaign-workspace-main">
+                <SessionLog
+                  worldId={worldId}
+                  campaignId={selected.id}
+                  campaignName={selected.name}
+                  onError={handleError}
                 />
+                <ArcBoard
+                  worldId={worldId}
+                  campaignId={selected.id}
+                  articles={articles}
+                  statblocks={statblocks}
+                  encounters={encounters}
+                  onOpenArticle={onOpenArticle}
+                  onError={handleError}
+                />
+                <ClockBoard worldId={worldId} campaignId={selected.id} onError={handleError} />
               </div>
-              <div className="editor-actions">
-                <Button onClick={saveNotes} disabled={!notesDirty}>
-                  Save notes
-                </Button>
+
+              <div className="campaign-workspace-side">
+                <RosterPanel worldId={worldId} campaignId={selected.id} onError={handleError} />
+
+                <section className="card">
+                  <TodoListPanel worldId={worldId} campaignId={selected.id} onError={handleError} />
+                </section>
+
+                <section className="card">
+                  <h3>GM notes</h3>
+                  <div className="gm-notes">
+                    <MarkdownEditor
+                      value={notes}
+                      onChange={(value) => {
+                        setNotes(value);
+                        setNotesDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="editor-actions">
+                    <Button onClick={saveNotes} disabled={!notesDirty}>
+                      Save notes
+                    </Button>
+                  </div>
+                </section>
               </div>
-            </section>
-
-            <RosterPanel worldId={worldId} campaignId={selected.id} onError={handleError} />
-
-            <section className="card">
-              <TodoListPanel worldId={worldId} campaignId={selected.id} onError={handleError} />
-            </section>
-
-            <SessionLog
-              worldId={worldId}
-              campaignId={selected.id}
-              campaignName={selected.name}
-              onError={handleError}
-            />
-            <ArcBoard
-              worldId={worldId}
-              campaignId={selected.id}
-              articles={articles}
-              statblocks={statblocks}
-              encounters={encounters}
-              onOpenArticle={onOpenArticle}
-              onError={handleError}
-            />
-            <ClockBoard worldId={worldId} campaignId={selected.id} onError={handleError} />
+            </div>
           </>
         )}
       </div>
