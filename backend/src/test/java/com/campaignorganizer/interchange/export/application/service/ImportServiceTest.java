@@ -62,6 +62,7 @@ import com.campaignorganizer.tagging.application.port.published.TagView;
 import com.campaignorganizer.tagging.domain.EntityType;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinImportPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipImportPort;
@@ -99,6 +100,8 @@ class ImportServiceTest {
     private CategoryImportPort categoryImportPort;
     @Mock
     private ArticleImportPort articleImportPort;
+    @Mock
+    private MapCategoryImportPort mapCategoryImportPort;
     @Mock
     private MapImportPort mapImportPort;
     @Mock
@@ -171,7 +174,7 @@ class ImportServiceTest {
     @BeforeEach
     void setUp() {
         service = new ImportService(objectMapper, worldImportPort, categoryImportPort, articleImportPort,
-                mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
+                mapCategoryImportPort, mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
                 arcImportPort, beatKindImportPort, fieldTemplateImportPort, gameSystemImportPort,

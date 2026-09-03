@@ -58,6 +58,8 @@ import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImp
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarView;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryImportPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
@@ -102,6 +104,7 @@ public class ImportService implements ImportBackupUseCase {
     private final WorldImportPort worldImportPort;
     private final CategoryImportPort categoryImportPort;
     private final ArticleImportPort articleImportPort;
+    private final MapCategoryImportPort mapCategoryImportPort;
     private final MapImportPort mapImportPort;
     private final MapPinImportPort mapPinImportPort;
     private final CalendarImportPort calendarImportPort;
@@ -137,6 +140,7 @@ public class ImportService implements ImportBackupUseCase {
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
+            MapCategoryImportPort mapCategoryImportPort,
             MapImportPort mapImportPort, MapPinImportPort mapPinImportPort,
             CalendarImportPort calendarImportPort, TimelineImportPort timelineImportPort,
             TimelineEventImportPort timelineEventImportPort, RelationshipImportPort relationshipImportPort,
@@ -160,6 +164,7 @@ public class ImportService implements ImportBackupUseCase {
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
         this.articleImportPort = articleImportPort;
+        this.mapCategoryImportPort = mapCategoryImportPort;
         this.mapImportPort = mapImportPort;
         this.mapPinImportPort = mapPinImportPort;
         this.calendarImportPort = calendarImportPort;
@@ -217,6 +222,7 @@ public class ImportService implements ImportBackupUseCase {
         List<MediaBundleEntry> media = readList(root, "media", MediaBundleEntry.class);
         List<CategoryView> categories = readList(root, "categories", CategoryView.class);
         List<ArticleView> articles = readList(root, "articles", ArticleView.class);
+        List<MapCategoryView> mapCategories = readList(root, "mapCategories", MapCategoryView.class);
         List<MapView> maps = readList(root, "maps", MapView.class);
         List<MapPinView> mapPins = readList(root, "mapPins", MapPinView.class);
         List<CalendarView> calendars = readList(root, "calendars", CalendarView.class);
@@ -261,6 +267,7 @@ public class ImportService implements ImportBackupUseCase {
         media.forEach(m -> remap.assign(m.id()));
         categories.forEach(c -> remap.assign(c.id()));
         articles.forEach(a -> remap.assign(a.id()));
+        mapCategories.forEach(c -> remap.assign(c.id()));
         maps.forEach(m -> remap.assign(m.id()));
         mapPins.forEach(p -> remap.assign(p.id()));
         calendars.forEach(c -> remap.assign(c.id()));
@@ -315,9 +322,14 @@ public class ImportService implements ImportBackupUseCase {
                     a.slug(), a.template(), body, a.createdAt(), a.updatedAt()));
         }
 
+        for (MapCategoryView c : mapCategories) {
+            mapCategoryImportPort.importMapCategory(new MapCategoryView(remap.get(c.id()), newWorldId,
+                    remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         for (MapView m : maps) {
-            mapImportPort.importMap(new MapView(remap.get(m.id()), newWorldId, m.name(),
-                    remap.getOrNull(m.mediaId()), m.createdAt(), m.updatedAt()));
+            mapImportPort.importMap(new MapView(remap.get(m.id()), newWorldId, remap.getOrNull(m.categoryId()),
+                    m.name(), remap.getOrNull(m.mediaId()), m.createdAt(), m.updatedAt()));
         }
 
         for (MapPinView p : mapPins) {

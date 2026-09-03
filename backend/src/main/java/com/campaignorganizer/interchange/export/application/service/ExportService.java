@@ -31,6 +31,7 @@ import com.campaignorganizer.tagging.application.port.published.TagQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
@@ -64,6 +65,7 @@ public class ExportService implements ExportWorldUseCase {
     private final WorldQueryPort worlds;
     private final CategoryQueryPort categories;
     private final ArticleQueryPort articles;
+    private final MapCategoryQueryPort mapCategories;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
     private final TimelineLookupPort timelines;
@@ -97,6 +99,7 @@ public class ExportService implements ExportWorldUseCase {
     private final TodoQueryPort todos;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
+                         MapCategoryQueryPort mapCategories,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
                          TimelineEventQueryPort events, CalendarQueryPort calendars,
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
@@ -116,6 +119,7 @@ public class ExportService implements ExportWorldUseCase {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
+        this.mapCategories = mapCategories;
         this.maps = maps;
         this.pins = pins;
         this.timelines = timelines;
@@ -161,6 +165,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("world", world);
         bundle.put("categories", categories.findByWorld(worldId));
         bundle.put("articles", articles.findByWorld(worldId));
+        bundle.put("mapCategories", mapCategories.findByWorld(worldId));
 
         List<Object> allPins = new ArrayList<>();
         List<MapView> worldMaps = maps.findByWorld(worldId);
