@@ -9,10 +9,10 @@ import { GlobalTemplatesPanel } from './pages/GlobalTemplatesPanel';
 import { GlobalStatblocksPanel } from './pages/GlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
 import { WorldsNextPage } from './pages/WorldsNextPage';
+import { NextSettingsPage } from './pages/NextSettingsPage';
 import { WorldViewNext } from './pages/WorldViewNext';
 import { AppSidebar } from './components/AppSidebar';
 import { AppSidebarNext } from './components/AppSidebarNext';
-import { NextStubPage } from './components/NextStubPage';
 import { NextTopBar } from './components/NextTopBar';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
@@ -97,7 +97,7 @@ function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
             <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
-            <Route path="settings" element={<NextStubPage title="Settings" note="Phase 5 — reskin of the existing settings categories." />} />
+            <Route path="settings/*" element={<NextSettingsPage onAuthExpired={onAuthExpired} />} />
             <Route path="*" element={<Navigate to="/next/worlds" replace />} />
           </Routes>
         </SidebarInset>
