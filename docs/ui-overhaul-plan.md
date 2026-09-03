@@ -336,8 +336,13 @@ one screen at a time:
   Sidebar rebuilt as a real Category tree (ADR-0104), matching the mockup's
   "BY CATEGORY" grouping instead of ADR-0080's parentArticleId tree — a
   frontend-only change, since `Category` already had full backend CRUD sitting
-  unused. Includes category create/delete and, for the first time in any UI,
-  a way to set an article's category.
+  unused. Includes category create/delete, arbitrarily deep sub-categories,
+  and drag-and-drop article-to-category assignment (`@dnd-kit/core`, this
+  app's first drag-and-drop of any kind) — the first time in any UI there's
+  a way to set an article's category at all. Also fixed a real navigation
+  bug found along the way: `openArticle` used a bare relative `navigate(id)`,
+  which broke once already on `wiki/:articleId` (same route-tree-aware
+  relative-navigation issue fixed elsewhere in this app).
 - **Whiteboards**: checked against the mockup — already matches (full-bleed
   corkboard canvas); no change needed.
 - **Game Systems**: fixed a `/next` navigation gap — the sidebar's "Game

@@ -42,14 +42,24 @@ because nothing new is being added to the backend.
 - **`categoriesApi` in `client.ts` extended** with `create`/`update`/`remove`
   (previously `list()` only) — thin wrappers matching the existing OpenAPI
   contract, no backend change.
-- **A category picker on the article read pane** (`Select`, defaulting to
-  "— uncategorised —", options labeled with the full path e.g.
-  "Places / Cities") — the first UI anywhere that lets a user set an
-  article's category. This is deliberately narrow: it's the one write
-  affordance added to an otherwise still-read-only `/next` Wiki (body
-  editing stays on the old UI's richer editor per ADR-0080/Phase 2 scoping),
-  justified because there was previously *no* way at all, in either UI, to
-  assign a category.
+- **Drag-and-drop article-to-category assignment** (`@dnd-kit/core`, new
+  dependency): every article row in the tree is draggable, every category
+  row (including "Uncategorised") is a drop target with a highlight while
+  dragged over. This is the one write affordance added to an otherwise
+  still-read-only `/next` Wiki (body editing stays on the old UI's richer
+  editor per ADR-0080/Phase 2 scoping), justified because there was
+  previously *no* way at all, in either UI, to assign a category. A first
+  pass used a `Select` picker on the read pane instead; the user asked for
+  drag-and-drop, which fully replaced it (the read pane now just shows the
+  category as plain text next to the template). Chose `@dnd-kit/core` over
+  native HTML5 drag-and-drop for touch support and a cleaner drop-highlight
+  API (`useDroppable`'s `isOver`) — no prior drag-and-drop existed anywhere
+  in this codebase (Whiteboards' node dragging is raw pointer-event canvas
+  math, not a fit for a "drop onto a target" tree interaction). Dropping
+  fetches the moved article's full detail first — the tree only holds
+  `ArticleSummary`, which has no `body`, and `ArticleRequest.body` isn't
+  defaulted server-side to the existing value when omitted, so skipping
+  this fetch would silently wipe the article's body on every drag.
 - **`parentArticleId`-based nesting is not shown in `/next` at all now** —
   neither as the sidebar's structure (replaced by Category) nor as a
   breadcrumb on the read pane (not carried over from the old design). The
@@ -82,6 +92,11 @@ because nothing new is being added to the backend.
 - **Keep parentArticleId, just improve its visual nesting** — rejected by
   the user in favor of matching the mockup's actual mechanism, once it was
   established Category already has full backend support sitting unused.
+- **Native HTML5 drag-and-drop** for the category assignment, instead of
+  `@dnd-kit/core` — would avoid a new dependency, but has no touch support
+  and a much fussier `dragover`/`dragleave` event dance for highlight
+  state. Rejected in favor of the library given this app has no existing
+  drag-and-drop precedent to stay consistent with either way.
 - **Both trees at once** (Category as the primary grouping, with
   parentArticleId nesting *within* a category) — not attempted here; the
   mockup only shows one tree, and combining both would be a second,
