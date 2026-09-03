@@ -1194,6 +1194,7 @@ export interface TemplateSection {
 export interface FieldTemplate {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   name: string;
   kind: TemplateKind;
   systemId?: string | null;
@@ -1203,6 +1204,7 @@ export interface FieldTemplate {
 }
 
 export interface FieldTemplateRequest {
+  categoryId?: string | null;
   name: string;
   kind: TemplateKind;
   systemId?: string | null;
@@ -1285,6 +1287,7 @@ export interface ImportGlobalStatblockRequest {
 export interface CharacterSheet {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   worldTemplateId: string | null;
   globalTemplateId: string | null;
   articleId?: string | null;
@@ -1296,6 +1299,7 @@ export interface CharacterSheet {
 }
 
 export interface CharacterSheetRequest {
+  categoryId?: string | null;
   name: string;
   worldTemplateId?: string | null;
   globalTemplateId?: string | null;
@@ -1307,6 +1311,7 @@ export interface CharacterSheetRequest {
 export interface Document {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   templateId: string;
   campaignId?: string | null;
   name: string;
@@ -1316,6 +1321,7 @@ export interface Document {
 }
 
 export interface DocumentRequest {
+  categoryId?: string | null;
   name: string;
   templateId: string;
   campaignId?: string | null;
@@ -1325,6 +1331,7 @@ export interface DocumentRequest {
 export interface Statblock {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   articleId?: string | null;
   campaignId?: string | null;
   worldTemplateId?: string | null;
@@ -1337,6 +1344,7 @@ export interface Statblock {
 }
 
 export interface StatblockRequest {
+  categoryId?: string | null;
   name: string;
   articleId?: string | null;
   campaignId?: string | null;
@@ -1466,6 +1474,33 @@ export function statblocksApi(worldId: string) {
       request<Statblock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => request<Statblock>(`${base}/${id}/duplicate`, { method: 'POST' }),
+  };
+}
+
+export interface SheetCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SheetCategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+/** ADR-0105: one shared taxonomy across sheets, statblocks, documents, and templates. */
+export function sheetCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/sheet-categories`;
+  return {
+    list: () => request<SheetCategory[]>(base),
+    create: (body: SheetCategoryRequest) =>
+      request<SheetCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: SheetCategoryRequest) =>
+      request<SheetCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 

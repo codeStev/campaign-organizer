@@ -3486,6 +3486,89 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/sheet-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [sheets]
+      summary: List a world's sheet categories (ADR-0105, shared by character sheets, statblocks, documents, and field templates)
+      operationId: listSheetCategories
+      responses:
+        '200':
+          description: Sheet categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SheetCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [sheets]
+      summary: Create a sheet category
+      operationId: createSheetCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetCategoryRequest'
+      responses:
+        '201':
+          description: Sheet category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/sheet-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [sheets]
+      summary: Update a sheet category
+      operationId: updateSheetCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetCategoryRequest'
+      responses:
+        '200':
+          description: Sheet category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a sheet category (its sheets/statblocks/documents/templates are kept, uncategorized)
+      operationId: deleteSheetCategory
+      responses:
+        '204':
+          description: Sheet category deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/arcs:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -4891,10 +4974,49 @@ components:
           items:
             $ref: '#/components/schemas/TemplateField'
 
+    SheetCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent sheet category for nesting, or null for a root category.
+
+    SheetCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     FieldTemplateRequest:
       type: object
       required: [name, kind]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -4918,6 +5040,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         name:
           type: string
@@ -5115,6 +5240,10 @@ components:
       type: object
       required: [name]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -5155,6 +5284,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         articleId:
           type: [string, "null"]
@@ -5300,6 +5432,10 @@ components:
         Exactly one of worldTemplateId/globalTemplateId must be set
         (ADR-0093) — a character sheet always needs a template.
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -5333,6 +5469,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         worldTemplateId:
           type: [string, "null"]
           format: uuid
@@ -5361,6 +5500,10 @@ components:
       type: object
       required: [name, templateId]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -5386,6 +5529,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         templateId:
           type: string
