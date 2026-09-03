@@ -116,7 +116,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
           <SidebarContent>
             {TAB_GROUPS.map((group) => (
               <SidebarGroup key={group}>
-                <SidebarGroupLabel>{group}</SidebarGroupLabel>
+                <SidebarGroupLabel className="eyebrow">{group}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {TABS.filter((t) => t.group === group).map((t) => (

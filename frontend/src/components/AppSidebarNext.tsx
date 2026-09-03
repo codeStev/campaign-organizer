@@ -54,7 +54,7 @@ export function AppSidebarNext() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Library · all worlds</SidebarGroupLabel>
+          <SidebarGroupLabel className="eyebrow">Library · all worlds</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {LIBRARY_ITEMS.map((item) => (
