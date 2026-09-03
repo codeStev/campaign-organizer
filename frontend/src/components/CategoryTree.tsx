@@ -189,7 +189,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <Input placeholder={searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} />
-      <Button variant="outline" size="sm" onClick={() => setNewCategoryParentId(null)}>
+      <Button className="sidebar-new-button" variant="outline" size="sm" onClick={() => setNewCategoryParentId(null)}>
         + New category
       </Button>
       <PromptDialog

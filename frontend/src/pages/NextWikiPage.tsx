@@ -150,7 +150,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         {error && <p className="error">{error}</p>}
-        <Button size="sm" onClick={() => navigate(`/next/worlds/${worldId}/wiki/new`)}>
+        <Button className="sidebar-new-button" size="sm" onClick={() => navigate(`/next/worlds/${worldId}/wiki/new`)}>
           + New article
         </Button>
         <CategoryTree

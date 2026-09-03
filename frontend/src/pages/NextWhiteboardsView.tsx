@@ -116,7 +116,9 @@ export function NextWhiteboardsView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Button onClick={() => setNamePromptOpen(true)}>+ New whiteboard</Button>
+        <Button className="sidebar-new-button" size="sm" onClick={() => setNamePromptOpen(true)}>
+          + New whiteboard
+        </Button>
         <PromptDialog
           open={namePromptOpen}
           onOpenChange={setNamePromptOpen}

@@ -273,6 +273,8 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         <Button
+          className="sidebar-new-button"
+          size="sm"
           onClick={() => {
             setDraft(EMPTY_DRAFT);
             setMode('edit');

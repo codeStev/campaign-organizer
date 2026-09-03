@@ -208,7 +208,9 @@ export function NextCampaignsPage({ worldId, onOpenArticle, onAuthExpired }: Pro
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Button onClick={() => setNamePromptOpen(true)}>+ New campaign</Button>
+        <Button className="sidebar-new-button" size="sm" onClick={() => setNamePromptOpen(true)}>
+          + New campaign
+        </Button>
         <PromptDialog
           open={namePromptOpen}
           onOpenChange={setNamePromptOpen}

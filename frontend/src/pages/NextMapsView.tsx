@@ -327,7 +327,9 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout maps-layout">
       <aside className="wiki-sidebar">
-        <Button onClick={() => fileInputRef.current?.click()}>+ New map</Button>
+        <Button className="sidebar-new-button" size="sm" onClick={() => fileInputRef.current?.click()}>
+          + New map
+        </Button>
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleNewMapFile} />
         <PromptDialog
           open={mapNameOpen}

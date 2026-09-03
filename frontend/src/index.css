@@ -507,6 +507,15 @@ button:disabled {
   min-width: 0;
 }
 
+/* The mockup's "+ New X" trigger is a small, left-aligned accent pill
+   (padding:8px 13px, ~11.5px semibold text) — not a full-width bar. Plain
+   shadcn <Button>s default to align-items:stretch from .wiki-sidebar's flex
+   column, so they stretch to the sidebar's full width and read as clunky
+   blocks; this opts them back out to their natural (small) width. */
+.sidebar-new-button {
+  align-self: flex-start;
+}
+
 /* Scrollable, grouped article list. */
 .article-list-scroll {
   max-height: 60vh;
