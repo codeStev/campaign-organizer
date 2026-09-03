@@ -53,6 +53,7 @@ import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.handouts.application.port.published.HandoutCategoryImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
 import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
@@ -152,6 +153,8 @@ class ImportServiceTest {
     @Mock
     private MediaImportPort mediaImportPort;
     @Mock
+    private TableDeckCategoryImportPort tableDeckCategoryImportPort;
+    @Mock
     private RollTableImportPort rollTableImportPort;
     @Mock
     private CardDeckImportPort cardDeckImportPort;
@@ -184,7 +187,8 @@ class ImportServiceTest {
                 globalFieldTemplateImportPort,
                 globalStatblockImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort, encounterImportPort,
-                arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
+                arcBeatImportPort, whiteboardImportPort, mediaImportPort,
+                tableDeckCategoryImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutCategoryImportPort, handoutImportPort,
                 cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
                 todoImportPort);
@@ -669,12 +673,12 @@ class ImportServiceTest {
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
-        bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, "Ambush", null,
+        bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, null, "Ambush", null,
                 "1d1", 1, 1,
                 List.of(new RollTableEntryView(UUID.randomUUID(), 1, 1, "Bandits",
                         List.of(danglingTableId), List.of())),
                 now, now)));
-        bundle.put("cardDecks", List.of(new CardDeckView(oldDeckId, oldWorldId, "Twists", null,
+        bundle.put("cardDecks", List.of(new CardDeckView(oldDeckId, oldWorldId, null, "Twists", null,
                 List.of(new DeckCardView(UUID.randomUUID(), "Ambush", "More foes",
                         List.of(), List.of(danglingTableId))),
                 now, now)));

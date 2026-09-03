@@ -50,6 +50,8 @@ import com.campaignorganizer.handouts.application.port.published.HandoutImportPo
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryImportPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryView;
 import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
@@ -131,6 +133,7 @@ public class ImportService implements ImportBackupUseCase {
     private final ArcBeatImportPort arcBeatImportPort;
     private final WhiteboardImportPort whiteboardImportPort;
     private final MediaImportPort mediaImportPort;
+    private final TableDeckCategoryImportPort tableDeckCategoryImportPort;
     private final RollTableImportPort rollTableImportPort;
     private final CardDeckImportPort cardDeckImportPort;
     private final HandoutCategoryImportPort handoutCategoryImportPort;
@@ -158,7 +161,8 @@ public class ImportService implements ImportBackupUseCase {
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
             StatblockImportPort statblockImportPort, EncounterImportPort encounterImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
-            MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
+            MediaImportPort mediaImportPort,
+            TableDeckCategoryImportPort tableDeckCategoryImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort,
             HandoutCategoryImportPort handoutCategoryImportPort, HandoutImportPort handoutImportPort,
             CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
@@ -193,6 +197,7 @@ public class ImportService implements ImportBackupUseCase {
         this.arcBeatImportPort = arcBeatImportPort;
         this.whiteboardImportPort = whiteboardImportPort;
         this.mediaImportPort = mediaImportPort;
+        this.tableDeckCategoryImportPort = tableDeckCategoryImportPort;
         this.rollTableImportPort = rollTableImportPort;
         this.cardDeckImportPort = cardDeckImportPort;
         this.handoutCategoryImportPort = handoutCategoryImportPort;
@@ -256,6 +261,8 @@ public class ImportService implements ImportBackupUseCase {
         List<EncounterView> encounters = readList(root, "encounters", EncounterView.class);
         List<ArcBeatView> beats = readList(root, "beats", ArcBeatView.class);
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
+        List<TableDeckCategoryView> tableDeckCategories =
+                readList(root, "tableDeckCategories", TableDeckCategoryView.class);
         List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
         List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
         List<HandoutCategoryView> handoutCategories =
@@ -295,6 +302,7 @@ public class ImportService implements ImportBackupUseCase {
         encounters.forEach(e -> remap.assign(e.id()));
         beats.forEach(b -> remap.assign(b.id()));
         whiteboards.forEach(w -> remap.assign(w.id()));
+        tableDeckCategories.forEach(c -> remap.assign(c.id()));
         rollTables.forEach(t -> remap.assign(t.id()));
         cardDecks.forEach(d -> remap.assign(d.id()));
         handoutCategories.forEach(c -> remap.assign(c.id()));
@@ -505,19 +513,25 @@ public class ImportService implements ImportBackupUseCase {
                     remap.get(t.entityId()), t.name(), t.createdAt()));
         }
 
+        for (TableDeckCategoryView c : tableDeckCategories) {
+            tableDeckCategoryImportPort.importTableDeckCategory(new TableDeckCategoryView(remap.get(c.id()),
+                    newWorldId, remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         // Tables and decks before beats: beats reference them (FR-40). Nested
         // chains (FR-41) are rewritten to the new ids; bodies carry no other
         // id-based links.
         for (RollTableView t : rollTables) {
             rollTableImportPort.importRollTable(new RollTableView(remap.get(t.id()), newWorldId,
-                    t.title(), t.description(), t.diceExpression(), t.minResult(), t.maxResult(),
-                    remapEntries(t.entries(), remap), t.createdAt(), t.updatedAt()));
+                    remap.getOrNull(t.categoryId()), t.title(), t.description(), t.diceExpression(),
+                    t.minResult(), t.maxResult(), remapEntries(t.entries(), remap), t.createdAt(),
+                    t.updatedAt()));
         }
 
         for (CardDeckView d : cardDecks) {
             cardDeckImportPort.importCardDeck(new CardDeckView(remap.get(d.id()), newWorldId,
-                    d.title(), d.description(), remapCards(d.cards(), remap), d.createdAt(),
-                    d.updatedAt()));
+                    remap.getOrNull(d.categoryId()), d.title(), d.description(), remapCards(d.cards(), remap),
+                    d.createdAt(), d.updatedAt()));
         }
 
         for (HandoutCategoryView c : handoutCategories) {
