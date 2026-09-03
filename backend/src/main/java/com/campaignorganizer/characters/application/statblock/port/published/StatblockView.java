@@ -8,6 +8,7 @@ import java.util.UUID;
 public record StatblockView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         UUID articleId,
         UUID campaignId,
         UUID worldTemplateId,

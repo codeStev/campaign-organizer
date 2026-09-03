@@ -3,6 +3,7 @@ package com.campaignorganizer.characters.application.statblock.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.characters.application.statblock.port.in.StatblockCommands.CreateStatblockCommand;
@@ -12,6 +13,7 @@ import com.campaignorganizer.characters.application.statblock.port.out.CampaignS
 import com.campaignorganizer.characters.application.statblock.port.out.StatblockRepositoryPort;
 import com.campaignorganizer.characters.application.statblock.port.out.StatblockTagLookupPort;
 import com.campaignorganizer.characters.application.statblock.port.out.WorldExistsPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
@@ -56,6 +58,8 @@ class StatblockServiceTest {
     @Mock
     private StatblockTagLookupPort tagLookup;
     @Mock
+    private SheetCategoryQueryPort categories;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -69,16 +73,17 @@ class StatblockServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(categories.existsInWorld(any(), any())).thenReturn(true);
         service = new StatblockService(statblocks, worlds, articles, campaigns, templates, globalTemplates,
-                campaignRefs, tagLookup, viewMapper, ids, clock);
+                campaignRefs, tagLookup, categories, viewMapper, ids, clock);
     }
 
     private Statblock statblock(UUID id, UUID campaign) {
-        return Statblock.create(id, worldId, null, campaign, null, null, "SB", null, null, clock.instant());
+        return Statblock.create(id, worldId, null, null, campaign, null, null, "SB", null, null, clock.instant());
     }
 
     private FieldTemplateView templateView(TemplateKind kind) {
-        return new FieldTemplateView(templateId, worldId, "Template", kind, null, List.of(),
+        return new FieldTemplateView(templateId, worldId, null, "Template", kind, null, List.of(),
                 Instant.now(), Instant.now());
     }
 
@@ -87,7 +92,7 @@ class StatblockServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, null, null, "SB", null, null)))
+                worldId, null, null, null, null, null, "SB", null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -97,7 +102,7 @@ class StatblockServiceTest {
         when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, campaignId, null, null, "SB", null, null)))
+                worldId, null, null, campaignId, null, null, "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -107,7 +112,7 @@ class StatblockServiceTest {
         when(templates.findByIdInWorld(templateId, worldId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, templateId, null, "SB", null, null)))
+                worldId, null, null, null, templateId, null, "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -118,7 +123,7 @@ class StatblockServiceTest {
                 .thenReturn(Optional.of(templateView(TemplateKind.CHARACTER)));
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, templateId, null, "SB", null, null)))
+                worldId, null, null, null, templateId, null, "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -133,7 +138,7 @@ class StatblockServiceTest {
         when(statblocks.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         StatblockView view = service.create(new CreateStatblockCommand(
-                worldId, null, null, null, globalTemplateId, "SB", null, null));
+                worldId, null, null, null, null, globalTemplateId, "SB", null, null));
 
         assertThat(view.globalTemplateId()).isEqualTo(globalTemplateId);
     }
@@ -145,7 +150,7 @@ class StatblockServiceTest {
                 .thenReturn(Optional.of(templateView(TemplateKind.STATBLOCK)));
 
         assertThatThrownBy(() -> service.create(new CreateStatblockCommand(
-                worldId, null, null, templateId, UUID.randomUUID(), "SB", null, null)))
+                worldId, null, null, null, templateId, UUID.randomUUID(), "SB", null, null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -169,7 +174,7 @@ class StatblockServiceTest {
     @Test
     void duplicateCopiesFieldsAndRenamesWithNewId() {
         UUID sourceId = UUID.randomUUID();
-        Statblock source = Statblock.create(sourceId, worldId, null, campaignId, null, null, "Goblin",
+        Statblock source = Statblock.create(sourceId, worldId, null, null, campaignId, null, null, "Goblin",
                 Map.of("hp", 7), "Sneaky", clock.instant());
         when(statblocks.findByIdAndWorld(sourceId, worldId)).thenReturn(Optional.of(source));
         when(worlds.exists(worldId)).thenReturn(true);

@@ -14,14 +14,14 @@ public interface StatblockWebMapper {
     StatblockResponse toResponse(StatblockView view);
 
     default CreateStatblockCommand toCreateCommand(UUID worldId, StatblockRequest request) {
-        return new CreateStatblockCommand(worldId, request.articleId(), request.campaignId(),
-                request.worldTemplateId(), request.globalTemplateId(), request.name(), request.stats(),
-                request.notes());
+        return new CreateStatblockCommand(worldId, request.categoryId(), request.articleId(),
+                request.campaignId(), request.worldTemplateId(), request.globalTemplateId(), request.name(),
+                request.stats(), request.notes());
     }
 
     default UpdateStatblockCommand toUpdateCommand(UUID worldId, UUID statblockId,
                                                    StatblockRequest request) {
-        return new UpdateStatblockCommand(worldId, statblockId, request.articleId(),
+        return new UpdateStatblockCommand(worldId, statblockId, request.categoryId(), request.articleId(),
                 request.campaignId(), request.worldTemplateId(), request.globalTemplateId(), request.name(),
                 request.stats(), request.notes());
     }

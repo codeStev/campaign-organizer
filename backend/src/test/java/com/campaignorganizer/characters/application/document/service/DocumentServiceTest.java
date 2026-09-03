@@ -3,6 +3,7 @@ package com.campaignorganizer.characters.application.document.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.characters.application.document.port.in.DocumentCommands.CreateDocumentCommand;
@@ -10,6 +11,7 @@ import com.campaignorganizer.characters.application.document.port.out.CampaignEx
 import com.campaignorganizer.characters.application.document.port.out.DocumentRepositoryPort;
 import com.campaignorganizer.characters.application.document.port.out.WorldExistsPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
@@ -41,6 +43,8 @@ class DocumentServiceTest {
     @Mock
     private CampaignExistsPort campaigns;
     @Mock
+    private SheetCategoryQueryPort categories;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -53,11 +57,13 @@ class DocumentServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DocumentService(documents, templates, worlds, campaigns, viewMapper, ids, clock);
+        lenient().when(categories.existsInWorld(any(), any())).thenReturn(true);
+        service = new DocumentService(documents, templates, worlds, campaigns, categories, viewMapper, ids,
+                clock);
     }
 
     private FieldTemplateView templateView(TemplateKind kind) {
-        return new FieldTemplateView(templateId, worldId, "Template", kind, null, List.of(),
+        return new FieldTemplateView(templateId, worldId, null, "Template", kind, null, List.of(),
                 Instant.now(), Instant.now());
     }
 
@@ -70,7 +76,7 @@ class DocumentServiceTest {
         when(documents.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         DocumentView view = service.create(new CreateDocumentCommand(
-                worldId, templateId, null, "Session Zero", null));
+                worldId, null, templateId, null, "Session Zero", null));
 
         assertThat(view.name()).isEqualTo("Session Zero");
     }
@@ -80,7 +86,7 @@ class DocumentServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateDocumentCommand(
-                worldId, templateId, null, "Session Zero", null)))
+                worldId, null, templateId, null, "Session Zero", null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -90,7 +96,7 @@ class DocumentServiceTest {
         when(templates.findByIdInWorld(templateId, worldId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(new CreateDocumentCommand(
-                worldId, templateId, null, "Session Zero", null)))
+                worldId, null, templateId, null, "Session Zero", null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -101,7 +107,7 @@ class DocumentServiceTest {
                 .thenReturn(Optional.of(templateView(TemplateKind.CHARACTER)));
 
         assertThatThrownBy(() -> service.create(new CreateDocumentCommand(
-                worldId, templateId, null, "Session Zero", null)))
+                worldId, null, templateId, null, "Session Zero", null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -112,7 +118,7 @@ class DocumentServiceTest {
                 .thenReturn(Optional.of(templateView(TemplateKind.STATBLOCK)));
 
         assertThatThrownBy(() -> service.create(new CreateDocumentCommand(
-                worldId, templateId, null, "Session Zero", null)))
+                worldId, null, templateId, null, "Session Zero", null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -125,7 +131,7 @@ class DocumentServiceTest {
         when(campaigns.existsInWorld(campaignId, worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateDocumentCommand(
-                worldId, templateId, campaignId, "Session Zero", null)))
+                worldId, null, templateId, campaignId, "Session Zero", null)))
                 .isInstanceOf(ValidationException.class);
     }
 }

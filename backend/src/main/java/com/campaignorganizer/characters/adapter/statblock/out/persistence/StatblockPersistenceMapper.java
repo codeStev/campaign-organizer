@@ -12,8 +12,8 @@ public interface StatblockPersistenceMapper {
         if (e == null) {
             return null;
         }
-        return Statblock.reconstitute(e.getId(), e.getWorldId(), e.getArticleId(), e.getCampaignId(),
-                e.getWorldTemplateId(), e.getGlobalTemplateId(), e.getName(), e.getStats(), e.getNotes(),
-                e.getCreatedAt(), e.getUpdatedAt());
+        return Statblock.reconstitute(e.getId(), e.getWorldId(), e.getCategoryId(), e.getArticleId(),
+                e.getCampaignId(), e.getWorldTemplateId(), e.getGlobalTemplateId(), e.getName(), e.getStats(),
+                e.getNotes(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

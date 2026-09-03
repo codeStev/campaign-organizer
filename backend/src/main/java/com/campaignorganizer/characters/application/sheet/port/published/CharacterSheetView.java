@@ -8,6 +8,7 @@ import java.util.UUID;
 public record CharacterSheetView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         UUID worldTemplateId,
         UUID globalTemplateId,
         UUID articleId,

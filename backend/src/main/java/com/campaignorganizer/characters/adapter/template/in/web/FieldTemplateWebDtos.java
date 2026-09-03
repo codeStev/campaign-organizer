@@ -15,6 +15,7 @@ public final class FieldTemplateWebDtos {
     }
 
     public record FieldTemplateRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String name,
             @NotNull TemplateKind kind,
             UUID systemId,
@@ -24,6 +25,7 @@ public final class FieldTemplateWebDtos {
     public record FieldTemplateResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             String name,
             TemplateKind kind,
             UUID systemId,

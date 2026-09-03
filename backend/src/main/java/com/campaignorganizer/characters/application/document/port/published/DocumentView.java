@@ -8,6 +8,7 @@ import java.util.UUID;
 public record DocumentView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         UUID templateId,
         UUID campaignId,
         String name,

@@ -10,6 +10,7 @@ import java.util.UUID;
 public record FieldTemplateView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         String name,
         TemplateKind kind,
         UUID systemId,

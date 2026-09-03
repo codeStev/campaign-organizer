@@ -13,6 +13,7 @@ public final class DocumentWebDtos {
     }
 
     public record DocumentRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String name,
             @NotNull UUID templateId,
             UUID campaignId,
@@ -22,6 +23,7 @@ public final class DocumentWebDtos {
     public record DocumentResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             UUID templateId,
             UUID campaignId,
             String name,

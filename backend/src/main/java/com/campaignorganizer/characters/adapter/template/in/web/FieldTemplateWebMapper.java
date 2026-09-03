@@ -14,13 +14,13 @@ public interface FieldTemplateWebMapper {
     FieldTemplateResponse toResponse(FieldTemplateView view);
 
     default CreateFieldTemplateCommand toCreateCommand(UUID worldId, FieldTemplateRequest request) {
-        return new CreateFieldTemplateCommand(worldId, request.name(), request.kind(), request.systemId(),
-                request.sections());
+        return new CreateFieldTemplateCommand(worldId, request.categoryId(), request.name(), request.kind(),
+                request.systemId(), request.sections());
     }
 
     default UpdateFieldTemplateCommand toUpdateCommand(UUID worldId, UUID templateId,
                                                         FieldTemplateRequest request) {
-        return new UpdateFieldTemplateCommand(worldId, templateId, request.name(), request.systemId(),
-                request.sections());
+        return new UpdateFieldTemplateCommand(worldId, templateId, request.categoryId(), request.name(),
+                request.systemId(), request.sections());
     }
 }

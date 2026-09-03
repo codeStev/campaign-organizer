@@ -12,6 +12,7 @@ public final class CharacterSheetWebDtos {
     }
 
     public record CharacterSheetRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String name,
             UUID worldTemplateId,
             UUID globalTemplateId,
@@ -23,6 +24,7 @@ public final class CharacterSheetWebDtos {
     public record CharacterSheetResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             UUID worldTemplateId,
             UUID globalTemplateId,
             UUID articleId,
