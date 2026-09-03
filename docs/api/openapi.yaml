@@ -2862,6 +2862,89 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/handout-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [handouts]
+      summary: List a world's handout categories (ADR-0105)
+      operationId: listHandoutCategories
+      responses:
+        '200':
+          description: Handout categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandoutCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [handouts]
+      summary: Create a handout category
+      operationId: createHandoutCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoutCategoryRequest'
+      responses:
+        '201':
+          description: Handout category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoutCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/handout-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [handouts]
+      summary: Update a handout category
+      operationId: updateHandoutCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoutCategoryRequest'
+      responses:
+        '200':
+          description: Handout category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoutCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [handouts]
+      summary: Delete a handout category (its handouts are kept, uncategorized)
+      operationId: deleteHandoutCategory
+      responses:
+        '204':
+          description: Handout category deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/export:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -6353,6 +6436,10 @@ components:
       type: object
       required: [title, preset]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Handout category (ADR-0105); null for uncategorized.
         title:
           type: string
           minLength: 1
@@ -6400,6 +6487,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         title:
           type: string
         preset:
@@ -6413,6 +6503,41 @@ components:
         revealed:
           type: boolean
           description: Screen-only prep flag; not access control (ADR-0079).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    HandoutCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent handout category for nesting, or null for a root category.
+
+    HandoutCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
         createdAt:
           type: string
           format: date-time

@@ -234,6 +234,7 @@ export type HandoutPreset = 'PARCHMENT' | 'NEWSPAPER' | 'POSTER' | 'LETTER';
 export interface Handout {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   title: string;
   preset: HandoutPreset;
   body?: string | null;
@@ -244,11 +245,26 @@ export interface Handout {
 }
 
 interface HandoutRequestBody {
+  categoryId?: string | null;
   title: string;
   preset: HandoutPreset;
   body?: string | null;
   sessionId?: string | null;
   revealed?: boolean;
+}
+
+export interface HandoutCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HandoutCategoryRequest {
+  name: string;
+  parentId?: string | null;
 }
 
 /** FR-46: player-facing styled one-page printables. */
@@ -265,6 +281,19 @@ export function handoutsApi(worldId: string) {
     reorder: (orderedIds: string[]) =>
       request<Handout[]>(`${base}/order`, { method: 'PUT', body: JSON.stringify({ orderedIds }) }),
     duplicate: (id: string) => request<Handout>(`${base}/${id}/duplicate`, { method: 'POST' }),
+  };
+}
+
+/** ADR-0105: a handout-only taxonomy, separate from Wiki's. */
+export function handoutCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/handout-categories`;
+  return {
+    list: () => request<HandoutCategory[]>(base),
+    create: (body: HandoutCategoryRequest) =>
+      request<HandoutCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: HandoutCategoryRequest) =>
+      request<HandoutCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
