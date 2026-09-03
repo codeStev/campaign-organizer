@@ -200,30 +200,46 @@ function EncounterCard({ encounter, statblocks, onSave, onRemove, onPrint }: Enc
         <div className="arc-beats">
           <MarkdownEditor value={encounter.notes ?? ''} onChange={setNotes} />
 
-          <ul className="article-list">
-            {encounter.entries.map((entry, i) => (
-              <li key={i} className="rel-row">
-                <span>{statblockName(entry.statblockId)}</span>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={entry.quantity}
-                  title="Quantity"
-                  onChange={(e) => setEntry(i, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                />
-                <Button
-                  type="button"
-                  variant="link"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => removeEntry(i)}
-                >
-                  ✕
-                </Button>
-              </li>
-            ))}
-            {encounter.entries.length === 0 && <li className="muted">No statblocks yet.</li>}
-          </ul>
+          {encounter.entries.length > 0 ? (
+            <table className="encounter-table">
+              <thead>
+                <tr>
+                  <th>Combatant</th>
+                  <th>Qty</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {encounter.entries.map((entry, i) => (
+                  <tr key={i}>
+                    <td>{statblockName(entry.statblockId)}</td>
+                    <td>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={entry.quantity}
+                        title="Quantity"
+                        onChange={(e) => setEntry(i, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                      />
+                    </td>
+                    <td>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => removeEntry(i)}
+                      >
+                        ✕
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="muted">No statblocks yet.</p>
+          )}
 
           {availableStatblocks.length > 0 && (
             <Select value={NONE_VALUE} onValueChange={addEntry}>
