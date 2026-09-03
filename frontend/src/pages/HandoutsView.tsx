@@ -148,7 +148,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       loadDraft(saved);
-      if (!draft.id) navigate(`/worlds/${worldId}/handouts/${saved.id}`);
+      if (!draft.id) navigate(saved.id);
       await refresh();
       toast.success(`Handout "${draft.title}" saved`);
     } catch (err) {
@@ -193,7 +193,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     try {
       const copy = await api.duplicate(draft.id);
       await refresh();
-      navigate(`/worlds/${worldId}/handouts/${copy.id}`);
+      navigate(`../${copy.id}`, { relative: 'path' });
       toast.success(`Handout "${copy.title}" created`);
     } catch (err) {
       handleError(err);
@@ -204,7 +204,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     if (!draft.id) return;
     try {
       await api.remove(draft.id);
-      navigate(`/worlds/${worldId}/handouts`);
+      navigate('..', { relative: 'path' });
       await refresh();
     } catch (err) {
       handleError(err);
@@ -220,7 +220,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
           onClick={() => {
             setDraft(EMPTY_DRAFT);
             setMode('edit');
-            navigate(`/worlds/${worldId}/handouts`);
+            navigate(urlHandoutId ? '..' : '.', { relative: 'path' });
           }}
           data-testid="new-handout-button"
         >
@@ -244,7 +244,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
               </div>
               <button
                 className={h.id === urlHandoutId ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/handouts/${h.id}`)}
+                onClick={() => navigate(urlHandoutId ? `../${h.id}` : h.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={h.title}>{h.title}</TruncatedLabel>
                 <small className="muted">

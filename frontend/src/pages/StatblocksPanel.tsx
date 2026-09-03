@@ -146,7 +146,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
       setImportOpen(false);
       setImportCatalogId('');
       await refresh();
-      navigate(`/worlds/${worldId}/sheets/statblocks/${copy.id}`);
+      navigate(urlStatblockId ? `../${copy.id}` : copy.id, { relative: 'path' });
       toast.success(`Imported "${copy.name}" into the campaign`);
     } catch (err) {
       onError(err);
@@ -268,7 +268,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       const tagResult = await statblockTagsApi(worldId, saved.id).set(draft.tags);
       edit(saved, tagResult.tags);
-      if (wasNew) navigate(`/worlds/${worldId}/sheets/statblocks/${saved.id}`);
+      if (wasNew) navigate(saved.id);
       await refresh();
       loadWorldTags();
       toast.success(`Statblock "${body.name}" saved`);
@@ -281,7 +281,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
     try {
       const copy = await api.duplicate(sb.id);
       await refresh();
-      navigate(`/worlds/${worldId}/sheets/statblocks/${copy.id}`);
+      navigate(`../${copy.id}`, { relative: 'path' });
       toast.success(`Statblock "${copy.name}" created`);
     } catch (err) {
       onError(err);
@@ -294,7 +294,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
       if (draft.id === sb.id) {
         setDraft(EMPTY);
         setSavedTags([]);
-        navigate(`/worlds/${worldId}/sheets/statblocks`);
+        navigate('..', { relative: 'path' });
       }
       await refresh();
     } catch (err) {
@@ -314,7 +314,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
             setDraft({ ...EMPTY, campaignId: filterCampaign });
             setSavedTags([]);
             setMode('edit');
-            navigate(`/worlds/${worldId}/sheets/statblocks`);
+            navigate(urlStatblockId ? '..' : '.', { relative: 'path' });
           }}
         >
           + New statblock
@@ -448,7 +448,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
               />
               <button
                 className={sb.id === draft.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/sheets/statblocks/${sb.id}`)}
+                onClick={() => navigate(urlStatblockId ? `../${sb.id}` : sb.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={sb.name}>{sb.name}</TruncatedLabel>
               </button>

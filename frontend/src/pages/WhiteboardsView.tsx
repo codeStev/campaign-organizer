@@ -74,7 +74,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       const created = await api.create({ name, nodes: [], edges: [] });
       await refresh();
       select(created);
-      navigate(`/worlds/${worldId}/whiteboards/${created.id}`);
+      navigate(urlWhiteboardId ? `../${created.id}` : created.id, { relative: 'path' });
       toast.success(`Whiteboard "${created.name}" created`);
     } catch (err) {
       handleError(err);
@@ -99,7 +99,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
       await api.remove(board.id);
       if (selected?.id === board.id) {
         setSelected(null);
-        navigate(`/worlds/${worldId}/whiteboards`);
+        navigate('..', { relative: 'path' });
       }
       await refresh();
     } catch (err) {
@@ -129,7 +129,7 @@ export function WhiteboardsView({ worldId, onAuthExpired }: Props) {
             <li key={b.id}>
               <button
                 className={b.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/whiteboards/${b.id}`)}
+                onClick={() => navigate(urlWhiteboardId ? `../${b.id}` : b.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={b.name}>{b.name}</TruncatedLabel>
               </button>

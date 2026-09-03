@@ -18,6 +18,11 @@ import { NextTopBar } from '../components/NextTopBar';
 import { RelationshipsView } from './RelationshipsView';
 import { ConsistencyView } from './ConsistencyView';
 import { WhiteboardsView } from './WhiteboardsView';
+import { TagBrowseView } from './TagBrowseView';
+import { PlayersPanel } from './PlayersPanel';
+import { SheetsView } from './SheetsView';
+import { TablesView } from './TablesView';
+import { HandoutsView } from './HandoutsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { NextOverviewPage } from './NextOverviewPage';
 import { NextEncountersPage } from './NextEncountersPage';
@@ -33,10 +38,15 @@ type Tab =
   | 'atlas'
   | 'chronicle'
   | 'relations'
+  | 'tags'
   | 'consistency'
   | 'campaigns'
   | 'encounters'
-  | 'whiteboards';
+  | 'players'
+  | 'sheets'
+  | 'whiteboards'
+  | 'tables'
+  | 'handouts';
 
 type TabGroup = 'World' | 'Play';
 
@@ -53,10 +63,15 @@ const TABS: { key: Tab; label: string; group: TabGroup }[] = [
   { key: 'atlas', label: 'Atlas', group: 'World' },
   { key: 'chronicle', label: 'Chronicle', group: 'World' },
   { key: 'relations', label: 'Relations', group: 'World' },
+  { key: 'tags', label: 'Tags', group: 'World' },
   { key: 'consistency', label: 'Consistency', group: 'World' },
   { key: 'campaigns', label: 'Campaigns', group: 'Play' },
   { key: 'encounters', label: 'Encounters', group: 'Play' },
+  { key: 'players', label: 'Players', group: 'Play' },
+  { key: 'sheets', label: 'Sheets', group: 'Play' },
   { key: 'whiteboards', label: 'Whiteboards', group: 'Play' },
+  { key: 'tables', label: 'Tables & Decks', group: 'Play' },
+  { key: 'handouts', label: 'Handouts', group: 'Play' },
 ];
 
 const TAB_GROUPS: TabGroup[] = ['World', 'Play'];
@@ -77,6 +92,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
   // non-grouped route like Print Shop.
   const activeTab: Tab | null = TABS.some((t) => t.key === activeTabKey) ? (activeTabKey as Tab) : null;
   const openArticle = (articleId: string) => navigate(`/next/worlds/${worldId}/wiki/${articleId}`);
+  const openStatblock = (id: string) => navigate(`/next/worlds/${worldId}/sheets/statblocks/${id}`);
 
   return (
     <section className="next-world-view">
@@ -143,12 +159,34 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
             <Route
-              path="chronicle"
+              path="chronicle/*"
               element={<NextChroniclePage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="relations"
               element={<RelationshipsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="tags"
+              element={
+                <TagBrowseView
+                  worldId={worldId}
+                  onOpenArticle={openArticle}
+                  onOpenStatblock={openStatblock}
+                  onAuthExpired={onAuthExpired}
+                />
+              }
+            />
+            <Route
+              path="tags/:tagName"
+              element={
+                <TagBrowseView
+                  worldId={worldId}
+                  onOpenArticle={openArticle}
+                  onOpenStatblock={openStatblock}
+                  onAuthExpired={onAuthExpired}
+                />
+              }
             />
             <Route
               path="consistency"
@@ -174,10 +212,26 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               path="encounters/:campaignId"
               element={<NextEncountersPage worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
+            <Route path="players" element={<PlayersPanel worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="sheets/*"
+              element={<SheetsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
             <Route path="whiteboards" element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="whiteboards/:whiteboardId"
               element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route path="tables" element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="tables/:kind" element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="tables/:kind/:entityId"
+              element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route path="handouts" element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="handouts/:handoutId"
+              element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="print"

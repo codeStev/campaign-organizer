@@ -59,7 +59,7 @@ export function TagBrowseView({ worldId, onOpenArticle, onOpenStatblock, onAuthE
                 key={t}
                 type="button"
                 className="beat-chip tag-chip-link"
-                onClick={() => navigate(`/worlds/${worldId}/tags/${encodeURIComponent(t)}`)}
+                onClick={() => navigate(encodeURIComponent(t))}
               >
                 {t}
               </button>
@@ -76,7 +76,7 @@ export function TagBrowseView({ worldId, onOpenArticle, onOpenStatblock, onAuthE
         <div className="form-actions">
           <h3 style={{ margin: 0 }}>Tag: {tagName}</h3>
           <span className="print-toolbar-spacer" />
-          <Button variant="link" onClick={() => navigate(`/worlds/${worldId}/tags`)}>
+          <Button variant="link" onClick={() => navigate('..', { relative: 'path' })}>
             ← All tags
           </Button>
         </div>

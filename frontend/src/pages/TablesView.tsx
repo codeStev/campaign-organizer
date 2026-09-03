@@ -158,6 +158,21 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     kind?: string;
     entityId?: string;
   }>();
+  // Path-relative navigation (React Router resolves ".." as "one URL segment
+  // up" only with `{ relative: 'path' }` — the default "route" mode instead
+  // means "one registered <Route> up", which skips straight past this flat
+  // "tables"/"tables/:kind"/"tables/:kind/:entityId" sibling structure to
+  // whatever encloses it). Depth-aware since a save/duplicate/delete can
+  // fire from any of the three URL depths.
+  const currentDepth = urlEntityId ? 2 : urlKind ? 1 : 0;
+  function goToEntity(kind: DraftKind, id: string) {
+    const segments = [...Array(currentDepth).fill('..'), kind, id];
+    navigate(segments.join('/'), { relative: 'path' });
+  }
+  function goToList() {
+    const segments = Array(currentDepth).fill('..');
+    navigate(segments.length > 0 ? segments.join('/') : '.', { relative: 'path' });
+  }
   const tablesApi = useMemo(() => rollTablesApi(worldId), [worldId]);
   const decksApi = useMemo(() => cardDecksApi(worldId), [worldId]);
   const [tables, setTables] = useState<RollTable[]>([]);
@@ -594,7 +609,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         const saved =
           draft.id != null ? await tablesApi.update(draft.id, body) : await tablesApi.create(body);
         edit('table', saved);
-        navigate(`/worlds/${worldId}/tables/table/${saved.id}`);
+        goToEntity('table', saved.id);
         await refresh();
         markSaved(`Table "${saved.title}" saved`);
       } catch (err) {
@@ -625,7 +640,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         const saved =
           draft.id != null ? await decksApi.update(draft.id, body) : await decksApi.create(body);
         edit('deck', saved);
-        navigate(`/worlds/${worldId}/tables/deck/${saved.id}`);
+        goToEntity('deck', saved.id);
         await refresh();
         markSaved(`Deck "${saved.title}" saved`);
       } catch (err) {
@@ -641,13 +656,13 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       if (draft.kind === 'table') {
         const copy = await tablesApi.duplicate(draft.id);
         edit('table', copy);
-        navigate(`/worlds/${worldId}/tables/table/${copy.id}`);
+        goToEntity('table', copy.id);
         await refresh();
         markSaved(`Table "${copy.title}" created`);
       } else {
         const copy = await decksApi.duplicate(draft.id);
         edit('deck', copy);
-        navigate(`/worlds/${worldId}/tables/deck/${copy.id}`);
+        goToEntity('deck', copy.id);
         await refresh();
         markSaved(`Deck "${copy.title}" created`);
       }
@@ -662,7 +677,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
       if (draft.kind === 'table') await tablesApi.remove(draft.id);
       else await decksApi.remove(draft.id);
       setDraft(EMPTY_DRAFT);
-      navigate(`/worlds/${worldId}/tables`);
+      goToList();
       await refresh();
     } catch (err) {
       handleError(err);
@@ -683,7 +698,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             });
             setRoll(null);
             setMode('edit');
-            navigate(`/worlds/${worldId}/tables`);
+            goToList();
           }}
           data-testid="new-table-button"
         >
@@ -696,7 +711,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 className={
                   draft.kind === 'table' && draft.id === t.id ? 'article-link active' : 'article-link'
                 }
-                onClick={() => navigate(`/worlds/${worldId}/tables/table/${t.id}`)}
+                onClick={() => goToEntity('table', t.id)}
               >
                 <TruncatedLabel label={t.title}>🎲 {t.title}</TruncatedLabel>
                 <small className="muted">
@@ -717,7 +732,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
             });
             setDrawnIndex(null);
             setMode('edit');
-            navigate(`/worlds/${worldId}/tables`);
+            goToList();
           }}
           data-testid="new-deck-button"
         >
@@ -730,7 +745,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
                 className={
                   draft.kind === 'deck' && draft.id === d.id ? 'article-link active' : 'article-link'
                 }
-                onClick={() => navigate(`/worlds/${worldId}/tables/deck/${d.id}`)}
+                onClick={() => goToEntity('deck', d.id)}
               >
                 <TruncatedLabel label={d.title}>🃏 {d.title}</TruncatedLabel>
                 <small className="muted">{d.cards.length} cards</small>

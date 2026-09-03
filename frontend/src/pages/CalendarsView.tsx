@@ -102,7 +102,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       edit(saved);
-      if (!draft.id) navigate(`/worlds/${worldId}/calendars/${saved.id}`);
+      if (!draft.id) navigate(saved.id);
       await refresh();
       toast.success(`Calendar "${body.name}" saved`);
     } catch (err) {
@@ -115,7 +115,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
       await api.remove(calendar.id);
       if (draft.id === calendar.id) {
         setDraft(EMPTY_DRAFT);
-        navigate(`/worlds/${worldId}/calendars`);
+        navigate('..', { relative: 'path' });
       }
       await refresh();
     } catch (err) {
@@ -130,7 +130,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
           onClick={() => {
             setDraft(EMPTY_DRAFT);
             setMode('edit');
-            navigate(`/worlds/${worldId}/calendars`);
+            navigate(urlCalendarId ? '..' : '.', { relative: 'path' });
           }}
         >
           + New calendar
@@ -140,7 +140,7 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
             <li key={c.id}>
               <button
                 className={c.id === draft.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/calendars/${c.id}`)}
+                onClick={() => navigate(urlCalendarId ? `../${c.id}` : c.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
                 <small className="muted">{c.months.length} months</small>

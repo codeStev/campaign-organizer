@@ -126,7 +126,7 @@ export function CharacterSheetsPanel({
       values: {},
     });
     setMode('edit');
-    navigate(`/worlds/${worldId}/sheets/characters`);
+    navigate(urlSheetId ? '..' : '.', { relative: 'path' });
   }
 
   function toDraft(sheet: CharacterSheet): Draft {
@@ -175,7 +175,7 @@ export function CharacterSheetsPanel({
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       setDraft(toDraft(saved));
       setMode('read');
-      if (wasNew) navigate(`/worlds/${worldId}/sheets/characters/${saved.id}`);
+      if (wasNew) navigate(saved.id);
       await refresh();
       toast.success(`Character sheet "${body.name}" saved`);
     } catch (err) {
@@ -188,7 +188,7 @@ export function CharacterSheetsPanel({
     try {
       await api.remove(draft.id);
       setDraft(null);
-      navigate(`/worlds/${worldId}/sheets/characters`);
+      navigate('..', { relative: 'path' });
       await refresh();
     } catch (err) {
       onError(err);
@@ -231,7 +231,7 @@ export function CharacterSheetsPanel({
             <li key={s.id}>
               <button
                 className={s.id === draft?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/sheets/characters/${s.id}`)}
+                onClick={() => navigate(urlSheetId ? `../${s.id}` : s.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={s.name}>{s.name}</TruncatedLabel>
               </button>

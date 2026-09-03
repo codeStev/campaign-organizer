@@ -94,7 +94,7 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Select value={campaignId} onValueChange={(v) => navigate(`../${v}`)}>
+        <Select value={campaignId} onValueChange={(v) => navigate(`../${v}`, { relative: 'path' })}>
           <SelectTrigger>
             <SelectValue placeholder="Pick a campaign…" />
           </SelectTrigger>

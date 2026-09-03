@@ -139,7 +139,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       const map = await maps.create({ name, mediaId: asset.id });
       setList(await maps.list());
       await selectMap(map);
-      navigate(`/worlds/${worldId}/maps/${map.id}`);
+      navigate(urlMapId ? `../${map.id}` : map.id, { relative: 'path' });
       toast.success(`Map "${map.name}" added`);
     } catch (err) {
       handleError(err);
@@ -194,7 +194,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       if (selected?.id === map.id) {
         setSelected(null);
         setPins([]);
-        navigate(`/worlds/${worldId}/maps`);
+        navigate('..', { relative: 'path' });
       }
       setList(await maps.list());
     } catch (err) {
@@ -290,7 +290,7 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
             <li key={m.id}>
               <button
                 className={m.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/maps/${m.id}`)}
+                onClick={() => navigate(urlMapId ? `../${m.id}` : m.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={m.name} data-testid="map-name">
                   {m.name}

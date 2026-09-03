@@ -139,7 +139,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       const created = await api.create({ name });
       setList(await api.list());
       await selectTimeline(created);
-      navigate(`/worlds/${worldId}/timelines/${created.id}`);
+      navigate(urlTimelineId ? `../${created.id}` : created.id, { relative: 'path' });
       toast.success(`Timeline "${created.name}" created`);
     } catch (err) {
       handleError(err);
@@ -152,7 +152,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
       if (selected?.id === timeline.id) {
         setSelected(null);
         setEvents([]);
-        navigate(`/worlds/${worldId}/timelines`);
+        navigate('..', { relative: 'path' });
       }
       setList(await api.list());
     } catch (err) {
@@ -227,7 +227,7 @@ export function TimelinesView({ worldId, onOpenArticle, onAuthExpired }: Props) 
             <li key={t.id}>
               <button
                 className={t.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/timelines/${t.id}`)}
+                onClick={() => navigate(urlTimelineId ? `../${t.id}` : t.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={t.name}>{t.name}</TruncatedLabel>
               </button>

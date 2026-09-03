@@ -105,7 +105,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       setBuilding(false);
       setEditing(null);
       setPreviewing(null);
-      navigate(`/worlds/${worldId}/sheets/templates`);
+      navigate(urlTemplateId ? '..' : '.', { relative: 'path' });
       onChanged();
       toast.success('Template saved');
     } catch (err) {
@@ -117,7 +117,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
     try {
       const copy = await api.duplicate(t.id);
       onChanged();
-      navigate(`/worlds/${worldId}/sheets/templates/${copy.id}`);
+      navigate(copy.id);
       toast.success(`Template "${copy.name}" created`);
     } catch (err) {
       onError(err);
@@ -131,7 +131,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
       await api.promote(t.id);
       if (previewing?.id === t.id) {
         setPreviewing(null);
-        navigate(`/worlds/${worldId}/sheets/templates`);
+        navigate('.');
       }
       onChanged();
       toast.success(`Promoted "${t.name}" to the global catalog`);
@@ -166,8 +166,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
           setEditing(null);
           // Reached the builder via a preview's Edit button? Land back on
           // that preview rather than the bare list.
-          if (previewing) navigate(`/worlds/${worldId}/sheets/templates/${previewing.id}`);
-          else navigate(`/worlds/${worldId}/sheets/templates`);
+          navigate('.');
         }}
       />
     );
@@ -205,7 +204,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
               variant="link"
               onClick={() => {
                 setPreviewing(null);
-                navigate(`/worlds/${worldId}/sheets/templates`);
+                navigate('..', { relative: 'path' });
               }}
             >
               Back to list
@@ -272,7 +271,7 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             <Button
               variant="link"
               className="template-open"
-              onClick={() => navigate(`/worlds/${worldId}/sheets/templates/${t.id}`)}
+              onClick={() => navigate(t.id)}
             >
               <strong>{t.name}</strong>{' '}
               <small className="muted">

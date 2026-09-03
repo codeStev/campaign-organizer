@@ -71,7 +71,7 @@ export function DocumentsPanel({ worldId, templates, campaigns, onError }: Props
       values: {},
     });
     setMode('edit');
-    navigate(`/worlds/${worldId}/sheets/documents`);
+    navigate(urlDocumentId ? '..' : '.', { relative: 'path' });
   }
 
   function toDraft(doc: Document): Draft {
@@ -116,7 +116,7 @@ export function DocumentsPanel({ worldId, templates, campaigns, onError }: Props
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       setDraft(toDraft(saved));
       setMode('read');
-      if (wasNew) navigate(`/worlds/${worldId}/sheets/documents/${saved.id}`);
+      if (wasNew) navigate(saved.id);
       await refresh();
       toast.success(`Document "${body.name}" saved`);
     } catch (err) {
@@ -129,7 +129,7 @@ export function DocumentsPanel({ worldId, templates, campaigns, onError }: Props
     try {
       await api.remove(draft.id);
       setDraft(null);
-      navigate(`/worlds/${worldId}/sheets/documents`);
+      navigate('..', { relative: 'path' });
       await refresh();
     } catch (err) {
       onError(err);
@@ -172,7 +172,7 @@ export function DocumentsPanel({ worldId, templates, campaigns, onError }: Props
             <li key={d.id}>
               <button
                 className={d.id === draft?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/worlds/${worldId}/sheets/documents/${d.id}`)}
+                onClick={() => navigate(urlDocumentId ? `../${d.id}` : d.id, { relative: 'path' })}
               >
                 <TruncatedLabel label={d.name}>{d.name}</TruncatedLabel>
               </button>
