@@ -6242,10 +6242,16 @@ components:
           type: string
           maxLength: 5000
           description: Optional summary of the world.
+        scratch:
+          type: boolean
+          default: false
+          description: >-
+            Cosmetic-only sandbox/brainstorming flag (FR-60) — no functional
+            effect, just a label in the world list and switcher.
 
     World:
       type: object
-      required: [id, name, createdAt, updatedAt]
+      required: [id, name, scratch, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -6256,6 +6262,11 @@ components:
           type: [string, "null"]
         layerStyles:
           $ref: '#/components/schemas/LayerStyleMap'
+        scratch:
+          type: boolean
+          description: >-
+            Cosmetic-only sandbox/brainstorming flag (FR-60) — no functional
+            effect, just a label in the world list and switcher.
         createdAt:
           type: string
           format: date-time

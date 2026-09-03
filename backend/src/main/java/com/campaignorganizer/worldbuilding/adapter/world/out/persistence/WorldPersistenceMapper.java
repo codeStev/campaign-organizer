@@ -13,6 +13,6 @@ public interface WorldPersistenceMapper {
             return null;
         }
         return World.reconstitute(e.getId(), e.getName(), e.getDescription(), e.getLayerStyles(),
-                e.getCreatedAt(), e.getUpdatedAt());
+                e.isScratch(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

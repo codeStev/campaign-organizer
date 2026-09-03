@@ -286,7 +286,7 @@ public class ImportService implements ImportBackupUseCase {
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
         worldImportPort.importWorld(new WorldView(newWorldId, world.name(), world.description(),
-                world.layerStyles(), world.createdAt(), world.updatedAt()));
+                world.layerStyles(), world.scratch(), world.createdAt(), world.updatedAt()));
 
         for (MediaBundleEntry m : media) {
             byte[] bytes = mediaByOldId.get(m.id());

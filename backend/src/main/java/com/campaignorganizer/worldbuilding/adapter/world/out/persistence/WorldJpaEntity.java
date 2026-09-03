@@ -31,6 +31,10 @@ public class WorldJpaEntity {
     @Column(name = "layer_styles", nullable = false, columnDefinition = "jsonb")
     private Map<String, LayerStyle> layerStyles = new HashMap<>();
 
+    /** Cosmetic-only sandbox/brainstorming flag (FR-60, ADR-0100) — no functional effect. */
+    @Column(name = "is_scratch", nullable = false)
+    private boolean scratch;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -70,6 +74,14 @@ public class WorldJpaEntity {
 
     public void setLayerStyles(Map<String, LayerStyle> layerStyles) {
         this.layerStyles = layerStyles == null ? new HashMap<>() : layerStyles;
+    }
+
+    public boolean isScratch() {
+        return scratch;
+    }
+
+    public void setScratch(boolean scratch) {
+        this.scratch = scratch;
     }
 
     public Instant getCreatedAt() {

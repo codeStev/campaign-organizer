@@ -11,6 +11,7 @@ public record WorldView(
         String name,
         String description,
         Map<String, LayerStyle> layerStyles,
+        boolean scratch,
         Instant createdAt,
         Instant updatedAt) {
 }

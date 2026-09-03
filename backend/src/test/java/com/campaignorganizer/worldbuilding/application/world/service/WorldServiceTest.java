@@ -50,10 +50,21 @@ class WorldServiceTest {
         when(ids.newId()).thenReturn(worldId);
         when(worlds.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        WorldView view = service.create(new CreateWorldCommand("Aetheria", "desc"));
+        WorldView view = service.create(new CreateWorldCommand("Aetheria", "desc", false));
 
         assertThat(view.id()).isEqualTo(worldId);
         assertThat(view.name()).isEqualTo("Aetheria");
+        assertThat(view.scratch()).isFalse();
+    }
+
+    @Test
+    void createCanStartAsScratch() {
+        when(ids.newId()).thenReturn(worldId);
+        when(worlds.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorldView view = service.create(new CreateWorldCommand("Sketchbook", null, true));
+
+        assertThat(view.scratch()).isTrue();
     }
 
     @Test
@@ -65,7 +76,7 @@ class WorldServiceTest {
 
     @Test
     void replaceLayerStylesPersistsAndReturns() {
-        World world = World.create(worldId, "Aetheria", null, clock.instant());
+        World world = World.create(worldId, "Aetheria", null, false, clock.instant());
         when(worlds.findById(worldId)).thenReturn(Optional.of(world));
         when(worlds.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

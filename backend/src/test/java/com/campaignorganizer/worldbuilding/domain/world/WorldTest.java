@@ -17,8 +17,8 @@ class WorldTest {
 
     @Test
     void updateBumpsUpdatedAt() {
-        World w = World.create(UUID.randomUUID(), "Aetheria", "desc", T0);
-        w.update("Aetheria II", "desc2", T1);
+        World w = World.create(UUID.randomUUID(), "Aetheria", "desc", false, T0);
+        w.update("Aetheria II", "desc2", false, T1);
 
         assertThat(w.getName()).isEqualTo("Aetheria II");
         assertThat(w.getCreatedAt()).isEqualTo(T0);
@@ -26,14 +26,30 @@ class WorldTest {
     }
 
     @Test
+    void scratchDefaultsToFalseAndIsToggleableViaUpdate() {
+        World w = World.create(UUID.randomUUID(), "Sketchbook", null, false, T0);
+        assertThat(w.isScratch()).isFalse();
+
+        w.update("Sketchbook", null, true, T1);
+
+        assertThat(w.isScratch()).isTrue();
+    }
+
+    @Test
+    void createCanStartAsScratch() {
+        World w = World.create(UUID.randomUUID(), "Sketchbook", null, true, T0);
+        assertThat(w.isScratch()).isTrue();
+    }
+
+    @Test
     void createStartsWithEmptyLayerStyles() {
-        World w = World.create(UUID.randomUUID(), "Aetheria", null, T0);
+        World w = World.create(UUID.randomUUID(), "Aetheria", null, false, T0);
         assertThat(w.getLayerStyles()).isEmpty();
     }
 
     @Test
     void replaceLayerStylesBumpsUpdatedAt() {
-        World w = World.create(UUID.randomUUID(), "Aetheria", null, T0);
+        World w = World.create(UUID.randomUUID(), "Aetheria", null, false, T0);
         w.replaceLayerStyles(Map.of("towns", new LayerStyle("#ff0000", "castle")), T1);
 
         assertThat(w.getLayerStyles()).containsKey("towns");
@@ -42,7 +58,7 @@ class WorldTest {
 
     @Test
     void rejectsBlankName() {
-        assertThatThrownBy(() -> World.create(UUID.randomUUID(), " ", null, T0))
+        assertThatThrownBy(() -> World.create(UUID.randomUUID(), " ", null, false, T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

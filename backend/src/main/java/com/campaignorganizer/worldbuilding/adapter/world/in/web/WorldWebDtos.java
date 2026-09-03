@@ -15,7 +15,8 @@ public final class WorldWebDtos {
 
     public record WorldRequest(
             @NotBlank @Size(max = 200) String name,
-            @Size(max = 5000) String description) {
+            @Size(max = 5000) String description,
+            Boolean scratch) {
     }
 
     public record WorldResponse(
@@ -23,6 +24,7 @@ public final class WorldWebDtos {
             String name,
             String description,
             Map<String, LayerStyle> layerStyles,
+            boolean scratch,
             Instant createdAt,
             Instant updatedAt) {
     }

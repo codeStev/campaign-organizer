@@ -66,7 +66,7 @@ class BackupServiceTest {
     void backupContainsManifestWorldJsonAndMediaFiles() throws IOException {
         UUID worldId = UUID.randomUUID();
         UUID mediaId = UUID.randomUUID();
-        WorldView world = new WorldView(worldId, "Dark Caribbean", null, Map.of(),
+        WorldView world = new WorldView(worldId, "Dark Caribbean", null, Map.of(), false,
                 Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z"));
         Map<String, Object> bundleData = new LinkedHashMap<>();
         bundleData.put("exportVersion", 1);

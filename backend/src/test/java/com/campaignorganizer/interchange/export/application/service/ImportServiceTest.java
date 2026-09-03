@@ -190,7 +190,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("media", List.of(Map.of("id", oldMediaId, "worldId", oldWorldId, "filename", "cover.png",
                 "contentType", "image/png", "sizeBytes", 3, "createdAt", now.toString())));
         bundle.put("categories", List.of(
@@ -266,7 +266,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, null, null,
                 "Tortuga", "tortuga", "LOCATION", "Plain.", now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
@@ -320,7 +320,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("globalFieldTemplates", List.of(new GlobalFieldTemplateView(oldGlobalTemplateId,
                 "D&D 5e Monster", TemplateKind.STATBLOCK, UUID.randomUUID(), List.of(), now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
@@ -361,7 +361,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
                 now, now)));
         bundle.put("globalStatblocks", List.of(new GlobalStatblockView(oldStatblockId, oldSystemId, null,
@@ -400,7 +400,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
                 now, now)));
         bundle.put("campaigns", List.of(new CampaignView(oldCampaignId, oldWorldId, "The Society", null,
@@ -429,7 +429,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -467,7 +467,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -506,7 +506,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -541,7 +541,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -578,7 +578,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -616,7 +616,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, "Ambush", null,
                 "1d1", 1, 1,
                 List.of(new RollTableEntryView(UUID.randomUUID(), 1, 1, "Bandits",

@@ -325,6 +325,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   selections, pre-seeded with its saved quantities; HP (or whatever a
   system tracks instead) stays live/auto-detected at print time for
   every system, not persisted. (ADR-0097; extends FR-33, FR-44)
+- **FR-60 Scratch/sandbox world flag.** A world can be marked "scratch" —
+  a cosmetic label (world list badge, switcher entry) for a
+  brainstorming/sandbox space, distinct from a real campaign world. No
+  functional effect: a scratch world is a full world in search, backup,
+  and export alike. (ADR-0100)
 
 ---
 
