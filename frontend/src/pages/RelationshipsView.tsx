@@ -89,8 +89,9 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <form className="card" onSubmit={addRelationship}>
-          <strong>New relationship</strong>
+        <details className="card rel-new-form">
+          <summary>+ New relationship</summary>
+          <form onSubmit={addRelationship}>
           <Select value={from} onValueChange={setFrom}>
             <SelectTrigger>
               <SelectValue placeholder="From…" />
@@ -127,7 +128,8 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
           <Button type="submit" disabled={!from || !to}>
             Add relationship
           </Button>
-        </form>
+          </form>
+        </details>
 
         <ul className="article-list">
           {relationships.map((r) => (
@@ -162,7 +164,7 @@ export function RelationshipsView({ worldId, onOpenArticle, onAuthExpired }: Pro
 
       <div className="wiki-main">
         {error && <p className="error">{error}</p>}
-        <div className="card">
+        <div className="rel-canvas">
           <RelationshipGraph
             nodeLabels={labels}
             relationships={relationships}

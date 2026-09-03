@@ -1200,10 +1200,34 @@ button:disabled {
   padding: 0.25rem;
 }
 
+/* Relationships (mockup fidelity): the create form collapses behind a
+   <details> toggle so the sidebar defaults to the compact relationship
+   list, and the graph gets a full-bleed canvas area instead of a padded
+   card, matching the mockup's canvas-dominant layout. */
+.rel-new-form summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.rel-new-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.rel-canvas {
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Relationship graph */
 .rel-graph {
   width: 100%;
-  height: auto;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: var(--background);
   border-radius: 8px;
 }
