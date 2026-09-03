@@ -19,6 +19,7 @@ import { ConsistencyView } from './ConsistencyView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { MapsView } from './MapsView';
+import { NextWikiPage } from './NextWikiPage';
 
 type Tab =
   | 'overview'
@@ -64,10 +65,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const activeTabKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
   const activeTab: Tab = TABS.some((t) => t.key === activeTabKey) ? (activeTabKey as Tab) : 'overview';
-  // Wiki isn't migrated yet (Phase 2, later in this same phase) — send
-  // article links to the old UI's article view for now rather than a dead
-  // end, consistent with it staying the functional reference throughout.
-  const openArticle = (articleId: string) => navigate(`/worlds/${worldId}/articles/${articleId}`);
+  const openArticle = (articleId: string) => navigate(`/next/worlds/${worldId}/wiki/${articleId}`);
 
   return (
     <section className="next-world-view">
@@ -106,7 +104,8 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
           <Routes>
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<NextStubPage title="Overview" note="Phase 4 — dashboard, clocks, loose threads." />} />
-            <Route path="wiki" element={<NextStubPage title="Wiki" note="Phase 2 — articles, flat category list first." />} />
+            <Route path="wiki" element={<NextWikiPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="wiki/:articleId" element={<NextWikiPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route path="atlas" element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />} />
             <Route
               path="atlas/:mapId"

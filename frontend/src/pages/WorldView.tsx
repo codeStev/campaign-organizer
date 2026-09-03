@@ -84,7 +84,7 @@ function descendantIds(rootId: string, childrenByParent: Map<string, ArticleSumm
   return result;
 }
 
-function groupByParent(list: ArticleSummary[]): Map<string, ArticleSummary[]> {
+export function groupByParent(list: ArticleSummary[]): Map<string, ArticleSummary[]> {
   const map = new Map<string, ArticleSummary[]>();
   for (const a of list) {
     if (!a.parentArticleId) continue;
@@ -100,7 +100,7 @@ function groupByParent(list: ArticleSummary[]): Map<string, ArticleSummary[]> {
  * parent didn't survive the current filter/search) render at the root so
  * filtering never makes an article unreachable.
  */
-function ArticleTreeItem({
+export function ArticleTreeItem({
   article,
   childrenByParent,
   expandedIds,

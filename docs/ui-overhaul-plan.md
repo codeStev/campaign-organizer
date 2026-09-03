@@ -59,7 +59,7 @@ current UI") lets the user jump between them to compare during the
 transition. When a screen's `/next` version is confirmed to cover its old
 counterpart, that old route/component is deleted and, if the whole nav
 area is done, the `/next` prefix is dropped (routes promoted to the real
-paths) — see Phase 6.
+paths) — see Phase 7.
 
 ## Decisions (confirmed 2026-09-03)
 
@@ -79,13 +79,15 @@ context, not left as live questions:
   Combined with the point above, `AppSidebarNext`'s in-world sidebar ends
   up World / Play, and the top-level `AppSidebarNext` ends up Worlds /
   Library (Game Systems, Statblocks, Templates) / Settings.
-- **Wiki's nested category tree → tag-prefix convention, arbitrary depth.**
-  A tag like `Characters/Reckoners/Retired` parses into a tree at render
-  time on its `/`-delimited segments — not capped at one level of nesting,
-  so the tree can go as deep as the user's tags do. No new backend field;
-  built entirely from existing free-tag data. Still a Phase 6 build (needs
-  the parser + tree-rendering component), but the approach itself is
-  locked in, not open.
+- **Wiki's nested tree → superseded, already built.** ~~Tag-prefix
+  convention~~ was based on incomplete information — this app already has
+  a real, unlimited-depth `parentArticleId` structural hierarchy
+  (ADR-0080), independent of tags/categories, with a working
+  collapsed-by-default sidebar tree in the old UI (`WorldView.tsx`'s
+  `groupByParent`/`ArticleTreeItem`, now exported for reuse). Landed in
+  Phase 2 alongside Wiki itself instead of waiting for Phase 6 — it was
+  the same amount of work as the flat list once this was spotted, not
+  worth shipping twice.
 - **Beat `kind` → user-defined, not a fixed enum, but visually prominent
   like the mockup.** Same shape as Game Systems' color field: GMs create
   their own named kinds (not just SCENE/COMBAT/REVEAL) with a color, and
@@ -128,8 +130,8 @@ into their Phase-1 stub, reusing existing API calls/hooks, no new backend:
   added once spotted, same reuse-as-is treatment as the others)
 - **Chronicle** (merge Timelines + Calendars as sub-tabs of one screen —
   first real consolidation, but no new backend)
-- **Wiki** (Articles, flat category list — ship without the nested tree;
-  that's Phase 6)
+- **Wiki** (Articles, with the real nested tree — see Decisions above;
+  editing/creating stays on the old UI for now, read-only in `/next`)
 - **Print Shop** (new aggregator screen: pick an output type, see a live
   paper preview, toggle options — but every underlying print output
   already exists, `PrintView`/`MapPrintView`/`StatblockCardsView`/handouts;
@@ -192,9 +194,6 @@ roll logic.
   consolidated to match the mockup).
 
 ### Phase 6 — Deferred / needs its own design pass
-- **Wiki's nested category tree** — build the `/`-delimited tag-prefix
-  parser + tree component (see Decisions above; approach is locked in,
-  this is just the build).
 - **Hierarchical Atlas** — one or more world/region maps linking down to
   more specific location sub-maps. The user explicitly flagged this as
   "a feature I want later," not blocking the rest of the overhaul.
