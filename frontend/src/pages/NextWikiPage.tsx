@@ -4,6 +4,7 @@ import {
   articlesApi,
   articleTagsApi,
   categoriesApi,
+  worldTagsApi,
   Article,
   ArticleSummary,
   Category,
@@ -61,6 +62,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [article, setArticle] = useState<Article | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [worldTags, setWorldTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null | undefined>(undefined);
 
@@ -82,6 +84,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
 
   useEffect(() => {
     void refresh();
+    worldTagsApi(worldId).list().then(setWorldTags).catch(onError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
@@ -101,6 +104,10 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
 
   function openArticle(id: string) {
     navigate(id);
+  }
+
+  function openTag(tag: string) {
+    navigate(`/next/worlds/${worldId}/tags/${encodeURIComponent(tag)}`);
   }
 
   function toggleExpanded(id: string) {
@@ -226,7 +233,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           label="Category name"
           onSubmit={(name) => void createCategory(name)}
         />
-        <ul className="article-list article-list-scroll category-tree">
+        <ul className="category-tree">
           {rootCategories.map((c) => (
             <CategoryTreeNode
               key={c.id}
@@ -259,6 +266,18 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
             <li className="muted">No articles found.</li>
           )}
         </ul>
+        {worldTags.length > 0 && (
+          <div className="wiki-tags-section">
+            <p className="eyebrow">Tags</p>
+            <div className="beat-article-chips">
+              {worldTags.map((t) => (
+                <button key={t} type="button" className="beat-chip tag-chip-link" onClick={() => openTag(t)}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </aside>
       {article ? (
         <article className="card article-read">
@@ -394,15 +413,7 @@ function CategoryTreeNode({
             />
           ))}
           {directArticles.map((a) => (
-            <li key={a.id}>
-              <button
-                className={a.id === activeArticleId ? 'article-link active' : 'article-link'}
-                onClick={() => onOpenArticle(a.id)}
-              >
-                <TruncatedLabel label={a.title}>{a.title}</TruncatedLabel>
-                <small className="muted">{a.template.toLowerCase()}</small>
-              </button>
-            </li>
+            <CategoryTreeArticleRow key={a.id} article={a} active={a.id === activeArticleId} onOpen={onOpenArticle} />
           ))}
         </ul>
       )}
@@ -443,18 +454,31 @@ function CategoryLeaf({
       {expanded && (
         <ul className="article-list-nested">
           {articles.map((a) => (
-            <li key={a.id}>
-              <button
-                className={a.id === activeArticleId ? 'article-link active' : 'article-link'}
-                onClick={() => onOpenArticle(a.id)}
-              >
-                <TruncatedLabel label={a.title}>{a.title}</TruncatedLabel>
-                <small className="muted">{a.template.toLowerCase()}</small>
-              </button>
-            </li>
+            <CategoryTreeArticleRow key={a.id} article={a} active={a.id === activeArticleId} onOpen={onOpenArticle} />
           ))}
         </ul>
       )}
+    </li>
+  );
+}
+
+function CategoryTreeArticleRow({
+  article,
+  active,
+  onOpen,
+}: {
+  article: ArticleSummary;
+  active: boolean;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <li>
+      <button
+        className={active ? 'category-tree-article active' : 'category-tree-article'}
+        onClick={() => onOpen(article.id)}
+      >
+        <TruncatedLabel label={article.title}>{article.title}</TruncatedLabel>
+      </button>
     </li>
   );
 }
