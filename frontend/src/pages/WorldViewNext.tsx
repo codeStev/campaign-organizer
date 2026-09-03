@@ -21,7 +21,7 @@ import { NextWhiteboardsView } from './NextWhiteboardsView';
 import { NextTagBrowseView } from './NextTagBrowseView';
 import { NextPlayersPanel } from './NextPlayersPanel';
 import { NextSheetsPage } from './NextSheetsPage';
-import { TablesView } from './TablesView';
+import { NextTablesView } from './NextTablesView';
 import { NextHandoutsView } from './NextHandoutsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { NextOverviewPage } from './NextOverviewPage';
@@ -219,11 +219,11 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               path="whiteboards/:whiteboardId"
               element={<NextWhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
-            <Route path="tables" element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
-            <Route path="tables/:kind" element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="tables" element={<NextTablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="tables/:kind" element={<NextTablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="tables/:kind/:entityId"
-              element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />}
+              element={<NextTablesView worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
             <Route path="handouts" element={<NextHandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
