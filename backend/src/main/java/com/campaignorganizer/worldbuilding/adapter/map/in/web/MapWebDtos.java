@@ -13,12 +13,14 @@ public final class MapWebDtos {
 
     public record MapRequest(
             @NotBlank @Size(max = 200) String name,
-            @NotNull UUID mediaId) {
+            @NotNull UUID mediaId,
+            UUID categoryId) {
     }
 
     public record MapResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             String name,
             UUID mediaId,
             String imageUrl,

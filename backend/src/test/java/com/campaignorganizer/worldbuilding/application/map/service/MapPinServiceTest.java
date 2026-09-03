@@ -52,7 +52,7 @@ class MapPinServiceTest {
     }
 
     private MapView map() {
-        return new MapView(mapId, worldId, "Overworld", UUID.randomUUID(), Instant.now(), Instant.now());
+        return new MapView(mapId, worldId, null, "Overworld", UUID.randomUUID(), Instant.now(), Instant.now());
     }
 
     @Test

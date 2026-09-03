@@ -19,7 +19,7 @@ class MapTest {
         UUID media = UUID.randomUUID();
         WorldMap m = WorldMap.create(UUID.randomUUID(), UUID.randomUUID(), "Overworld", media, T0);
         UUID newMedia = UUID.randomUUID();
-        m.update("Underdark", newMedia, T1);
+        m.update(null, "Underdark", newMedia, T1);
 
         assertThat(m.getName()).isEqualTo("Underdark");
         assertThat(m.getMediaId()).isEqualTo(newMedia);
