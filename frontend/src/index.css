@@ -933,6 +933,29 @@ button:disabled {
   overflow: hidden;
 }
 
+/* Mockup fidelity: the canvas is the dominant element, with the pin
+   legend/detail as a compact right-hand column instead of stacked below. */
+.maps-canvas-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.maps-canvas-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.maps-side-col {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
 .leaflet-container {
   background: #0f0d15;
   font-family: inherit;
@@ -1449,6 +1472,15 @@ button:disabled {
 
   .map-canvas {
     height: 380px;
+  }
+
+  .maps-canvas-row {
+    flex-direction: column;
+  }
+
+  .maps-side-col {
+    width: 100%;
+    max-height: none;
   }
 
   /* Bigger touch targets for the stat-tracker pips and map layer swatches —

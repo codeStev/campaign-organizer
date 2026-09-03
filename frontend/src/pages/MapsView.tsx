@@ -376,62 +376,69 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
                 onConfirm={() => deleteMap(selected)}
               />
             </div>
-            {selected.imageUrl ? (
-              <MapCanvas
-                imageUrl={selected.imageUrl}
-                pins={visiblePins}
-                selectedPinId={selectedPinId}
-                colorByLayer={colorByLayer}
-                defaultColor={DEFAULT_PIN_COLOR}
-                pinLabels={pinLabels}
-                showLabels={showLabels}
-                pinIcon={pinIcon}
-                onMapClick={addPin}
-                onPinClick={setSelectedPinId}
-              />
-            ) : (
-              <p className="error">This map's image is missing.</p>
-            )}
 
-            {visiblePins.length > 0 && (
-              <ol className="pin-legend card">
-                {visiblePins.map((p, i) => (
-                  <li
-                    key={p.id}
-                    className={p.id === selectedPinId ? 'pin-legend-item active' : 'pin-legend-item'}
-                  >
-                    <button className="pin-legend-btn" onClick={() => setSelectedPinId(p.id)}>
-                      <span
-                        className="pin-legend-badge"
-                        style={{ background: p.layer ? colorByLayer[p.layer] ?? DEFAULT_PIN_COLOR : DEFAULT_PIN_COLOR }}
+            <div className="maps-canvas-row">
+              <div className="maps-canvas-col">
+                {selected.imageUrl ? (
+                  <MapCanvas
+                    imageUrl={selected.imageUrl}
+                    pins={visiblePins}
+                    selectedPinId={selectedPinId}
+                    colorByLayer={colorByLayer}
+                    defaultColor={DEFAULT_PIN_COLOR}
+                    pinLabels={pinLabels}
+                    showLabels={showLabels}
+                    pinIcon={pinIcon}
+                    onMapClick={addPin}
+                    onPinClick={setSelectedPinId}
+                  />
+                ) : (
+                  <p className="error">This map's image is missing.</p>
+                )}
+              </div>
+
+              <div className="maps-side-col">
+                {visiblePins.length > 0 && (
+                  <ol className="pin-legend card">
+                    {visiblePins.map((p, i) => (
+                      <li
+                        key={p.id}
+                        className={p.id === selectedPinId ? 'pin-legend-item active' : 'pin-legend-item'}
                       >
-                        {(() => {
-                          const key = p.layer ? styles[p.layer]?.icon : undefined;
-                          const Icon = iconComponent(key);
-                          return Icon ? <Icon size={13} color="#fff" strokeWidth={2.5} /> : i + 1;
-                        })()}
-                      </span>
-                      <span className="pin-legend-label">
-                        {labelFor(p) || <em className="muted">(no label)</em>}
-                      </span>
-                      {p.layer && <span className="pin-legend-layer muted">{p.layer}</span>}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            )}
+                        <button className="pin-legend-btn" onClick={() => setSelectedPinId(p.id)}>
+                          <span
+                            className="pin-legend-badge"
+                            style={{ background: p.layer ? colorByLayer[p.layer] ?? DEFAULT_PIN_COLOR : DEFAULT_PIN_COLOR }}
+                          >
+                            {(() => {
+                              const key = p.layer ? styles[p.layer]?.icon : undefined;
+                              const Icon = iconComponent(key);
+                              return Icon ? <Icon size={13} color="#fff" strokeWidth={2.5} /> : i + 1;
+                            })()}
+                          </span>
+                          <span className="pin-legend-label">
+                            {labelFor(p) || <em className="muted">(no label)</em>}
+                          </span>
+                          {p.layer && <span className="pin-legend-layer muted">{p.layer}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                )}
 
-            {selectedPin && (
-              <PinEditor
-                key={selectedPin.id}
-                pin={selectedPin}
-                articles={articles}
-                layers={layers}
-                onSave={(fields) => savePin(selectedPin, fields)}
-                onOpen={onOpenArticle}
-                onDelete={() => deletePin(selectedPin)}
-              />
-            )}
+                {selectedPin && (
+                  <PinEditor
+                    key={selectedPin.id}
+                    pin={selectedPin}
+                    articles={articles}
+                    layers={layers}
+                    onSave={(fields) => savePin(selectedPin, fields)}
+                    onOpen={onOpenArticle}
+                    onDelete={() => deletePin(selectedPin)}
+                  />
+                )}
+              </div>
+            </div>
 
             {printOpen && (
               <MapPrintView
