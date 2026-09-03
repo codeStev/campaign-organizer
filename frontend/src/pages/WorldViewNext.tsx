@@ -18,6 +18,7 @@ import { RelationshipsView } from './RelationshipsView';
 import { ConsistencyView } from './ConsistencyView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { NextChroniclePage } from './NextChroniclePage';
+import { MapsView } from './MapsView';
 
 type Tab =
   | 'overview'
@@ -106,7 +107,11 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<NextStubPage title="Overview" note="Phase 4 — dashboard, clocks, loose threads." />} />
             <Route path="wiki" element={<NextStubPage title="Wiki" note="Phase 2 — articles, flat category list first." />} />
-            <Route path="atlas" element={<NextStubPage title="Atlas" note="Phase 2 — maps." />} />
+            <Route path="atlas" element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="atlas/:mapId"
+              element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
             <Route
               path="chronicle"
               element={<NextChroniclePage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}

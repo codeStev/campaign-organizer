@@ -124,6 +124,8 @@ into their Phase-1 stub, reusing existing API calls/hooks, no new backend:
 - **Relations** (relationship graph — as-is)
 - **Consistency report** (as-is)
 - **Whiteboards** (as-is)
+- **Atlas** (maps — as-is; missing from the original draft of this list,
+  added once spotted, same reuse-as-is treatment as the others)
 - **Chronicle** (merge Timelines + Calendars as sub-tabs of one screen —
   first real consolidation, but no new backend)
 - **Wiki** (Articles, flat category list — ship without the nested tree;
@@ -132,6 +134,20 @@ into their Phase-1 stub, reusing existing API calls/hooks, no new backend:
   paper preview, toggle options — but every underlying print output
   already exists, `PrintView`/`MapPrintView`/`StatblockCardsView`/handouts;
   this is a new front-end composition, not new print logic)
+
+**Mockup fidelity note (checked by rendering the actual mockup file and
+comparing screenshots, not just reading its markup):** the shell — sidebar
+proportions, full-viewport layout, Chronicle's tab pattern — matches the
+mockup closely. Each reused screen's *internal* content layout does not:
+Atlas/Whiteboards/Relations keep their existing list-then-canvas or
+form-plus-list arrangement, where the mockup uses a full-bleed canvas with
+a minimal click-to-select detail panel; Consistency shows grouped text
+lists where the mockup has stat cards plus an actionable table. Expected,
+since this phase's whole point is reuse-as-is rather than a rebuild — but
+worth being explicit that "migrated" here means *relocated into the new
+shell*, not *redesigned to match the mockup's own content layout*. Closer
+per-screen fidelity, if wanted, is its own follow-up design pass, not
+implied by this phase being done.
 
 ### Phase 3 — New backend features
 Each gets its own ADR + FR + Flyway migration before any UI work:
