@@ -708,10 +708,38 @@ export interface RecentlyEditedArticle {
   updatedAt: string;
 }
 
+export interface NextSessionSummary {
+  sessionId: string;
+  campaignId: string;
+  campaignName: string;
+  title: string;
+  date: string;
+  sessionNumber?: number | null;
+}
+
+export interface ClockSummary {
+  clockId: string;
+  campaignId: string;
+  campaignName: string;
+  title: string;
+  filledSegments: number;
+  totalSegments: number;
+}
+
+export interface LooseThreadSummary {
+  threadId: string;
+  campaignId: string;
+  campaignName: string;
+  text: string;
+}
+
 export interface WorldOverviewStats {
   articleCount: number;
   sessionsRunCount: number;
   recentlyEdited: RecentlyEditedArticle[];
+  nextSession?: NextSessionSummary | null;
+  openClocks: ClockSummary[];
+  openLooseThreads: LooseThreadSummary[];
 }
 
 export function worldOverviewApi(worldId: string) {

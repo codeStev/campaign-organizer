@@ -332,6 +332,91 @@ button:disabled {
   margin-bottom: 0.75rem;
 }
 
+.next-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.next-overview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.next-overview-stat {
+  flex: 1;
+  min-width: 160px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.next-overview-stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.next-overview-stat-session .next-overview-stat-value {
+  font-size: 1.1rem;
+}
+
+.next-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.next-overview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.next-overview-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.35rem;
+}
+
+.next-overview-clock:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.table-tools-dock {
+  position: fixed;
+  top: 54px;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  width: 300px;
+  overflow-y: auto;
+  z-index: 20;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+}
+
+.table-tools-dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .world-main-inset,
 .app-shell-content {
   padding: 0.25rem;

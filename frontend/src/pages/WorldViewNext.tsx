@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -19,6 +20,8 @@ import { RelationshipsView } from './RelationshipsView';
 import { ConsistencyView } from './ConsistencyView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { NextChroniclePage } from './NextChroniclePage';
+import { NextOverviewPage } from './NextOverviewPage';
+import { TableToolsDock } from '../components/TableToolsDock';
 import { MapsView } from './MapsView';
 import { NextWikiPage } from './NextWikiPage';
 import { NextPrintShopPage } from './NextPrintShopPage';
@@ -65,6 +68,7 @@ interface Props {
 export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [toolsOpen, setToolsOpen] = useState(false);
   const activeTabKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
   // Only a real match highlights a group item — falling back to 'overview'
   // for anything unrecognized would wrongly highlight it while on a
@@ -78,11 +82,19 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
         currentWorldId={worldId}
         currentWorldName={worldName}
         rightSlot={
-          <Button variant="link" size="sm" asChild>
-            <NavLink to={`/worlds/${worldId}`}>← Back to current UI</NavLink>
-          </Button>
+          <>
+            <Button variant={toolsOpen ? 'default' : 'outline'} size="sm" onClick={() => setToolsOpen((v) => !v)}>
+              🎲 Table Tools
+            </Button>
+            <Button variant="link" size="sm" asChild>
+              <NavLink to={`/worlds/${worldId}`}>← Back to current UI</NavLink>
+            </Button>
+          </>
         }
       />
+      {toolsOpen && (
+        <TableToolsDock worldId={worldId} onAuthExpired={onAuthExpired} onClose={() => setToolsOpen(false)} />
+      )}
 
       <SidebarProvider className="min-h-0 sidebar-shell-next">
         <Sidebar collapsible="none" className="border-r border-sidebar-border" style={{ alignSelf: 'stretch', height: 'auto' }}>
@@ -117,7 +129,10 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
             <Route index element={<Navigate to="overview" replace />} />
-            <Route path="overview" element={<NextStubPage title="Overview" note="Phase 4 — dashboard, clocks, loose threads." />} />
+            <Route
+              path="overview"
+              element={<NextOverviewPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
             <Route path="wiki" element={<NextWikiPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route path="wiki/:articleId" element={<NextWikiPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route path="atlas" element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />} />
