@@ -329,7 +329,9 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           <p className="muted">Select an article from the list, or create one in the current UI.</p>
         )}
       </div>
-      <DragOverlay>{draggingArticle && <div className="category-tree-drag-overlay">{draggingArticle.title}</div>}</DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {draggingArticle && <div className="category-tree-drag-overlay">{draggingArticle.title}</div>}
+      </DragOverlay>
     </DndContext>
   );
 }
