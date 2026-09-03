@@ -267,6 +267,31 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  // Context-menu "Delete" on a tree row — the handout may not be open.
+  async function deleteHandout(h: Handout) {
+    try {
+      await api.remove(h.id);
+      if (draft.id === h.id) navigate('..', { relative: 'path' });
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // Context-menu "Print" on a tree row — loads the handout into the draft
+  // (the print portal below reads from `draft`) if it isn't already open.
+  async function printHandout(h: Handout) {
+    if (draft.id !== h.id) {
+      try {
+        loadDraft(await api.get(h.id));
+      } catch (err) {
+        handleError(err);
+        return;
+      }
+    }
+    setPrinting(true);
+  }
+
   const editingExisting = draft.id != null;
 
   return (
@@ -295,6 +320,8 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
           onMoveEntity={(h, categoryId) => void moveHandoutToCategory(h, categoryId)}
           onCreateCategory={(name, parentId) => void createHandoutCategory(name, parentId)}
           onRemoveCategory={(c) => void removeHandoutCategory(c)}
+          onDeleteEntity={(h) => void deleteHandout(h)}
+          onPrintEntity={(h) => void printHandout(h)}
           loading={loading}
           searchPlaceholder="Search handouts…"
           emptyLabel="No handouts yet."

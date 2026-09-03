@@ -9,6 +9,8 @@ import {
   sheetCategoriesApi,
   articlesApi,
   campaignsApi,
+  exportCharacterSheetPdf,
+  exportDocumentPdf,
   FieldTemplate,
   GlobalFieldTemplate,
   CharacterSheet,
@@ -216,6 +218,44 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
     }
   }
 
+  // Context-menu "Delete" on a tree row — none of these need the entity
+  // "open" first, each kind's list API takes just the id.
+  async function deleteItem(item: TreeItem) {
+    try {
+      switch (item.kind) {
+        case 'sheet':
+          await sheetsApiRef.remove(item.entity.id);
+          break;
+        case 'statblock':
+          await statblocksApiRef.remove(item.entity.id);
+          break;
+        case 'document':
+          await documentsApiRef.remove(item.entity.id);
+          break;
+        case 'template':
+          await templatesApiRef.remove(item.entity.id);
+          break;
+      }
+      await refreshAll();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  // Context-menu "Print" on a tree row — only sheets/documents export a
+  // filled PDF directly by id; statblocks' card print and templates have no
+  // single-entity print outside their own detail panel, so this only fires
+  // for the two kinds that support it (CategoryTree's item is unconditional,
+  // so the other two kinds are simply no-ops here).
+  async function printItem(item: TreeItem) {
+    try {
+      if (item.kind === 'sheet') await exportCharacterSheetPdf(worldId, item.entity.id);
+      else if (item.kind === 'document') await exportDocumentPdf(worldId, item.entity.id);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   const charactersPane = (
     <NextCharacterSheetsPanel
       worldId={worldId}
@@ -290,6 +330,8 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
           onMoveEntity={(item, categoryId) => void moveEntityToCategory(item, categoryId)}
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
+          onDeleteEntity={(item) => void deleteItem(item)}
+          onPrintEntity={(item) => void printItem(item)}
           loading={loading}
           searchPlaceholder="Search sheets…"
           emptyLabel="No sheets, statblocks, documents, or templates yet."

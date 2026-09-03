@@ -240,6 +240,13 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     }
   }
 
+  // Context-menu "Print" on a tree row — the map may not be the open one,
+  // so its pins need loading first (MapCanvas/MapPrintView need them).
+  async function printMap(map: WorldMap) {
+    if (selected?.id !== map.id) await selectMap(map);
+    setPrintOpen(true);
+  }
+
   async function deleteMap(map: WorldMap) {
     try {
       await maps.remove(map.id);
@@ -350,6 +357,8 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           onMoveEntity={(m, categoryId) => void moveMapToCategory(m, categoryId)}
           onCreateCategory={(name, parentId) => void createMapCategory(name, parentId)}
           onRemoveCategory={(c) => void removeMapCategory(c)}
+          onDeleteEntity={(m) => void deleteMap(m)}
+          onPrintEntity={(m) => void printMap(m)}
           loading={loading}
           searchPlaceholder="Search maps…"
           emptyLabel="No maps yet."

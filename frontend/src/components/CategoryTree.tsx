@@ -16,6 +16,16 @@ import { Spinner } from './ui/spinner';
 import { PromptDialog } from './PromptDialog';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { TruncatedLabel } from './TruncatedLabel';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from './ui/context-menu';
 
 const ROOT_KEY = '__root__';
 const UNCATEGORIZED_KEY = '__none__';
@@ -37,6 +47,10 @@ interface CategoryTreeProps<TEntity, TCategory extends CategoryLike> {
   onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
   onCreateCategory: (name: string, parentId: string | null) => void;
   onRemoveCategory: (category: TCategory) => void;
+  /** Enables the entity row's right-click "Delete" item when provided. */
+  onDeleteEntity?: (entity: TEntity) => void;
+  /** Enables the entity row's right-click "Print" item when provided. */
+  onPrintEntity?: (entity: TEntity) => void;
   loading?: boolean;
   searchPlaceholder?: string;
   uncategorizedLabel?: string;
@@ -65,6 +79,8 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   onMoveEntity,
   onCreateCategory,
   onRemoveCategory,
+  onDeleteEntity,
+  onPrintEntity,
   loading,
   searchPlaceholder = 'Search…',
   uncategorizedLabel = 'Uncategorised',
@@ -99,6 +115,20 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
     }
     return map;
   }, [categories]);
+
+  // Depth-first, indent-ready category list for the entity row's "Move to"
+  // context-menu submenu — every category regardless of search/expand state.
+  const flatCategories = useMemo(() => {
+    const result: { category: TCategory; depth: number }[] = [];
+    function walk(id: string, depth: number) {
+      for (const c of childrenByCategory.get(id) ?? []) {
+        result.push({ category: c, depth });
+        walk(c.id, depth + 1);
+      }
+    }
+    walk(ROOT_KEY, 0);
+    return result;
+  }, [childrenByCategory]);
 
   const queryLc = query.trim().toLowerCase();
   const matchingEntities = queryLc ? entities.filter((e) => entityLabel(e).toLowerCase().includes(queryLc)) : entities;
@@ -217,7 +247,12 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
             onRemoveCategory={onRemoveCategory}
             forceExpand={searching}
             entityId={entityId}
+            entityLabel={entityLabel}
             renderEntityRow={renderEntityRow ?? defaultEntityRow(entityLabel)}
+            flatCategories={flatCategories}
+            onMoveEntity={onMoveEntity}
+            onDeleteEntity={onDeleteEntity}
+            onPrintEntity={onPrintEntity}
           />
         ))}
         <CategoryLeaf
@@ -229,7 +264,12 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
           activeEntityId={activeEntityId}
           onOpenEntity={onOpenEntity}
           entityId={entityId}
+          entityLabel={entityLabel}
           renderEntityRow={renderEntityRow ?? defaultEntityRow(entityLabel)}
+          flatCategories={flatCategories}
+          onMoveEntity={onMoveEntity}
+          onDeleteEntity={onDeleteEntity}
+          onPrintEntity={onPrintEntity}
         />
         {loading && (
           <li className="muted loading-row">
@@ -266,7 +306,12 @@ interface CategoryTreeNodeProps<TEntity, TCategory extends CategoryLike> {
   onRemoveCategory: (category: TCategory) => void;
   forceExpand: boolean;
   entityId: (entity: TEntity) => string;
+  entityLabel: (entity: TEntity) => string;
   renderEntityRow: (entity: TEntity) => ReactNode;
+  flatCategories: { category: TCategory; depth: number }[];
+  onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
+  onDeleteEntity?: (entity: TEntity) => void;
+  onPrintEntity?: (entity: TEntity) => void;
 }
 
 function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
@@ -281,7 +326,12 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
   onRemoveCategory,
   forceExpand,
   entityId,
+  entityLabel,
   renderEntityRow,
+  flatCategories,
+  onMoveEntity,
+  onDeleteEntity,
+  onPrintEntity,
 }: CategoryTreeNodeProps<TEntity, TCategory>) {
   const subCategories = childrenByCategory.get(category.id) ?? [];
   const directEntities = entitiesByCategory.get(category.id) ?? [];
@@ -289,48 +339,68 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
   const expanded = forceExpand || expandedIds.has(category.id);
   const { setNodeRef, isOver } = useDroppable({ id: category.id });
 
-  return (
-    <li>
-      <div ref={setNodeRef} className={isOver ? 'category-tree-row drop-over' : 'category-tree-row'}>
-        {hasContent ? (
-          <button
-            type="button"
-            className="article-tree-toggle"
-            onClick={() => onToggleExpand(category.id)}
-            title={expanded ? 'Collapse' : 'Expand'}
-          >
-            {expanded ? '▾' : '▸'}
-          </button>
-        ) : (
-          <span className="article-tree-toggle-spacer" />
-        )}
-        <span className="category-tree-label">
-          <TruncatedLabel label={category.name}>{category.name}</TruncatedLabel>
-        </span>
-        {directEntities.length > 0 && <span className="muted category-tree-count">{directEntities.length}</span>}
+  const rowEl = (
+    <div ref={setNodeRef} className={isOver ? 'category-tree-row drop-over' : 'category-tree-row'}>
+      {hasContent ? (
         <button
           type="button"
-          className="category-tree-action"
-          title="Add sub-category"
-          onClick={() => onAddSubcategory(category.id)}
+          className="article-tree-toggle"
+          onClick={() => onToggleExpand(category.id)}
+          title={expanded ? 'Collapse' : 'Expand'}
         >
-          +
+          {expanded ? '▾' : '▸'}
         </button>
-        <ConfirmDeleteDialog
-          trigger={
-            <button
-              type="button"
-              className="category-tree-action category-tree-action-destructive"
-              title="Delete category"
-            >
-              ✕
-            </button>
-          }
-          title="Delete category?"
-          description={`This deletes "${category.name}". Its contents are kept, just uncategorised.`}
-          onConfirm={() => onRemoveCategory(category)}
-        />
-      </div>
+      ) : (
+        <span className="article-tree-toggle-spacer" />
+      )}
+      <span className="category-tree-label">
+        <TruncatedLabel label={category.name}>{category.name}</TruncatedLabel>
+      </span>
+      {directEntities.length > 0 && <span className="muted category-tree-count">{directEntities.length}</span>}
+      <button
+        type="button"
+        className="category-tree-action"
+        title="Add sub-category"
+        onClick={() => onAddSubcategory(category.id)}
+      >
+        +
+      </button>
+      <ConfirmDeleteDialog
+        trigger={
+          <button
+            type="button"
+            className="category-tree-action category-tree-action-destructive"
+            title="Delete category"
+          >
+            ✕
+          </button>
+        }
+        title="Delete category?"
+        description={`This deletes "${category.name}". Its contents are kept, just uncategorised.`}
+        onConfirm={() => onRemoveCategory(category)}
+      />
+    </div>
+  );
+
+  return (
+    <li>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={() => onAddSubcategory(category.id)}>+ New sub-category</ContextMenuItem>
+          <ContextMenuSeparator />
+          <ConfirmDeleteDialog
+            trigger={
+              <ContextMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                Delete category
+              </ContextMenuItem>
+            }
+            title="Delete category?"
+            description={`This deletes "${category.name}". Its contents are kept, just uncategorised.`}
+            onConfirm={() => onRemoveCategory(category)}
+          />
+        </ContextMenuContent>
+      </ContextMenu>
       {expanded && hasContent && (
         <ul className="article-list-nested">
           {subCategories.map((c) => (
@@ -347,7 +417,12 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               onRemoveCategory={onRemoveCategory}
               forceExpand={forceExpand}
               entityId={entityId}
+              entityLabel={entityLabel}
               renderEntityRow={renderEntityRow}
+              flatCategories={flatCategories}
+              onMoveEntity={onMoveEntity}
+              onDeleteEntity={onDeleteEntity}
+              onPrintEntity={onPrintEntity}
             />
           ))}
           {directEntities.map((e) => (
@@ -357,7 +432,13 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               active={entityId(e) === activeEntityId}
               onOpen={onOpenEntity}
               entityId={entityId}
+              entityLabel={entityLabel}
               render={renderEntityRow}
+              flatCategories={flatCategories}
+              currentCategoryId={category.id}
+              onMoveEntity={onMoveEntity}
+              onDeleteEntity={onDeleteEntity}
+              onPrintEntity={onPrintEntity}
             />
           ))}
         </ul>
@@ -366,7 +447,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
   );
 }
 
-function CategoryLeaf<TEntity>({
+function CategoryLeaf<TEntity, TCategory extends CategoryLike>({
   dropId,
   label,
   entities,
@@ -375,7 +456,12 @@ function CategoryLeaf<TEntity>({
   activeEntityId,
   onOpenEntity,
   entityId,
+  entityLabel,
   renderEntityRow,
+  flatCategories,
+  onMoveEntity,
+  onDeleteEntity,
+  onPrintEntity,
 }: {
   dropId: string;
   label: string;
@@ -385,7 +471,12 @@ function CategoryLeaf<TEntity>({
   activeEntityId: string | null;
   onOpenEntity: (id: string) => void;
   entityId: (entity: TEntity) => string;
+  entityLabel: (entity: TEntity) => string;
   renderEntityRow: (entity: TEntity) => ReactNode;
+  flatCategories: { category: TCategory; depth: number }[];
+  onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
+  onDeleteEntity?: (entity: TEntity) => void;
+  onPrintEntity?: (entity: TEntity) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dropId });
   return (
@@ -415,7 +506,13 @@ function CategoryLeaf<TEntity>({
               active={entityId(e) === activeEntityId}
               onOpen={onOpenEntity}
               entityId={entityId}
+              entityLabel={entityLabel}
               render={renderEntityRow}
+              flatCategories={flatCategories}
+              currentCategoryId={null}
+              onMoveEntity={onMoveEntity}
+              onDeleteEntity={onDeleteEntity}
+              onPrintEntity={onPrintEntity}
             />
           ))}
         </ul>
@@ -424,47 +521,107 @@ function CategoryLeaf<TEntity>({
   );
 }
 
-function CategoryTreeEntityRow<TEntity>({
+function CategoryTreeEntityRow<TEntity, TCategory extends CategoryLike>({
   entity,
   active,
   onOpen,
   entityId,
+  entityLabel,
   render,
+  flatCategories,
+  currentCategoryId,
+  onMoveEntity,
+  onDeleteEntity,
+  onPrintEntity,
 }: {
   entity: TEntity;
   active: boolean;
   onOpen: (id: string) => void;
   entityId: (entity: TEntity) => string;
+  entityLabel: (entity: TEntity) => string;
   render: (entity: TEntity) => ReactNode;
+  flatCategories: { category: TCategory; depth: number }[];
+  currentCategoryId: string | null;
+  onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
+  onDeleteEntity?: (entity: TEntity) => void;
+  onPrintEntity?: (entity: TEntity) => void;
 }) {
   const id = entityId(entity);
+  const label = entityLabel(entity);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id,
     data: { entity },
   });
+  const rowEl = (
+    // A <div role="button"> rather than a real <button> — some callers
+    // (e.g. Handouts' reorder/reveal controls) need real nested buttons in
+    // their row content, which a <button> can't legally contain.
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      role="button"
+      tabIndex={0}
+      className={active ? 'category-tree-article active' : 'category-tree-article'}
+      style={isDragging ? { opacity: 0.4 } : undefined}
+      onClick={() => onOpen(id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(id);
+        }
+      }}
+    >
+      {render(entity)}
+    </div>
+  );
   return (
     <li>
-      {/* A <div role="button"> rather than a real <button> — some callers
-          (e.g. Handouts' reorder/reveal controls) need real nested buttons
-          in their row content, which a <button> can't legally contain. */}
-      <div
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
-        role="button"
-        tabIndex={0}
-        className={active ? 'category-tree-article active' : 'category-tree-article'}
-        style={isDragging ? { opacity: 0.4 } : undefined}
-        onClick={() => onOpen(id)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onOpen(id);
-          }
-        }}
-      >
-        {render(entity)}
-      </div>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>Move to</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuItem
+                disabled={currentCategoryId === null}
+                onSelect={() => onMoveEntity(entity, null)}
+              >
+                Uncategorised
+              </ContextMenuItem>
+              {flatCategories.length > 0 && <ContextMenuSeparator />}
+              {flatCategories.map(({ category, depth }) => (
+                <ContextMenuItem
+                  key={category.id}
+                  disabled={category.id === currentCategoryId}
+                  onSelect={() => onMoveEntity(entity, category.id)}
+                  style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+                >
+                  {category.name}
+                </ContextMenuItem>
+              ))}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+          {onPrintEntity && (
+            <ContextMenuItem onSelect={() => onPrintEntity(entity)}>🖨 Print</ContextMenuItem>
+          )}
+          {onDeleteEntity && (
+            <>
+              <ContextMenuSeparator />
+              <ConfirmDeleteDialog
+                trigger={
+                  <ContextMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                    Delete
+                  </ContextMenuItem>
+                }
+                title={`Delete "${label}"?`}
+                description={`This permanently deletes "${label}" and cannot be undone.`}
+                onConfirm={() => onDeleteEntity(entity)}
+              />
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
     </li>
   );
 }

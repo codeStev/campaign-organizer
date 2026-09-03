@@ -144,6 +144,18 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  // Context-menu "Delete" on a tree row — the article may not be open, so
+  // this doesn't go through ArticleEditor's own delete flow at all.
+  async function deleteArticle(article: ArticleSummary) {
+    try {
+      await articlesApi(worldId).remove(article.id);
+      if (articleId === article.id) navigate(`/next/worlds/${worldId}/wiki`);
+      await refresh();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   const tagFilteredArticles = tagMatchIds ? articles.filter((a) => tagMatchIds.has(a.id)) : articles;
 
   return (
@@ -164,6 +176,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           onMoveEntity={(a, categoryId) => void moveArticleToCategory(a, categoryId)}
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
+          onDeleteEntity={(a) => void deleteArticle(a)}
           loading={loading}
           searchPlaceholder="Search articles…"
           emptyLabel="No articles found."

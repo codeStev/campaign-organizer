@@ -771,6 +771,29 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  // Context-menu "Delete" on a tree row — the item may not be open.
+  async function deleteItem(item: TreeItem) {
+    try {
+      if (item.kind === 'table') await tablesApi.remove(item.entity.id);
+      else await decksApi.remove(item.entity.id);
+      if (draft.id === item.entity.id) {
+        setDraft(EMPTY_DRAFT);
+        goToList();
+      }
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // Context-menu "Print" on a tree row — loads the item into the draft (the
+  // print portal reads printTable/printDeck, both derived from it) if it
+  // isn't already open.
+  function printItem(item: TreeItem) {
+    if (draft.id !== item.entity.id) edit(item.kind, item.entity);
+    setPrinting(true);
+  }
+
   const editingExisting = draft.id != null;
 
   return (
@@ -825,6 +848,8 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
           onMoveEntity={(item, categoryId) => void moveEntityToCategory(item, categoryId)}
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
+          onDeleteEntity={(item) => void deleteItem(item)}
+          onPrintEntity={(item) => printItem(item)}
           loading={loading}
           searchPlaceholder="Search tables & decks…"
           emptyLabel="No roll tables or card decks yet."
