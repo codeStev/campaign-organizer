@@ -1,6 +1,7 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–2 done**, Phase 3 up next. Living
+Status: In progress — **Phases 1–2 done**, Phase 3 in progress (scratch
+world flag ✅, beat kinds and world overview stats remaining). Living
 document — update it as phases complete or decisions change, rather than
 letting it drift out of sync with reality.
 
@@ -41,8 +42,10 @@ swappable via the CLI rather than hand-picked again. This plan is about
    (Accordion, Progress, Badge, etc. as needed) — rather than hand-rolling
    markup, per the standing shadcn-first convention.
 4. **Every new backend capability gets an ADR + a `docs/requirements.md`
-   FR**, per this repo's standing workflow — Clocks, Loose Threads, scratch
-   worlds, and beat types are new domain concepts, not reskins.
+   FR**, per this repo's standing workflow — scratch worlds and beat kinds
+   are new domain concepts, not reskins. (Clocks and Loose Threads turned
+   out to already exist, see Phase 3 note below — this rule still applied
+   to them when they were originally built, ADR-0084/0085.)
 5. **Playwright specs move with their screens.** A spec keeps testing the
    old route until that route is retired, then gets rewritten against the
    new one in the same change that retires the old screen — never left
@@ -160,16 +163,30 @@ per-screen fidelity, if wanted, is its own follow-up design pass, not
 implied by this phase being done.
 
 ### Phase 3 — New backend features
-Each gets its own ADR + FR + Flyway migration before any UI work:
-- **Clocks** (progress/countdown trackers) — from the brainstormed backlog
-  (memory `feature-backlog-brainstorm`), never built.
-- **Loose Threads** (dangling plot hooks) — same backlog, never built.
+
+**Correction (2026-09-03):** the original draft of this phase listed
+Clocks and Loose Threads as net-new work, sourced from the
+`feature-backlog-brainstorm` memory (dated 2026-08-31). That memory was
+stale — both are already fully built, backend and frontend: ADR-0084
+(Clocks) and ADR-0085 (Loose Threads), full hex-arch slices under
+`campaign/{domain,application,adapter}/{clock,loosethread}/...`,
+`clocksApi`/`looseThreadsApi` in `frontend/src/api/client.ts`, and
+existing pages `ClockBoard.tsx`/`LooseThreadsPanel.tsx`
+(campaign/session-scoped, not world-scoped). No new backend work for
+either — they move to **Phase 4** as a straight reuse/relocation
+(surface the existing UI in `/next`), same treatment as Phase 2's
+reskins. This is exactly the kind of drift the memory system's own
+"verify before trusting" guidance exists for.
+
+Genuinely new backend work, each gets its own ADR + FR + Flyway migration
+before any UI work:
 - **Beat kinds** — a small user-managed catalog (name + color, same shape
   as `GameSystem`'s color field), referenced by a new `kindId` on the
   existing StoryArc/Beat domain. Not a fixed enum — own table, own CRUD.
-- **Scratch/sandbox world flag** — a boolean on `World`, cosmetic only
-  (no functional exclusion from search/backup/export). Affects the Worlds
-  list and World switcher UI only.
+- ~~**Scratch/sandbox world flag**~~ ✅ done — ADR-0100, FR-60, boolean on
+  `World`, cosmetic only (no functional exclusion from search/backup/
+  export). Creation checkbox + badge on the old Worlds page and in the
+  `/next` world switcher.
 - **World overview aggregate stats** — read endpoint(s) for article count,
   sessions-run count, "recently edited" feed. No word count (dropped —
   see Decisions). Likely derivable from existing tables (revision history,
@@ -181,8 +198,9 @@ next-session card, recently-edited feed, Clocks widget, Loose Threads
 widget, in-world date), and the persistent **Table Tools dock** (dice
 roller + roll-table shortcuts + mini Clocks view, toggleable from the top
 bar, available from every `/next` screen). The dice roller and roll
-tables already exist (FR-19, FR-40/41) — this is composition, not new
-roll logic.
+tables already exist (FR-19, FR-40/41), and — per the Phase 3 correction
+above — so do Clocks and Loose Threads; this phase is composition/reuse
+across the board, not new domain logic.
 
 ### Phase 5 — Richer Campaigns workspace + Encounters
 - **Campaigns**: merge Campaigns + Sessions + Beats (now with `kind`
