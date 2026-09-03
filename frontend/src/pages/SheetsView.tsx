@@ -32,6 +32,8 @@ interface Props {
   worldId: string;
   onOpenArticle: (id: string) => void;
   onAuthExpired: () => void;
+  /** Old UI has no Table Tools dock (its own dice roller), so it still needs this one; `/next` doesn't. */
+  showDiceRoller?: boolean;
 }
 
 /** One row in the merged Sheets category tree (ADR-0105). */
@@ -57,7 +59,7 @@ const KIND_ICON: Record<TreeItem['kind'], string> = {
 
 const KIND_SEGMENTS = ['characters', 'statblocks', 'documents', 'templates'];
 
-export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
+export function SheetsView({ worldId, onOpenArticle, onAuthExpired, showDiceRoller = true }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   // The last URL segment when it's an entity id, not a kind segment or the
@@ -261,7 +263,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <DiceRollerWidget onAuthExpired={onAuthExpired} />
+        {showDiceRoller && <DiceRollerWidget onAuthExpired={onAuthExpired} />}
         <div className="editor-actions">
           <Button size="sm" onClick={() => navigate('characters/new')}>
             + New sheet

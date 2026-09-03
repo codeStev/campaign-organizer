@@ -110,9 +110,6 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
           </>
         }
       />
-      {toolsOpen && (
-        <TableToolsDock worldId={worldId} onAuthExpired={onAuthExpired} onClose={() => setToolsOpen(false)} />
-      )}
 
       <SidebarProvider className="min-h-0 sidebar-shell-next">
         <Sidebar collapsible="none" className="border-r border-sidebar-border" style={{ alignSelf: 'stretch', height: 'auto' }}>
@@ -215,7 +212,14 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route path="players" element={<PlayersPanel worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="sheets/*"
-              element={<SheetsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+              element={
+                <SheetsView
+                  worldId={worldId}
+                  onOpenArticle={openArticle}
+                  onAuthExpired={onAuthExpired}
+                  showDiceRoller={false}
+                />
+              }
             />
             <Route path="whiteboards" element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
@@ -240,6 +244,12 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route path="*" element={<Navigate to="overview" replace />} />
           </Routes>
         </SidebarInset>
+        <TableToolsDock
+          worldId={worldId}
+          open={toolsOpen}
+          onAuthExpired={onAuthExpired}
+          onClose={() => setToolsOpen(false)}
+        />
       </SidebarProvider>
     </section>
   );
