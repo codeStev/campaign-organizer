@@ -1,9 +1,9 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–5 and 5b done**, Phase 6 deferred by the
-user, so Phase 7 (Retirement) is next once one more mockup-fidelity pass
-feels warranted. Living document — update it as phases complete or
-decisions change, rather than letting it drift out of sync with reality.
+Status: In progress — **Phases 1–5, 5b, and 5c (mockup-fidelity polish) done**,
+Phase 6 deferred by the user, so Phase 7 (Retirement) is next. Living
+document — update it as phases complete or decisions change, rather than
+letting it drift out of sync with reality.
 
 ## Context
 
@@ -292,6 +292,61 @@ routes, since Timelines/Calendars read their selection from the URL
 (ADR-0053) and a local tab had no URL segment for that to bind to.
 **Lesson for future phases**: "reuse as-is" verification needs to include
 clicking through to a specific list item, not just loading the list.
+
+### Phase 5c — Mockup-fidelity polish pass
+A full screen-by-screen comparison against the mockup, requested by the
+user as "polish it to match the mockups layout and style (except colors)."
+Explicitly out of scope: the current shadcn theme's actual color values
+(kept as-is), and anything needing new backend data (see below). Landed,
+one screen at a time:
+- **Consistency**: rebuilt as a real Type/Where/Detail/Fix table instead of
+  three separate bulleted lists; found and fixed a real bug along the way —
+  `consistencyApi(worldId)` was called fresh every render, so the refresh
+  `useCallback`'s dependency array never stabilized and the effect re-fired
+  forever, hammering the report endpoint.
+- **Settings**: single-column sectioned cards instead of a one-item side-nav;
+  real "Export whole instance"/"Import backup" tiles wired to the same
+  whole-instance `downloadBackup`/`importBackup` flow `WorldsPage.tsx` uses,
+  replacing the old link-out to the current-UI worlds list.
+- **Table Tools dock**: roll-table picker simplified from a Select+Button
+  pair to a direct-click list.
+- **Chronicle Timeline**: connecting line + dot markers down the left edge,
+  date in a monospace column.
+- **Chronicle Calendar**: months shown as a year-at-a-glance card grid
+  instead of a definition list. **Deliberately not** a day-by-day event
+  grid — no per-day event data exists in this model (a calendar only
+  defines month names/lengths); building that would need new backend work.
+- **Overview**: eyebrow (uppercase, letter-spaced) micro-labels on the three
+  card headers.
+- **Relations**: the create-relationship form collapses behind a
+  `<details>` toggle so the sidebar defaults to the compact relationship
+  list; the graph gets a full-bleed canvas area instead of a padded card.
+- **Encounters**: combatant list rendered as a real Combatant/Qty table
+  (shared `EncounterBoard.tsx`, so this also improves old UI's embedded
+  encounter section).
+- **Atlas**: pin legend/detail moved to a right-hand side column instead of
+  stacking below the map, so the map canvas reads as the dominant element.
+- **Campaigns workspace**: split into a session-tools main column
+  (log/arcs/clocks) and a narrower roster/todos/GM-notes side column — a
+  pure layout regrouping, no sub-component internals touched (avoided the
+  much larger risk of rewriting `SessionLog`'s internals for a full
+  mockup-exact 3-column rebuild).
+- **Wiki**: tag chips added to the article read view (reuses the existing,
+  already-`/next`-aware `TagList` component, plus an `articleTagsApi` fetch).
+- **Whiteboards**: checked against the mockup — already matches (full-bleed
+  corkboard canvas); no change needed.
+
+**Explicitly deferred, not attempted**: merging Game Systems/Statblocks/
+Field Templates into one page (contradicts ADR-0098, which deliberately
+keeps them as separate sidebar entries); Print Shop's live inline paper
+preview (already deferred in Phase 2); fabricating Settings "Access"
+password-change or "Snapshots" auto-backup UI (neither is a real backend
+capability, and password handling is out of scope regardless); the dice
+roller's per-die-button paradigm (would diverge from `DiceRollerWidget`,
+reused everywhere in both UIs); Encounters' "Terrain & Stakes"/hazard-table
+cards (new domain concepts, not in the current `Encounter` model — would
+need an ADR + migration first, per this repo's Ground Rule 4); a true
+day-by-day Calendar grid (see above).
 
 ### Phase 6 — Deferred / needs its own design pass
 - **Hierarchical Atlas** — one or more world/region maps linking down to
