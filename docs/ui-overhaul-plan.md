@@ -1,7 +1,6 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–2 done**, Phase 3 in progress (scratch
-world flag ✅, beat kinds ✅, world overview stats remaining). Living
+Status: In progress — **Phases 1–3 done**, Phase 4 up next. Living
 document — update it as phases complete or decisions change, rather than
 letting it drift out of sync with reality.
 
@@ -162,7 +161,7 @@ shell*, not *redesigned to match the mockup's own content layout*. Closer
 per-screen fidelity, if wanted, is its own follow-up design pass, not
 implied by this phase being done.
 
-### Phase 3 — New backend features
+### Phase 3 — New backend features ✅ done
 
 **Correction (2026-09-03):** the original draft of this phase listed
 Clocks and Loose Threads as net-new work, sourced from the
@@ -189,10 +188,11 @@ before any UI work:
   `World`, cosmetic only (no functional exclusion from search/backup/
   export). Creation checkbox + badge on the old Worlds page and in the
   `/next` world switcher.
-- **World overview aggregate stats** — read endpoint(s) for article count,
-  sessions-run count, "recently edited" feed. No word count (dropped —
-  see Decisions). Likely derivable from existing tables (revision history,
-  article `updatedAt`) without new persisted state.
+- ~~**World overview aggregate stats**~~ ✅ done — ADR-0102, FR-62,
+  `GET /worlds/{worldId}/overview`: article count, sessions-run count
+  (dated on or before today), 5 most recently updated articles. Pure
+  read composition over existing published ports, no new persisted
+  state, no UI yet — that's Phase 4's Overview dashboard.
 
 ### Phase 4 — Overview dashboard + Table Tools dock
 Consumes Phase 3's new data: world Overview screen (stats strip,
