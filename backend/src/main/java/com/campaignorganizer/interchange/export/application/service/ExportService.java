@@ -16,6 +16,7 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.player.port.published.PlayerQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceQueryPort;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoQueryPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -82,6 +83,7 @@ public class ExportService implements ExportWorldUseCase {
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
     private final BeatKindQueryPort beatKinds;
+    private final SheetCategoryQueryPort sheetCategories;
     private final FieldTemplateQueryPort fieldTemplates;
     private final GameSystemQueryPort gameSystems;
     private final GlobalFieldTemplateQueryPort globalFieldTemplates;
@@ -110,6 +112,7 @@ public class ExportService implements ExportWorldUseCase {
                          PlayerQueryPort players, CampaignPlayerQueryPort campaignPlayers,
                          SessionQueryPort sessions, SessionAttendanceQueryPort sessionAttendance,
                          ArcQueryPort arcs, ArcBeatQueryPort beats, BeatKindQueryPort beatKinds,
+                         SheetCategoryQueryPort sheetCategories,
                          FieldTemplateQueryPort fieldTemplates, GameSystemQueryPort gameSystems,
                          GlobalFieldTemplateQueryPort globalFieldTemplates,
                          CharacterSheetQueryPort characterSheets,
@@ -140,6 +143,7 @@ public class ExportService implements ExportWorldUseCase {
         this.arcs = arcs;
         this.beats = beats;
         this.beatKinds = beatKinds;
+        this.sheetCategories = sheetCategories;
         this.fieldTemplates = fieldTemplates;
         this.gameSystems = gameSystems;
         this.globalFieldTemplates = globalFieldTemplates;
@@ -243,6 +247,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("cheatSheets", cheatSheetViews);
         bundle.put("sessionAttendance", allAttendance);
 
+        bundle.put("sheetCategories", sheetCategories.findByWorld(worldId));
         bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
         // Game systems (ADR-0094) and the global template catalog (ADR-0093):
         // neither is world-scoped, but both are included so a fresh instance

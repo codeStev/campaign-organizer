@@ -34,6 +34,7 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -129,6 +130,8 @@ class ImportServiceTest {
     @Mock
     private ArcImportPort arcImportPort;
     @Mock
+    private SheetCategoryImportPort sheetCategoryImportPort;
+    @Mock
     private FieldTemplateImportPort fieldTemplateImportPort;
     @Mock
     private GameSystemImportPort gameSystemImportPort;
@@ -183,7 +186,8 @@ class ImportServiceTest {
                 mapCategoryImportPort, mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
-                arcImportPort, beatKindImportPort, fieldTemplateImportPort, gameSystemImportPort,
+                arcImportPort, beatKindImportPort, sheetCategoryImportPort, fieldTemplateImportPort,
+                gameSystemImportPort,
                 globalFieldTemplateImportPort,
                 globalStatblockImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort, encounterImportPort,
@@ -284,7 +288,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, null, null,
                 "Tortuga", "tortuga", "LOCATION", "Plain.", now, now)));
-        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null,
                 null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("tags", List.of(
                 new TagView(UUID.randomUUID(), oldWorldId, EntityType.ARTICLE, oldArticleId, "npc", now),
@@ -338,8 +342,8 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("globalFieldTemplates", List.of(new GlobalFieldTemplateView(oldGlobalTemplateId,
                 "D&D 5e Monster", TemplateKind.STATBLOCK, UUID.randomUUID(), List.of(), now, now)));
-        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
-                null, oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null, null,
+                oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "campaigns", "sessions", "arcs", "beats",
                 "fieldTemplates", "characterSheets", "whiteboards", "tags")) {
@@ -486,7 +490,7 @@ class ImportServiceTest {
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
-        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null,
                 null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", "notes",
                 List.of(new EncounterEntryView(oldStatblockId, 3)), now, now)));
@@ -638,9 +642,9 @@ class ImportServiceTest {
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
-        bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId,
+        bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId, null,
                 "Session Zero", TemplateKind.DOCUMENT, null, List.of(), now, now)));
-        bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, oldTemplateId,
+        bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, null, oldTemplateId,
                 oldCampaignId, "Ashes Zero", Map.of("lines", "No animal harm"), now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats", "clocks",

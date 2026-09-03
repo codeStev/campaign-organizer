@@ -25,6 +25,8 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoImportPort;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryImportPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryView;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -122,6 +124,7 @@ public class ImportService implements ImportBackupUseCase {
     private final SessionAttendanceImportPort sessionAttendanceImportPort;
     private final ArcImportPort arcImportPort;
     private final BeatKindImportPort beatKindImportPort;
+    private final SheetCategoryImportPort sheetCategoryImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
     private final GameSystemImportPort gameSystemImportPort;
     private final GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
@@ -154,6 +157,7 @@ public class ImportService implements ImportBackupUseCase {
             CampaignPlayerImportPort campaignPlayerImportPort, SessionImportPort sessionImportPort,
             SessionAttendanceImportPort sessionAttendanceImportPort,
             ArcImportPort arcImportPort, BeatKindImportPort beatKindImportPort,
+            SheetCategoryImportPort sheetCategoryImportPort,
             FieldTemplateImportPort fieldTemplateImportPort,
             GameSystemImportPort gameSystemImportPort,
             GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
@@ -186,6 +190,7 @@ public class ImportService implements ImportBackupUseCase {
         this.sessionAttendanceImportPort = sessionAttendanceImportPort;
         this.arcImportPort = arcImportPort;
         this.beatKindImportPort = beatKindImportPort;
+        this.sheetCategoryImportPort = sheetCategoryImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
         this.gameSystemImportPort = gameSystemImportPort;
         this.globalFieldTemplateImportPort = globalFieldTemplateImportPort;
@@ -249,6 +254,7 @@ public class ImportService implements ImportBackupUseCase {
         List<ArcView> arcs = readList(root, "arcs", ArcView.class);
         List<BeatKindView> beatKinds = readList(root, "beatKinds", BeatKindView.class);
         List<GameSystemView> gameSystems = readList(root, "gameSystems", GameSystemView.class);
+        List<SheetCategoryView> sheetCategories = readList(root, "sheetCategories", SheetCategoryView.class);
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<GlobalFieldTemplateView> globalFieldTemplates =
                 readList(root, "globalFieldTemplates", GlobalFieldTemplateView.class);
@@ -295,6 +301,7 @@ public class ImportService implements ImportBackupUseCase {
         sessionAttendance.forEach(a -> remap.assign(a.id()));
         arcs.forEach(a -> remap.assign(a.id()));
         beatKinds.forEach(k -> remap.assign(k.id()));
+        sheetCategories.forEach(c -> remap.assign(c.id()));
         fieldTemplates.forEach(f -> remap.assign(f.id()));
         characterSheets.forEach(s -> remap.assign(s.id()));
         documents.forEach(d -> remap.assign(d.id()));
@@ -441,10 +448,15 @@ public class ImportService implements ImportBackupUseCase {
                     remap.getOrNull(t.sessionId()), t.text(), t.done(), t.createdAt(), t.updatedAt()));
         }
 
+        for (SheetCategoryView c : sheetCategories) {
+            sheetCategoryImportPort.importSheetCategory(new SheetCategoryView(remap.get(c.id()), newWorldId,
+                    remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         for (FieldTemplateView f : fieldTemplates) {
             fieldTemplateImportPort.importFieldTemplate(new FieldTemplateView(remap.get(f.id()),
-                    newWorldId, f.name(), f.kind(), gameSystemResolution.get(f.systemId()), f.sections(),
-                    f.createdAt(), f.updatedAt()));
+                    newWorldId, remap.getOrNull(f.categoryId()), f.name(), f.kind(),
+                    gameSystemResolution.get(f.systemId()), f.sections(), f.createdAt(), f.updatedAt()));
         }
 
         // Global template catalog (ADR-0093): resolved-or-reused by (kind, systemId,
@@ -475,7 +487,7 @@ public class ImportService implements ImportBackupUseCase {
 
         for (CharacterSheetView s : characterSheets) {
             characterSheetImportPort.importCharacterSheet(new CharacterSheetView(remap.get(s.id()),
-                    newWorldId, remap.getOrNull(s.worldTemplateId()),
+                    newWorldId, remap.getOrNull(s.categoryId()), remap.getOrNull(s.worldTemplateId()),
                     globalTemplateResolution.get(s.globalTemplateId()), remap.getOrNull(s.articleId()),
                     remap.getOrNull(s.campaignId()), s.name(), s.values(), s.createdAt(), s.updatedAt()));
         }
@@ -483,15 +495,16 @@ public class ImportService implements ImportBackupUseCase {
         // General-purpose documents (FR-50): templateId and campaignId are remapped.
         for (DocumentView d : documents) {
             documentImportPort.importDocument(new DocumentView(remap.get(d.id()), newWorldId,
-                    remap.getOrNull(d.templateId()), remap.getOrNull(d.campaignId()), d.name(),
-                    d.values(), d.createdAt(), d.updatedAt()));
+                    remap.getOrNull(d.categoryId()), remap.getOrNull(d.templateId()),
+                    remap.getOrNull(d.campaignId()), d.name(), d.values(), d.createdAt(), d.updatedAt()));
         }
 
         for (StatblockView s : statblocks) {
             statblockImportPort.importStatblock(new StatblockView(remap.get(s.id()), newWorldId,
-                    remap.getOrNull(s.articleId()), remap.getOrNull(s.campaignId()),
-                    remap.getOrNull(s.worldTemplateId()), globalTemplateResolution.get(s.globalTemplateId()),
-                    s.name(), s.stats(), s.notes(), s.createdAt(), s.updatedAt()));
+                    remap.getOrNull(s.categoryId()), remap.getOrNull(s.articleId()),
+                    remap.getOrNull(s.campaignId()), remap.getOrNull(s.worldTemplateId()),
+                    globalTemplateResolution.get(s.globalTemplateId()), s.name(), s.stats(), s.notes(),
+                    s.createdAt(), s.updatedAt()));
         }
 
         // Encounters (ADR-0097): campaign-scoped, ordinary data (not resolve-or-reuse
