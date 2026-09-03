@@ -97,47 +97,67 @@ export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpir
           <p className="muted">✓ No issues found. Every link resolves and nothing is stranded.</p>
         )}
 
-        {report && report.brokenLinks.length > 0 && (
-          <>
-            <h4>Broken links ({report.brokenLinks.length})</h4>
-            <ul className="article-list consistency-list">
+        {report && !clean && (
+          <table className="consistency-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Where</th>
+                <th>Detail</th>
+                <th>Fix</th>
+              </tr>
+            </thead>
+            <tbody>
               {report.brokenLinks.map((l, i) => (
-                <BrokenLinkRow key={i} link={l} onOpenArticle={onOpenArticle} />
+                <tr key={`broken-${i}`}>
+                  <td>
+                    <span className="consistency-badge consistency-badge-broken">Broken link</span>
+                  </td>
+                  <td>
+                    {SOURCE_LABELS[l.sourceType]} — {l.sourceLabel}
+                  </td>
+                  <td className="muted">
+                    → <code>{l.target}</code>
+                  </td>
+                  <td>
+                    {l.sourceType === 'ARTICLE' && (
+                      <Button variant="link" className="consistency-link" onClick={() => onOpenArticle(l.sourceId)}>
+                        Open source
+                      </Button>
+                    )}
+                  </td>
+                </tr>
               ))}
-            </ul>
-          </>
-        )}
-
-        {report && report.orphanedArticles.length > 0 && (
-          <>
-            <h4>Orphaned articles ({report.orphanedArticles.length})</h4>
-            <ul className="article-list consistency-list">
               {report.orphanedArticles.map((a) => (
-                <li key={a.articleId}>
-                  <Button variant="link" className="consistency-link" onClick={() => onOpenArticle(a.articleId)}>
-                    {a.title}
-                  </Button>
-                  <span className="muted"> — nothing links here</span>
-                </li>
+                <tr key={`orphan-${a.articleId}`}>
+                  <td>
+                    <span className="consistency-badge consistency-badge-orphan">Orphaned</span>
+                  </td>
+                  <td>{a.title}</td>
+                  <td className="muted">Nothing links here</td>
+                  <td>
+                    <Button variant="link" className="consistency-link" onClick={() => onOpenArticle(a.articleId)}>
+                      Open article
+                    </Button>
+                  </td>
+                </tr>
               ))}
-            </ul>
-          </>
-        )}
-
-        {report && report.unreferencedByCampaigns.length > 0 && (
-          <>
-            <h4>Not used by any campaign ({report.unreferencedByCampaigns.length})</h4>
-            <ul className="article-list consistency-list">
               {report.unreferencedByCampaigns.map((a) => (
-                <li key={a.articleId}>
-                  <Button variant="link" className="consistency-link" onClick={() => onOpenArticle(a.articleId)}>
-                    {a.title}
-                  </Button>
-                  <span className="muted"> — no beat or sheet references it</span>
-                </li>
+                <tr key={`unused-${a.articleId}`}>
+                  <td>
+                    <span className="consistency-badge consistency-badge-unused">Unused</span>
+                  </td>
+                  <td>{a.title}</td>
+                  <td className="muted">No beat or sheet references it</td>
+                  <td>
+                    <Button variant="link" className="consistency-link" onClick={() => onOpenArticle(a.articleId)}>
+                      Open article
+                    </Button>
+                  </td>
+                </tr>
               ))}
-            </ul>
-          </>
+            </tbody>
+          </table>
         )}
       </div>
 
@@ -196,24 +216,6 @@ export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpir
         </NewWindowPortal>
       )}
     </div>
-  );
-}
-
-function BrokenLinkRow({ link, onOpenArticle }: { link: BrokenLink; onOpenArticle: (id: string) => void }) {
-  return (
-    <li>
-      <span className="consistency-source">{SOURCE_LABELS[link.sourceType]}</span>{' '}
-      {/* Only article sources have somewhere to navigate to. */}
-      {link.sourceType === 'ARTICLE' ? (
-        <Button variant="link" className="consistency-link" onClick={() => onOpenArticle(link.sourceId)}>
-          {link.sourceLabel}
-        </Button>
-      ) : (
-        <span>{link.sourceLabel}</span>
-      )}
-      <span className="muted"> → </span>
-      <code>{link.target}</code>
-    </li>
   );
 }
 

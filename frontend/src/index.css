@@ -1649,6 +1649,47 @@ button:disabled {
   padding: 0;
 }
 
+.consistency-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.consistency-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.consistency-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.consistency-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.consistency-badge-broken {
+  background: color-mix(in oklch, var(--destructive) 18%, transparent);
+  color: var(--destructive);
+}
+
+.consistency-badge-orphan,
+.consistency-badge-unused {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
 /* Session log heading with inline recap action (FR-45). */
 .session-heading {
   display: flex;
