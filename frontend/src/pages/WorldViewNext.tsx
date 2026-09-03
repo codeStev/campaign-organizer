@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -20,6 +21,7 @@ import { WhiteboardsView } from './WhiteboardsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { MapsView } from './MapsView';
 import { NextWikiPage } from './NextWikiPage';
+import { NextPrintShopPage } from './NextPrintShopPage';
 
 type Tab =
   | 'overview'
@@ -64,7 +66,10 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const activeTabKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
-  const activeTab: Tab = TABS.some((t) => t.key === activeTabKey) ? (activeTabKey as Tab) : 'overview';
+  // Only a real match highlights a group item — falling back to 'overview'
+  // for anything unrecognized would wrongly highlight it while on a
+  // non-grouped route like Print Shop.
+  const activeTab: Tab | null = TABS.some((t) => t.key === activeTabKey) ? (activeTabKey as Tab) : null;
   const openArticle = (articleId: string) => navigate(`/next/worlds/${worldId}/wiki/${articleId}`);
 
   return (
@@ -99,6 +104,15 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               </SidebarGroup>
             ))}
           </SidebarContent>
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild size="sm" isActive={activeTabKey === 'print'}>
+                  <NavLink to="print">Print Shop</NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
         </Sidebar>
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
@@ -136,6 +150,10 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route
               path="whiteboards/:whiteboardId"
               element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="print"
+              element={<NextPrintShopPage worldId={worldId} worldName={worldName} onAuthExpired={onAuthExpired} />}
             />
             <Route path="*" element={<Navigate to="overview" replace />} />
           </Routes>

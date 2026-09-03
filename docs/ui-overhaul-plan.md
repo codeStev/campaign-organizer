@@ -1,8 +1,8 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phase 1 done**, Phase 2 up next. Living document —
-update it as phases complete or decisions change, rather than letting it
-drift out of sync with reality.
+Status: In progress — **Phases 1–2 done**, Phase 3 up next. Living
+document — update it as phases complete or decisions change, rather than
+letting it drift out of sync with reality.
 
 ## Context
 
@@ -120,7 +120,7 @@ Both against **stub/placeholder pages** (just a heading per screen, no
 real content yet). Goal: the new nav itself is navigable and reviewable
 before any feature work starts.
 
-### Phase 2 — Reskin migrations (mostly-existing functionality)
+### Phase 2 — Reskin migrations (mostly-existing functionality) ✅ done
 Screens that are close to 1:1 with what already exists — port real content
 into their Phase-1 stub, reusing existing API calls/hooks, no new backend:
 - **Relations** (relationship graph — as-is)
@@ -132,10 +132,18 @@ into their Phase-1 stub, reusing existing API calls/hooks, no new backend:
   first real consolidation, but no new backend)
 - **Wiki** (Articles, with the real nested tree — see Decisions above;
   editing/creating stays on the old UI for now, read-only in `/next`)
-- **Print Shop** (new aggregator screen: pick an output type, see a live
-  paper preview, toggle options — but every underlying print output
-  already exists, `PrintView`/`MapPrintView`/`StatblockCardsView`/handouts;
-  this is a new front-end composition, not new print logic)
+- **Print Shop** (new launcher screen, bottom-pinned in the in-world nav
+  like the mockup, not inside World/Play — missing from the original TABS
+  list too, added alongside this). Scoped down from the mockup's inline
+  live-preview + option toggles: "Full compendium" is a genuine reuse of
+  the existing `PrintView` (opens its real paper view in a new window,
+  `NewWindowPortal` — FR-30, "print in a separate tab" — confirmed
+  end-to-end, not just that it renders); the other three outputs
+  (session prep packet, statblock cards, player handouts) are scoped to
+  screens not yet migrated, so they link out to the old UI for now. A true
+  inline live-preview aggregator across all four is real net-new
+  composition work, bigger than "reuse as-is" — left as an explicit
+  follow-up, not silently implied by "Print Shop done."
 
 **Mockup fidelity note (checked by rendering the actual mockup file and
 comparing screenshots, not just reading its markup):** the shell — sidebar
