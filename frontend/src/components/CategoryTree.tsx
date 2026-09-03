@@ -444,16 +444,27 @@ function CategoryTreeEntityRow<TEntity>({
   });
   return (
     <li>
-      <button
+      {/* A <div role="button"> rather than a real <button> — some callers
+          (e.g. Handouts' reorder/reveal controls) need real nested buttons
+          in their row content, which a <button> can't legally contain. */}
+      <div
         ref={setNodeRef}
         {...listeners}
         {...attributes}
+        role="button"
+        tabIndex={0}
         className={active ? 'category-tree-article active' : 'category-tree-article'}
         style={isDragging ? { opacity: 0.4 } : undefined}
         onClick={() => onOpen(id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen(id);
+          }
+        }}
       >
         {render(entity)}
-      </button>
+      </div>
     </li>
   );
 }
