@@ -111,10 +111,18 @@ export function TableToolsDock({ worldId, onAuthExpired, onClose }: Props) {
           <ul className="next-overview-list">
             {clocks.map((c) => (
               <li key={c.clockId} className="next-overview-clock">
-                <span>{c.title}</span>
-                <span className="muted">
-                  {c.filledSegments}/{c.totalSegments} · {c.campaignName}
-                </span>
+                <div className="next-overview-clock-head">
+                  <span>{c.title}</span>
+                  <span className="muted">
+                    {c.filledSegments}/{c.totalSegments} · {c.campaignName}
+                  </span>
+                </div>
+                <div className="next-overview-progress">
+                  <div
+                    className="next-overview-progress-fill"
+                    style={{ width: `${(100 * c.filledSegments) / c.totalSegments}%` }}
+                  />
+                </div>
               </li>
             ))}
           </ul>

@@ -393,6 +393,32 @@ button:disabled {
   padding-bottom: 0;
 }
 
+.next-overview-clock-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.next-overview-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.next-overview-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+}
+
+.next-overview-recent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .table-tools-dock {
   position: fixed;
   top: 54px;

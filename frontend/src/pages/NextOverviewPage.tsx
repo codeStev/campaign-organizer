@@ -16,6 +16,18 @@ function formatDate(iso: string): string {
   });
 }
 
+/** "12m ago" / "3h ago" / "5d ago" — matches the mockup's Recently Edited feed. */
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
 /**
  * World Overview dashboard (docs/ui-overhaul-plan.md Phase 4): stats strip,
  * next-session card, recently-edited feed, Clocks widget, Loose Threads
@@ -61,6 +73,10 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
           <span className="next-overview-stat-value">{stats.sessionsRunCount}</span>
           <span className="muted">Sessions run</span>
         </div>
+        <div className="next-overview-stat">
+          <span className="next-overview-stat-value">{stats.openLooseThreads.length}</span>
+          <span className="muted">Loose threads</span>
+        </div>
         <div className="next-overview-stat next-overview-stat-session">
           {stats.nextSession ? (
             <>
@@ -86,10 +102,11 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
           ) : (
             <ul className="next-overview-list">
               {stats.recentlyEdited.map((a) => (
-                <li key={a.articleId}>
+                <li key={a.articleId} className="next-overview-recent-row">
                   <Button variant="link" onClick={() => onOpenArticle(a.articleId)}>
                     {a.title}
                   </Button>
+                  <span className="muted">{relativeTime(a.updatedAt)}</span>
                 </li>
               ))}
             </ul>
@@ -104,10 +121,18 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
             <ul className="next-overview-list">
               {stats.openClocks.map((c) => (
                 <li key={c.clockId} className="next-overview-clock">
-                  <span>{c.title}</span>
-                  <span className="muted">
-                    {c.filledSegments}/{c.totalSegments} · {c.campaignName}
-                  </span>
+                  <div className="next-overview-clock-head">
+                    <span>{c.title}</span>
+                    <span className="muted">
+                      {c.filledSegments}/{c.totalSegments} · {c.campaignName}
+                    </span>
+                  </div>
+                  <div className="next-overview-progress">
+                    <div
+                      className="next-overview-progress-fill"
+                      style={{ width: `${(100 * c.filledSegments) / c.totalSegments}%` }}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
