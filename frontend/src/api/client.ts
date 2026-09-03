@@ -700,6 +700,26 @@ export function playersApi(worldId: string) {
   };
 }
 
+// ---- World overview stats (FR-62): read-only, consumed by the Overview dashboard ----
+
+export interface RecentlyEditedArticle {
+  articleId: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface WorldOverviewStats {
+  articleCount: number;
+  sessionsRunCount: number;
+  recentlyEdited: RecentlyEditedArticle[];
+}
+
+export function worldOverviewApi(worldId: string) {
+  return {
+    get: () => request<WorldOverviewStats>(`/worlds/${worldId}/overview`),
+  };
+}
+
 // ---- Campaign roster (FR-53): whole-set replace, players flagged regular/guest ----
 
 export interface RosterEntry {
