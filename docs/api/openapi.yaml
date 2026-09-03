@@ -3809,6 +3809,30 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/overview:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [worlds]
+      summary: World overview stats
+      description: >
+        Aggregate stats for the world's Overview screen (FR-62): article
+        count, sessions run (dated on or before today, across every
+        campaign), and the 5 most recently updated articles. Pure read
+        composition, no new persisted state (ADR-0102).
+      operationId: getWorldOverview
+      responses:
+        '200':
+          description: The world's overview stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorldOverviewStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/articles/{articleId}/revisions/{revisionId}/restore:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -6664,6 +6688,34 @@ components:
           format: uuid
         title:
           type: string
+
+    WorldOverviewStats:
+      type: object
+      required: [articleCount, sessionsRunCount, recentlyEdited]
+      properties:
+        articleCount:
+          type: integer
+        sessionsRunCount:
+          type: integer
+          description: Sessions across every campaign in the world dated on or before today.
+        recentlyEdited:
+          type: array
+          description: The 5 most recently updated articles.
+          items:
+            $ref: '#/components/schemas/RecentlyEditedArticle'
+
+    RecentlyEditedArticle:
+      type: object
+      required: [articleId, title, updatedAt]
+      properties:
+        articleId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
 
     ArticleRevision:
       type: object

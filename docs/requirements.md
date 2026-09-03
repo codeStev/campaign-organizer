@@ -335,6 +335,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   tagged with, rendering beats with their kind's color the way an arc's
   beat list is meant to be scannable at a glance. Deleting a kind un-tags
   any beats that used it rather than being blocked. (ADR-0101)
+- **FR-62 World overview aggregate stats.** A per-world read endpoint
+  aggregating article count, sessions-run count (sessions dated on or
+  before today), and a recently-edited feed (5 most recently updated
+  articles) — no new persisted state, composed from existing published
+  ports. (ADR-0102)
 
 ---
 
