@@ -1,6 +1,6 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–3 done**, Phase 4 up next. Living
+Status: In progress — **Phases 1–4 done**, Phase 5 up next. Living
 document — update it as phases complete or decisions change, rather than
 letting it drift out of sync with reality.
 
@@ -194,15 +194,30 @@ before any UI work:
   read composition over existing published ports, no new persisted
   state, no UI yet — that's Phase 4's Overview dashboard.
 
-### Phase 4 — Overview dashboard + Table Tools dock
+### Phase 4 — Overview dashboard + Table Tools dock ✅ done
 Consumes Phase 3's new data: world Overview screen (stats strip,
 next-session card, recently-edited feed, Clocks widget, Loose Threads
-widget, in-world date), and the persistent **Table Tools dock** (dice
-roller + roll-table shortcuts + mini Clocks view, toggleable from the top
-bar, available from every `/next` screen). The dice roller and roll
-tables already exist (FR-19, FR-40/41), and — per the Phase 3 correction
-above — so do Clocks and Loose Threads; this phase is composition/reuse
-across the board, not new domain logic.
+widget), and the persistent **Table Tools dock** (dice roller +
+roll-table shortcuts + mini Clocks view, toggleable from the top bar,
+available from every `/next` screen). The dice roller and roll tables
+already exist (FR-19, FR-40/41), and — per the Phase 3 correction above
+— so do Clocks and Loose Threads; this phase turned out to be pure
+composition/reuse, no new domain logic, matching Ground Rule 4's spirit.
+
+Where the data itself needed more than Phase 3 initially shipped (next
+session, open clocks, open loose threads — none of which had a
+world-scoped published-port method to read from), that got filled in as
+ADR-0103, not new UI-side logic — `NextOverviewPage.tsx` and
+`TableToolsDock.tsx` are both thin consumers of `worldOverviewApi`.
+
+**Dropped from the original bullet list: in-world date.** Nothing in
+this app persists a campaign's or world's "current" in-world date —
+`Calendar`/`Month` model calendar *structure*, not a live pointer into
+it. Surfacing one would mean inventing new persisted state, which
+contradicts this phase's whole "composition, not new domain logic"
+premise (and Ground Rule 4 would require its own ADR/FR/migration first
+regardless). Left as an explicit future FR if wanted, not silently
+implied by "Phase 4 done."
 
 ### Phase 5 — Richer Campaigns workspace + Encounters
 - **Campaigns**: merge Campaigns + Sessions + Beats (now with `kind`
