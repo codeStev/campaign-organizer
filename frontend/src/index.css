@@ -443,6 +443,27 @@ button:disabled {
   justify-content: space-between;
 }
 
+.table-tools-roll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.table-tools-roll-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+.table-tools-roll-item:hover {
+  background: var(--muted);
+}
+
 .world-main-inset,
 .app-shell-content {
   padding: 0.25rem;

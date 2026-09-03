@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { rollTablesApi, worldOverviewApi, diceApi, ApiError, RollTable, RollTableEntry, ClockSummary } from '../api/client';
 import { DiceRollerWidget } from './DiceRollerWidget';
 import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface Props {
   worldId: string;
@@ -28,7 +27,7 @@ function matchingEntry(entries: RollTableEntry[], total: number): RollTableEntry
  */
 export function TableToolsDock({ worldId, onAuthExpired, onClose }: Props) {
   const [tables, setTables] = useState<RollTable[]>([]);
-  const [selectedTableId, setSelectedTableId] = useState('');
+  const [rolledTableId, setRolledTableId] = useState('');
   const [tableRoll, setTableRoll] = useState<{ total: number; breakdown: string; entry: RollTableEntry | null } | null>(null);
   const [clocks, setClocks] = useState<ClockSummary[]>([]);
 
@@ -47,9 +46,8 @@ export function TableToolsDock({ worldId, onAuthExpired, onClose }: Props) {
       });
   }, [worldId, onAuthExpired]);
 
-  async function rollTable() {
-    const table = tables.find((t) => t.id === selectedTableId);
-    if (!table) return;
+  async function rollTable(table: RollTable) {
+    setRolledTableId(table.id);
     try {
       const result = await diceApi.roll(table.diceExpression);
       setTableRoll({ total: result.total, breakdown: result.breakdown, entry: matchingEntry(table.entries, result.total) });
@@ -75,26 +73,20 @@ export function TableToolsDock({ worldId, onAuthExpired, onClose }: Props) {
           <p className="muted">No roll tables in this world yet.</p>
         ) : (
           <>
-            <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pick a table…" />
-              </SelectTrigger>
-              <SelectContent>
-                {tables.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
+            <ul className="table-tools-roll-list">
+              {tables.map((t) => (
+                <li key={t.id}>
+                  <button type="button" className="table-tools-roll-item" onClick={() => void rollTable(t)}>
                     {t.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="button" variant="outline" disabled={!selectedTableId} onClick={() => void rollTable()}>
-              Roll
-            </Button>
+                  </button>
+                </li>
+              ))}
+            </ul>
             {tableRoll && (
               <p className="dice-result">
                 <span className="dice-total">{tableRoll.total}</span>
                 <span className="muted">
-                  {tableRoll.breakdown}
+                  {tables.find((t) => t.id === rolledTableId)?.title} — {tableRoll.breakdown}
                   {tableRoll.entry ? ` — ${tableRoll.entry.body}` : ' — no entry covers this result'}
                 </span>
               </p>
