@@ -15,11 +15,11 @@ import {
 } from '../components/ui/sidebar';
 import { Button } from '../components/ui/button';
 import { NextTopBar } from '../components/NextTopBar';
-import { RelationshipsView } from './RelationshipsView';
-import { ConsistencyView } from './ConsistencyView';
-import { WhiteboardsView } from './WhiteboardsView';
-import { TagBrowseView } from './TagBrowseView';
-import { PlayersPanel } from './PlayersPanel';
+import { NextRelationshipsView } from './NextRelationshipsView';
+import { NextConsistencyView } from './NextConsistencyView';
+import { NextWhiteboardsView } from './NextWhiteboardsView';
+import { NextTagBrowseView } from './NextTagBrowseView';
+import { NextPlayersPanel } from './NextPlayersPanel';
 import { NextSheetsPage } from './NextSheetsPage';
 import { TablesView } from './TablesView';
 import { HandoutsView } from './HandoutsView';
@@ -161,12 +161,12 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             />
             <Route
               path="relations"
-              element={<RelationshipsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+              element={<NextRelationshipsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="tags"
               element={
-                <TagBrowseView
+                <NextTagBrowseView
                   worldId={worldId}
                   onOpenArticle={openArticle}
                   onOpenStatblock={openStatblock}
@@ -177,7 +177,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route
               path="tags/:tagName"
               element={
-                <TagBrowseView
+                <NextTagBrowseView
                   worldId={worldId}
                   onOpenArticle={openArticle}
                   onOpenStatblock={openStatblock}
@@ -188,7 +188,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route
               path="consistency"
               element={
-                <ConsistencyView
+                <NextConsistencyView
                   worldId={worldId}
                   worldName={worldName}
                   onOpenArticle={openArticle}
@@ -209,15 +209,15 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               path="encounters/:campaignId"
               element={<NextEncountersPage worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
-            <Route path="players" element={<PlayersPanel worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="players" element={<NextPlayersPanel worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="sheets/*"
               element={<NextSheetsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
-            <Route path="whiteboards" element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="whiteboards" element={<NextWhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="whiteboards/:whiteboardId"
-              element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+              element={<NextWhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
             <Route path="tables" element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route path="tables/:kind" element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />} />
