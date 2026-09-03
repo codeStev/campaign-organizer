@@ -13,6 +13,7 @@ import { WorldViewNext } from './pages/WorldViewNext';
 import { AppSidebar } from './components/AppSidebar';
 import { AppSidebarNext } from './components/AppSidebarNext';
 import { NextStubPage } from './components/NextStubPage';
+import { NextTopBar } from './components/NextTopBar';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
 import { TooltipProvider } from './components/ui/tooltip';
@@ -89,23 +90,25 @@ function AppShell({ onAuthExpired }: { onAuthExpired: () => void }) {
  */
 function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
   return (
-    <SidebarProvider className="min-h-0 gap-6 sidebar-shell">
-      <AppSidebarNext />
-      <SidebarInset className="app-shell-content">
-        <Routes>
-          <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
-          <Route path="settings" element={<NextStubPage title="Settings" note="Phase 5 — reskin of the existing settings categories." />} />
-          <Route path="*" element={<Navigate to="/next/worlds" replace />} />
-        </Routes>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="next-shell">
+      <NextTopBar />
+      <SidebarProvider className="min-h-0 sidebar-shell-next">
+        <AppSidebarNext />
+        <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
+          <Routes>
+            <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
+            <Route path="settings" element={<NextStubPage title="Settings" note="Phase 5 — reskin of the existing settings categories." />} />
+            <Route path="*" element={<Navigate to="/next/worlds" replace />} />
+          </Routes>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }
 
 /** Resolves :worldId to a World, then renders the /next world shell. */
 function NextWorldViewRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
   const { worldId } = useParams<{ worldId: string }>();
-  const navigate = useNavigate();
   const [world, setWorld] = useState<World | null>(null);
   const [notFound, setNotFound] = useState(false);
 
@@ -128,9 +131,7 @@ function NextWorldViewRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
   if (!worldId || notFound) return <Navigate to="/next/worlds" replace />;
   if (!world) return <p className="muted">Loading…</p>;
 
-  return (
-    <WorldViewNext worldId={world.id} worldName={world.name} onBack={() => navigate('/next/worlds')} />
-  );
+  return <WorldViewNext worldId={world.id} worldName={world.name} />;
 }
 
 /**

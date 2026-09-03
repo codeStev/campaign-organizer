@@ -13,6 +13,7 @@ import {
 } from '../components/ui/sidebar';
 import { Button } from '../components/ui/button';
 import { NextStubPage } from '../components/NextStubPage';
+import { NextTopBar } from '../components/NextTopBar';
 
 type Tab =
   | 'overview'
@@ -50,28 +51,27 @@ const TAB_GROUPS: TabGroup[] = ['World', 'Play'];
 interface Props {
   worldId: string;
   worldName: string;
-  onBack: () => void;
 }
 
-export function WorldViewNext({ worldId, worldName, onBack }: Props) {
+export function WorldViewNext({ worldId, worldName }: Props) {
   const location = useLocation();
   const activeTabKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
   const activeTab: Tab = TABS.some((t) => t.key === activeTabKey) ? (activeTabKey as Tab) : 'overview';
 
   return (
-    <section className="world-view">
-      <div className="world-view-bar">
-        <Button variant="link" onClick={onBack}>
-          ← Worlds
-        </Button>
-        <h2>{worldName}</h2>
-        <Button variant="link" asChild>
-          <NavLink to={`/worlds/${worldId}`}>← Back to current UI</NavLink>
-        </Button>
-      </div>
+    <section className="next-world-view">
+      <NextTopBar
+        currentWorldId={worldId}
+        currentWorldName={worldName}
+        rightSlot={
+          <Button variant="link" size="sm" asChild>
+            <NavLink to={`/worlds/${worldId}`}>← Back to current UI</NavLink>
+          </Button>
+        }
+      />
 
-      <SidebarProvider className="min-h-0 sidebar-shell world-shell">
-        <Sidebar collapsible="none" className="border-r border-sidebar-border">
+      <SidebarProvider className="min-h-0 sidebar-shell-next">
+        <Sidebar collapsible="none" className="border-r border-sidebar-border" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <SidebarContent>
             {TAB_GROUPS.map((group) => (
               <SidebarGroup key={group}>
@@ -80,7 +80,7 @@ export function WorldViewNext({ worldId, worldName, onBack }: Props) {
                   <SidebarMenu>
                     {TABS.filter((t) => t.group === group).map((t) => (
                       <SidebarMenuItem key={t.key}>
-                        <SidebarMenuButton asChild isActive={activeTab === t.key}>
+                        <SidebarMenuButton asChild size="sm" isActive={activeTab === t.key}>
                           <NavLink to={t.key}>{t.label}</NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -91,7 +91,7 @@ export function WorldViewNext({ worldId, worldName, onBack }: Props) {
             ))}
           </SidebarContent>
         </Sidebar>
-        <SidebarInset className="world-main-inset">
+        <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<NextStubPage title="Overview" note="Phase 4 — dashboard, clocks, loose threads." />} />

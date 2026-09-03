@@ -31,14 +31,14 @@ export function AppSidebarNext() {
   const location = useLocation();
   const isActive = (to: string) => location.pathname.startsWith(to);
   return (
-    <Sidebar collapsible="none" className="border-r border-sidebar-border">
+    <Sidebar collapsible="none" className="border-r border-sidebar-border" style={{ alignSelf: 'stretch', height: 'auto' }}>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               {TOP_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild isActive={isActive(item.to)}>
+                  <SidebarMenuButton asChild size="sm" isActive={isActive(item.to)}>
                     <NavLink to={item.to}>
                       <span aria-hidden="true">{item.icon}</span>
                       <span>{item.label}</span>
@@ -56,7 +56,7 @@ export function AppSidebarNext() {
             <SidebarMenu>
               {LIBRARY_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild isActive={isActive(item.to)}>
+                  <SidebarMenuButton asChild size="sm" isActive={isActive(item.to)}>
                     <NavLink to={item.to}>
                       <span aria-hidden="true">{item.icon}</span>
                       <span>{item.label}</span>
@@ -73,7 +73,7 @@ export function AppSidebarNext() {
             <SidebarMenu>
               {BOTTOM_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild isActive={isActive(item.to)}>
+                  <SidebarMenuButton asChild size="sm" isActive={isActive(item.to)}>
                     <NavLink to={item.to}>
                       <span aria-hidden="true">{item.icon}</span>
                       <span>{item.label}</span>
