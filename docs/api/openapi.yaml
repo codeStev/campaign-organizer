@@ -2709,6 +2709,89 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/table-deck-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [roll-tables, card-decks]
+      summary: List a world's table/deck categories (ADR-0105, shared by roll tables and card decks)
+      operationId: listTableDeckCategories
+      responses:
+        '200':
+          description: Table/deck categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TableDeckCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [roll-tables, card-decks]
+      summary: Create a table/deck category
+      operationId: createTableDeckCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableDeckCategoryRequest'
+      responses:
+        '201':
+          description: Table/deck category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableDeckCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/table-deck-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [roll-tables, card-decks]
+      summary: Update a table/deck category
+      operationId: updateTableDeckCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableDeckCategoryRequest'
+      responses:
+        '200':
+          description: Table/deck category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableDeckCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [roll-tables, card-decks]
+      summary: Delete a table/deck category (its tables/decks are kept, uncategorized)
+      operationId: deleteTableDeckCategory
+      responses:
+        '204':
+          description: Table/deck category deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/handouts:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -6294,6 +6377,10 @@ components:
       type: object
       required: [title, diceExpression, entries]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Table/deck category (ADR-0105); null for uncategorized.
         title:
           type: string
           minLength: 1
@@ -6322,6 +6409,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         title:
           type: string
@@ -6373,6 +6463,10 @@ components:
       type: object
       required: [title, cards]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Table/deck category (ADR-0105); null for uncategorized.
         title:
           type: string
           minLength: 1
@@ -6417,6 +6511,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         title:
           type: string
         description:
@@ -6425,6 +6522,41 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeckCard'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TableDeckCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent table/deck category for nesting, or null for a root category.
+
+    TableDeckCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
         createdAt:
           type: string
           format: date-time

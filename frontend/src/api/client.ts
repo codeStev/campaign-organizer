@@ -1797,6 +1797,7 @@ export interface RollTableEntry {
 export interface RollTable {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   title: string;
   description?: string | null;
   diceExpression: string;
@@ -1808,6 +1809,7 @@ export interface RollTable {
 }
 
 export interface RollTableRequest {
+  categoryId?: string | null;
   title: string;
   description?: string;
   diceExpression: string;
@@ -1845,6 +1847,7 @@ export interface DeckCard {
 export interface CardDeck {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   title: string;
   description?: string | null;
   cards: DeckCard[];
@@ -1853,6 +1856,7 @@ export interface CardDeck {
 }
 
 export interface CardDeckRequest {
+  categoryId?: string | null;
   title: string;
   description?: string;
   cards: DeckCardInput[];
@@ -1868,5 +1872,32 @@ export function cardDecksApi(worldId: string) {
       request<CardDeck>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => request<CardDeck>(`${base}/${id}/duplicate`, { method: 'POST' }),
+  };
+}
+
+export interface TableDeckCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TableDeckCategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+/** ADR-0105: one shared taxonomy for both roll tables and card decks. */
+export function tableDeckCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/table-deck-categories`;
+  return {
+    list: () => request<TableDeckCategory[]>(base),
+    create: (body: TableDeckCategoryRequest) =>
+      request<TableDeckCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: TableDeckCategoryRequest) =>
+      request<TableDeckCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
