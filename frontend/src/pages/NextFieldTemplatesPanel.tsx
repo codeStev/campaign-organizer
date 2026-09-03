@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   fieldTemplatesApi,
   builtinFieldTemplatesApi,
@@ -35,6 +35,10 @@ const KIND_LABEL: Record<TemplateKind, string> = {
 export function NextFieldTemplatesPanel({ worldId, templates, loading, onChanged, onError }: Props) {
   const navigate = useNavigate();
   const { templateId: urlTemplateId } = useParams<{ templateId: string }>();
+  const [searchParams] = useSearchParams();
+  // Set via the tree's "+ New template" on a category (?category=<id> in the
+  // URL) — carried through both creation paths (starter, builder) below.
+  const pendingCategoryId = searchParams.get('category') || null;
   const api = fieldTemplatesApi(worldId);
   const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
   const [systems, setSystems] = useState<GameSystem[]>([]);
@@ -89,7 +93,7 @@ export function NextFieldTemplatesPanel({ worldId, templates, loading, onChanged
     if (!b) return;
     try {
       const systemId = b.system ? await resolveSystemId(b.system) : null;
-      await api.create({ name: b.name, kind: b.kind, systemId, sections: b.sections });
+      await api.create({ name: b.name, kind: b.kind, systemId, sections: b.sections, categoryId: pendingCategoryId });
       setChoice('');
       onChanged();
       toast.success(`Template "${b.name}" added`);
@@ -101,7 +105,7 @@ export function NextFieldTemplatesPanel({ worldId, templates, loading, onChanged
   async function saveTemplate(body: FieldTemplateRequest) {
     try {
       if (editing) await api.update(editing.id, body);
-      else await api.create(body);
+      else await api.create({ ...body, categoryId: pendingCategoryId });
       setBuilding(false);
       setEditing(null);
       setPreviewing(null);

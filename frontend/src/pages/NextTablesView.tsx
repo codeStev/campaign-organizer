@@ -799,41 +799,6 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <div className="editor-actions sidebar-actions-wrap">
-          <Button
-            size="sm"
-            onClick={() => {
-              setDraft({
-                ...EMPTY_DRAFT,
-                kind: 'table',
-                entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
-              });
-              setRoll(null);
-              setMode('edit');
-              goToList();
-            }}
-            data-testid="new-table-button"
-          >
-            + New roll table
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              setDraft({
-                ...EMPTY_DRAFT,
-                kind: 'deck',
-                entries: [],
-                cards: [{ title: '', body: '', ...emptyChains }],
-              });
-              setDrawnIndex(null);
-              setMode('edit');
-              goToList();
-            }}
-            data-testid="new-deck-button"
-          >
-            + New card deck
-          </Button>
-        </div>
         <CategoryTree
           categories={categories}
           entities={treeItems}
@@ -850,6 +815,37 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
           onRemoveCategory={(c) => void removeCategory(c)}
           onDeleteEntity={(item) => void deleteItem(item)}
           onPrintEntity={(item) => printItem(item)}
+          newEntityActions={[
+            {
+              label: 'New roll table',
+              onCreate: (categoryId) => {
+                setDraft({
+                  ...EMPTY_DRAFT,
+                  kind: 'table',
+                  categoryId,
+                  entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
+                });
+                setRoll(null);
+                setMode('edit');
+                goToList();
+              },
+            },
+            {
+              label: 'New card deck',
+              onCreate: (categoryId) => {
+                setDraft({
+                  ...EMPTY_DRAFT,
+                  kind: 'deck',
+                  categoryId,
+                  entries: [],
+                  cards: [{ title: '', body: '', ...emptyChains }],
+                });
+                setDrawnIndex(null);
+                setMode('edit');
+                goToList();
+              },
+            },
+          ]}
           loading={loading}
           searchPlaceholder="Search tables & decks…"
           emptyLabel="No roll tables or card decks yet."

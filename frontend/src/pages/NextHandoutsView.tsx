@@ -297,18 +297,6 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Button
-          className="sidebar-new-button"
-          size="sm"
-          onClick={() => {
-            setDraft(EMPTY_DRAFT);
-            setMode('edit');
-            navigate(urlHandoutId ? '..' : '.', { relative: 'path' });
-          }}
-          data-testid="new-handout-button"
-        >
-          + New handout
-        </Button>
         <CategoryTree
           categories={categories}
           entities={list}
@@ -322,6 +310,16 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
           onRemoveCategory={(c) => void removeHandoutCategory(c)}
           onDeleteEntity={(h) => void deleteHandout(h)}
           onPrintEntity={(h) => void printHandout(h)}
+          newEntityActions={[
+            {
+              label: 'New handout',
+              onCreate: (categoryId) => {
+                setDraft({ ...EMPTY_DRAFT, categoryId });
+                setMode('edit');
+                navigate(urlHandoutId ? '..' : '.', { relative: 'path' });
+              },
+            },
+          ]}
           loading={loading}
           searchPlaceholder="Search handouts…"
           emptyLabel="No handouts yet."

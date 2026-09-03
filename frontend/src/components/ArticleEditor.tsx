@@ -1,5 +1,5 @@
 import { MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   articlesApi,
   articleRevisionsApi,
@@ -120,6 +120,7 @@ interface Props {
  */
 export function ArticleEditor({ worldId, articleId, articles, categories, onOpenArticle, onChanged, onAuthExpired }: Props) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const api = useMemo(() => articlesApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const ai = useMemo(() => aiApi(worldId), [worldId]);
@@ -158,7 +159,9 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
   const parentCandidates = articles.filter((a) => !excludedParentIds.has(a.id));
 
   function newDraft() {
-    setDraft({ ...EMPTY_DRAFT });
+    // "+ New article" from a category's tree menu passes ?category=<id> so
+    // the article is pre-assigned instead of landing Uncategorised.
+    setDraft({ ...EMPTY_DRAFT, categoryId: searchParams.get('category') || null });
     setPreviewHtml('');
     setMode('edit');
     setRevisions(null);

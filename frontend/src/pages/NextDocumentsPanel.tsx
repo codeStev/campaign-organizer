@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { documentsApi, exportDocumentPdf, Document, FieldTemplate, Campaign } from '../api/client';
 import { TemplateForm } from '../components/TemplateForm';
 import { Button } from '../components/ui/button';
@@ -32,6 +32,7 @@ interface Draft {
 export function NextDocumentsPanel({ worldId, templates, campaigns, onChanged, onError }: Props) {
   const navigate = useNavigate();
   const { documentId: urlDocumentId } = useParams<{ documentId: string }>();
+  const [searchParams] = useSearchParams();
   const api = useMemo(() => documentsApi(worldId), [worldId]);
   const [draft, setDraft] = useState<Draft | null>(null);
   // The last-saved version of the open document, for the Cancel button to revert to.
@@ -49,7 +50,7 @@ export function NextDocumentsPanel({ worldId, templates, campaigns, onChanged, o
     }
     setDraft({
       id: null,
-      categoryId: null,
+      categoryId: searchParams.get('category') || null,
       name: '',
       templateId: documentTemplates[0].id,
       campaignId: '',

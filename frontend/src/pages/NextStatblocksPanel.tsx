@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   statblocksApi,
   statblockTagsApi,
@@ -113,6 +113,7 @@ function coerceRowValue(type: FieldType | undefined, raw: string): unknown {
 export function NextStatblocksPanel({ worldId, templates, globalTemplates, campaigns, onChanged, onError }: Props) {
   const navigate = useNavigate();
   const { statblockId: urlStatblockId } = useParams<{ statblockId: string }>();
+  const [searchParams] = useSearchParams();
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Statblock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,7 +243,7 @@ export function NextStatblocksPanel({ worldId, templates, globalTemplates, campa
   }
 
   function newStatblock() {
-    setDraft({ ...EMPTY, campaignId: filterCampaign });
+    setDraft({ ...EMPTY, campaignId: filterCampaign, categoryId: searchParams.get('category') || null });
     setSavedTags([]);
     setMode('edit');
     navigate(urlStatblockId ? '..' : '.', { relative: 'path' });

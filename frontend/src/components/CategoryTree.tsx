@@ -26,6 +26,13 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from './ui/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 const ROOT_KEY = '__root__';
 const UNCATEGORIZED_KEY = '__none__';
@@ -34,6 +41,14 @@ interface CategoryLike {
   id: string;
   parentId?: string | null;
   name: string;
+}
+
+/** One "+ New X" action offered in a category's menu — plural since e.g.
+ * Sheets' merged tree can create a sheet, statblock, document, or template
+ * from the same category, and Tables & Decks a table or a deck. */
+export interface NewEntityAction {
+  label: string;
+  onCreate: (categoryId: string | null) => void;
 }
 
 interface CategoryTreeProps<TEntity, TCategory extends CategoryLike> {
@@ -51,6 +66,9 @@ interface CategoryTreeProps<TEntity, TCategory extends CategoryLike> {
   onDeleteEntity?: (entity: TEntity) => void;
   /** Enables the entity row's right-click "Print" item when provided. */
   onPrintEntity?: (entity: TEntity) => void;
+  /** "+ New X" actions offered in every category's (and Uncategorised's)
+   * menu — omit to leave a screen without in-tree entity creation. */
+  newEntityActions?: NewEntityAction[];
   loading?: boolean;
   searchPlaceholder?: string;
   uncategorizedLabel?: string;
@@ -81,6 +99,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   onRemoveCategory,
   onDeleteEntity,
   onPrintEntity,
+  newEntityActions = [],
   loading,
   searchPlaceholder = 'Search…',
   uncategorizedLabel = 'Uncategorised',
@@ -253,6 +272,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
             onMoveEntity={onMoveEntity}
             onDeleteEntity={onDeleteEntity}
             onPrintEntity={onPrintEntity}
+            newEntityActions={newEntityActions}
           />
         ))}
         <CategoryLeaf
@@ -270,6 +290,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
           onMoveEntity={onMoveEntity}
           onDeleteEntity={onDeleteEntity}
           onPrintEntity={onPrintEntity}
+          newEntityActions={newEntityActions}
         />
         {loading && (
           <li className="muted loading-row">
@@ -312,6 +333,7 @@ interface CategoryTreeNodeProps<TEntity, TCategory extends CategoryLike> {
   onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
   onDeleteEntity?: (entity: TEntity) => void;
   onPrintEntity?: (entity: TEntity) => void;
+  newEntityActions: NewEntityAction[];
 }
 
 function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
@@ -332,6 +354,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
   onMoveEntity,
   onDeleteEntity,
   onPrintEntity,
+  newEntityActions,
 }: CategoryTreeNodeProps<TEntity, TCategory>) {
   const subCategories = childrenByCategory.get(category.id) ?? [];
   const directEntities = entitiesByCategory.get(category.id) ?? [];
@@ -357,14 +380,22 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
         <TruncatedLabel label={category.name}>{category.name}</TruncatedLabel>
       </span>
       {directEntities.length > 0 && <span className="muted category-tree-count">{directEntities.length}</span>}
-      <button
-        type="button"
-        className="category-tree-action"
-        title="Add sub-category"
-        onClick={() => onAddSubcategory(category.id)}
-      >
-        +
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="category-tree-action" title="New…" onClick={(e) => e.stopPropagation()}>
+            +
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem onSelect={() => onAddSubcategory(category.id)}>+ New sub-category</DropdownMenuItem>
+          {newEntityActions.length > 0 && <DropdownMenuSeparator />}
+          {newEntityActions.map((action) => (
+            <DropdownMenuItem key={action.label} onSelect={() => action.onCreate(category.id)}>
+              + {action.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <ConfirmDeleteDialog
         trigger={
           <button
@@ -388,6 +419,11 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
         <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onSelect={() => onAddSubcategory(category.id)}>+ New sub-category</ContextMenuItem>
+          {newEntityActions.map((action) => (
+            <ContextMenuItem key={action.label} onSelect={() => action.onCreate(category.id)}>
+              + {action.label}
+            </ContextMenuItem>
+          ))}
           <ContextMenuSeparator />
           <ConfirmDeleteDialog
             trigger={
@@ -423,6 +459,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               onMoveEntity={onMoveEntity}
               onDeleteEntity={onDeleteEntity}
               onPrintEntity={onPrintEntity}
+              newEntityActions={newEntityActions}
             />
           ))}
           {directEntities.map((e) => (
@@ -462,6 +499,7 @@ function CategoryLeaf<TEntity, TCategory extends CategoryLike>({
   onMoveEntity,
   onDeleteEntity,
   onPrintEntity,
+  newEntityActions,
 }: {
   dropId: string;
   label: string;
@@ -477,26 +515,59 @@ function CategoryLeaf<TEntity, TCategory extends CategoryLike>({
   onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
   onDeleteEntity?: (entity: TEntity) => void;
   onPrintEntity?: (entity: TEntity) => void;
+  newEntityActions: NewEntityAction[];
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dropId });
+  const rowEl = (
+    <div ref={setNodeRef} className={isOver ? 'category-tree-row drop-over' : 'category-tree-row'}>
+      {entities.length > 0 ? (
+        <button
+          type="button"
+          className="article-tree-toggle"
+          onClick={onToggleExpand}
+          title={expanded ? 'Collapse' : 'Expand'}
+        >
+          {expanded ? '▾' : '▸'}
+        </button>
+      ) : (
+        <span className="article-tree-toggle-spacer" />
+      )}
+      <span className="category-tree-label muted">{label}</span>
+      {entities.length > 0 && <span className="muted category-tree-count">{entities.length}</span>}
+      {newEntityActions.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="category-tree-action" title="New…" onClick={(e) => e.stopPropagation()}>
+              +
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+            {newEntityActions.map((action) => (
+              <DropdownMenuItem key={action.label} onSelect={() => action.onCreate(null)}>
+                + {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
   return (
     <li>
-      <div ref={setNodeRef} className={isOver ? 'category-tree-row drop-over' : 'category-tree-row'}>
-        {entities.length > 0 ? (
-          <button
-            type="button"
-            className="article-tree-toggle"
-            onClick={onToggleExpand}
-            title={expanded ? 'Collapse' : 'Expand'}
-          >
-            {expanded ? '▾' : '▸'}
-          </button>
-        ) : (
-          <span className="article-tree-toggle-spacer" />
-        )}
-        <span className="category-tree-label muted">{label}</span>
-        {entities.length > 0 && <span className="muted category-tree-count">{entities.length}</span>}
-      </div>
+      {newEntityActions.length > 0 ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
+          <ContextMenuContent>
+            {newEntityActions.map((action) => (
+              <ContextMenuItem key={action.label} onSelect={() => action.onCreate(null)}>
+                + {action.label}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        rowEl
+      )}
       {expanded && entities.length > 0 && (
         <ul className="article-list-nested">
           {entities.map((e) => (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   characterSheetsApi,
   exportCharacterSheetPdf,
@@ -69,6 +69,7 @@ export function NextCharacterSheetsPanel({
 }: Props) {
   const navigate = useNavigate();
   const { sheetId: urlSheetId } = useParams<{ sheetId: string }>();
+  const [searchParams] = useSearchParams();
   const api = useMemo(() => characterSheetsApi(worldId), [worldId]);
   const [draft, setDraft] = useState<Draft | null>(null);
   // The last-saved version of the open sheet, for the Cancel button to revert to.
@@ -103,7 +104,7 @@ export function NextCharacterSheetsPanel({
     }
     setDraft({
       id: null,
-      categoryId: null,
+      categoryId: searchParams.get('category') || null,
       name: '',
       worldTemplateId: characterTemplates[0]?.id ?? '',
       globalTemplateId: characterTemplates.length === 0 ? globalCharacterTemplates[0].id : '',

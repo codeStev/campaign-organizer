@@ -9,7 +9,6 @@ import {
   Category,
   ApiError,
 } from '../api/client';
-import { Button } from '../components/ui/button';
 import { CategoryTree } from '../components/CategoryTree';
 import { ArticleEditor } from '../components/ArticleEditor';
 
@@ -162,9 +161,6 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         {error && <p className="error">{error}</p>}
-        <Button className="sidebar-new-button" size="sm" onClick={() => navigate(`/next/worlds/${worldId}/wiki/new`)}>
-          + New article
-        </Button>
         <CategoryTree
           categories={categories}
           entities={tagFilteredArticles}
@@ -177,6 +173,13 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
           onDeleteEntity={(a) => void deleteArticle(a)}
+          newEntityActions={[
+            {
+              label: 'New article',
+              onCreate: (categoryId) =>
+                navigate(`/next/worlds/${worldId}/wiki/new${categoryId ? `?category=${categoryId}` : ''}`),
+            },
+          ]}
           loading={loading}
           searchPlaceholder="Search articles…"
           emptyLabel="No articles found."

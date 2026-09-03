@@ -77,6 +77,9 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const [styles, setStyles] = useState<Record<string, LayerStyle>>({});
   const [error, setError] = useState<string | null>(null);
   const [pendingMapFile, setPendingMapFile] = useState<File | null>(null);
+  // Set by the tree's "+ New map" on a category, before the file picker
+  // opens — carried through to createMapWithName so the map lands pre-assigned.
+  const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
   const [mapNameOpen, setMapNameOpen] = useState(false);
 
   const handleError = useCallback(
@@ -188,7 +191,8 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     if (!file) return;
     try {
       const asset = await media.upload(file);
-      const map = await maps.create({ name, mediaId: asset.id });
+      const map = await maps.create({ name, mediaId: asset.id, categoryId: pendingCategoryId });
+      setPendingCategoryId(null);
       setList(await maps.list());
       await selectMap(map);
       navigate(urlMapId ? `../${map.id}` : map.id, { relative: 'path' });
@@ -334,9 +338,6 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout maps-layout">
       <aside className="wiki-sidebar">
-        <Button className="sidebar-new-button" size="sm" onClick={() => fileInputRef.current?.click()}>
-          + New map
-        </Button>
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleNewMapFile} />
         <PromptDialog
           open={mapNameOpen}
@@ -359,6 +360,15 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           onRemoveCategory={(c) => void removeMapCategory(c)}
           onDeleteEntity={(m) => void deleteMap(m)}
           onPrintEntity={(m) => void printMap(m)}
+          newEntityActions={[
+            {
+              label: 'New map',
+              onCreate: (categoryId) => {
+                setPendingCategoryId(categoryId);
+                fileInputRef.current?.click();
+              },
+            },
+          ]}
           loading={loading}
           searchPlaceholder="Search maps…"
           emptyLabel="No maps yet."

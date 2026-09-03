@@ -26,7 +26,6 @@ import { NextCharacterSheetsPanel } from './NextCharacterSheetsPanel';
 import { NextStatblocksPanel } from './NextStatblocksPanel';
 import { NextDocumentsPanel } from './NextDocumentsPanel';
 import { NextFieldTemplatesPanel } from './NextFieldTemplatesPanel';
-import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 
 interface Props {
@@ -300,22 +299,6 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <div className="editor-actions">
-          <Button size="sm" onClick={() => navigate('characters/new')}>
-            + New sheet
-          </Button>
-          <Button size="sm" onClick={() => navigate('statblocks/new')}>
-            + New statblock
-          </Button>
-        </div>
-        <div className="editor-actions">
-          <Button size="sm" onClick={() => navigate('documents/new')}>
-            + New document
-          </Button>
-          <Button size="sm" onClick={() => navigate('templates')}>
-            + New template
-          </Button>
-        </div>
         <CategoryTree
           categories={categories}
           entities={treeItems}
@@ -332,6 +315,24 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
           onRemoveCategory={(c) => void removeCategory(c)}
           onDeleteEntity={(item) => void deleteItem(item)}
           onPrintEntity={(item) => void printItem(item)}
+          newEntityActions={[
+            {
+              label: 'New sheet',
+              onCreate: (categoryId) => navigate(`characters/new${categoryId ? `?category=${categoryId}` : ''}`),
+            },
+            {
+              label: 'New statblock',
+              onCreate: (categoryId) => navigate(`statblocks/new${categoryId ? `?category=${categoryId}` : ''}`),
+            },
+            {
+              label: 'New document',
+              onCreate: (categoryId) => navigate(`documents/new${categoryId ? `?category=${categoryId}` : ''}`),
+            },
+            {
+              label: 'New template',
+              onCreate: (categoryId) => navigate(`templates${categoryId ? `?category=${categoryId}` : ''}`),
+            },
+          ]}
           loading={loading}
           searchPlaceholder="Search sheets…"
           emptyLabel="No sheets, statblocks, documents, or templates yet."
