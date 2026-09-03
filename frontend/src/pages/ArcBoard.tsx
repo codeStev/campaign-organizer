@@ -21,6 +21,7 @@ import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
+import { Badge } from '../components/ui/badge';
 import { Spinner } from '../components/ui/spinner';
 import { PromptDialog } from '../components/PromptDialog';
 import { toast } from 'sonner';
@@ -388,20 +389,24 @@ function ArcCard({
                         {titleById.get(id)}
                       </Button>
                     ))}
-                  {b.statblockIds
-                    .filter((id) => statblockNameById.has(id))
-                    .map((id) => (
-                      <span key={id} className="beat-statblock" title="Statblock">
-                        ⚔ {statblockNameById.get(id)}
-                      </span>
-                    ))}
-                  {b.encounterIds
-                    .filter((id) => encounterNameById.has(id))
-                    .map((id) => (
-                      <span key={id} className="beat-encounter" title="Encounter">
-                        ⚔ {encounterNameById.get(id)}
-                      </span>
-                    ))}
+                  {(() => {
+                    const names = b.statblockIds.filter((id) => statblockNameById.has(id))
+                      .map((id) => statblockNameById.get(id));
+                    return names.length > 0 ? (
+                      <Badge variant="secondary" title={names.join(', ')}>
+                        ⚔ {names.length} statblock{names.length === 1 ? '' : 's'}
+                      </Badge>
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const names = b.encounterIds.filter((id) => encounterNameById.has(id))
+                      .map((id) => encounterNameById.get(id));
+                    return names.length > 0 ? (
+                      <Badge variant="secondary" title={names.join(', ')}>
+                        ⚔ {names.length} encounter{names.length === 1 ? '' : 's'}
+                      </Badge>
+                    ) : null;
+                  })()}
                   {b.sessionId && sessionById.has(b.sessionId) && (
                     <span className="beat-session muted">{sessionLabel(sessionById.get(b.sessionId)!)}</span>
                   )}
