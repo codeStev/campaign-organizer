@@ -1,19 +1,17 @@
-import { MouseEvent, useEffect, useMemo, useState } from 'react';
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   articlesApi,
-  articleTagsApi,
   categoriesApi,
   worldTagsApi,
   tagBrowseApi,
-  Article,
   ArticleSummary,
   Category,
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
-import { TagList } from '../components/TagInput';
 import { CategoryTree } from '../components/CategoryTree';
+import { ArticleEditor } from '../components/ArticleEditor';
 
 interface Props {
   worldId: string;
@@ -38,8 +36,6 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [article, setArticle] = useState<Article | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
   const [worldTags, setWorldTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [tagMatchIds, setTagMatchIds] = useState<Set<string> | null>(null);
@@ -91,20 +87,6 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, selectedTags]);
 
-  useEffect(() => {
-    if (!articleId) {
-      setArticle(null);
-      setTags([]);
-      return;
-    }
-    articlesApi(worldId).get(articleId).then(setArticle).catch(onError);
-    articleTagsApi(worldId, articleId)
-      .get()
-      .then((t) => setTags(t.tags))
-      .catch(onError);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, articleId]);
-
   // Absolute path, not a bare relative navigate(id): with flat sibling
   // routes ("wiki" and "wiki/:articleId"), React Router's default
   // route-tree-aware relative resolution breaks once already on
@@ -120,15 +102,6 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
       else next.add(tag);
       return next;
     });
-  }
-
-  function handleBodyClick(event: MouseEvent<HTMLDivElement>) {
-    const link = (event.target as HTMLElement).closest('.wiki-link');
-    if (link) {
-      event.preventDefault();
-      const id = link.getAttribute('data-article-id');
-      if (id) openArticle(id);
-    }
   }
 
   async function createCategory(name: string, parentId: string | null) {
@@ -156,9 +129,8 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   async function moveArticleToCategory(articleToMove: ArticleSummary, categoryId: string | null) {
     if (articleToMove.categoryId === categoryId) return;
     try {
-      const full =
-        article && articleToMove.id === article.id ? article : await articlesApi(worldId).get(articleToMove.id);
-      const updated = await articlesApi(worldId).update(full.id, {
+      const full = await articlesApi(worldId).get(articleToMove.id);
+      await articlesApi(worldId).update(full.id, {
         title: full.title,
         slug: full.slug,
         template: full.template,
@@ -166,14 +138,11 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
         parentArticleId: full.parentArticleId,
         body: full.body ?? undefined,
       });
-      if (article?.id === updated.id) setArticle(updated);
       await refresh();
     } catch (err) {
       onError(err);
     }
   }
-
-  const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
   const tagFilteredArticles = tagMatchIds ? articles.filter((a) => tagMatchIds.has(a.id)) : articles;
 
@@ -181,6 +150,9 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         {error && <p className="error">{error}</p>}
+        <Button size="sm" onClick={() => navigate(`/next/worlds/${worldId}/wiki/new`)}>
+          + New article
+        </Button>
         <CategoryTree
           categories={categories}
           entities={tagFilteredArticles}
@@ -216,30 +188,17 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           </div>
         )}
       </aside>
-      {article ? (
-        <article className="card article-read">
-          <div className="article-read-head">
-            <div>
-              <h3>{article.title}</h3>
-              <small className="muted">
-                {article.template.toLowerCase()}
-                {article.categoryId && ` · ${categoryById.get(article.categoryId)?.name ?? ''}`}
-              </small>
-              <TagList worldId={worldId} tags={tags} />
-            </div>
-            <Button variant="link" size="sm" asChild>
-              <NavLink to={`/worlds/${worldId}/articles/${article.id}`}>Edit in current UI →</NavLink>
-            </Button>
-          </div>
-          <div
-            className="preview-body"
-            onClick={handleBodyClick}
-            dangerouslySetInnerHTML={{ __html: article.bodyHtml || '<p class="muted">(empty)</p>' }}
-          />
-        </article>
-      ) : (
-        <p className="muted">Select an article from the list, or create one in the current UI.</p>
-      )}
+      <div className="wiki-main">
+        <ArticleEditor
+          worldId={worldId}
+          articleId={articleId ?? null}
+          articles={articles}
+          categories={categories}
+          onOpenArticle={openArticle}
+          onChanged={() => void refresh()}
+          onAuthExpired={onAuthExpired}
+        />
+      </div>
     </div>
   );
 }
