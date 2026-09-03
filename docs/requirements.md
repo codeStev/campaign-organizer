@@ -24,7 +24,9 @@ non-functional). Each maps to a roadmap phase.
 
 ### Wiki (Phase 1)
 - **FR-3 Articles.** Create Markdown articles (live-preview editor) within a
-  world, organized by category/hierarchy. (ADR-0054)
+  world, organized by category/hierarchy. (ADR-0054; category hierarchy UI
+  landed in `/next`'s Wiki via ADR-0104, alongside ADR-0080's independent
+  parentArticleId structural nesting)
 - **FR-4 Templates.** Article templates (Character, Location, Organization,
   Species, Item, etc.) provide structured prompts.
 - **FR-5 Auto-linking.** Mentions of other articles are automatically turned

@@ -333,8 +333,18 @@ one screen at a time:
   mockup-exact 3-column rebuild).
 - **Wiki**: tag chips added to the article read view (reuses the existing,
   already-`/next`-aware `TagList` component, plus an `articleTagsApi` fetch).
+  Sidebar rebuilt as a real Category tree (ADR-0104), matching the mockup's
+  "BY CATEGORY" grouping instead of ADR-0080's parentArticleId tree — a
+  frontend-only change, since `Category` already had full backend CRUD sitting
+  unused. Includes category create/delete and, for the first time in any UI,
+  a way to set an article's category.
 - **Whiteboards**: checked against the mockup — already matches (full-bleed
   corkboard canvas); no change needed.
+- **Game Systems**: fixed a `/next` navigation gap — the sidebar's "Game
+  Systems" entry linked to the old UI's `/game-systems` route, dropping the
+  user out of `/next`'s chrome entirely (unlike Templates/Statblocks, which
+  have the same gap, not yet fixed). Now mounted at `/next/game-systems`,
+  reusing `GameSystemsPage` unchanged.
 
 **Explicitly deferred, not attempted**: merging Game Systems/Statblocks/
 Field Templates into one page (contradicts ADR-0098, which deliberately
