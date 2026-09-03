@@ -3818,8 +3818,9 @@ paths:
       description: >
         Aggregate stats for the world's Overview screen (FR-62): article
         count, sessions run (dated on or before today, across every
-        campaign), and the 5 most recently updated articles. Pure read
-        composition, no new persisted state (ADR-0102).
+        campaign), the 5 most recently updated articles, the next
+        scheduled session, open clocks, and open loose threads. Pure read
+        composition, no new persisted state (ADR-0102, ADR-0103).
       operationId: getWorldOverview
       responses:
         '200':
@@ -6691,7 +6692,7 @@ components:
 
     WorldOverviewStats:
       type: object
-      required: [articleCount, sessionsRunCount, recentlyEdited]
+      required: [articleCount, sessionsRunCount, recentlyEdited, openClocks, openLooseThreads]
       properties:
         articleCount:
           type: integer
@@ -6703,6 +6704,21 @@ components:
           description: The 5 most recently updated articles.
           items:
             $ref: '#/components/schemas/RecentlyEditedArticle'
+        nextSession:
+          allOf:
+            - $ref: '#/components/schemas/NextSessionSummary'
+          nullable: true
+          description: The nearest session across every campaign dated strictly after today, or absent if none is scheduled.
+        openClocks:
+          type: array
+          description: Not-yet-full clocks across every campaign, most-filled-first, capped at 8.
+          items:
+            $ref: '#/components/schemas/ClockSummary'
+        openLooseThreads:
+          type: array
+          description: Open (unresolved) loose threads across every campaign, newest-first, capped at 8.
+          items:
+            $ref: '#/components/schemas/LooseThreadSummary'
 
     RecentlyEditedArticle:
       type: object
@@ -6716,6 +6732,60 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    NextSessionSummary:
+      type: object
+      required: [sessionId, campaignId, campaignName, title, date]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+        sessionNumber:
+          type: [integer, "null"]
+
+    ClockSummary:
+      type: object
+      required: [clockId, campaignId, campaignName, title, filledSegments, totalSegments]
+      properties:
+        clockId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        title:
+          type: string
+        filledSegments:
+          type: integer
+        totalSegments:
+          type: integer
+
+    LooseThreadSummary:
+      type: object
+      required: [threadId, campaignId, campaignName, text]
+      properties:
+        threadId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        text:
+          type: string
 
     ArticleRevision:
       type: object

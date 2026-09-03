@@ -337,9 +337,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   any beats that used it rather than being blocked. (ADR-0101)
 - **FR-62 World overview aggregate stats.** A per-world read endpoint
   aggregating article count, sessions-run count (sessions dated on or
-  before today), and a recently-edited feed (5 most recently updated
-  articles) — no new persisted state, composed from existing published
-  ports. (ADR-0102)
+  before today), a recently-edited feed (5 most recently updated
+  articles), the next scheduled session across every campaign in the
+  world, open (not-yet-full) clocks, and open loose threads — no new
+  persisted state, composed from existing published ports. (ADR-0102,
+  ADR-0103)
 
 ---
 
