@@ -21,6 +21,7 @@ import { ConsistencyView } from './ConsistencyView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { NextOverviewPage } from './NextOverviewPage';
+import { NextEncountersPage } from './NextEncountersPage';
 import { TableToolsDock } from '../components/TableToolsDock';
 import { MapsView } from './MapsView';
 import { NextWikiPage } from './NextWikiPage';
@@ -160,7 +161,11 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               }
             />
             <Route path="campaigns" element={<NextStubPage title="Campaigns" note="Phase 5 — richer session-prep workspace." />} />
-            <Route path="encounters" element={<NextStubPage title="Encounters" note="Phase 5 — relocated encounter builder." />} />
+            <Route path="encounters" element={<NextEncountersPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="encounters/:campaignId"
+              element={<NextEncountersPage worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
             <Route path="whiteboards" element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="whiteboards/:whiteboardId"
