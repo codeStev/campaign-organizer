@@ -2,11 +2,13 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   mapsApi,
+  mapCategoriesApi,
   pinsApi,
   mediaApi,
   articlesApi,
   layerStylesApi,
   WorldMap,
+  MapCategory,
   MapPin,
   ArticleSummary,
   LayerStyle,
@@ -15,6 +17,7 @@ import {
 import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { CategoryTree } from '../components/CategoryTree';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -22,7 +25,6 @@ import { PromptDialog } from '../components/PromptDialog';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
-import { Spinner } from '../components/ui/spinner';
 import { Checkbox } from '../components/ui/checkbox';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -54,12 +56,14 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const { mapId: urlMapId } = useParams<{ mapId: string }>();
   const maps = useMemo(() => mapsApi(worldId), [worldId]);
+  const mapCategories = useMemo(() => mapCategoriesApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
   const stylesApi = useMemo(() => layerStylesApi(worldId), [worldId]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [list, setList] = useState<WorldMap[]>([]);
+  const [categories, setCategories] = useState<MapCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<WorldMap | null>(null);
   const [pins, setPins] = useState<MapPin[]>([]);
@@ -94,11 +98,59 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     [worldId, handleError],
   );
 
+  const refreshMaps = useCallback(() => {
+    setLoading(true);
+    return Promise.all([maps.list(), mapCategories.list()])
+      .then(([m, c]) => {
+        setList(m);
+        setCategories(c);
+      })
+      .catch(handleError)
+      .finally(() => setLoading(false));
+  }, [maps, mapCategories, handleError]);
+
   useEffect(() => {
-    maps.list().then(setList).catch(handleError).finally(() => setLoading(false));
+    void refreshMaps();
     articleApi.list().then(setArticles).catch(handleError);
     stylesApi.get().then(setStyles).catch(handleError);
-  }, [maps, articleApi, stylesApi, handleError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleApi, stylesApi, handleError]);
+
+  async function createMapCategory(name: string, parentId: string | null) {
+    try {
+      await mapCategories.create({ name, parentId });
+      await refreshMaps();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function removeMapCategory(category: MapCategory) {
+    try {
+      await mapCategories.remove(category.id);
+      await refreshMaps();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // WorldMap's list response already carries every field an update needs
+  // (unlike Article, there's no separate "summary vs full" split to worry
+  // about), so this can update directly without a full-fetch-first step.
+  async function moveMapToCategory(map: WorldMap, categoryId: string | null) {
+    if ((map.categoryId ?? null) === categoryId) return;
+    try {
+      const updated = await maps.update(map.id, {
+        name: map.name,
+        mediaId: map.mediaId ?? '',
+        categoryId,
+      });
+      if (selected?.id === updated.id) setSelected(updated);
+      await refreshMaps();
+    } catch (err) {
+      handleError(err);
+    }
+  }
 
   // Persist a layer-styling change to the world (merged with existing styles).
   const saveStyles = useCallback(
@@ -285,26 +337,26 @@ export function MapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           defaultValue={pendingMapFile ? pendingMapFile.name.replace(/\.[^.]+$/, '') : ''}
           onSubmit={(name) => void createMapWithName(name)}
         />
-        <ul className="article-list">
-          {list.map((m) => (
-            <li key={m.id}>
-              <button
-                className={m.id === selected?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(urlMapId ? `../${m.id}` : m.id, { relative: 'path' })}
-              >
-                <TruncatedLabel label={m.name} data-testid="map-name">
-                  {m.name}
-                </TruncatedLabel>
-              </button>
-            </li>
-          ))}
-          {loading && (
-            <li className="muted loading-row">
-              <Spinner /> Loading…
-            </li>
+        <CategoryTree
+          categories={categories}
+          entities={list}
+          entityId={(m) => m.id}
+          entityLabel={(m) => m.name}
+          entityCategoryId={(m) => m.categoryId ?? null}
+          activeEntityId={selected?.id ?? null}
+          onOpenEntity={(id) => navigate(urlMapId ? `../${id}` : id, { relative: 'path' })}
+          onMoveEntity={(m, categoryId) => void moveMapToCategory(m, categoryId)}
+          onCreateCategory={(name, parentId) => void createMapCategory(name, parentId)}
+          onRemoveCategory={(c) => void removeMapCategory(c)}
+          loading={loading}
+          searchPlaceholder="Search maps…"
+          emptyLabel="No maps yet."
+          renderEntityRow={(m) => (
+            <TruncatedLabel label={m.name} data-testid="map-name">
+              {m.name}
+            </TruncatedLabel>
           )}
-          {!loading && list.length === 0 && <li className="muted">No maps yet.</li>}
-        </ul>
+        />
 
         {layers.length > 0 && (
           <div className="layer-toggles">

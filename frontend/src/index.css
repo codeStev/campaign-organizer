@@ -659,6 +659,7 @@ button:disabled {
 .category-tree-article {
   display: block;
   width: 100%;
+  min-width: 0;
   text-align: left;
   background: none;
   border: none;
@@ -667,6 +668,14 @@ button:disabled {
   font-size: 0.85rem;
   color: var(--foreground);
   cursor: pointer;
+  overflow: hidden;
+}
+
+/* text-overflow doesn't inherit, so the truncation itself must target the
+   label span directly (mirrors .article-link > span), not just the button. */
+.category-tree-article > span {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
