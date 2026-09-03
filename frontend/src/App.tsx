@@ -97,6 +97,7 @@ function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
             <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
+            <Route path="game-systems" element={<GameSystemsPage onAuthExpired={onAuthExpired} />} />
             <Route path="settings/*" element={<NextSettingsPage onAuthExpired={onAuthExpired} />} />
             <Route path="*" element={<Navigate to="/next/worlds" replace />} />
           </Routes>
