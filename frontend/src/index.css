@@ -326,6 +326,12 @@ button:disabled {
   padding: 0.25rem 0.5rem;
 }
 
+.next-chronicle-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
 .world-main-inset,
 .app-shell-content {
   padding: 0.25rem;
