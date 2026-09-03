@@ -203,6 +203,7 @@ export function TemplateBuilder({ initial, kind, onSave, onCancel }: Props) {
 
   function save() {
     const body: FieldTemplateRequest = {
+      categoryId: initial?.categoryId ?? null,
       name,
       kind,
       systemId,
