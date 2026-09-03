@@ -5,6 +5,8 @@ export interface World {
   id: string;
   name: string;
   description?: string | null;
+  /** Cosmetic-only sandbox/brainstorming flag (FR-60) — no functional effect. */
+  scratch: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -12,6 +14,7 @@ export interface World {
 export interface WorldRequest {
   name: string;
   description?: string;
+  scratch?: boolean;
 }
 
 interface TokenResponse {

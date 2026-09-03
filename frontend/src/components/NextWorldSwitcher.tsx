@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { worldsApi, World } from '../api/client';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 interface Props {
   currentWorldId?: string;
@@ -77,6 +78,7 @@ export function NextWorldSwitcher({ currentWorldId, currentWorldName }: Props) {
                 >
                   <span className="next-world-dot" aria-hidden="true" />
                   <span>{w.name}</span>
+                  {w.scratch && <Badge variant="secondary">Scratch</Badge>}
                 </button>
               </li>
             ))}

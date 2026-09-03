@@ -3,6 +3,8 @@ import { worldsApi, downloadBackup, importBackup, World, ApiError } from '../api
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
+import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -17,6 +19,7 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
   const [worlds, setWorlds] = useState<World[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [scratch, setScratch] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
@@ -44,9 +47,10 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     try {
-      await worldsApi.create({ name, description: description || undefined });
+      await worldsApi.create({ name, description: description || undefined, scratch });
       setName('');
       setDescription('');
+      setScratch(false);
       await refresh();
       toast.success(`World "${name}" created`);
     } catch (err) {
@@ -131,6 +135,15 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+        <label className="layer-toggle" htmlFor="scratch">
+          <Checkbox
+            id="scratch"
+            checked={scratch}
+            onCheckedChange={(checked) => setScratch(checked === true)}
+            data-testid="new-world-scratch"
+          />
+          Scratch world (brainstorming sandbox, separate from your real worlds)
+        </label>
         <Button type="submit" disabled={name.length === 0} data-testid="create-world-submit">
           Create world
         </Button>
@@ -212,6 +225,7 @@ export function WorldsPage({ onOpenWorld, onAuthExpired }: Props) {
                 data-world-name={world.name}
               >
                 <strong>{world.name}</strong>
+                {world.scratch && <Badge variant="secondary">Scratch</Badge>}
                 {world.description && <p className="muted">{world.description}</p>}
               </button>
               <ConfirmDeleteDialog
