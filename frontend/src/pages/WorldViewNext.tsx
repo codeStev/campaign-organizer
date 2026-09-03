@@ -22,7 +22,7 @@ import { NextTagBrowseView } from './NextTagBrowseView';
 import { NextPlayersPanel } from './NextPlayersPanel';
 import { NextSheetsPage } from './NextSheetsPage';
 import { TablesView } from './TablesView';
-import { HandoutsView } from './HandoutsView';
+import { NextHandoutsView } from './NextHandoutsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { NextOverviewPage } from './NextOverviewPage';
 import { NextEncountersPage } from './NextEncountersPage';
@@ -225,10 +225,10 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
               path="tables/:kind/:entityId"
               element={<TablesView worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
-            <Route path="handouts" element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route path="handouts" element={<NextHandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="handouts/:handoutId"
-              element={<HandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+              element={<NextHandoutsView worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="print"
