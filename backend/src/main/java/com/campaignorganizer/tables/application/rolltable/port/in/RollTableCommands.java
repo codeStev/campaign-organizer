@@ -12,11 +12,11 @@ public final class RollTableCommands {
                              List<UUID> nestedTableIds, List<UUID> nestedDeckIds) {
     }
 
-    public record CreateRollTableCommand(UUID worldId, String title, String description,
+    public record CreateRollTableCommand(UUID worldId, UUID categoryId, String title, String description,
                                          String diceExpression, List<EntryInput> entries) {
     }
 
-    public record UpdateRollTableCommand(UUID worldId, UUID tableId, String title, String description,
-                                         String diceExpression, List<EntryInput> entries) {
+    public record UpdateRollTableCommand(UUID worldId, UUID tableId, UUID categoryId, String title,
+                                         String description, String diceExpression, List<EntryInput> entries) {
     }
 }

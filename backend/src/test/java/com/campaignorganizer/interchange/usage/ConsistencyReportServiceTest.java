@@ -159,12 +159,12 @@ class ConsistencyReportServiceTest {
                 beat("Ambush", "Fight near the [[harbor master]] while [[the kraken]] rises.",
                         List.of())));
         when(rollTables.findByWorld(worldId)).thenReturn(List.of(new RollTableView(
-                UUID.randomUUID(), worldId, "Weather", null, "1d6", 1, 6,
+                UUID.randomUUID(), worldId, null, "Weather", null, "1d6", 1, 6,
                 List.of(new RollTableEntryView(UUID.randomUUID(), null, null, "[[Storm]] hits.",
                         List.of(), List.of())),
                 Instant.EPOCH, Instant.EPOCH)));
         when(cardDecks.findByWorld(worldId)).thenReturn(List.of(new CardDeckView(
-                UUID.randomUUID(), worldId, "Rumors", null,
+                UUID.randomUUID(), worldId, null, "Rumors", null,
                 List.of(new DeckCardView(UUID.randomUUID(), "R1", "[[Ghost]] seen.", List.of(), List.of())),
                 Instant.EPOCH, Instant.EPOCH)));
         knownArticles = Map.of("Harbor Master", UUID.randomUUID());

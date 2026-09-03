@@ -21,7 +21,7 @@ class CardDeckTest {
     void createKeepsCardOrder() {
         DeckCard first = card("The Fool", "A new beginning. See [[Portals]]");
         DeckCard second = card("The Tower", "Disaster strikes");
-        CardDeck deck = CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), "Omens",
+        CardDeck deck = CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), null, "Omens",
                 "Draw for foreshadowing", List.of(first, second), NOW);
 
         assertThat(deck.getCards()).containsExactly(first, second);
@@ -30,24 +30,24 @@ class CardDeckTest {
 
     @Test
     void nullCardsBecomeEmptyList() {
-        CardDeck deck = CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), "Empty", null, null,
+        CardDeck deck = CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), null, "Empty", null, null,
                 NOW);
         assertThat(deck.getCards()).isEmpty();
     }
 
     @Test
     void rejectsBlankTitle() {
-        assertThatThrownBy(() -> CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), " ", null,
+        assertThatThrownBy(() -> CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), null, " ", null,
                 List.of(), NOW)).isInstanceOf(ValidationException.class);
     }
 
     @Test
     void updateReplacesCardsAndStampsTime() {
-        CardDeck deck = CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), "Before", null,
+        CardDeck deck = CardDeck.create(UUID.randomUUID(), UUID.randomUUID(), null, "Before", null,
                 List.of(card("Old", "body")), NOW);
         Instant later = NOW.plusSeconds(30);
 
-        deck.update("After", "desc", List.of(card("New A", "a"), card("New B", "b")), later);
+        deck.update(null, "After", "desc", List.of(card("New A", "a"), card("New B", "b")), later);
 
         assertThat(deck.getTitle()).isEqualTo("After");
         assertThat(deck.getCards()).hasSize(2);

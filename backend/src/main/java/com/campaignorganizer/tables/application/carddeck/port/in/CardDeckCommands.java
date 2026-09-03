@@ -12,11 +12,11 @@ public final class CardDeckCommands {
                             List<UUID> nestedTableIds, List<UUID> nestedDeckIds) {
     }
 
-    public record CreateCardDeckCommand(UUID worldId, String title, String description,
+    public record CreateCardDeckCommand(UUID worldId, UUID categoryId, String title, String description,
                                         List<CardInput> cards) {
     }
 
-    public record UpdateCardDeckCommand(UUID worldId, UUID deckId, String title, String description,
-                                        List<CardInput> cards) {
+    public record UpdateCardDeckCommand(UUID worldId, UUID deckId, UUID categoryId, String title,
+                                        String description, List<CardInput> cards) {
     }
 }

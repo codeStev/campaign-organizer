@@ -23,6 +23,7 @@ public final class RollTableWebDtos {
     }
 
     public record RollTableRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String title,
             @Size(max = 4000) String description,
             @NotBlank @Size(max = 100) String diceExpression,
@@ -36,6 +37,7 @@ public final class RollTableWebDtos {
     public record RollTableResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             String title,
             String description,
             String diceExpression,

@@ -15,6 +15,7 @@ import com.campaignorganizer.tables.application.carddeck.port.in.UpdateCardDeckU
 import com.campaignorganizer.tables.application.carddeck.port.out.CardDeckRepositoryPort;
 import com.campaignorganizer.tables.application.carddeck.port.out.WorldExistsPort;
 import com.campaignorganizer.tables.application.rolltable.port.out.RollTableRepositoryPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
@@ -37,16 +38,18 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     private final CardDeckRepositoryPort decks;
     private final RollTableRepositoryPort rollTables;
     private final WorldExistsPort worlds;
+    private final TableDeckCategoryQueryPort categories;
     private final CardDeckViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public CardDeckService(CardDeckRepositoryPort decks, RollTableRepositoryPort rollTables,
-                           WorldExistsPort worlds,
+                           WorldExistsPort worlds, TableDeckCategoryQueryPort categories,
                            CardDeckViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.decks = decks;
         this.rollTables = rollTables;
         this.worlds = worlds;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -56,10 +59,11 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     @Transactional
     public CardDeckView create(CreateCardDeckCommand command) {
         requireWorld(command.worldId());
+        validateCategory(command.worldId(), command.categoryId());
         UUID deckId = ids.newId();
         List<DeckCard> cards = toCards(command.cards());
         validateNestedRefs(deckId, cards, command.worldId());
-        CardDeck created = CardDeck.create(deckId, command.worldId(), command.title(),
+        CardDeck created = CardDeck.create(deckId, command.worldId(), command.categoryId(), command.title(),
                 command.description(), cards, clock.instant());
         return viewMapper.toView(decks.save(created));
     }
@@ -67,10 +71,11 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     @Override
     @Transactional
     public CardDeckView update(UpdateCardDeckCommand command) {
+        validateCategory(command.worldId(), command.categoryId());
         CardDeck deck = require(command.worldId(), command.deckId());
         List<DeckCard> cards = toCards(command.cards());
         validateNestedRefs(command.deckId(), cards, command.worldId());
-        deck.update(command.title(), command.description(), cards, clock.instant());
+        deck.update(command.categoryId(), command.title(), command.description(), cards, clock.instant());
         return viewMapper.toView(decks.save(deck));
     }
 
@@ -87,7 +92,7 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
         List<CardInput> cards = source.getCards().stream()
                 .map(c -> new CardInput(c.title(), c.body(), c.nestedTableIds(), c.nestedDeckIds()))
                 .toList();
-        return create(new CreateCardDeckCommand(worldId, source.getTitle() + " (copy)",
+        return create(new CreateCardDeckCommand(worldId, source.getCategoryId(), source.getTitle() + " (copy)",
                 source.getDescription(), cards));
     }
 
@@ -140,7 +145,7 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
                         .map(c -> new DeckCard(c.id(), c.title(), c.body(),
                                 c.nestedTableIds(), c.nestedDeckIds()))
                         .toList();
-        CardDeck deck = CardDeck.reconstitute(view.id(), view.worldId(), view.title(),
+        CardDeck deck = CardDeck.reconstitute(view.id(), view.worldId(), view.categoryId(), view.title(),
                 view.description(), cards, view.createdAt(), view.updatedAt());
         return viewMapper.toView(decks.save(deck));
     }
@@ -186,6 +191,12 @@ public class CardDeckService implements CreateCardDeckUseCase, UpdateCardDeckUse
     private void requireWorld(UUID worldId) {
         if (!worlds.exists(worldId)) {
             throw new NotFoundException("World not found");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Category not found in this world");
         }
     }
 }

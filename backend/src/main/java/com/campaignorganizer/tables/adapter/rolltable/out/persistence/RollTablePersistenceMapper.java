@@ -22,6 +22,7 @@ public interface RollTablePersistenceMapper {
         return RollTable.reconstitute(
                 entity.getId(),
                 entity.getWorldId(),
+                entity.getCategoryId(),
                 entity.getTitle(),
                 entity.getDescription(),
                 entity.getDiceExpression(),

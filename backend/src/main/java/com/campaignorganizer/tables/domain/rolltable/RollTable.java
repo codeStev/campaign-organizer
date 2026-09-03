@@ -18,6 +18,7 @@ public final class RollTable {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private String title;
     private String description;
     private String diceExpression;
@@ -27,35 +28,37 @@ public final class RollTable {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private RollTable(UUID id, UUID worldId, String title, String description, String diceExpression,
-                      int minResult, int maxResult, List<RollTableEntry> entries,
+    private RollTable(UUID id, UUID worldId, UUID categoryId, String title, String description,
+                      String diceExpression, int minResult, int maxResult, List<RollTableEntry> entries,
                       Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(title, description, diceExpression, minResult, maxResult, entries);
     }
 
-    public static RollTable create(UUID id, UUID worldId, String title, String description,
+    public static RollTable create(UUID id, UUID worldId, UUID categoryId, String title, String description,
                                    String diceExpression, List<RollTableEntry> entries, Instant now) {
         DiceExpression.Range range = DiceExpression.range(diceExpression);
-        return new RollTable(id, worldId, title, description, diceExpression,
+        return new RollTable(id, worldId, categoryId, title, description, diceExpression,
                 range.min(), range.max(), entries, now, now);
     }
 
-    public static RollTable reconstitute(UUID id, UUID worldId, String title, String description,
+    public static RollTable reconstitute(UUID id, UUID worldId, UUID categoryId, String title, String description,
                                          String diceExpression, int minResult, int maxResult,
                                          List<RollTableEntry> entries, Instant createdAt,
                                          Instant updatedAt) {
-        return new RollTable(id, worldId, title, description, diceExpression, minResult, maxResult,
+        return new RollTable(id, worldId, categoryId, title, description, diceExpression, minResult, maxResult,
                 entries, createdAt, updatedAt);
     }
 
-    public void update(String title, String description, String diceExpression,
+    public void update(UUID categoryId, String title, String description, String diceExpression,
                        List<RollTableEntry> entries, Instant now) {
         DiceExpression.Range range = DiceExpression.range(diceExpression);
         apply(title, description, diceExpression, range.min(), range.max(), entries);
+        this.categoryId = categoryId;
         this.updatedAt = now;
     }
 
@@ -120,6 +123,10 @@ public final class RollTable {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public String getTitle() {

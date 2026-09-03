@@ -4,6 +4,7 @@ import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.tables.application.carddeck.port.out.CardDeckRepositoryPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryQueryPort;
 import com.campaignorganizer.tables.application.rolltable.port.in.CreateRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.DeleteRollTableUseCase;
 import com.campaignorganizer.tables.application.rolltable.port.in.DuplicateRollTableUseCase;
@@ -36,16 +37,18 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
     private final RollTableRepositoryPort tables;
     private final CardDeckRepositoryPort cardDecks;
     private final WorldExistsPort worlds;
+    private final TableDeckCategoryQueryPort categories;
     private final RollTableViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public RollTableService(RollTableRepositoryPort tables, CardDeckRepositoryPort cardDecks,
-                            WorldExistsPort worlds,
+                            WorldExistsPort worlds, TableDeckCategoryQueryPort categories,
                             RollTableViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.tables = tables;
         this.cardDecks = cardDecks;
         this.worlds = worlds;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -55,10 +58,11 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
     @Transactional
     public RollTableView create(CreateRollTableCommand command) {
         requireWorld(command.worldId());
+        validateCategory(command.worldId(), command.categoryId());
         UUID tableId = ids.newId();
         List<RollTableEntry> entries = toEntries(command.entries());
         validateNestedRefs(tableId, entries, command.worldId());
-        RollTable created = RollTable.create(tableId, command.worldId(), command.title(),
+        RollTable created = RollTable.create(tableId, command.worldId(), command.categoryId(), command.title(),
                 command.description(), command.diceExpression(), entries,
                 clock.instant());
         return viewMapper.toView(tables.save(created));
@@ -67,10 +71,11 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
     @Override
     @Transactional
     public RollTableView update(UpdateRollTableCommand command) {
+        validateCategory(command.worldId(), command.categoryId());
         RollTable table = require(command.worldId(), command.tableId());
         List<RollTableEntry> entries = toEntries(command.entries());
         validateNestedRefs(command.tableId(), entries, command.worldId());
-        table.update(command.title(), command.description(), command.diceExpression(),
+        table.update(command.categoryId(), command.title(), command.description(), command.diceExpression(),
                 entries, clock.instant());
         return viewMapper.toView(tables.save(table));
     }
@@ -89,7 +94,7 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
                 .map(e -> new EntryInput(e.minResult(), e.maxResult(), e.body(),
                         e.nestedTableIds(), e.nestedDeckIds()))
                 .toList();
-        return create(new CreateRollTableCommand(worldId, source.getTitle() + " (copy)",
+        return create(new CreateRollTableCommand(worldId, source.getCategoryId(), source.getTitle() + " (copy)",
                 source.getDescription(), source.getDiceExpression(), entries));
     }
 
@@ -142,7 +147,7 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
                         .map(e -> new RollTableEntry(e.id(), e.minResult(), e.maxResult(),
                                 e.body(), e.nestedTableIds(), e.nestedDeckIds()))
                         .toList();
-        RollTable table = RollTable.reconstitute(view.id(), view.worldId(), view.title(),
+        RollTable table = RollTable.reconstitute(view.id(), view.worldId(), view.categoryId(), view.title(),
                 view.description(), view.diceExpression(), view.minResult(), view.maxResult(),
                 entries, view.createdAt(), view.updatedAt());
         return viewMapper.toView(tables.save(table));
@@ -189,6 +194,12 @@ public class RollTableService implements CreateRollTableUseCase, UpdateRollTable
     private void requireWorld(UUID worldId) {
         if (!worlds.exists(worldId)) {
             throw new NotFoundException("World not found");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Category not found in this world");
         }
     }
 }

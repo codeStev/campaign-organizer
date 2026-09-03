@@ -19,6 +19,7 @@ public final class CardDeckWebDtos {
     }
 
     public record CardDeckRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String title,
             @Size(max = 4000) String description,
             @NotNull @Valid List<CardDto> cards) {
@@ -31,6 +32,7 @@ public final class CardDeckWebDtos {
     public record CardDeckResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             String title,
             String description,
             List<CardResponse> cards,
