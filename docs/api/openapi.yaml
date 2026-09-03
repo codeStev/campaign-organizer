@@ -44,6 +44,10 @@ tags:
     description: >-
       A world-scoped, reusable pool of players; campaign rosters, guest
       flags, and per-session attendance are exposed under campaigns (ADR-0091).
+  - name: beat-kinds
+    description: >-
+      A world-scoped, GM-defined catalog of named+colored beat kinds; an
+      arc beat can optionally be tagged with one (ADR-0101).
   - name: campaigns
     description: Gamemaster campaigns and their play sessions.
   - name: arcs
@@ -1027,6 +1031,116 @@ paths:
       responses:
         '204':
           description: Player deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/beat-kinds:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [beat-kinds]
+      summary: List a world's beat kinds
+      operationId: listBeatKinds
+      responses:
+        '200':
+          description: Beat kinds in the world.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BeatKind'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [beat-kinds]
+      summary: Create a beat kind in the world's catalog
+      operationId: createBeatKind
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatKindRequest'
+      responses:
+        '201':
+          description: Beat kind created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatKind'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A beat kind with that name already exists in this world.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/beat-kinds/{beatKindId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/BeatKindId'
+    get:
+      tags: [beat-kinds]
+      summary: Get a beat kind
+      operationId: getBeatKind
+      responses:
+        '200':
+          description: The beat kind.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatKind'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [beat-kinds]
+      summary: Rename or recolor a beat kind
+      operationId: updateBeatKind
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatKindRequest'
+      responses:
+        '200':
+          description: Beat kind updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatKind'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A beat kind with that name already exists in this world.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags: [beat-kinds]
+      summary: Delete a beat kind (un-tags any beats that used it)
+      operationId: deleteBeatKind
+      responses:
+        '204':
+          description: Beat kind deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -4099,6 +4213,14 @@ components:
       schema:
         type: string
         format: uuid
+    BeatKindId:
+      name: beatKindId
+      in: path
+      required: true
+      description: Identifier of the beat kind.
+      schema:
+        type: string
+        format: uuid
     LooseThreadId:
       name: threadId
       in: path
@@ -5221,6 +5343,10 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional session where this beat occurred.
+        kindId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional GM-defined beat kind tag (ADR-0101), informational only.
         position:
           type: [integer, "null"]
 
@@ -5269,6 +5395,10 @@ components:
         sessionId:
           type: [string, "null"]
           format: uuid
+        kindId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional GM-defined beat kind tag (ADR-0101), informational only.
         position:
           type: integer
         createdAt:
@@ -5299,6 +5429,39 @@ components:
           format: uuid
         name:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BeatKindRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        color:
+          type: [string, "null"]
+          maxLength: 20
+
+    BeatKind:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time

@@ -17,6 +17,7 @@ public record ArcBeatView(
         List<UUID> tableIds,
         List<UUID> deckIds,
         UUID sessionId,
+        UUID kindId,
         int position,
         Instant createdAt,
         Instant updatedAt) {

@@ -21,6 +21,7 @@ public final class BeatWebDtos {
             List<UUID> tableIds,
             List<UUID> deckIds,
             UUID sessionId,
+            UUID kindId,
             Integer position) {
 
         public boolean doneOrDefault() {
@@ -60,6 +61,7 @@ public final class BeatWebDtos {
             List<UUID> tableIds,
             List<UUID> deckIds,
             UUID sessionId,
+            UUID kindId,
             int position,
             Instant createdAt,
             Instant updatedAt) {

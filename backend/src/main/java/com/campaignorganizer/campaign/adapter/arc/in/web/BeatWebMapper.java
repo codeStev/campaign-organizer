@@ -18,7 +18,7 @@ public interface BeatWebMapper {
         return new CreateBeatCommand(worldId, campaignId, arcId, request.title(), request.body(),
                 request.doneOrDefault(), request.articleIdsOrEmpty(), request.statblockIdsOrEmpty(),
                 request.encounterIdsOrEmpty(), request.tableIdsOrEmpty(), request.deckIdsOrEmpty(),
-                request.sessionId(), request.position());
+                request.sessionId(), request.kindId(), request.position());
     }
 
     default UpdateBeatCommand toUpdateCommand(UUID worldId, UUID campaignId, UUID arcId, UUID beatId,
@@ -26,6 +26,6 @@ public interface BeatWebMapper {
         return new UpdateBeatCommand(worldId, campaignId, arcId, beatId, request.title(), request.body(),
                 request.doneOrDefault(), request.articleIdsOrEmpty(), request.statblockIdsOrEmpty(),
                 request.encounterIdsOrEmpty(), request.tableIdsOrEmpty(), request.deckIdsOrEmpty(),
-                request.sessionId(), request.position());
+                request.sessionId(), request.kindId(), request.position());
     }
 }

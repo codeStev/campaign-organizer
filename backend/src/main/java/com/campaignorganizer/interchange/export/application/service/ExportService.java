@@ -3,6 +3,7 @@ package com.campaignorganizer.interchange.export.application.service;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindQueryPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockQueryPort;
 import com.campaignorganizer.campaign.application.encounter.port.published.EncounterQueryPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadQueryPort;
@@ -76,6 +77,7 @@ public class ExportService implements ExportWorldUseCase {
     private final SessionAttendanceQueryPort sessionAttendance;
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
+    private final BeatKindQueryPort beatKinds;
     private final FieldTemplateQueryPort fieldTemplates;
     private final GameSystemQueryPort gameSystems;
     private final GlobalFieldTemplateQueryPort globalFieldTemplates;
@@ -100,7 +102,7 @@ public class ExportService implements ExportWorldUseCase {
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                          PlayerQueryPort players, CampaignPlayerQueryPort campaignPlayers,
                          SessionQueryPort sessions, SessionAttendanceQueryPort sessionAttendance,
-                         ArcQueryPort arcs, ArcBeatQueryPort beats,
+                         ArcQueryPort arcs, ArcBeatQueryPort beats, BeatKindQueryPort beatKinds,
                          FieldTemplateQueryPort fieldTemplates, GameSystemQueryPort gameSystems,
                          GlobalFieldTemplateQueryPort globalFieldTemplates,
                          CharacterSheetQueryPort characterSheets,
@@ -127,6 +129,7 @@ public class ExportService implements ExportWorldUseCase {
         this.sessionAttendance = sessionAttendance;
         this.arcs = arcs;
         this.beats = beats;
+        this.beatKinds = beatKinds;
         this.fieldTemplates = fieldTemplates;
         this.gameSystems = gameSystems;
         this.globalFieldTemplates = globalFieldTemplates;
@@ -213,6 +216,8 @@ public class ExportService implements ExportWorldUseCase {
         // Player pool (ADR-0091): world-scoped, reused across the world's campaigns.
         bundle.put("players", players.findByWorld(worldId));
         bundle.put("campaignPlayers", allCampaignPlayers);
+        // Beat kinds (FR-61, ADR-0101): world-scoped, reused across the world's arcs/beats.
+        bundle.put("beatKinds", beatKinds.findByWorld(worldId));
         // Session cheat sheets (FR-37): one per session, when present.
         List<CheatSheetView> cheatSheetViews = new ArrayList<>();
         // Session attendance (ADR-0091): zero or more rows per session.

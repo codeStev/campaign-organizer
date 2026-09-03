@@ -57,6 +57,10 @@ public class ArcBeatJpaEntity {
     @Column(name = "session_id")
     private UUID sessionId;
 
+    /** Optional GM-defined beat kind tag (ADR-0101), informational only. */
+    @Column(name = "kind_id")
+    private UUID kindId;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -140,6 +144,14 @@ public class ArcBeatJpaEntity {
 
     public void setSessionId(UUID sessionId) {
         this.sessionId = sessionId;
+    }
+
+    public UUID getKindId() {
+        return kindId;
+    }
+
+    public void setKindId(UUID kindId) {
+        this.kindId = kindId;
     }
 
     public String getTitle() {

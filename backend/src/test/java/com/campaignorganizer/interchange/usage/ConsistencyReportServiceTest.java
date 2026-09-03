@@ -129,7 +129,8 @@ class ConsistencyReportServiceTest {
 
     private ArcBeatView beat(String title, String body, List<UUID> articleIds) {
         return new ArcBeatView(UUID.randomUUID(), arcId, title, body, false,
-                articleIds, List.of(), List.of(), List.of(), List.of(), null, 0, Instant.EPOCH, Instant.EPOCH);
+                articleIds, List.of(), List.of(), List.of(), List.of(), null, null, 0, Instant.EPOCH,
+                Instant.EPOCH);
     }
 
     @Test

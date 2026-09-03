@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindImportPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
@@ -140,6 +142,8 @@ class ImportServiceTest {
     @Mock
     private ArcBeatImportPort arcBeatImportPort;
     @Mock
+    private BeatKindImportPort beatKindImportPort;
+    @Mock
     private WhiteboardImportPort whiteboardImportPort;
     @Mock
     private MediaImportPort mediaImportPort;
@@ -170,7 +174,8 @@ class ImportServiceTest {
                 mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
-                arcImportPort, fieldTemplateImportPort, gameSystemImportPort, globalFieldTemplateImportPort,
+                arcImportPort, beatKindImportPort, fieldTemplateImportPort, gameSystemImportPort,
+                globalFieldTemplateImportPort,
                 globalStatblockImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort, encounterImportPort,
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
@@ -513,7 +518,8 @@ class ImportServiceTest {
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", null,
                 List.of(), now, now)));
         bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
-                List.of(), List.of(), List.of(oldEncounterId), List.of(), List.of(), null, 0, now, now)));
+                List.of(), List.of(), List.of(oldEncounterId), List.of(), List.of(), null, null, 0, now,
+                now)));
         bundle.put("arcs", List.of(new ArcView(oldArcId, oldCampaignId, "Main Arc", null, "ACTIVE", 0,
                 now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
@@ -529,6 +535,46 @@ class ImportServiceTest {
         verify(arcBeatImportPort).importArcBeat(beatCaptor.capture());
         assertThat(beatCaptor.getValue().encounterIds()).hasSize(1)
                 .doesNotContain(oldEncounterId);
+    }
+
+    @Test
+    void remapsBeatKindId() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldArcId = UUID.randomUUID();
+        UUID oldBeatId = UUID.randomUUID();
+        UUID oldBeatKindId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, null, now, now)));
+        bundle.put("beatKinds", List.of(new BeatKindView(oldBeatKindId, oldWorldId, "Combat", "#ff0000",
+                now, now)));
+        bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
+                List.of(), List.of(), List.of(), List.of(), List.of(), null, oldBeatKindId, 0, now, now)));
+        bundle.put("arcs", List.of(new ArcView(oldArcId, oldCampaignId, "Main Arc", null, "ACTIVE", 0,
+                now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions",
+                "fieldTemplates", "characterSheets", "statblocks", "whiteboards", "encounters")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<BeatKindView> kindCaptor = ArgumentCaptor.forClass(BeatKindView.class);
+        verify(beatKindImportPort).importBeatKind(kindCaptor.capture());
+        assertThat(kindCaptor.getValue().id()).isNotEqualTo(oldBeatKindId);
+        assertThat(kindCaptor.getValue().worldId()).isNotEqualTo(oldWorldId);
+
+        ArgumentCaptor<ArcBeatView> beatCaptor = ArgumentCaptor.forClass(ArcBeatView.class);
+        verify(arcBeatImportPort).importArcBeat(beatCaptor.capture());
+        assertThat(beatCaptor.getValue().kindId()).isEqualTo(kindCaptor.getValue().id());
     }
 
     @Test

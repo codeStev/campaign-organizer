@@ -175,6 +175,37 @@ class BeatControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    private String beatKindId(String name) throws Exception {
+        return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/beat-kinds", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\",\"color\":\"#ff0000\"}"))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void linksBeatKindToBeat() throws Exception {
+        setup();
+        String combat = beatKindId("Combat");
+
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"The road ambush\",\"kindId\":\"" + combat + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.kindId").value(combat));
+    }
+
+    @Test
+    void rejectsBeatWithForeignBeatKind() throws Exception {
+        setup();
+        mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"kindId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void rejectsBeatWithForeignSession() throws Exception {
         setup();

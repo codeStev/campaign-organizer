@@ -4,6 +4,8 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImpo
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindImportPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerView;
@@ -112,6 +114,7 @@ public class ImportService implements ImportBackupUseCase {
     private final SessionImportPort sessionImportPort;
     private final SessionAttendanceImportPort sessionAttendanceImportPort;
     private final ArcImportPort arcImportPort;
+    private final BeatKindImportPort beatKindImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
     private final GameSystemImportPort gameSystemImportPort;
     private final GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
@@ -140,7 +143,8 @@ public class ImportService implements ImportBackupUseCase {
             CampaignImportPort campaignImportPort, PlayerImportPort playerImportPort,
             CampaignPlayerImportPort campaignPlayerImportPort, SessionImportPort sessionImportPort,
             SessionAttendanceImportPort sessionAttendanceImportPort,
-            ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
+            ArcImportPort arcImportPort, BeatKindImportPort beatKindImportPort,
+            FieldTemplateImportPort fieldTemplateImportPort,
             GameSystemImportPort gameSystemImportPort,
             GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
             GlobalStatblockImportPort globalStatblockImportPort,
@@ -168,6 +172,7 @@ public class ImportService implements ImportBackupUseCase {
         this.sessionImportPort = sessionImportPort;
         this.sessionAttendanceImportPort = sessionAttendanceImportPort;
         this.arcImportPort = arcImportPort;
+        this.beatKindImportPort = beatKindImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
         this.gameSystemImportPort = gameSystemImportPort;
         this.globalFieldTemplateImportPort = globalFieldTemplateImportPort;
@@ -226,6 +231,7 @@ public class ImportService implements ImportBackupUseCase {
         List<SessionAttendanceView> sessionAttendance =
                 readList(root, "sessionAttendance", SessionAttendanceView.class);
         List<ArcView> arcs = readList(root, "arcs", ArcView.class);
+        List<BeatKindView> beatKinds = readList(root, "beatKinds", BeatKindView.class);
         List<GameSystemView> gameSystems = readList(root, "gameSystems", GameSystemView.class);
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<GlobalFieldTemplateView> globalFieldTemplates =
@@ -267,6 +273,7 @@ public class ImportService implements ImportBackupUseCase {
         sessions.forEach(s -> remap.assign(s.id()));
         sessionAttendance.forEach(a -> remap.assign(a.id()));
         arcs.forEach(a -> remap.assign(a.id()));
+        beatKinds.forEach(k -> remap.assign(k.id()));
         fieldTemplates.forEach(f -> remap.assign(f.id()));
         characterSheets.forEach(s -> remap.assign(s.id()));
         documents.forEach(d -> remap.assign(d.id()));
@@ -379,6 +386,12 @@ public class ImportService implements ImportBackupUseCase {
         for (ArcView a : arcs) {
             arcImportPort.importArc(new ArcView(remap.get(a.id()), remap.get(a.campaignId()), a.title(),
                     a.description(), a.status(), a.position(), a.createdAt(), a.updatedAt()));
+        }
+
+        // Beat kinds (FR-61, ADR-0101): world-scoped, no other id references inside.
+        for (BeatKindView k : beatKinds) {
+            beatKindImportPort.importBeatKind(new BeatKindView(remap.get(k.id()), newWorldId, k.name(),
+                    k.color(), k.createdAt(), k.updatedAt()));
         }
 
         // Clocks (FR-48): campaign-scoped, no other id references inside.
@@ -520,7 +533,8 @@ public class ImportService implements ImportBackupUseCase {
             List<UUID> deckIds = b.deckIds() == null ? List.of() : b.deckIds().stream().map(remap::get).toList();
             arcBeatImportPort.importArcBeat(new ArcBeatView(remap.get(b.id()), remap.get(b.arcId()),
                     b.title(), b.body(), b.done(), articleIds, statblockIds, encounterIds, tableIds, deckIds,
-                    remap.getOrNull(b.sessionId()), b.position(), b.createdAt(), b.updatedAt()));
+                    remap.getOrNull(b.sessionId()), remap.getOrNull(b.kindId()), b.position(),
+                    b.createdAt(), b.updatedAt()));
         }
 
         for (WhiteboardView w : whiteboards) {

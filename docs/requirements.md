@@ -330,6 +330,11 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   brainstorming/sandbox space, distinct from a real campaign world. No
   functional effect: a scratch world is a full world in search, backup,
   and export alike. (ADR-0100)
+- **FR-61 Beat kinds.** A world-scoped, GM-defined catalog of named beat
+  kinds (name + color) — not a fixed enum — that a beat can optionally be
+  tagged with, rendering beats with their kind's color the way an arc's
+  beat list is meant to be scannable at a glance. Deleting a kind un-tags
+  any beats that used it rather than being blocked. (ADR-0101)
 
 ---
 

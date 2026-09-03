@@ -15,7 +15,7 @@ public interface ArcBeatViewMapper {
         return new ArcBeatView(beat.getId(), beat.getArcId(), beat.getTitle(), beat.getBody(),
                 beat.isDone(), List.copyOf(beat.getArticleIds()), List.copyOf(beat.getStatblockIds()),
                 List.copyOf(beat.getEncounterIds()), List.copyOf(beat.getTableIds()),
-                List.copyOf(beat.getDeckIds()), beat.getSessionId(), beat.getPosition(),
+                List.copyOf(beat.getDeckIds()), beat.getSessionId(), beat.getKindId(), beat.getPosition(),
                 beat.getCreatedAt(), beat.getUpdatedAt());
     }
 }
