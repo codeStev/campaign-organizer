@@ -1,9 +1,9 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–5 done**, Phase 5b (correction: five
-missed screens) up next, before Phase 7 can start. Living document —
-update it as phases complete or decisions change, rather than letting it
-drift out of sync with reality.
+Status: In progress — **Phases 1–5 and 5b done**, Phase 6 deferred by the
+user, so Phase 7 (Retirement) is next once one more mockup-fidelity pass
+feels warranted. Living document — update it as phases complete or
+decisions change, rather than letting it drift out of sync with reality.
 
 ## Context
 
@@ -252,7 +252,7 @@ implied by "Phase 4 done."
   `/next` route now renders real content — `NextStubPage` was dead code
   and got removed.
 
-### Phase 5b — Remaining reskins (correction, 2026-09-03)
+### Phase 5b — Remaining reskins (correction, 2026-09-03) ✅ done
 
 **Gap found while checking Phase 7's precondition** ("every screen has a
 confirmed-equivalent `/next` replacement"): the original phase list never
@@ -268,13 +268,30 @@ simple `{worldId, onOpenArticle?, onOpenStatblock?, onAuthExpired}`
 self-contained component (`PlayersPanel`, `TagBrowseView`, `SheetsView`,
 `TablesView`, `HandoutsView`), the same shape Whiteboards/Relations/
 Consistency already were.
-- **Players** — world-scoped player pool (FR-53), reuse as-is.
-- **Tags** — folksonomy cross-entity browse (FR-47), reuse as-is.
-- **Sheets** — character sheets/statblocks/documents/templates sub-tabs,
-  reuse as-is.
-- **Tables & Decks** — roll tables + card decks (FR-19, FR-40/41), reuse
-  as-is.
-- **Handouts** — player-facing printables (FR-46), reuse as-is.
+- ~~**Players**~~ — world-scoped player pool (FR-53), reused as-is.
+- ~~**Tags**~~ — folksonomy cross-entity browse (FR-47), reused as-is.
+- ~~**Sheets**~~ — character sheets/statblocks/documents/templates
+  sub-tabs, reused as-is.
+- ~~**Tables & Decks**~~ — roll tables + card decks (FR-19, FR-40/41),
+  reused as-is.
+- ~~**Handouts**~~ — player-facing printables (FR-46), reused as-is.
+
+**Second gap found while wiring these in**: every one of these reused
+views (plus Atlas and Whiteboards from Phase 2, plus Timelines/Calendars
+from Chronicle) hardcoded absolute `/worlds/{worldId}/...` navigate()
+calls, so clicking any list item under `/next` silently exited back to
+the old UI — a regression that had been live since Phase 2 without being
+caught by manual testing (clicking through to a *specific* list item was
+never part of the verification checklist, only "does the screen render").
+Fixed across all fourteen files by switching to React Router's
+path-relative navigation (`{ relative: 'path' }` — the default "route"
+mode doesn't do what it looks like it does for flat sibling routes;
+verified against `@remix-run/router`'s own source, not assumed). Also
+required replacing Chronicle's local-state tab switch with real nested
+routes, since Timelines/Calendars read their selection from the URL
+(ADR-0053) and a local tab had no URL segment for that to bind to.
+**Lesson for future phases**: "reuse as-is" verification needs to include
+clicking through to a specific list item, not just loading the list.
 
 ### Phase 6 — Deferred / needs its own design pass
 - **Hierarchical Atlas** — one or more world/region maps linking down to
