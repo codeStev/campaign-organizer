@@ -653,6 +653,13 @@ button:disabled {
   color: var(--destructive);
 }
 
+/* "✕" renders visibly heavier/larger than "+" at the same font-size (glyph
+   weight, not box size — both share the 1.1rem box above) — shrink it back
+   down so the two hover icons read as the same size. */
+.category-tree-action-destructive {
+  font-size: 0.8em;
+}
+
 /* Drag-and-drop (@dnd-kit/core): highlight a category row while an article
    is dragged over it, and a small floating chip that follows the pointer. */
 .category-tree-row.drop-over {
