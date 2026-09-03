@@ -13,6 +13,7 @@ import com.campaignorganizer.handouts.application.port.in.UpdateHandoutUseCase;
 import com.campaignorganizer.handouts.application.port.out.HandoutRepositoryPort;
 import com.campaignorganizer.handouts.application.port.out.SessionExistsPort;
 import com.campaignorganizer.handouts.application.port.out.WorldExistsPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
@@ -42,16 +43,18 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     private final HandoutRepositoryPort handouts;
     private final WorldExistsPort worlds;
     private final SessionExistsPort sessions;
+    private final HandoutCategoryQueryPort categories;
     private final HandoutViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public HandoutService(HandoutRepositoryPort handouts, WorldExistsPort worlds,
-                          SessionExistsPort sessions, HandoutViewMapper viewMapper,
-                          IdGenerator ids, Clock clock) {
+                          SessionExistsPort sessions, HandoutCategoryQueryPort categories,
+                          HandoutViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.handouts = handouts;
         this.worlds = worlds;
         this.sessions = sessions;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -62,8 +65,9 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     public HandoutView create(CreateHandoutCommand command) {
         requireWorld(command.worldId());
         requireSession(command.worldId(), command.sessionId());
-        Handout created = Handout.create(ids.newId(), command.worldId(), command.title(),
-                toPreset(command.preset()), command.body(), command.sessionId(),
+        validateCategory(command.worldId(), command.categoryId());
+        Handout created = Handout.create(ids.newId(), command.worldId(), command.categoryId(),
+                command.title(), toPreset(command.preset()), command.body(), command.sessionId(),
                 command.revealed(), clock.instant());
         return viewMapper.toView(handouts.save(created));
     }
@@ -72,8 +76,9 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     @Transactional
     public HandoutView update(UpdateHandoutCommand command) {
         requireSession(command.worldId(), command.sessionId());
+        validateCategory(command.worldId(), command.categoryId());
         Handout handout = require(command.worldId(), command.handoutId());
-        handout.update(command.title(), toPreset(command.preset()), command.body(),
+        handout.update(command.categoryId(), command.title(), toPreset(command.preset()), command.body(),
                 command.sessionId(), command.revealed(), clock.instant());
         return viewMapper.toView(handouts.save(handout));
     }
@@ -88,9 +93,9 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     @Transactional
     public HandoutView duplicate(UUID worldId, UUID handoutId) {
         Handout source = require(worldId, handoutId);
-        return create(new CreateHandoutCommand(worldId, source.getTitle() + " (copy)",
-                source.getPreset().name(), source.getBody(), source.getSessionId(),
-                source.isRevealed()));
+        return create(new CreateHandoutCommand(worldId, source.getCategoryId(),
+                source.getTitle() + " (copy)", source.getPreset().name(), source.getBody(),
+                source.getSessionId(), source.isRevealed()));
     }
 
     @Override
@@ -143,7 +148,7 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     @Override
     @Transactional
     public HandoutView importHandout(HandoutView view) {
-        Handout handout = Handout.reconstitute(view.id(), view.worldId(), view.title(),
+        Handout handout = Handout.reconstitute(view.id(), view.worldId(), view.categoryId(), view.title(),
                 toPreset(view.preset()), view.body(), view.sessionId(), view.sortOrder(),
                 view.revealed(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(handouts.save(handout));
@@ -191,6 +196,12 @@ public class HandoutService implements CreateHandoutUseCase, UpdateHandoutUseCas
     private void requireSession(UUID worldId, UUID sessionId) {
         if (sessionId != null && !sessions.existsInWorld(sessionId, worldId)) {
             throw new NotFoundException("Session not found");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Category not found in this world");
         }
     }
 }

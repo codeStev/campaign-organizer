@@ -15,6 +15,7 @@ public final class HandoutWebDtos {
     }
 
     public record HandoutRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String title,
             @NotNull String preset,
             String body,
@@ -29,6 +30,7 @@ public final class HandoutWebDtos {
     public record HandoutResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             String title,
             String preset,
             String body,

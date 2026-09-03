@@ -22,6 +22,9 @@ public class HandoutJpaEntity {
     @Column(name = "world_id", nullable = false, updatable = false)
     private UUID worldId;
 
+    @Column(name = "category_id")
+    private UUID categoryId;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -64,6 +67,14 @@ public class HandoutJpaEntity {
 
     public void setWorldId(UUID worldId) {
         this.worldId = worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getTitle() {
