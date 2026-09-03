@@ -1,0 +1,83 @@
+package com.campaignorganizer.handouts.adapter.out.persistence;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
+
+/** Persistence model for a handout category (maps the {@code handout_categories} table). */
+@Entity
+@Table(name = "handout_categories")
+public class HandoutCategoryJpaEntity {
+
+    @Id
+    private UUID id;
+
+    @Column(name = "world_id", nullable = false, updatable = false)
+    private UUID worldId;
+
+    @Column(name = "parent_id")
+    private UUID parentId;
+
+    @Column(nullable = false, length = 200)
+    private String name;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    protected HandoutCategoryJpaEntity() {
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public UUID getWorldId() {
+        return worldId;
+    }
+
+    public void setWorldId(UUID worldId) {
+        this.worldId = worldId;
+    }
+
+    public UUID getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(UUID parentId) {
+        this.parentId = parentId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}
