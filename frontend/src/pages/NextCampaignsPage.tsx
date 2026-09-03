@@ -2,21 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   campaignsApi,
-  articlesApi,
-  statblocksApi,
   gameSystemsApi,
-  encountersApi,
+  sessionsApi,
+  arcsApi,
   Campaign,
   CampaignStatus,
   CAMPAIGN_STATUSES,
-  ArticleSummary,
-  Statblock,
   GameSystem,
-  Encounter,
+  Session,
+  Arc,
   ApiError,
 } from '../api/client';
-import { SessionLog } from './SessionLog';
-import { ArcBoard } from './ArcBoard';
 import { ClockBoard } from './ClockBoard';
 import { RosterPanel } from '../components/RosterPanel';
 import { TodoListPanel } from '../components/TodoListPanel';
@@ -31,34 +27,29 @@ import { PromptDialog } from '../components/PromptDialog';
 
 interface Props {
   worldId: string;
-  onOpenArticle: (id: string) => void;
   onAuthExpired: () => void;
 }
 
 /**
- * Campaigns workspace (docs/ui-overhaul-plan.md Phase 5) — the mockup's
- * biggest single consolidation: Campaigns + Sessions + Beats + roster/
- * attendance + session todos + cheat sheet + print shortcuts, one screen.
- * Structurally near-identical to the old UI's CampaignsView (same
- * sub-components: SessionLog, ArcBoard, ClockBoard, RosterPanel,
- * TodoListPanel — all already self-contained and reused unchanged), with
- * two differences: a Chronicle link (new), and no embedded EncounterBoard
- * — Encounters got its own /next nav entry, so this page only keeps the
- * `encounters` list needed for ArcBoard's "+ link encounter" beat picker.
+ * Campaigns dashboard (docs/ui-overhaul-plan.md Phase 5, trimmed per
+ * ADR-0105 follow-up): Clocks, Roster, and campaign-standing Todos live
+ * here — the things that are genuinely campaign-level, not session- or
+ * arc-specific. Sessions and Story Arcs moved to their own screens
+ * (NextSessionsPage/NextArcsPage) with their own per-entity detail view;
+ * this page only shows a compact, read-only, dashboard-style summary of
+ * each (title + a link), matching the mockup's "at a glance" framing
+ * rather than the old SessionLog/ArcBoard's full inline management UI.
  */
-export function NextCampaignsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
+export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const { campaignId: urlCampaignId } = useParams<{ campaignId: string }>();
   const api = useMemo(() => campaignsApi(worldId), [worldId]);
-  const articleApi = useMemo(() => articlesApi(worldId), [worldId]);
-  const statblockApi = useMemo(() => statblocksApi(worldId), [worldId]);
   const [list, setList] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Campaign | null>(null);
-  const [articles, setArticles] = useState<ArticleSummary[]>([]);
-  const [statblocks, setStatblocks] = useState<Statblock[]>([]);
   const [systems, setSystems] = useState<GameSystem[]>([]);
-  const [encounters, setEncounters] = useState<Encounter[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [arcs, setArcs] = useState<Arc[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,10 +75,8 @@ export function NextCampaignsPage({ worldId, onOpenArticle, onAuthExpired }: Pro
 
   useEffect(() => {
     void refresh();
-    articleApi.list().then(setArticles).catch(handleError);
-    statblockApi.list().then(setStatblocks).catch(handleError);
     gameSystemsApi.list().then(setSystems).catch(() => {});
-  }, [refresh, articleApi, statblockApi, handleError]);
+  }, [refresh, handleError]);
 
   function select(campaign: Campaign) {
     setSelected(campaign);
@@ -95,21 +84,17 @@ export function NextCampaignsPage({ worldId, onOpenArticle, onAuthExpired }: Pro
     setNotesDirty(false);
   }
 
-  // Encounters are campaign-scoped (ADR-0097); still needed here for
-  // ArcBoard's "+ link encounter" beat picker, even though the full
-  // EncounterBoard editor now lives on its own /next nav entry.
-  const refreshEncounters = useCallback(() => {
-    if (!selected) return;
-    encountersApi(worldId, selected.id)
-      .list()
-      .then(setEncounters)
-      .catch(handleError);
-  }, [worldId, selected, handleError]);
-
+  // Compact dashboard summary only — full session/arc management lives on
+  // their own screens now.
   useEffect(() => {
-    refreshEncounters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, selected?.id]);
+    if (!selected) {
+      setSessions([]);
+      setArcs([]);
+      return;
+    }
+    sessionsApi(worldId, selected.id).list().then(setSessions).catch(handleError);
+    arcsApi(worldId, selected.id).list().then(setArcs).catch(handleError);
+  }, [worldId, selected, handleError]);
 
   // The URL is the source of truth for which campaign is open (ADR-0053).
   useEffect(() => {
@@ -302,21 +287,62 @@ export function NextCampaignsPage({ worldId, onOpenArticle, onAuthExpired }: Pro
 
             <div className="campaign-workspace">
               <div className="campaign-workspace-main">
-                <SessionLog
-                  worldId={worldId}
-                  campaignId={selected.id}
-                  campaignName={selected.name}
-                  onError={handleError}
-                />
-                <ArcBoard
-                  worldId={worldId}
-                  campaignId={selected.id}
-                  articles={articles}
-                  statblocks={statblocks}
-                  encounters={encounters}
-                  onOpenArticle={onOpenArticle}
-                  onError={handleError}
-                />
+                <section className="card">
+                  <div className="form-actions">
+                    <h3 style={{ margin: 0 }}>Sessions</h3>
+                    <span className="print-toolbar-spacer" />
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => navigate(`/next/worlds/${worldId}/sessions/${selected.id}`)}
+                    >
+                      Open →
+                    </Button>
+                  </div>
+                  <ul className="next-overview-list">
+                    {sessions.slice(0, 5).map((s) => (
+                      <li key={s.id}>
+                        <Button
+                          variant="link"
+                          onClick={() => navigate(`/next/worlds/${worldId}/sessions/${selected.id}/${s.id}`)}
+                        >
+                          {s.sessionNumber != null ? `#${s.sessionNumber} ` : ''}
+                          {s.title}
+                        </Button>
+                      </li>
+                    ))}
+                    {sessions.length === 0 && <li className="muted">No sessions logged yet.</li>}
+                  </ul>
+                </section>
+
+                <section className="card">
+                  <div className="form-actions">
+                    <h3 style={{ margin: 0 }}>Story arcs</h3>
+                    <span className="print-toolbar-spacer" />
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => navigate(`/next/worlds/${worldId}/arcs/${selected.id}`)}
+                    >
+                      Open →
+                    </Button>
+                  </div>
+                  <ul className="next-overview-list">
+                    {arcs.slice(0, 5).map((a) => (
+                      <li key={a.id}>
+                        <Button
+                          variant="link"
+                          onClick={() => navigate(`/next/worlds/${worldId}/arcs/${selected.id}/${a.id}`)}
+                        >
+                          <span className={`arc-status arc-${a.status.toLowerCase()}`}>{a.status.toLowerCase()}</span>{' '}
+                          {a.title}
+                        </Button>
+                      </li>
+                    ))}
+                    {arcs.length === 0 && <li className="muted">No arcs yet.</li>}
+                  </ul>
+                </section>
+
                 <ClockBoard worldId={worldId} campaignId={selected.id} onError={handleError} />
               </div>
 

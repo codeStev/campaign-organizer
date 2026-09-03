@@ -27,6 +27,8 @@ import { NextChroniclePage } from './NextChroniclePage';
 import { NextOverviewPage } from './NextOverviewPage';
 import { NextEncountersPage } from './NextEncountersPage';
 import { NextCampaignsPage } from './NextCampaignsPage';
+import { NextSessionsPage } from './NextSessionsPage';
+import { NextArcsPage } from './NextArcsPage';
 import { TableToolsDock } from '../components/TableToolsDock';
 import { NextMapsView } from './NextMapsView';
 import { NextWikiPage } from './NextWikiPage';
@@ -41,6 +43,8 @@ type Tab =
   | 'tags'
   | 'consistency'
   | 'campaigns'
+  | 'sessions'
+  | 'arcs'
   | 'encounters'
   | 'players'
   | 'sheets'
@@ -66,6 +70,8 @@ const TABS: { key: Tab; label: string; group: TabGroup }[] = [
   { key: 'tags', label: 'Tags', group: 'World' },
   { key: 'consistency', label: 'Consistency', group: 'World' },
   { key: 'campaigns', label: 'Campaigns', group: 'Play' },
+  { key: 'sessions', label: 'Sessions', group: 'Play' },
+  { key: 'arcs', label: 'Story Arcs', group: 'Play' },
   { key: 'encounters', label: 'Encounters', group: 'Play' },
   { key: 'players', label: 'Players', group: 'Play' },
   { key: 'sheets', label: 'Sheets', group: 'Play' },
@@ -198,11 +204,32 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             />
             <Route
               path="campaigns"
-              element={<NextCampaignsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+              element={<NextCampaignsPage worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="campaigns/:campaignId"
-              element={<NextCampaignsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+              element={<NextCampaignsPage worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route path="sessions" element={<NextSessionsPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
+            <Route
+              path="sessions/:campaignId"
+              element={<NextSessionsPage worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="sessions/:campaignId/:sessionId"
+              element={<NextSessionsPage worldId={worldId} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="arcs"
+              element={<NextArcsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="arcs/:campaignId"
+              element={<NextArcsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="arcs/:campaignId/:arcId"
+              element={<NextArcsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
             <Route path="encounters" element={<NextEncountersPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
