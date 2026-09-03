@@ -28,7 +28,7 @@ import { NextOverviewPage } from './NextOverviewPage';
 import { NextEncountersPage } from './NextEncountersPage';
 import { NextCampaignsPage } from './NextCampaignsPage';
 import { TableToolsDock } from '../components/TableToolsDock';
-import { MapsView } from './MapsView';
+import { NextMapsView } from './NextMapsView';
 import { NextWikiPage } from './NextWikiPage';
 import { NextPrintShopPage } from './NextPrintShopPage';
 
@@ -150,10 +150,10 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             />
             <Route path="wiki" element={<NextWikiPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route path="wiki/:articleId" element={<NextWikiPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
-            <Route path="atlas" element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />} />
+            <Route path="atlas" element={<NextMapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />} />
             <Route
               path="atlas/:mapId"
-              element={<MapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+              element={<NextMapsView worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="chronicle/*"
