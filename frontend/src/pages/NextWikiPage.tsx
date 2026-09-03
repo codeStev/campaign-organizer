@@ -1,10 +1,11 @@
 import { MouseEvent, useEffect, useState } from 'react';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { articlesApi, Article, ArticleSummary, ApiError } from '../api/client';
+import { articlesApi, articleTagsApi, Article, ArticleSummary, ApiError } from '../api/client';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Spinner } from '../components/ui/spinner';
 import { ArticleTreeItem } from './WorldView';
+import { TagList } from '../components/TagInput';
 
 interface Props {
   worldId: string;
@@ -28,6 +29,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [query, setQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [article, setArticle] = useState<Article | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const onError = (err: unknown) => {
@@ -51,9 +53,14 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   useEffect(() => {
     if (!articleId) {
       setArticle(null);
+      setTags([]);
       return;
     }
     articlesApi(worldId).get(articleId).then(setArticle).catch(onError);
+    articleTagsApi(worldId, articleId)
+      .get()
+      .then((t) => setTags(t.tags))
+      .catch(onError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, articleId]);
 
@@ -126,6 +133,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
             <div>
               <h3>{article.title}</h3>
               <small className="muted">{article.template.toLowerCase()}</small>
+              <TagList worldId={worldId} tags={tags} />
             </div>
             <Button variant="link" size="sm" asChild>
               <NavLink to={`/worlds/${worldId}/articles/${article.id}`}>Edit in current UI →</NavLink>
