@@ -687,6 +687,19 @@ button:disabled {
   border-top: 1px solid var(--border);
 }
 
+/* Selected tag filter chip (additive/OR): filled instead of outlined.
+   Compound selector (not a single class) so it isn't at the mercy of
+   .beat-chip/.tag-chip-link's cascade position later in this file. */
+.beat-chip.tag-chip-link.tag-chip-selected {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.beat-chip.tag-chip-link.tag-chip-selected:hover {
+  background: var(--primary);
+}
+
 .wiki-category-picker {
   display: flex;
   align-items: center;

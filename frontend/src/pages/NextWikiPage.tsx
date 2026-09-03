@@ -16,6 +16,7 @@ import {
   articleTagsApi,
   categoriesApi,
   worldTagsApi,
+  tagBrowseApi,
   Article,
   ArticleSummary,
   Category,
@@ -61,6 +62,8 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [article, setArticle] = useState<Article | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [worldTags, setWorldTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [tagMatchIds, setTagMatchIds] = useState<Set<string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null | undefined>(undefined);
   const [draggingArticle, setDraggingArticle] = useState<ArticleSummary | null>(null);
@@ -89,6 +92,30 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
+  // Additive (OR) tag filter: an article matches if it carries ANY selected
+  // tag. Resolved via tagBrowseApi per tag (union of results) rather than
+  // fetching every article's own tags — cheaper for the common case of a
+  // handful of tags selected against a much larger article list.
+  useEffect(() => {
+    if (selectedTags.size === 0) {
+      setTagMatchIds(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([...selectedTags].map((t) => tagBrowseApi(worldId).entities(t)))
+      .then((results) => {
+        if (cancelled) return;
+        const ids = new Set<string>();
+        for (const r of results) for (const a of r.articles) ids.add(a.id);
+        setTagMatchIds(ids);
+      })
+      .catch(onError);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, selectedTags]);
+
   useEffect(() => {
     if (!articleId) {
       setArticle(null);
@@ -111,8 +138,13 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     navigate(`/next/worlds/${worldId}/wiki/${id}`);
   }
 
-  function openTag(tag: string) {
-    navigate(`/next/worlds/${worldId}/tags/${encodeURIComponent(tag)}`);
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
   }
 
   function toggleExpanded(id: string) {
@@ -202,8 +234,42 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     return map;
   }, [categories]);
 
+  // Auto-expand the open article's category path — covers deep links (an
+  // Overview "recently edited" link, a wiki-link click) landing directly on
+  // wiki/:articleId with the tree otherwise fully collapsed, and re-runs
+  // whenever the open article's category changes (e.g. dragged elsewhere).
+  useEffect(() => {
+    if (!article) return;
+    if (!article.categoryId) {
+      setExpandedIds((prev) => (prev.has(UNCATEGORIZED_KEY) ? prev : new Set(prev).add(UNCATEGORIZED_KEY)));
+      return;
+    }
+    const toExpand: string[] = [];
+    let cur = categoryById.get(article.categoryId);
+    while (cur) {
+      toExpand.push(cur.id);
+      cur = cur.parentId ? categoryById.get(cur.parentId) : undefined;
+    }
+    if (toExpand.length === 0) return;
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const id of toExpand) {
+        if (!next.has(id)) {
+          next.add(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [article, categoryById]);
+
   const queryLc = query.trim().toLowerCase();
-  const matchingArticles = queryLc ? articles.filter((a) => a.title.toLowerCase().includes(queryLc)) : articles;
+  const matchingArticles = articles.filter((a) => {
+    if (queryLc && !a.title.toLowerCase().includes(queryLc)) return false;
+    if (tagMatchIds && !tagMatchIds.has(a.id)) return false;
+    return true;
+  });
 
   const articlesByCategory = useMemo(() => {
     const map = new Map<string, ArticleSummary[]>();
@@ -216,12 +282,13 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     return map;
   }, [matchingArticles]);
 
-  // Search filters the tree in place rather than replacing it with a flat
-  // list: a category shows only if it (or a descendant) has a match, and
-  // every visible category force-expands so results aren't hidden behind a
-  // collapsed toggle.
+  // Search and tag selection both filter the tree in place rather than
+  // replacing it with a flat list: a category shows only if it (or a
+  // descendant) has a match, and every visible category force-expands so
+  // results aren't hidden behind a collapsed toggle.
+  const filtering = queryLc.length > 0 || selectedTags.size > 0;
   const categoryHasMatch = useMemo(() => {
-    if (!queryLc) return null;
+    if (!filtering) return null;
     const has = new Set<string>();
     function walk(id: string): boolean {
       let found = (articlesByCategory.get(id) ?? []).length > 0;
@@ -233,7 +300,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     }
     for (const c of categories) walk(c.id);
     return has;
-  }, [queryLc, categories, childrenByCategory, articlesByCategory]);
+  }, [filtering, categories, childrenByCategory, articlesByCategory]);
 
   const rootCategories = (childrenByCategory.get(ROOT_KEY) ?? []).filter(
     (c) => !categoryHasMatch || categoryHasMatch.has(c.id),
@@ -296,7 +363,14 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
               <p className="eyebrow">Tags</p>
               <div className="beat-article-chips">
                 {worldTags.map((t) => (
-                  <button key={t} type="button" className="beat-chip tag-chip-link" onClick={() => openTag(t)}>
+                  <button
+                    key={t}
+                    type="button"
+                    className={
+                      selectedTags.has(t) ? 'beat-chip tag-chip-link tag-chip-selected' : 'beat-chip tag-chip-link'
+                    }
+                    onClick={() => toggleTag(t)}
+                  >
                     {t}
                   </button>
                 ))}
