@@ -1,9 +1,9 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–5, 5b, and 5c (mockup-fidelity polish) done**,
-Phase 6 deferred by the user, so Phase 7 (Retirement) is next. Living
-document — update it as phases complete or decisions change, rather than
-letting it drift out of sync with reality.
+Status: In progress — **Phases 1–5, 5b, 5c, and 5d done**, Phase 6 deferred
+by the user, so Phase 7 (Retirement) is next. Living document — update it as
+phases complete or decisions change, rather than letting it drift out of
+sync with reality.
 
 ## Context
 
@@ -362,6 +362,34 @@ reused everywhere in both UIs); Encounters' "Terrain & Stakes"/hazard-table
 cards (new domain concepts, not in the current `Encounter` model — would
 need an ADR + migration first, per this repo's Ground Rule 4); a true
 day-by-day Calendar grid (see above).
+
+### Phase 5d — Category taxonomies everywhere + full Wiki editor port ✅ done
+
+Two pieces of work, one ADR (ADR-0105), landed together since the second
+reused machinery the first built:
+
+- **Category taxonomies for Atlas, Handouts, Tables & Decks, and Sheets** —
+  the same `<CategoryTree>` pattern ADR-0104 proved for Wiki, extracted into
+  a shared `frontend/src/components/CategoryTree.tsx` and applied to the
+  four other screens still using a flat list or tab strip. Atlas and
+  Handouts each get their own taxonomy (separate from Wiki's, a deliberate
+  product choice); Tables & Decks share one tree across roll tables and card
+  decks; Sheets gets **one merged tree** across sheets/statblocks/documents/
+  templates, replacing its sub-tab strip entirely (`StatblocksPanel` keeps a
+  separate bulk-select section for print/encounter-builder, since that's a
+  genuinely different interaction from "pick one to open").
+- **Wiki article editor — full native port into `/next`.** `ArticleEditor.tsx`
+  lifts `WorldView.tsx`'s inline editor (title/template/parent/tags/body, AI
+  draft, revision history + diff, "Used by" usages) into a standalone
+  component, and `NextWikiPage.tsx` now has a real read/edit toggle plus a
+  "+ New article" trigger — no more "Edit in current UI →" link-out. This
+  was the last piece keeping Wiki specifically from meeting Phase 7's
+  precondition ("every screen has a confirmed-equivalent `/next`
+  replacement"). Frontend-only — every API the editor needs already existed.
+
+See ADR-0105 for the full per-screen rationale and the backend taxonomy
+tables (`map_categories`, `handout_categories`, `table_deck_categories`,
+`sheet_categories`).
 
 ### Phase 6 — Deferred / needs its own design pass
 - **Hierarchical Atlas** — one or more world/region maps linking down to
