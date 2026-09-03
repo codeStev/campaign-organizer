@@ -14,7 +14,6 @@ import {
   SidebarProvider,
 } from '../components/ui/sidebar';
 import { Button } from '../components/ui/button';
-import { NextStubPage } from '../components/NextStubPage';
 import { NextTopBar } from '../components/NextTopBar';
 import { RelationshipsView } from './RelationshipsView';
 import { ConsistencyView } from './ConsistencyView';
@@ -22,6 +21,7 @@ import { WhiteboardsView } from './WhiteboardsView';
 import { NextChroniclePage } from './NextChroniclePage';
 import { NextOverviewPage } from './NextOverviewPage';
 import { NextEncountersPage } from './NextEncountersPage';
+import { NextCampaignsPage } from './NextCampaignsPage';
 import { TableToolsDock } from '../components/TableToolsDock';
 import { MapsView } from './MapsView';
 import { NextWikiPage } from './NextWikiPage';
@@ -43,8 +43,9 @@ type TabGroup = 'World' | 'Play';
 /**
  * In-world /next nav (docs/ui-overhaul-plan.md Phase 1) — two groups, World
  * and Play, no separate Tools group (Consistency folds into World), per the
- * confirmed mockup-review decisions. Screens land real content phase by
- * phase (Phase 2 in progress); the rest stay NextStubPage placeholders.
+ * confirmed mockup-review decisions. Every tab now renders real content
+ * (Phases 2-5 landed one screen at a time); Print Shop below is the one
+ * bottom-pinned, ungrouped entry.
  */
 const TABS: { key: Tab; label: string; group: TabGroup }[] = [
   { key: 'overview', label: 'Overview', group: 'World' },
@@ -160,7 +161,14 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
                 />
               }
             />
-            <Route path="campaigns" element={<NextStubPage title="Campaigns" note="Phase 5 — richer session-prep workspace." />} />
+            <Route
+              path="campaigns"
+              element={<NextCampaignsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
+            <Route
+              path="campaigns/:campaignId"
+              element={<NextCampaignsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
+            />
             <Route path="encounters" element={<NextEncountersPage worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="encounters/:campaignId"
