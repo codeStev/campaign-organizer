@@ -187,10 +187,20 @@ export function articlesApi(worldId: string) {
   };
 }
 
+export interface CategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
 export function categoriesApi(worldId: string) {
   const base = `/worlds/${worldId}/categories`;
   return {
     list: () => request<Category[]>(base),
+    create: (body: CategoryRequest) =>
+      request<Category>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: CategoryRequest) =>
+      request<Category>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
