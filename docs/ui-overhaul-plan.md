@@ -1,6 +1,6 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–4 done**, Phase 5 up next. Living
+Status: In progress — **Phases 1–5 done**, Phase 6 up next. Living
 document — update it as phases complete or decisions change, rather than
 letting it drift out of sync with reality.
 
@@ -219,22 +219,37 @@ premise (and Ground Rule 4 would require its own ADR/FR/migration first
 regardless). Left as an explicit future FR if wanted, not silently
 implied by "Phase 4 done."
 
-### Phase 5 — Richer Campaigns workspace + Encounters
-- **Campaigns**: merge Campaigns + Sessions + Beats (now with `kind`
-  colors from Phase 3) + player roster/attendance + session todo + cheat
-  sheet + print shortcuts + a Chronicle link, into one workspace screen —
-  the mockup's biggest single consolidation.
-- **Encounters**: relocate the existing encounter builder (ADR-0097) into
-  its own `/next` nav entry with the statblock side panel, matching the
-  mockup — mostly reskin/relocation, encounter builder logic is recent
-  and already solid.
-- Also apply the **collapsing usage-count badge** convention here and
-  wherever else a screen currently lists individual reference chips for a
-  count (e.g. "3 beats staged" instead of three separate chips) — a
-  display-only pattern, apply during each screen's migration rather than
-  as a separate pass.
-- **Settings** reskin (existing AI/backup/access sections, visually
-  consolidated to match the mockup).
+### Phase 5 — Richer Campaigns workspace + Encounters ✅ done
+- ~~**Campaigns**~~: merges Campaigns + Sessions + Beats (now with `kind`
+  colors from Phase 3) + player roster/attendance + session todos + cheat
+  sheet + print shortcuts + a new Chronicle link, into one workspace
+  screen (`NextCampaignsPage.tsx`) — the mockup's biggest single
+  consolidation. Structurally a near-copy of the old UI's `CampaignsView`:
+  `SessionLog`/`ArcBoard`/`ClockBoard`/`RosterPanel`/`TodoListPanel` were
+  already self-contained and dropped in unchanged. Cheat sheet and print
+  shortcuts needed no separate work — `SessionLog` already provides both
+  per-session.
+- ~~**Encounters**~~: relocated the existing encounter builder (ADR-0097,
+  `EncounterBoard`, unchanged) to its own `/next` nav entry
+  (`NextEncountersPage.tsx`), with a campaign picker (encounters were only
+  reachable via one campaign's detail view before) and a statblock
+  reference panel beside the builder, mirroring `StatblocksPanel`'s
+  list-plus-detail layout. No longer embedded inline in the Campaigns
+  workspace — only the `encounters` list itself stays there, for
+  ArcBoard's beat-linking picker.
+- ~~**Collapsing usage-count badge**~~ applied to `ArcBoard`'s beat row:
+  statblock/encounter chips collapse to "N statblocks"/"N encounters"
+  badges (edit-mode chips, with remove buttons, are untouched). Shared by
+  both UIs since `ArcBoard` is one component, not duplicated.
+- ~~**Settings**~~ reskin (`NextSettingsPage.tsx`) — turned out to be
+  smaller than the mockup implied: only "AI" (FR-39) is a real settings
+  category today. Backup/import is a one-shot world action, not
+  configurable state, and there's no user-facing access/password setting
+  to reskin (ADR-0006: one env-configured password) — rather than
+  fabricate sections with nothing to configure, Settings links to the
+  worlds list (current UI) where backup/import already lives. Every
+  `/next` route now renders real content — `NextStubPage` was dead code
+  and got removed.
 
 ### Phase 6 — Deferred / needs its own design pass
 - **Hierarchical Atlas** — one or more world/region maps linking down to
