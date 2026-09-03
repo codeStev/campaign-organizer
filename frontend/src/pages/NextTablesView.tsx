@@ -776,8 +776,9 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <div className="editor-actions">
+        <div className="editor-actions sidebar-actions-wrap">
           <Button
+            size="sm"
             onClick={() => {
               setDraft({
                 ...EMPTY_DRAFT,
@@ -793,6 +794,7 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
             + New roll table
           </Button>
           <Button
+            size="sm"
             onClick={() => {
               setDraft({
                 ...EMPTY_DRAFT,

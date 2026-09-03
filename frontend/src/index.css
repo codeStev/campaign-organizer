@@ -859,6 +859,16 @@ button:disabled {
   gap: 1rem;
 }
 
+/* .editor-actions' row layout overflows a 260px sidebar column once it
+   holds more than one button of any real width (e.g. Tables & Decks'
+   "+ New roll table" / "+ New card deck" pair) — the buttons don't shrink
+   or clip, so they visually spill into (and float over) the main column
+   next to it. Wrap instead of overflowing. */
+.sidebar-actions-wrap {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .ai-draft-field {
   display: flex;
   flex-direction: column;
