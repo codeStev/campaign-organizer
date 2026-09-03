@@ -20,7 +20,7 @@ import { ConsistencyView } from './ConsistencyView';
 import { WhiteboardsView } from './WhiteboardsView';
 import { TagBrowseView } from './TagBrowseView';
 import { PlayersPanel } from './PlayersPanel';
-import { SheetsView } from './SheetsView';
+import { NextSheetsPage } from './NextSheetsPage';
 import { TablesView } from './TablesView';
 import { HandoutsView } from './HandoutsView';
 import { NextChroniclePage } from './NextChroniclePage';
@@ -212,14 +212,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
             <Route path="players" element={<PlayersPanel worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route
               path="sheets/*"
-              element={
-                <SheetsView
-                  worldId={worldId}
-                  onOpenArticle={openArticle}
-                  onAuthExpired={onAuthExpired}
-                  showDiceRoller={false}
-                />
-              }
+              element={<NextSheetsPage worldId={worldId} onOpenArticle={openArticle} onAuthExpired={onAuthExpired} />}
             />
             <Route path="whiteboards" element={<WhiteboardsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
             <Route

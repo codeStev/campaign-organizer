@@ -19,12 +19,11 @@ import {
   Campaign,
   ApiError,
 } from '../api/client';
-import { DiceRollerWidget } from '../components/DiceRollerWidget';
 import { CategoryTree } from '../components/CategoryTree';
-import { CharacterSheetsPanel } from './CharacterSheetsPanel';
-import { StatblocksPanel } from './StatblocksPanel';
-import { DocumentsPanel } from './DocumentsPanel';
-import { FieldTemplatesPanel } from './FieldTemplatesPanel';
+import { NextCharacterSheetsPanel } from './NextCharacterSheetsPanel';
+import { NextStatblocksPanel } from './NextStatblocksPanel';
+import { NextDocumentsPanel } from './NextDocumentsPanel';
+import { NextFieldTemplatesPanel } from './NextFieldTemplatesPanel';
 import { Button } from '../components/ui/button';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 
@@ -57,7 +56,7 @@ const KIND_ICON: Record<TreeItem['kind'], string> = {
 
 const KIND_SEGMENTS = ['characters', 'statblocks', 'documents', 'templates'];
 
-export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
+export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   // The last URL segment when it's an entity id, not a kind segment or the
@@ -218,7 +217,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   }
 
   const charactersPane = (
-    <CharacterSheetsPanel
+    <NextCharacterSheetsPanel
       worldId={worldId}
       templates={templates}
       globalTemplates={globalTemplates}
@@ -230,7 +229,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     />
   );
   const statblocksPane = (
-    <StatblocksPanel
+    <NextStatblocksPanel
       worldId={worldId}
       templates={templates}
       globalTemplates={globalTemplates}
@@ -240,7 +239,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     />
   );
   const documentsPane = (
-    <DocumentsPanel
+    <NextDocumentsPanel
       worldId={worldId}
       templates={templates}
       campaigns={campaigns}
@@ -249,7 +248,7 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     />
   );
   const templatesPane = (
-    <FieldTemplatesPanel
+    <NextFieldTemplatesPanel
       worldId={worldId}
       templates={templates}
       loading={loading}
@@ -261,7 +260,6 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <DiceRollerWidget onAuthExpired={onAuthExpired} />
         <div className="editor-actions">
           <Button size="sm" onClick={() => navigate('characters/new')}>
             + New sheet
