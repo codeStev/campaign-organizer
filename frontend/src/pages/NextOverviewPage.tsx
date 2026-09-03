@@ -96,7 +96,7 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
 
       <div className="next-overview-grid">
         <section className="card">
-          <h3>Recently edited</h3>
+          <h3 className="eyebrow">Recently edited</h3>
           {stats.recentlyEdited.length === 0 ? (
             <p className="muted">No articles yet.</p>
           ) : (
@@ -114,7 +114,7 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
         </section>
 
         <section className="card">
-          <h3>Clocks</h3>
+          <h3 className="eyebrow">Clocks</h3>
           {stats.openClocks.length === 0 ? (
             <p className="muted">No clocks in progress.</p>
           ) : (
@@ -140,7 +140,7 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
         </section>
 
         <section className="card">
-          <h3>Loose threads</h3>
+          <h3 className="eyebrow">Loose threads</h3>
           {stats.openLooseThreads.length === 0 ? (
             <p className="muted">Nothing open.</p>
           ) : (
