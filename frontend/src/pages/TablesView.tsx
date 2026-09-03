@@ -3,12 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   rollTablesApi,
   cardDecksApi,
+  tableDeckCategoriesApi,
   diceApi,
   articlesApi,
   RollTable,
   RollTableEntry,
   CardDeck,
   DeckCard,
+  TableDeckCategory,
   ApiError,
 } from '../api/client';
 import { diceRange, DiceRange } from '../lib/dice';
@@ -17,6 +19,7 @@ import { ArticleLinkPicker } from '../components/ArticleLinkPicker';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { CategoryTree } from '../components/CategoryTree';
 import { Button } from '../components/ui/button';
 import { Toggle } from '../components/ui/toggle';
 import { Spinner } from '../components/ui/spinner';
@@ -50,9 +53,13 @@ const emptyChains = { nestedTableIds: [], nestedDeckIds: [] };
 /** Which half of the tab the editor shows; the URL keeps it deep-linkable (FR-35). */
 type DraftKind = 'table' | 'deck';
 
+/** One row in the merged Tables & Decks category tree (ADR-0105). */
+type TreeItem = { kind: 'table'; entity: RollTable } | { kind: 'deck'; entity: CardDeck };
+
 interface Draft {
   kind: DraftKind;
   id: string | null;
+  categoryId: string | null;
   title: string;
   description: string;
   diceExpression: string;
@@ -63,6 +70,7 @@ interface Draft {
 const EMPTY_DRAFT: Draft = {
   kind: 'table',
   id: null,
+  categoryId: null,
   title: '',
   description: '',
   diceExpression: '',
@@ -74,6 +82,7 @@ function draftFromTable(t: RollTable): Draft {
   return {
     kind: 'table',
     id: t.id,
+    categoryId: t.categoryId ?? null,
     title: t.title,
     description: t.description ?? '',
     diceExpression: t.diceExpression,
@@ -92,6 +101,7 @@ function draftFromDeck(d: CardDeck): Draft {
   return {
     kind: 'deck',
     id: d.id,
+    categoryId: d.categoryId ?? null,
     title: d.title,
     description: d.description ?? '',
     diceExpression: '',
@@ -175,8 +185,10 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   }
   const tablesApi = useMemo(() => rollTablesApi(worldId), [worldId]);
   const decksApi = useMemo(() => cardDecksApi(worldId), [worldId]);
+  const categoriesApi = useMemo(() => tableDeckCategoriesApi(worldId), [worldId]);
   const [tables, setTables] = useState<RollTable[]>([]);
   const [decks, setDecks] = useState<CardDeck[]>([]);
+  const [categories, setCategories] = useState<TableDeckCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
@@ -223,19 +235,92 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const [t, d] = await Promise.all([tablesApi.list(), decksApi.list()]);
+      const [t, d, c] = await Promise.all([tablesApi.list(), decksApi.list(), categoriesApi.list()]);
       setTables(t);
       setDecks(d);
+      setCategories(c);
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
     }
-  }, [tablesApi, decksApi, handleError]);
+  }, [tablesApi, decksApi, categoriesApi, handleError]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  async function createCategory(name: string, parentId: string | null) {
+    try {
+      await categoriesApi.create({ name, parentId });
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function removeCategory(category: TableDeckCategory) {
+    try {
+      await categoriesApi.remove(category.id);
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // RollTable/CardDeck's list responses already carry every field an update
+  // needs, so this can update directly without a full-fetch-first step
+  // (mirrors Atlas/Handouts). categoryId must be threaded through explicitly
+  // in every update call below, or an unrelated edit would silently clobber it.
+  async function moveEntityToCategory(item: TreeItem, categoryId: string | null) {
+    if ((item.entity.categoryId ?? null) === categoryId) return;
+    try {
+      if (item.kind === 'table') {
+        const t = item.entity;
+        await tablesApi.update(t.id, {
+          categoryId,
+          title: t.title,
+          description: t.description ?? undefined,
+          diceExpression: t.diceExpression,
+          entries: t.entries.map((e) => ({
+            minResult: e.minResult ?? null,
+            maxResult: e.maxResult ?? null,
+            body: e.body,
+            nestedTableIds: e.nestedTableIds,
+            nestedDeckIds: e.nestedDeckIds,
+          })),
+        });
+      } else {
+        const d = item.entity;
+        await decksApi.update(d.id, {
+          categoryId,
+          title: d.title,
+          description: d.description ?? undefined,
+          cards: d.cards.map((c) => ({
+            title: c.title ?? undefined,
+            body: c.body,
+            nestedTableIds: c.nestedTableIds,
+            nestedDeckIds: c.nestedDeckIds,
+          })),
+        });
+      }
+      if (draft.kind === item.kind && draft.id === item.entity.id) {
+        setDraft((d) => ({ ...d, categoryId }));
+      }
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // Tables and decks merged into one category tree (ADR-0105), kind shown per row.
+  const treeItems: TreeItem[] = useMemo(
+    () => [
+      ...tables.map((entity): TreeItem => ({ kind: 'table', entity })),
+      ...decks.map((entity): TreeItem => ({ kind: 'deck', entity })),
+    ],
+    [tables, decks],
+  );
 
   function edit(kind: DraftKind, entity: RollTable | CardDeck) {
     setDraft(kind === 'table' ? draftFromTable(entity as RollTable) : draftFromDeck(entity as CardDeck));
@@ -593,6 +678,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         return;
       }
       const body = {
+        categoryId: draft.categoryId,
         title: draft.title,
         description: draft.description || undefined,
         diceExpression: draft.diceExpression,
@@ -626,6 +712,7 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
         return;
       }
       const body = {
+        categoryId: draft.categoryId,
         title: draft.title,
         description: draft.description || undefined,
         cards: draft.cards.map((c) => ({
@@ -689,71 +776,62 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Button
-          onClick={() => {
-            setDraft({
-              ...EMPTY_DRAFT,
-              kind: 'table',
-              entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
-            });
-            setRoll(null);
-            setMode('edit');
-            goToList();
+        <div className="editor-actions">
+          <Button
+            onClick={() => {
+              setDraft({
+                ...EMPTY_DRAFT,
+                kind: 'table',
+                entries: [{ minResult: '', maxResult: '', body: '', ...emptyChains }],
+              });
+              setRoll(null);
+              setMode('edit');
+              goToList();
+            }}
+            data-testid="new-table-button"
+          >
+            + New roll table
+          </Button>
+          <Button
+            onClick={() => {
+              setDraft({
+                ...EMPTY_DRAFT,
+                kind: 'deck',
+                entries: [],
+                cards: [{ title: '', body: '', ...emptyChains }],
+              });
+              setDrawnIndex(null);
+              setMode('edit');
+              goToList();
+            }}
+            data-testid="new-deck-button"
+          >
+            + New card deck
+          </Button>
+        </div>
+        <CategoryTree
+          categories={categories}
+          entities={treeItems}
+          entityId={(i) => i.entity.id}
+          entityLabel={(i) => i.entity.title}
+          entityCategoryId={(i) => i.entity.categoryId ?? null}
+          activeEntityId={draft.id}
+          onOpenEntity={(id) => {
+            const item = treeItems.find((i) => i.entity.id === id);
+            if (item) goToEntity(item.kind, id);
           }}
-          data-testid="new-table-button"
-        >
-          + New roll table
-        </Button>
-        <ul className="article-list">
-          {tables.map((t) => (
-            <li key={t.id}>
-              <button
-                className={
-                  draft.kind === 'table' && draft.id === t.id ? 'article-link active' : 'article-link'
-                }
-                onClick={() => goToEntity('table', t.id)}
-              >
-                <TruncatedLabel label={t.title}>🎲 {t.title}</TruncatedLabel>
-                <small className="muted">
-                  {t.diceExpression} · {t.entries.length} entries
-                </small>
-              </button>
-            </li>
-          ))}
-          {!loading && tables.length === 0 && <li className="muted">No roll tables yet.</li>}
-        </ul>
-        <Button
-          onClick={() => {
-            setDraft({
-              ...EMPTY_DRAFT,
-              kind: 'deck',
-              entries: [],
-              cards: [{ title: '', body: '', ...emptyChains }],
-            });
-            setDrawnIndex(null);
-            setMode('edit');
-            goToList();
-          }}
-          data-testid="new-deck-button"
-        >
-          + New card deck
-        </Button>
-        <ul className="article-list">
-          {decks.map((d) => (
-            <li key={d.id}>
-              <button
-                className={
-                  draft.kind === 'deck' && draft.id === d.id ? 'article-link active' : 'article-link'
-                }
-                onClick={() => goToEntity('deck', d.id)}
-              >
-                <TruncatedLabel label={d.title}>🃏 {d.title}</TruncatedLabel>
-                <small className="muted">{d.cards.length} cards</small>
-              </button>
-            </li>
-          ))}
-          {!loading && decks.length === 0 && <li className="muted">No card decks yet.</li>}
-        </ul>
+          onMoveEntity={(item, categoryId) => void moveEntityToCategory(item, categoryId)}
+          onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
+          onRemoveCategory={(c) => void removeCategory(c)}
+          loading={loading}
+          searchPlaceholder="Search tables & decks…"
+          emptyLabel="No roll tables or card decks yet."
+          renderEntityRow={(i) => (
+            <TruncatedLabel label={i.entity.title}>
+              {i.kind === 'table' ? '🎲' : '🃏'} {i.entity.title}
+            </TruncatedLabel>
+          )}
+        />
       </aside>
 
       <div className="wiki-main">

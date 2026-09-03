@@ -177,12 +177,14 @@ test('deleting a table asks for confirmation, and Cancel backs out safely', asyn
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).not.toBeVisible();
   await page.reload();
-  await expect(page.locator('.article-link').filter({ hasText: 'Delete Me Table' })).toBeVisible();
+  // Deep-linked to this table's own route, so the category tree (ADR-0105)
+  // auto-expands its "Uncategorised" bucket to reveal the active entity.
+  await expect(page.locator('.category-tree-article').filter({ hasText: 'Delete Me Table' })).toBeVisible();
 
   // Confirming does delete it.
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await deleteTrigger.click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByRole('alertdialog')).not.toBeVisible();
-  await expect(page.locator('.article-link').filter({ hasText: 'Delete Me Table' })).toHaveCount(0);
+  await expect(page.locator('.category-tree-article').filter({ hasText: 'Delete Me Table' })).toHaveCount(0);
 });
