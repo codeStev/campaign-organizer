@@ -252,14 +252,14 @@ export function CalendarsView({ worldId, onAuthExpired }: Props) {
             </div>
             {draft.daysPerWeek && <p className="muted">{draft.daysPerWeek} days per week</p>}
             {draft.months.length > 0 ? (
-              <dl className="print-stats">
+              <div className="calendar-month-grid">
                 {draft.months.map((month, i) => (
-                  <div key={i} className="print-stat">
-                    <dt>{month.name}</dt>
-                    <dd>{month.days} days</dd>
+                  <div key={i} className="calendar-month-card">
+                    <strong>{month.name}</strong>
+                    <span className="muted">{month.days} days</span>
                   </div>
                 ))}
-              </dl>
+              </div>
             ) : (
               <p className="muted">(no months)</p>
             )}
