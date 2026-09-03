@@ -1104,23 +1104,50 @@ button:disabled {
 
 .timeline {
   list-style: none;
-  padding: 0;
+  padding: 0 0 0 1.5rem;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  position: relative;
+}
+
+/* Connecting line + dot markers (mockup fidelity): a vertical rail down the
+   left edge with a dot per event, matching the mockup's vertical-timeline
+   treatment. */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.4rem;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 2px;
+  background: var(--border);
 }
 
 .timeline-event {
+  position: relative;
   flex-direction: row;
   gap: 1rem;
   align-items: flex-start;
 }
 
+.timeline-event::before {
+  content: '';
+  position: absolute;
+  left: -1.35rem;
+  top: 1rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
 .timeline-date {
   min-width: 5rem;
   font-variant-numeric: tabular-nums;
-  color: var(--primary);
+  font-family: ui-monospace, 'SF Mono', 'Menlo', monospace;
+  color: var(--muted-foreground);
   font-weight: 600;
   padding-top: 0.1rem;
 }
@@ -1145,6 +1172,25 @@ button:disabled {
 
 .month-row input[type='number'] {
   width: 5rem;
+}
+
+/* Year-at-a-glance grid of month cards (mockup fidelity) — no per-day
+   events exist in this data model (a calendar only defines month names and
+   lengths), so this stays a grid of month summaries rather than a
+   day-by-day grid with invented event data. */
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.calendar-month-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 /* Tables & decks: highlight the row a roll or draw landed on (FR-40) */
