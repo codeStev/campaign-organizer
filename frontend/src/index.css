@@ -3207,16 +3207,28 @@ button:disabled {
   min-width: 2rem;
 }
 
-/* Handout list rows reuse the cheat-sheet's up/down reorder buttons. */
-.handout-list-row {
+/* Handout tree row (ADR-0105): label + reorder/reveal controls inline,
+   compact to match the category tree's dense rows. */
+.handout-tree-row-content {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
 }
 
-.handout-list-row .article-link {
-  flex: 1;
+.handout-tree-row-label {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handout-tree-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex: 0 0 auto;
 }
 
 .cheatsheet-order button {

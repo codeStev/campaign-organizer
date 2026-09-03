@@ -1,6 +1,16 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ApiError, handoutsApi, mediaApi, campaignsApi, sessionsApi, Handout, HandoutPreset } from '../api/client';
+import {
+  ApiError,
+  handoutsApi,
+  handoutCategoriesApi,
+  mediaApi,
+  campaignsApi,
+  sessionsApi,
+  Handout,
+  HandoutCategory,
+  HandoutPreset,
+} from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
@@ -9,9 +19,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
+import { CategoryTree } from '../components/CategoryTree';
 import { Toggle } from '../components/ui/toggle';
 import { toast } from 'sonner';
-import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Props {
@@ -28,6 +38,7 @@ const PRESETS: { value: HandoutPreset; label: string }[] = [
 
 const EMPTY_DRAFT = {
   id: null as string | null,
+  categoryId: null as string | null,
   title: '',
   preset: 'PARCHMENT' as HandoutPreset,
   body: '',
@@ -53,8 +64,10 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const { handoutId: urlHandoutId } = useParams<{ handoutId: string }>();
   const api = useMemo(() => handoutsApi(worldId), [worldId]);
+  const categoriesApi = useMemo(() => handoutCategoriesApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const [list, setList] = useState<Handout[]>([]);
+  const [categories, setCategories] = useState<HandoutCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [printing, setPrinting] = useState(false);
@@ -74,8 +87,9 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const all = await api.list();
+      const [all, cats] = await Promise.all([api.list(), categoriesApi.list()]);
       setList(all);
+      setCategories(cats);
       return all;
     } catch (err) {
       handleError(err);
@@ -83,7 +97,46 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [api, handleError]);
+  }, [api, categoriesApi, handleError]);
+
+  async function createHandoutCategory(name: string, parentId: string | null) {
+    try {
+      await categoriesApi.create({ name, parentId });
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function removeHandoutCategory(category: HandoutCategory) {
+    try {
+      await categoriesApi.remove(category.id);
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // Handout's list response already carries every field an update needs
+  // (unlike Article, there's no separate "summary vs full" split), so this
+  // can update directly without a full-fetch-first step (mirrors Atlas).
+  async function moveHandoutToCategory(h: Handout, categoryId: string | null) {
+    if ((h.categoryId ?? null) === categoryId) return;
+    try {
+      const updated = await api.update(h.id, {
+        categoryId,
+        title: h.title,
+        preset: h.preset,
+        body: h.body ?? null,
+        sessionId: h.sessionId ?? null,
+        revealed: h.revealed,
+      });
+      if (draft.id === updated.id) setDraft((d) => ({ ...d, categoryId: updated.categoryId ?? null }));
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
 
   useEffect(() => {
     void refresh();
@@ -117,6 +170,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
   function loadDraft(h: Handout) {
     setDraft({
       id: h.id,
+      categoryId: h.categoryId ?? null,
       title: h.title,
       preset: h.preset,
       body: h.body ?? '',
@@ -139,6 +193,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
   async function save(e: FormEvent) {
     e.preventDefault();
     const body = {
+      categoryId: draft.categoryId,
       title: draft.title,
       preset: draft.preset,
       body: draft.body || null,
@@ -176,6 +231,7 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
     if (draft.id === h.id) setDraft((d) => ({ ...d, revealed }));
     try {
       await api.update(h.id, {
+        categoryId: h.categoryId ?? null,
         title: h.title,
         preset: h.preset,
         body: h.body ?? null,
@@ -226,50 +282,65 @@ export function HandoutsView({ worldId, onAuthExpired }: Props) {
         >
           + New handout
         </Button>
-        <ul className="article-list">
-          {list.map((h, i) => (
-            <li key={h.id} className="handout-list-row">
-              <div className="cheatsheet-order">
-                <Button variant="link" onClick={() => void move(i, -1)} disabled={i === 0} title="Move up">
-                  ↑
-                </Button>
-                <Button
-                  variant="link"
-                  onClick={() => void move(i, 1)}
-                  disabled={i === list.length - 1}
-                  title="Move down"
-                >
-                  ↓
-                </Button>
+        <CategoryTree
+          categories={categories}
+          entities={list}
+          entityId={(h) => h.id}
+          entityLabel={(h) => h.title}
+          entityCategoryId={(h) => h.categoryId ?? null}
+          activeEntityId={urlHandoutId ?? null}
+          onOpenEntity={(id) => navigate(urlHandoutId ? `../${id}` : id, { relative: 'path' })}
+          onMoveEntity={(h, categoryId) => void moveHandoutToCategory(h, categoryId)}
+          onCreateCategory={(name, parentId) => void createHandoutCategory(name, parentId)}
+          onRemoveCategory={(c) => void removeHandoutCategory(c)}
+          loading={loading}
+          searchPlaceholder="Search handouts…"
+          emptyLabel="No handouts yet."
+          renderEntityRow={(h) => {
+            const i = list.findIndex((x) => x.id === h.id);
+            return (
+              <div className="handout-tree-row-content">
+                <TruncatedLabel label={h.title} className="handout-tree-row-label">
+                  {h.title}
+                </TruncatedLabel>
+                <span className="handout-tree-row-actions" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => void move(i, -1)}
+                    disabled={i <= 0}
+                    title="Move up"
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => void move(i, 1)}
+                    disabled={i < 0 || i === list.length - 1}
+                    title="Move down"
+                  >
+                    ↓
+                  </Button>
+                  <Toggle
+                    type="button"
+                    size="sm"
+                    pressed={h.revealed}
+                    onPressedChange={() => void toggleRevealed(h)}
+                    title={
+                      h.revealed
+                        ? 'Revealed to players — click to mark secret'
+                        : 'Not yet revealed — click to mark revealed'
+                    }
+                    aria-label="Revealed to players"
+                  >
+                    {h.revealed ? '👁' : '🔒'}
+                  </Toggle>
+                </span>
               </div>
-              <button
-                className={h.id === urlHandoutId ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(urlHandoutId ? `../${h.id}` : h.id, { relative: 'path' })}
-              >
-                <TruncatedLabel label={h.title}>{h.title}</TruncatedLabel>
-                <small className="muted">
-                  {PRESETS.find((p) => p.value === h.preset)?.label ?? h.preset}
-                </small>
-              </button>
-              <Toggle
-                type="button"
-                size="sm"
-                pressed={h.revealed}
-                onPressedChange={() => void toggleRevealed(h)}
-                title={h.revealed ? 'Revealed to players — click to mark secret' : 'Not yet revealed — click to mark revealed'}
-                aria-label="Revealed to players"
-              >
-                {h.revealed ? '👁' : '🔒'}
-              </Toggle>
-            </li>
-          ))}
-          {loading && (
-            <li className="muted loading-row">
-              <Spinner /> Loading…
-            </li>
-          )}
-          {!loading && list.length === 0 && <li className="muted">No handouts yet.</li>}
-        </ul>
+            );
+          }}
+        />
       </aside>
 
       <div className="wiki-main">
