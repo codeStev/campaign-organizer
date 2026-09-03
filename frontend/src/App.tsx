@@ -131,7 +131,7 @@ function NextWorldViewRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
   if (!worldId || notFound) return <Navigate to="/next/worlds" replace />;
   if (!world) return <p className="muted">Loading…</p>;
 
-  return <WorldViewNext worldId={world.id} worldName={world.name} />;
+  return <WorldViewNext worldId={world.id} worldName={world.name} onAuthExpired={onAuthExpired} />;
 }
 
 /**
