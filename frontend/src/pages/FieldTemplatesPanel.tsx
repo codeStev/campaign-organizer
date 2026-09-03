@@ -202,13 +202,35 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
             <Button
               type="button"
               variant="link"
-              onClick={() => {
+              onClick={() => duplicate(previewing)}
+              title="Duplicate this template"
+            >
+              Duplicate
+            </Button>
+            {previewing.kind !== 'DOCUMENT' && (
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => promote(previewing)}
+                title="Promote to the global catalog, shared across every world"
+              >
+                Promote to global
+              </Button>
+            )}
+            <ConfirmDeleteDialog
+              trigger={
+                <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                  Delete
+                </Button>
+              }
+              title="Delete template?"
+              description={`This deletes "${previewing.name}". ${deleteConsequence(previewing)}`}
+              onConfirm={() => {
+                remove(previewing);
                 setPreviewing(null);
                 navigate('..', { relative: 'path' });
               }}
-            >
-              Back to list
-            </Button>
+            />
           </div>
         </div>
         <TemplateForm sections={previewing.sections} values={{}} onChange={() => {}} readOnly />
@@ -264,57 +286,14 @@ export function FieldTemplatesPanel({ worldId, templates, loading, onChanged, on
           Build new
         </Button>
       </div>
-
-      <ul className="article-list">
-        {templates.map((t) => (
-          <li key={t.id} className="rel-row">
-            <Button
-              variant="link"
-              className="template-open"
-              onClick={() => navigate(t.id)}
-            >
-              <strong>{t.name}</strong>{' '}
-              <small className="muted">
-                {KIND_LABEL[t.kind]} ·{' '}
-                {systemColor(t.systemId) && (
-                  <span className="system-color-dot" style={{ backgroundColor: systemColor(t.systemId)! }} />
-                )}
-                {systemName(t.systemId)} · {t.sections.length} sections
-              </small>
-            </Button>
-            <Button variant="link" onClick={() => duplicate(t)} title="Duplicate this template">
-              ⎘
-            </Button>
-            {t.kind !== 'DOCUMENT' && (
-              <Button
-                variant="link"
-                onClick={() => promote(t)}
-                title="Promote to the global catalog, shared across every world"
-              >
-                🌐
-              </Button>
-            )}
-            <ConfirmDeleteDialog
-              trigger={
-                <Button variant="link" className="text-destructive hover:text-destructive">
-                  ✕
-                </Button>
-              }
-              title="Delete template?"
-              description={`This deletes "${t.name}". ${deleteConsequence(t)}`}
-              onConfirm={() => remove(t)}
-            />
-          </li>
-        ))}
-        {loading && (
-          <li className="muted loading-row">
-            <Spinner /> Loading…
-          </li>
-        )}
-        {!loading && templates.length === 0 && (
-          <li className="muted">No templates yet. Add a starter or build one.</li>
-        )}
-      </ul>
+      {loading && (
+        <p className="muted loading-row">
+          <Spinner /> Loading…
+        </p>
+      )}
+      {!loading && templates.length === 0 && (
+        <p className="muted">No templates yet. Add a starter or build one, or pick one from the tree.</p>
+      )}
     </div>
   );
 }

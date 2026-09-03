@@ -47,6 +47,7 @@ interface Props {
   templates: FieldTemplate[];
   globalTemplates: GlobalFieldTemplate[];
   campaigns: Campaign[];
+  onChanged: () => void;
   onError: (err: unknown) => void;
 }
 
@@ -57,6 +58,7 @@ interface StatRow {
 
 interface Draft {
   id: string | null;
+  categoryId: string | null;
   name: string;
   notes: string;
   campaignId: string;
@@ -68,6 +70,7 @@ interface Draft {
 
 const EMPTY: Draft = {
   id: null,
+  categoryId: null,
   name: '',
   notes: '',
   campaignId: '',
@@ -107,7 +110,7 @@ function coerceRowValue(type: FieldType | undefined, raw: string): unknown {
   return raw;
 }
 
-export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns, onError }: Props) {
+export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns, onChanged, onError }: Props) {
   const navigate = useNavigate();
   const { statblockId: urlStatblockId } = useParams<{ statblockId: string }>();
   const api = useMemo(() => statblocksApi(worldId), [worldId]);
@@ -130,6 +133,8 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
   const [importOpen, setImportOpen] = useState(false);
   const [importCatalogId, setImportCatalogId] = useState('');
   const [importCampaignId, setImportCampaignId] = useState('');
+  // Statblocks-only bulk select for print/encounter (separate from picking one to open).
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
     gameSystemsApi.list().then(setSystems).catch(() => {});
@@ -146,6 +151,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
       setImportOpen(false);
       setImportCatalogId('');
       await refresh();
+      onChanged();
       navigate(urlStatblockId ? `../${copy.id}` : copy.id, { relative: 'path' });
       toast.success(`Imported "${copy.name}" into the campaign`);
     } catch (err) {
@@ -222,6 +228,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
   function edit(sb: Statblock, tags: string[] = []) {
     setDraft({
       id: sb.id,
+      categoryId: sb.categoryId ?? null,
       name: sb.name,
       notes: sb.notes ?? '',
       campaignId: sb.campaignId ?? '',
@@ -234,9 +241,21 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
     setMode('read');
   }
 
-  // The URL is the source of truth for which statblock is open (ADR-0053).
+  function newStatblock() {
+    setDraft({ ...EMPTY, campaignId: filterCampaign });
+    setSavedTags([]);
+    setMode('edit');
+    navigate(urlStatblockId ? '..' : '.', { relative: 'path' });
+  }
+
+  // The URL is the source of truth for which statblock is open (ADR-0053);
+  // "new" is a sentinel the sidebar's "+ New statblock" button navigates to.
   useEffect(() => {
     if (!urlStatblockId || urlStatblockId === draft.id) return;
+    if (urlStatblockId === 'new') {
+      newStatblock();
+      return;
+    }
     Promise.all([api.get(urlStatblockId), statblockTagsApi(worldId, urlStatblockId).get()])
       .then(([sb, t]) => edit(sb, t.tags))
       .catch(onError);
@@ -256,6 +275,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
       }
     }
     const body = {
+      categoryId: draft.categoryId,
       name: draft.name,
       stats,
       notes: draft.notes || null,
@@ -270,6 +290,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
       edit(saved, tagResult.tags);
       if (wasNew) navigate(saved.id);
       await refresh();
+      onChanged();
       loadWorldTags();
       toast.success(`Statblock "${body.name}" saved`);
     } catch (err) {
@@ -281,6 +302,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
     try {
       const copy = await api.duplicate(sb.id);
       await refresh();
+      onChanged();
       navigate(`../${copy.id}`, { relative: 'path' });
       toast.success(`Statblock "${copy.name}" created`);
     } catch (err) {
@@ -297,6 +319,7 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
         navigate('..', { relative: 'path' });
       }
       await refresh();
+      onChanged();
     } catch (err) {
       onError(err);
     }
@@ -307,24 +330,18 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
   }
 
   return (
-    <div className="sheets-panel">
-      <div className="sheets-list-col">
-        <Button
-          onClick={() => {
-            setDraft({ ...EMPTY, campaignId: filterCampaign });
-            setSavedTags([]);
-            setMode('edit');
-            navigate(urlStatblockId ? '..' : '.', { relative: 'path' });
-          }}
-        >
-          + New statblock
+    <div className="sheet-detail">
+      <div className="editor-actions">
+        <Button variant="outline" onClick={() => setBulkOpen((v) => !v)}>
+          {bulkOpen ? 'Hide bulk select' : '☑ Bulk select (print / encounter)'}
         </Button>
         {campaigns.length > 0 && catalog.length > 0 && (
           <Button variant="link" onClick={() => setImportOpen((v) => !v)}>
             Import from catalog
           </Button>
         )}
-        {importOpen && (
+      </div>
+      {importOpen && (
           <div className="import-catalog-picker">
             <Select value={importCatalogId || NONE_VALUE} onValueChange={(v) => setImportCatalogId(v === NONE_VALUE ? '' : v)}>
               <SelectTrigger>
@@ -373,97 +390,102 @@ export function StatblocksPanel({ worldId, templates, globalTemplates, campaigns
             </div>
           </div>
         )}
-        {campaigns.length > 0 && (
-          <Select
-            value={filterCampaign || NONE_VALUE}
-            onValueChange={(v) => setFilterCampaign(v === NONE_VALUE ? '' : v)}
-          >
-            <SelectTrigger title="Filter by campaign">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_VALUE}>All campaigns</SelectItem>
-              {campaigns.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {worldTags.length > 0 && (
-          <Select value={filterTag || NONE_VALUE} onValueChange={(v) => setFilterTag(v === NONE_VALUE ? '' : v)}>
-            <SelectTrigger title="Filter by tag">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_VALUE}>All tags</SelectItem>
-              {worldTags.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {list.length > 0 && (
-          <div className="statblock-print-bar">
-            <Button
-              variant="link"
-              onClick={() => setCardsOpen(true)}
-              title={
-                selected.size
-                  ? 'Print the ticked statblocks as cut-out cards'
-                  : 'Print all listed statblocks as cut-out cards'
-              }
-            >
-              🖨 Print {selected.size ? `${selected.size} card${selected.size > 1 ? 's' : ''}` : 'cards'}
-            </Button>
-            <Button
-              variant="link"
-              onClick={() => setEncounterOpen(true)}
-              title={
-                selected.size
-                  ? 'Build a combat tracker from the ticked statblocks'
-                  : 'Build a combat tracker from all listed statblocks'
-              }
-            >
-              ⚔ Encounter
-            </Button>
-            {selected.size > 0 && (
-              <Button variant="link" onClick={() => setSelected(new Set())}>
-                Clear
-              </Button>
+      {bulkOpen && (
+        <div className="card statblock-bulk-select">
+          <div className="editor-actions">
+            {campaigns.length > 0 && (
+              <Select
+                value={filterCampaign || NONE_VALUE}
+                onValueChange={(v) => setFilterCampaign(v === NONE_VALUE ? '' : v)}
+              >
+                <SelectTrigger title="Filter by campaign">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>All campaigns</SelectItem>
+                  {campaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {worldTags.length > 0 && (
+              <Select value={filterTag || NONE_VALUE} onValueChange={(v) => setFilterTag(v === NONE_VALUE ? '' : v)}>
+                <SelectTrigger title="Filter by tag">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>All tags</SelectItem>
+                  {worldTags.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
-        )}
-        <ul className="article-list">
-          {list.map((sb) => (
-            <li key={sb.id} className="statblock-row">
-              <Checkbox
-                className="statblock-check"
-                checked={selected.has(sb.id)}
-                onCheckedChange={() => toggleSelected(sb.id)}
-                title="Select for printing"
-              />
-              <button
-                className={sb.id === draft.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(urlStatblockId ? `../${sb.id}` : sb.id, { relative: 'path' })}
+          {list.length > 0 && (
+            <div className="statblock-print-bar">
+              <Button
+                variant="link"
+                onClick={() => setCardsOpen(true)}
+                title={
+                  selected.size
+                    ? 'Print the ticked statblocks as cut-out cards'
+                    : 'Print all listed statblocks as cut-out cards'
+                }
               >
-                <TruncatedLabel label={sb.name}>{sb.name}</TruncatedLabel>
-              </button>
-            </li>
-          ))}
-          {loading && (
-            <li className="muted loading-row">
-              <Spinner /> Loading…
-            </li>
+                🖨 Print {selected.size ? `${selected.size} card${selected.size > 1 ? 's' : ''}` : 'cards'}
+              </Button>
+              <Button
+                variant="link"
+                onClick={() => setEncounterOpen(true)}
+                title={
+                  selected.size
+                    ? 'Build a combat tracker from the ticked statblocks'
+                    : 'Build a combat tracker from all listed statblocks'
+                }
+              >
+                ⚔ Encounter
+              </Button>
+              {selected.size > 0 && (
+                <Button variant="link" onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              )}
+            </div>
           )}
-          {!loading && list.length === 0 && <li className="muted">No statblocks yet.</li>}
-        </ul>
-      </div>
+          <ul className="article-list">
+            {list.map((sb) => (
+              <li key={sb.id} className="statblock-row">
+                <Checkbox
+                  className="statblock-check"
+                  checked={selected.has(sb.id)}
+                  onCheckedChange={() => toggleSelected(sb.id)}
+                  title="Select for printing"
+                />
+                <button
+                  className={sb.id === draft.id ? 'article-link active' : 'article-link'}
+                  onClick={() => navigate(urlStatblockId ? `../${sb.id}` : sb.id, { relative: 'path' })}
+                >
+                  <TruncatedLabel label={sb.name}>{sb.name}</TruncatedLabel>
+                </button>
+              </li>
+            ))}
+            {loading && (
+              <li className="muted loading-row">
+                <Spinner /> Loading…
+              </li>
+            )}
+            {!loading && list.length === 0 && <li className="muted">No statblocks yet.</li>}
+          </ul>
+        </div>
+      )}
 
-      <div className="sheet-detail card">
+      <div className="card">
         {(mode === 'edit' || !draft.id) && (
           <>
             <Input

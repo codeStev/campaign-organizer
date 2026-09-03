@@ -23,10 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
-import { Spinner } from '../components/ui/spinner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
 // so a meaningfully persistent "none" state goes through this sentinel.
@@ -44,11 +42,13 @@ interface Props {
   articles: ArticleSummary[];
   campaigns: Campaign[];
   onOpenArticle: (id: string) => void;
+  onChanged: () => void;
   onError: (err: unknown) => void;
 }
 
 interface Draft {
   id: string | null;
+  categoryId: string | null;
   name: string;
   worldTemplateId: string;
   globalTemplateId: string;
@@ -64,16 +64,15 @@ export function CharacterSheetsPanel({
   articles,
   campaigns,
   onOpenArticle,
+  onChanged,
   onError,
 }: Props) {
   const navigate = useNavigate();
   const { sheetId: urlSheetId } = useParams<{ sheetId: string }>();
   const api = useMemo(() => characterSheetsApi(worldId), [worldId]);
-  const [sheets, setSheets] = useState<CharacterSheet[]>([]);
-  const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
-  // '' = all campaigns; a campaign id = only that party's sheets.
-  const [filterCampaign, setFilterCampaign] = useState('');
+  // The last-saved version of the open sheet, for the Cancel button to revert to.
+  const [saved, setSaved] = useState<CharacterSheet | null>(null);
   // Read (rendered values) vs edit (the form) — mirrors WorldView's article mode.
   const [mode, setMode] = useState<'read' | 'edit'>('read');
   const [systems, setSystems] = useState<GameSystem[]>([]);
@@ -90,20 +89,6 @@ export function CharacterSheetsPanel({
     return systems.find((s) => s.id === systemId)?.color ?? null;
   }
 
-  const refresh = useCallback(async () => {
-    try {
-      setSheets(await api.list(filterCampaign || undefined));
-    } catch (err) {
-      onError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [api, filterCampaign, onError]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
   const characterTemplates = templates.filter((t) => t.kind === 'CHARACTER');
   const globalCharacterTemplates = globalTemplates.filter((t) => t.kind === 'CHARACTER');
   const template =
@@ -118,13 +103,15 @@ export function CharacterSheetsPanel({
     }
     setDraft({
       id: null,
+      categoryId: null,
       name: '',
       worldTemplateId: characterTemplates[0]?.id ?? '',
       globalTemplateId: characterTemplates.length === 0 ? globalCharacterTemplates[0].id : '',
       articleId: '',
-      campaignId: filterCampaign, // default new sheets to the active campaign
+      campaignId: '',
       values: {},
     });
+    setSaved(null);
     setMode('edit');
     navigate(urlSheetId ? '..' : '.', { relative: 'path' });
   }
@@ -132,6 +119,7 @@ export function CharacterSheetsPanel({
   function toDraft(sheet: CharacterSheet): Draft {
     return {
       id: sheet.id,
+      categoryId: sheet.categoryId ?? null,
       name: sheet.name,
       worldTemplateId: sheet.worldTemplateId ?? '',
       globalTemplateId: sheet.globalTemplateId ?? '',
@@ -144,7 +132,9 @@ export function CharacterSheetsPanel({
   const open = useCallback(
     async (id: string) => {
       try {
-        setDraft(toDraft(await api.get(id)));
+        const sheet = await api.get(id);
+        setSaved(sheet);
+        setDraft(toDraft(sheet));
         setMode('read');
       } catch (err) {
         onError(err);
@@ -153,9 +143,14 @@ export function CharacterSheetsPanel({
     [api, onError],
   );
 
-  // The URL is the source of truth for which sheet is open (ADR-0053).
+  // The URL is the source of truth for which sheet is open (ADR-0053); "new"
+  // is a sentinel the sidebar's "+ New sheet" button navigates to.
   useEffect(() => {
     if (!urlSheetId || urlSheetId === draft?.id) return;
+    if (urlSheetId === 'new') {
+      newSheet();
+      return;
+    }
     void open(urlSheetId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlSheetId]);
@@ -164,6 +159,7 @@ export function CharacterSheetsPanel({
     if (!draft) return;
     const wasNew = !draft.id;
     const body = {
+      categoryId: draft.categoryId,
       name: draft.name,
       worldTemplateId: draft.worldTemplateId || null,
       globalTemplateId: draft.globalTemplateId || null,
@@ -172,11 +168,12 @@ export function CharacterSheetsPanel({
       values: draft.values,
     };
     try {
-      const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
-      setDraft(toDraft(saved));
+      const savedSheet = draft.id ? await api.update(draft.id, body) : await api.create(body);
+      setSaved(savedSheet);
+      setDraft(toDraft(savedSheet));
       setMode('read');
-      if (wasNew) navigate(saved.id);
-      await refresh();
+      if (wasNew) navigate(savedSheet.id);
+      onChanged();
       toast.success(`Character sheet "${body.name}" saved`);
     } catch (err) {
       onError(err);
@@ -188,8 +185,9 @@ export function CharacterSheetsPanel({
     try {
       await api.remove(draft.id);
       setDraft(null);
+      setSaved(null);
       navigate('..', { relative: 'path' });
-      await refresh();
+      onChanged();
     } catch (err) {
       onError(err);
     }
@@ -205,51 +203,8 @@ export function CharacterSheetsPanel({
   }
 
   return (
-    <div className="sheets-panel">
-      <div className="sheets-list-col">
-        <Button onClick={newSheet}>+ New sheet</Button>
-        {campaigns.length > 0 && (
-          <Select
-            value={filterCampaign || NONE_VALUE}
-            onValueChange={(v) => setFilterCampaign(v === NONE_VALUE ? '' : v)}
-          >
-            <SelectTrigger title="Filter by campaign">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_VALUE}>All campaigns</SelectItem>
-              {campaigns.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <ul className="article-list">
-          {sheets.map((s) => (
-            <li key={s.id}>
-              <button
-                className={s.id === draft?.id ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(urlSheetId ? `../${s.id}` : s.id, { relative: 'path' })}
-              >
-                <TruncatedLabel label={s.name}>{s.name}</TruncatedLabel>
-              </button>
-            </li>
-          ))}
-          {loading && (
-            <li className="muted loading-row">
-              <Spinner /> Loading…
-            </li>
-          )}
-          {!loading && sheets.length === 0 && (
-            <li className="muted">No character sheets yet.</li>
-          )}
-        </ul>
-      </div>
-
-      <div className="sheet-detail">
-        {!draft && <p className="muted">Select or create a character sheet.</p>}
+    <div className="sheet-detail">
+      {!draft && <p className="muted">Select or create a character sheet.</p>}
         {draft && mode === 'edit' && (
           <>
             <div className="sheet-head">
@@ -369,7 +324,6 @@ export function CharacterSheetsPanel({
                   type="button"
                   variant="link"
                   onClick={() => {
-                    const saved = sheets.find((s) => s.id === draft.id);
                     if (saved) setDraft(toDraft(saved));
                     setMode('read');
                   }}
@@ -432,7 +386,6 @@ export function CharacterSheetsPanel({
             )}
           </article>
         )}
-      </div>
     </div>
   );
 }
