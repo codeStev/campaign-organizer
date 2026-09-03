@@ -30,7 +30,6 @@ const SOURCE_LABELS: Record<BrokenLink['sourceType'], string> = {
  * reaches. Read-only lint; each finding links to where it can be fixed.
  */
 export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpired }: Props) {
-  const api = consistencyApi(worldId);
   const [report, setReport] = useState<ConsistencyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,13 +47,13 @@ export function ConsistencyView({ worldId, worldName, onOpenArticle, onAuthExpir
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setReport(await api.report());
+      setReport(await consistencyApi(worldId).report());
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
     }
-  }, [api, handleError]);
+  }, [worldId, handleError]);
 
   useEffect(() => {
     void refresh();
