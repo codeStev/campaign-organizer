@@ -448,6 +448,13 @@ button:disabled {
   gap: 0.75rem;
 }
 
+/* Mobile variant (TableToolsDock renders through a Sheet instead of the
+   fixed-width in-flow dock above) — the 300px inner width would overflow
+   the Sheet's own (viewport-relative) bounds on a narrow phone. */
+.table-tools-sheet .table-tools-dock-inner {
+  width: 100%;
+}
+
 .table-tools-dock-head {
   display: flex;
   align-items: center;
