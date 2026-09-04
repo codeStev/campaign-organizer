@@ -14,6 +14,11 @@ interface CampaignChildren {
   arcs: Arc[];
 }
 
+type RenameTarget =
+  | { kind: 'campaign'; campaign: Campaign }
+  | { kind: 'session'; campaignId: string; session: Session }
+  | { kind: 'arc'; campaignId: string; arc: Arc };
+
 /**
  * Nested campaign navigation for the /next sidebar (ADR-0105 follow-up):
  * Campaigns > [campaign] > Sessions/Story Arcs/Encounters > individual
@@ -40,6 +45,7 @@ export function CampaignNavTree({ worldId }: Props) {
   const [expandedKinds, setExpandedKinds] = useState<Set<string>>(new Set());
   const [children, setChildren] = useState<Map<string, CampaignChildren>>(new Map());
   const [newArcCampaignId, setNewArcCampaignId] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
 
   useEffect(() => {
     campaignsApi(worldId).list().then(setCampaigns).catch(() => {});
@@ -137,6 +143,71 @@ export function CampaignNavTree({ worldId }: Props) {
     }
   }
 
+  // Campaign's list response already carries every field its update needs,
+  // so this updates directly without a full-fetch-first step (mirrors
+  // CategoryTree's rename pattern for Atlas/Handouts/Tables & Decks).
+  async function renameCampaign(campaign: Campaign, newName: string) {
+    try {
+      await campaignsApi(worldId).update(campaign.id, {
+        name: newName,
+        description: campaign.description ?? null,
+        notes: campaign.notes ?? null,
+        status: campaign.status,
+        systemId: campaign.systemId ?? null,
+      });
+      setCampaigns((prev) => prev.map((c) => (c.id === campaign.id ? { ...c, name: newName } : c)));
+    } catch {
+      // Best-effort — the dialog just closes on failure.
+    }
+  }
+
+  async function renameSession(campaignId: string, session: Session, newTitle: string) {
+    try {
+      await sessionsApi(worldId, campaignId).update(session.id, {
+        title: newTitle,
+        sessionNumber: session.sessionNumber ?? null,
+        date: session.date ?? null,
+        summary: session.summary ?? null,
+        notes: session.notes ?? null,
+      });
+      setChildren((prev) => {
+        const existing = prev.get(campaignId);
+        if (!existing) return prev;
+        const next = new Map(prev);
+        next.set(campaignId, {
+          ...existing,
+          sessions: existing.sessions.map((s) => (s.id === session.id ? { ...s, title: newTitle } : s)),
+        });
+        return next;
+      });
+    } catch {
+      // Best-effort — the dialog just closes on failure.
+    }
+  }
+
+  async function renameArc(campaignId: string, arc: Arc, newTitle: string) {
+    try {
+      await arcsApi(worldId, campaignId).update(arc.id, {
+        title: newTitle,
+        description: arc.description ?? null,
+        status: arc.status,
+        position: arc.position,
+      });
+      setChildren((prev) => {
+        const existing = prev.get(campaignId);
+        if (!existing) return prev;
+        const next = new Map(prev);
+        next.set(campaignId, {
+          ...existing,
+          arcs: existing.arcs.map((a) => (a.id === arc.id ? { ...a, title: newTitle } : a)),
+        });
+        return next;
+      });
+    } catch {
+      // Best-effort — the dialog just closes on failure.
+    }
+  }
+
   return (
     <ul className="category-tree campaign-nav-tree">
       {campaigns.map((c) => {
@@ -148,24 +219,35 @@ export function CampaignNavTree({ worldId }: Props) {
         const arcsExpanded = expandedKinds.has(arcsKey);
         return (
           <li key={c.id}>
-            <div className="category-tree-row">
-              <button
-                type="button"
-                className="article-tree-toggle"
-                onClick={() => toggleCampaign(c.id)}
-                title={campaignExpanded ? 'Collapse' : 'Expand'}
-              >
-                {campaignExpanded ? '▾' : '▸'}
-              </button>
-              <NavLink
-                to={`campaigns/${c.id}`}
-                className={({ isActive }) =>
-                  isActive && match.section === 'campaigns' ? 'category-tree-article active' : 'category-tree-article'
-                }
-              >
-                <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
-              </NavLink>
-            </div>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <div className="category-tree-row">
+                  <button
+                    type="button"
+                    className="article-tree-toggle"
+                    onClick={() => toggleCampaign(c.id)}
+                    title={campaignExpanded ? 'Collapse' : 'Expand'}
+                  >
+                    {campaignExpanded ? '▾' : '▸'}
+                  </button>
+                  <NavLink
+                    to={`campaigns/${c.id}`}
+                    className={({ isActive }) =>
+                      isActive && match.section === 'campaigns'
+                        ? 'category-tree-article active'
+                        : 'category-tree-article'
+                    }
+                  >
+                    <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
+                  </NavLink>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onSelect={() => setRenameTarget({ kind: 'campaign', campaign: c })}>
+                  Rename campaign
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
             {campaignExpanded && (
               <ul className="article-list-nested">
                 <li>
@@ -212,17 +294,30 @@ export function CampaignNavTree({ worldId }: Props) {
                     <ul className="article-list-nested">
                       {(kids?.sessions ?? []).map((s) => (
                         <li key={s.id}>
-                          <NavLink
-                            to={`sessions/${c.id}/${s.id}`}
-                            className={({ isActive }) =>
-                              isActive ? 'category-tree-article active' : 'category-tree-article'
-                            }
-                          >
-                            <TruncatedLabel label={s.title}>
-                              {s.sessionNumber != null && <span className="session-num">#{s.sessionNumber} </span>}
-                              {s.title}
-                            </TruncatedLabel>
-                          </NavLink>
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <NavLink
+                                to={`sessions/${c.id}/${s.id}`}
+                                className={({ isActive }) =>
+                                  isActive ? 'category-tree-article active' : 'category-tree-article'
+                                }
+                              >
+                                <TruncatedLabel label={s.title}>
+                                  {s.sessionNumber != null && (
+                                    <span className="session-num">#{s.sessionNumber} </span>
+                                  )}
+                                  {s.title}
+                                </TruncatedLabel>
+                              </NavLink>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onSelect={() => setRenameTarget({ kind: 'session', campaignId: c.id, session: s })}
+                              >
+                                Rename
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         </li>
                       ))}
                       {kids && kids.sessions.length === 0 && <li className="muted">No sessions yet.</li>}
@@ -273,17 +368,30 @@ export function CampaignNavTree({ worldId }: Props) {
                     <ul className="article-list-nested">
                       {(kids?.arcs ?? []).map((a) => (
                         <li key={a.id}>
-                          <NavLink
-                            to={`arcs/${c.id}/${a.id}`}
-                            className={({ isActive }) =>
-                              isActive ? 'category-tree-article active' : 'category-tree-article'
-                            }
-                          >
-                            <TruncatedLabel label={a.title}>
-                              <span className={`arc-status arc-${a.status.toLowerCase()}`}>{a.status.toLowerCase()}</span>{' '}
-                              {a.title}
-                            </TruncatedLabel>
-                          </NavLink>
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <NavLink
+                                to={`arcs/${c.id}/${a.id}`}
+                                className={({ isActive }) =>
+                                  isActive ? 'category-tree-article active' : 'category-tree-article'
+                                }
+                              >
+                                <TruncatedLabel label={a.title}>
+                                  <span className={`arc-status arc-${a.status.toLowerCase()}`}>
+                                    {a.status.toLowerCase()}
+                                  </span>{' '}
+                                  {a.title}
+                                </TruncatedLabel>
+                              </NavLink>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onSelect={() => setRenameTarget({ kind: 'arc', campaignId: c.id, arc: a })}
+                              >
+                                Rename
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         </li>
                       ))}
                       {kids && kids.arcs.length === 0 && <li className="muted">No arcs yet.</li>}
@@ -324,6 +432,37 @@ export function CampaignNavTree({ worldId }: Props) {
           const campaignId = newArcCampaignId;
           setNewArcCampaignId(null);
           if (campaignId) void createArc(campaignId, title);
+        }}
+      />
+      <PromptDialog
+        open={renameTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRenameTarget(null);
+        }}
+        title={
+          renameTarget?.kind === 'campaign'
+            ? 'Rename campaign'
+            : renameTarget?.kind === 'session'
+              ? 'Rename session'
+              : 'Rename arc'
+        }
+        label="Name"
+        defaultValue={
+          renameTarget?.kind === 'campaign'
+            ? renameTarget.campaign.name
+            : renameTarget?.kind === 'session'
+              ? renameTarget.session.title
+              : renameTarget?.kind === 'arc'
+                ? renameTarget.arc.title
+                : ''
+        }
+        onSubmit={(name) => {
+          const target = renameTarget;
+          setRenameTarget(null);
+          if (!target) return;
+          if (target.kind === 'campaign') void renameCampaign(target.campaign, name);
+          else if (target.kind === 'session') void renameSession(target.campaignId, target.session, name);
+          else void renameArc(target.campaignId, target.arc, name);
         }}
       />
     </ul>
