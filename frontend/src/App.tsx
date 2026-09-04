@@ -7,6 +7,8 @@ import { WorldView } from './pages/WorldView';
 import { SettingsPage } from './pages/SettingsPage';
 import { GlobalTemplatesPanel } from './pages/GlobalTemplatesPanel';
 import { GlobalStatblocksPanel } from './pages/GlobalStatblocksPanel';
+import { NextGlobalTemplatesPanel } from './pages/NextGlobalTemplatesPanel';
+import { NextGlobalStatblocksPanel } from './pages/NextGlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
 import { WorldsNextPage } from './pages/WorldsNextPage';
 import { NextSettingsPage } from './pages/NextSettingsPage';
@@ -97,6 +99,7 @@ function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
             <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
+            <Route path="templates/*" element={<NextTemplatesPageRoute onAuthExpired={onAuthExpired} />} />
             <Route path="game-systems" element={<GameSystemsPage onAuthExpired={onAuthExpired} />} />
             <Route path="settings/*" element={<NextSettingsPage onAuthExpired={onAuthExpired} />} />
             <Route path="*" element={<Navigate to="/next/worlds" replace />} />
@@ -151,6 +154,24 @@ function TemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
       <Route
         path="statblocks/:globalStatblockId"
         element={<GlobalStatblocksPanel onAuthExpired={onAuthExpired} />}
+      />
+      <Route path="*" element={<Navigate to="global" replace />} />
+    </Routes>
+  );
+}
+
+/** /next's own version of TemplatesPageRoute (ADR-0106) — same route shape,
+ * pointing at NextGlobalTemplatesPanel/NextGlobalStatblocksPanel instead. */
+function NextTemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
+  return (
+    <Routes>
+      <Route index element={<Navigate to="global" replace />} />
+      <Route path="global" element={<NextGlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
+      <Route path="global/:globalTemplateId" element={<NextGlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
+      <Route path="statblocks" element={<NextGlobalStatblocksPanel onAuthExpired={onAuthExpired} />} />
+      <Route
+        path="statblocks/:globalStatblockId"
+        element={<NextGlobalStatblocksPanel onAuthExpired={onAuthExpired} />}
       />
       <Route path="*" element={<Navigate to="global" replace />} />
     </Routes>

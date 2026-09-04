@@ -15,16 +15,16 @@ import {
  * Worlds/Settings as flat entries, and a "Library" group for the
  * world-independent catalogs (Game Systems/Statblocks/Templates stay three
  * separate pages per ADR-0098, just grouped here under one label, matching
- * the reviewed mockup's framing without merging the pages themselves).
- * Game Systems has its own /next-chrome route (reuses GameSystemsPage
- * unchanged); Templates/Statblocks still link out to the old UI's shell —
- * same gap, not yet given a /next equivalent.
+ * the reviewed mockup's framing without merging the pages themselves). All
+ * three now have their own /next-chrome routes: Game Systems reuses
+ * GameSystemsPage unchanged; Templates/Statblocks route to
+ * NextGlobalTemplatesPanel/NextGlobalStatblocksPanel (ADR-0106).
  */
 const TOP_ITEMS = [{ to: '/next/worlds', label: 'Worlds', icon: '🌍' }];
 
 const LIBRARY_ITEMS = [
-  { to: '/templates/global', label: 'Templates', icon: '🧩' },
-  { to: '/templates/statblocks', label: 'Statblocks', icon: '📋' },
+  { to: '/next/templates/global', label: 'Templates', icon: '🧩' },
+  { to: '/next/templates/statblocks', label: 'Statblocks', icon: '📋' },
   { to: '/next/game-systems', label: 'Game Systems', icon: '🎲' },
 ];
 
