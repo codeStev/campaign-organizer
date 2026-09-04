@@ -1,13 +1,12 @@
 # UI overhaul migration plan
 
-Status: In progress — **Phases 1–5, 5b, 5c, 5d, and 5e done**, Phase 6
-deferred by the user. Phase 7 (Retirement)'s precondition — every screen has
-a confirmed-equivalent `/next` replacement, and (per Phase 5e/ADR-0106) each
-is now its own independent component, not a shared instance — is met; Phase
-7 itself hasn't started and needs an explicit go-ahead given its size (delete
-all of old UI, rewrite the Playwright suite, drop the `/next` prefix). Living
-document — update it as phases complete or decisions change, rather than
-letting it drift out of sync with reality.
+Status: **Done — Phases 1–5, 5b, 5c, 5d, 5e, and 7 complete**, Phase 6
+deferred by the user. Old UI has been retired: `AppShell`/`WorldView`/every
+old-UI-only page component and their routes are deleted, `/` redirects into
+`/next`, and both "try the new UI"/"back to current UI" escape hatches are
+gone. The `/next` URL prefix was deliberately kept (not promoted to root —
+see Phase 7 below for why). Living document — update it as phases complete
+or decisions change, rather than letting it drift out of sync with reality.
 
 ## Context
 
@@ -415,13 +414,41 @@ same `.card`/shadcn CSS vocabulary (ADR-0099).
   more specific location sub-maps. The user explicitly flagged this as
   "a feature I want later," not blocking the rest of the overhaul.
 
-### Phase 7 — Retirement
-Once every screen has a confirmed-equivalent `/next` replacement: delete
-the old `AppShell`/`WorldView`/old page components and their routes,
-rewrite the Playwright suite to target the (now-promoted) real paths
-instead of `/next/*`, drop the `/next` prefix (promote routes), remove the
-"try the new UI" escape hatch from both shells, update `CLAUDE.md` if the
-bounded-context/page map changed materially.
+### Phase 7 — Retirement ✅ done
+
+Two pieces of prep landed first, since old UI still had genuine
+dependents that would have broken outright:
+
+- **Six remaining shared components forked** (`GlobalTemplatesPanel`,
+  `GlobalStatblocksPanel`, `TimelinesView`, `CalendarsView`,
+  `EncounterBoard`, `PrintView` → their `Next*` equivalents, ADR-0106) —
+  these were still literally the same component instance mounted by both
+  `WorldView.tsx`/`CampaignsView.tsx` and their `/next` callers, missed by
+  Phase 5e's original sweep. `NextEncounterBoard` also dropped the old
+  expand/collapse accordion card pattern (already rejected for Story Arcs)
+  in favor of always-expanded cards.
+- **Closed the last `/next` navigation gap**: `AppSidebarNext`'s
+  Templates/Statblocks links pointed at old-UI-only routes; added
+  `NextTemplatesPageRoute` (mirroring the old `TemplatesPageRoute`) under
+  `/next/templates/*`.
+
+Then the actual retirement: deleted `AppShell`/`WorldView`/every old-UI-only
+page component (~25 files, see ADR-0106 and this phase's commits for the
+full list) and their routes from `App.tsx`; `/` and the top-level catch-all
+now redirect into `/next`; removed both "try the new UI"/"back to current
+UI" escape-hatch links; rewrote all 5 Playwright specs to target
+`/next/worlds/...` routes (`frontend/e2e/support.ts`'s shared `login()`
+helper now waits for `/next/worlds`). One real feature gap surfaced only at
+this point: `WorldsNextPage.tsx` had never gotten its own create/delete/
+browse-worlds functionality — it silently depended on the now-deleted old
+`WorldsPage.tsx` via a "Manage worlds (old UI) →" link. Ported that
+functionality directly into `WorldsNextPage.tsx` (backup/import already
+lived on `NextSettingsPage`, untouched).
+
+**Deliberately not done**: dropping the `/next` URL prefix (route
+promotion). Every route, nav link, and Playwright spec keeps the `/next/...`
+shape permanently — the prefix was never meaningfully "temporary," and
+removing it now would touch every route in the app for no functional gain.
 
 ## Verification per phase
 - `cd frontend && npm run build` (TS + Vite) after every change.
