@@ -24,7 +24,6 @@ import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
-import { TruncatedLabel } from '../components/TruncatedLabel';
 
 interface Props {
   worldId: string;
@@ -230,26 +229,11 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
 
   return (
     <div className="session-workspace-layout">
-      <aside className="wiki-sidebar">
+      <div className="wiki-main">
         {error && <p className="error">{error}</p>}
-        <p className="eyebrow">Campaigns</p>
-        <ul className="article-list">
-          {campaigns.map((c) => (
-            <li key={c.id}>
-              <button
-                className={c.id === urlCampaignId ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/next/worlds/${worldId}/sessions/${c.id}`)}
-              >
-                <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
-              </button>
-            </li>
-          ))}
-          {campaigns.length === 0 && <li className="muted">No campaigns yet.</li>}
-        </ul>
-
+        {!urlCampaignId && <p className="muted">Select a campaign from the sidebar to see its sessions.</p>}
         {urlCampaignId && (
-          <>
-            <p className="eyebrow">Sessions</p>
+          <div className="editor-actions">
             <Button
               className="sidebar-new-button"
               size="sm"
@@ -257,34 +241,16 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
             >
               + New session
             </Button>
-            <ul className="article-list">
-              {sessions.map((s) => (
-                <li key={s.id}>
-                  <button
-                    className={s.id === urlSessionId ? 'article-link active' : 'article-link'}
-                    onClick={() => navigate(`/next/worlds/${worldId}/sessions/${urlCampaignId}/${s.id}`)}
-                  >
-                    <TruncatedLabel label={s.title}>
-                      {s.sessionNumber != null && <span className="session-num">#{s.sessionNumber} </span>}
-                      {s.title}
-                    </TruncatedLabel>
-                  </button>
-                </li>
-              ))}
-              {loading && (
-                <li className="muted loading-row">
-                  <Spinner /> Loading…
-                </li>
-              )}
-              {!loading && sessions.length === 0 && <li className="muted">No sessions yet.</li>}
-            </ul>
-          </>
+          </div>
         )}
-      </aside>
-
-      <div className="wiki-main">
-        {!urlCampaignId && <p className="muted">Select a campaign to see its sessions.</p>}
-        {urlCampaignId && !draft && <p className="muted">Select a session from the list, or create a new one.</p>}
+        {loading && (
+          <p className="muted loading-row">
+            <Spinner /> Loading…
+          </p>
+        )}
+        {urlCampaignId && !loading && !draft && (
+          <p className="muted">Select a session from the sidebar, or create a new one.</p>
+        )}
 
         {draft && mode === 'edit' && (
           <div className="card">

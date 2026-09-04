@@ -507,15 +507,16 @@ button:disabled {
   min-width: 0;
 }
 
-/* Sessions/Arcs workspace (mockup's isCampaign view): campaign+entity list,
-   the open entity's detail, and a narrow right column for session-scoped
-   panels (attendance, loose threads) — three columns instead of Wiki's two. */
+/* Sessions workspace (mockup's isCampaign view): the open session's detail
+   plus a narrow right column for session-scoped panels (attendance, loose
+   threads). Campaign/session picking itself lives in the sidebar's
+   CampaignNavTree now, not a third column here. */
 .session-workspace-layout {
   display: grid;
   /* Right column matches .campaign-workspace-side's proven 320px — narrower
      and AttendancePanel's <table> (no table-layout:fixed) forces its own
      min-content width past the track, overflowing the whole page. */
-  grid-template-columns: 200px minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 1rem;
   align-items: start;
 }

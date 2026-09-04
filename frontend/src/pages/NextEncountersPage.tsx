@@ -1,20 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
-  campaignsApi,
   statblocksApi,
   fieldTemplatesApi,
   globalFieldTemplatesApi,
   encountersApi,
   ApiError,
-  Campaign,
   Statblock,
   FieldTemplate,
   GlobalFieldTemplate,
   Encounter,
 } from '../api/client';
 import { EncounterBoard } from './EncounterBoard';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Spinner } from '../components/ui/spinner';
 
 interface Props {
@@ -28,14 +25,11 @@ interface Props {
  * reference panel beside it (mirrors StatblocksPanel's list-plus-detail
  * layout) so a GM can eyeball the world's statblocks while building.
  * EncounterBoard itself is reused unchanged — "mostly reskin/relocation"
- * per the plan. Encounters are still campaign-scoped, so this page adds a
- * campaign picker the old UI didn't need (it lived inside one campaign's
- * detail view).
+ * per the plan. Campaign selection comes from the sidebar's CampaignNavTree
+ * (ADR-0105 follow-up), not a picker on this page.
  */
 export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
-  const navigate = useNavigate();
   const { campaignId } = useParams<{ campaignId: string }>();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [statblocks, setStatblocks] = useState<Statblock[]>([]);
   const [templates, setTemplates] = useState<FieldTemplate[]>([]);
   const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
@@ -48,14 +42,8 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      campaignsApi(worldId).list(),
-      statblocksApi(worldId).list(),
-      fieldTemplatesApi(worldId).list(),
-      globalFieldTemplatesApi.list(),
-    ])
-      .then(([c, s, t, g]) => {
-        setCampaigns(c);
+    Promise.all([statblocksApi(worldId).list(), fieldTemplatesApi(worldId).list(), globalFieldTemplatesApi.list()])
+      .then(([s, t, g]) => {
         setStatblocks(s);
         setTemplates(t);
         setGlobalTemplates(g);
@@ -64,14 +52,6 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
-
-  // Land on the first campaign once the list loads, if none is selected yet.
-  useEffect(() => {
-    if (!campaignId && campaigns.length > 0) {
-      navigate(campaigns[0].id, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId, campaigns]);
 
   const refreshEncounters = useCallback(() => {
     if (!campaignId) return;
@@ -94,19 +74,6 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
   return (
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
-        <Select value={campaignId} onValueChange={(v) => navigate(`../${v}`, { relative: 'path' })}>
-          <SelectTrigger>
-            <SelectValue placeholder="Pick a campaign…" />
-          </SelectTrigger>
-          <SelectContent>
-            {campaigns.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <h4>Statblocks</h4>
         <ul className="article-list article-list-scroll">
           {statblocks.map((s) => (
@@ -118,9 +85,7 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
         </ul>
       </aside>
 
-      {campaigns.length === 0 ? (
-        <p className="muted">No campaigns yet — create one in the current UI.</p>
-      ) : campaignId ? (
+      {campaignId ? (
         <EncounterBoard
           worldId={worldId}
           campaignId={campaignId}
@@ -132,7 +97,7 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
           onError={onError}
         />
       ) : (
-        <p className="muted">Pick a campaign.</p>
+        <p className="muted">Select a campaign from the sidebar to see its encounters.</p>
       )}
     </div>
   );

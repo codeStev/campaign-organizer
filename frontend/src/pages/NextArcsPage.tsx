@@ -5,7 +5,6 @@ import {
   beatsApi,
   beatKindsApi,
   sessionsApi,
-  campaignsApi,
   articlesApi,
   statblocksApi,
   encountersApi,
@@ -15,7 +14,6 @@ import {
   Beat,
   BeatKind,
   Session,
-  Campaign,
   ArticleSummary,
   Statblock,
   Encounter,
@@ -31,7 +29,6 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Badge } from '../components/ui/badge';
 import { Spinner } from '../components/ui/spinner';
 import { PromptDialog } from '../components/PromptDialog';
-import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 
 // Radix Select can't use "" as an item value (reserved for "no selection").
@@ -80,7 +77,6 @@ const EMPTY_BEAT_DRAFT: BeatDraft = {
 export function NextArcsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
   const navigate = useNavigate();
   const { campaignId: urlCampaignId, arcId: urlArcId } = useParams<{ campaignId?: string; arcId?: string }>();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [arcs, setArcs] = useState<Arc[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -101,7 +97,6 @@ export function NextArcsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
   );
 
   useEffect(() => {
-    campaignsApi(worldId).list().then(setCampaigns).catch(handleError);
     articlesApi(worldId).list().then(setArticles).catch(handleError);
     statblocksApi(worldId).list().then(setStatblocks).catch(handleError);
   }, [worldId, handleError]);
@@ -219,63 +214,27 @@ export function NextArcsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout">
-      <aside className="wiki-sidebar">
-        {error && <p className="error">{error}</p>}
-        <p className="eyebrow">Campaigns</p>
-        <ul className="article-list">
-          {campaigns.map((c) => (
-            <li key={c.id}>
-              <button
-                className={c.id === urlCampaignId ? 'article-link active' : 'article-link'}
-                onClick={() => navigate(`/next/worlds/${worldId}/arcs/${c.id}`)}
-              >
-                <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
-              </button>
-            </li>
-          ))}
-          {campaigns.length === 0 && <li className="muted">No campaigns yet.</li>}
-        </ul>
+    <div className="wiki-main">
+      {error && <p className="error">{error}</p>}
+      {!urlCampaignId && <p className="muted">Select a campaign from the sidebar to see its story arcs.</p>}
+      {urlCampaignId && (
+        <form className="editor-actions" onSubmit={addArc}>
+          <Input placeholder="New arc title" value={newArcTitle} onChange={(e) => setNewArcTitle(e.target.value)} />
+          <Button type="submit" size="sm" disabled={!newArcTitle}>
+            + New arc
+          </Button>
+        </form>
+      )}
+      {loading && (
+        <p className="muted loading-row">
+          <Spinner /> Loading…
+        </p>
+      )}
+      {urlCampaignId && !loading && !arc && (
+        <p className="muted">Select an arc from the sidebar, or create a new one.</p>
+      )}
 
-        {urlCampaignId && (
-          <>
-            <p className="eyebrow">Story arcs</p>
-            <ul className="article-list">
-              {arcs.map((a) => (
-                <li key={a.id}>
-                  <button
-                    className={a.id === urlArcId ? 'article-link active' : 'article-link'}
-                    onClick={() => navigate(`/next/worlds/${worldId}/arcs/${urlCampaignId}/${a.id}`)}
-                  >
-                    <TruncatedLabel label={a.title}>
-                      <span className={`arc-status arc-${a.status.toLowerCase()}`}>{a.status.toLowerCase()}</span>{' '}
-                      {a.title}
-                    </TruncatedLabel>
-                  </button>
-                </li>
-              ))}
-              {loading && (
-                <li className="muted loading-row">
-                  <Spinner /> Loading…
-                </li>
-              )}
-              {!loading && arcs.length === 0 && <li className="muted">No arcs yet.</li>}
-            </ul>
-            <form className="editor-actions" onSubmit={addArc}>
-              <Input placeholder="New arc title" value={newArcTitle} onChange={(e) => setNewArcTitle(e.target.value)} />
-              <Button type="submit" size="sm" disabled={!newArcTitle}>
-                Add
-              </Button>
-            </form>
-          </>
-        )}
-      </aside>
-
-      <div className="wiki-main">
-        {!urlCampaignId && <p className="muted">Select a campaign to see its story arcs.</p>}
-        {urlCampaignId && !arc && <p className="muted">Select an arc from the list, or create a new one.</p>}
-
-        {arc && (
+      {arc && (
           <div className="card">
             <div className="arc-head">
               <strong>{arc.title}</strong>
@@ -325,7 +284,6 @@ export function NextArcsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
             />
           </div>
         )}
-      </div>
     </div>
   );
 }
