@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { campaignsApi, Campaign, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
-import { PrintView } from './PrintView';
+import { NextPrintView } from './NextPrintView';
 
 interface Props {
   worldId: string;
@@ -13,11 +13,12 @@ interface Props {
 /**
  * Print Shop (docs/ui-overhaul-plan.md Phase 2) — one place to find every
  * print output, matching the reviewed mockup's intent. Only "Full
- * compendium" is a genuine aggregator here (it opens the existing
- * PrintView overlay as-is, no new print logic); the other three outputs
- * are scoped to screens not yet migrated (Campaigns/Sheets/Handouts), so
- * they link out to the old UI for now rather than a live inline preview —
- * that's a bigger, separate composition effort, not a rebuild-as-is.
+ * compendium" is a genuine aggregator here (it opens NextPrintView,
+ * ADR-0106's fork of PrintView, as an overlay — no new print logic); the
+ * other three outputs are scoped to screens with their own print flow
+ * (Sessions, Sheets, Handouts), so they link to that screen rather than a
+ * live inline preview here — that's a bigger, separate composition effort,
+ * not a rebuild-as-is.
  */
 export function NextPrintShopPage({ worldId, worldName, onAuthExpired }: Props) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -45,7 +46,7 @@ export function NextPrintShopPage({ worldId, worldName, onAuthExpired }: Props) 
       <p className="muted">Built for paper — every output opens in its own paper view, never the app chrome.</p>
       {error && <p className="error">{error}</p>}
       {printOpen && (
-        <PrintView
+        <NextPrintView
           worldId={worldId}
           worldName={worldName}
           campaigns={campaigns}
@@ -62,22 +63,22 @@ export function NextPrintShopPage({ worldId, worldName, onAuthExpired }: Props) 
         </li>
         <li className="rel-row">
           <Button variant="link" className="template-open" asChild>
-            <NavLink to={`/worlds/${worldId}/campaigns`}>
-              <strong>Session prep packet</strong> <small className="muted">old UI — from a campaign's session</small>
+            <NavLink to={`/next/worlds/${worldId}/sessions`}>
+              <strong>Session prep packet</strong> <small className="muted">from a campaign's session</small>
             </NavLink>
           </Button>
         </li>
         <li className="rel-row">
           <Button variant="link" className="template-open" asChild>
-            <NavLink to={`/worlds/${worldId}/sheets/statblocks`}>
-              <strong>Statblock cards</strong> <small className="muted">old UI — Sheets</small>
+            <NavLink to={`/next/worlds/${worldId}/sheets/statblocks`}>
+              <strong>Statblock cards</strong> <small className="muted">Sheets</small>
             </NavLink>
           </Button>
         </li>
         <li className="rel-row">
           <Button variant="link" className="template-open" asChild>
-            <NavLink to={`/worlds/${worldId}/handouts`}>
-              <strong>Player handouts</strong> <small className="muted">old UI — Handouts</small>
+            <NavLink to={`/next/worlds/${worldId}/handouts`}>
+              <strong>Player handouts</strong> <small className="muted">Handouts</small>
             </NavLink>
           </Button>
         </li>
