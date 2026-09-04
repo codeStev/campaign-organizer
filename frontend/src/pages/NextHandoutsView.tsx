@@ -237,11 +237,22 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
     }
   }
 
-  async function move(index: number, delta: number) {
+  // Reorder buttons act within one category grouping at a time (the tree
+  // visually groups handouts by category), not the flat world-wide list —
+  // otherwise "move up" on a handout that's merely first *within its
+  // category* could swap it into a different category's item entirely.
+  // The two siblings still swap positions in the full `list` sent to
+  // api.reorder (there's only one world-wide sortOrder), which moves them
+  // relative to each other without disturbing anyone else's order.
+  async function move(handout: Handout, delta: number) {
+    const categoryId = handout.categoryId ?? null;
+    const siblings = list.filter((h) => (h.categoryId ?? null) === categoryId);
+    const index = siblings.findIndex((h) => h.id === handout.id);
     const target = index + delta;
-    if (target < 0 || target >= list.length) return;
-    const next = [...list];
-    [next[index], next[target]] = [next[target], next[index]];
+    if (index < 0 || target < 0 || target >= siblings.length) return;
+    const a = siblings[index];
+    const b = siblings[target];
+    const next = list.map((h) => (h.id === a.id ? b : h.id === b.id ? a : h));
     setList(next);
     try {
       await api.reorder(next.map((h) => h.id));
@@ -352,7 +363,8 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
           searchPlaceholder="Search handouts…"
           emptyLabel="No handouts yet."
           renderEntityRow={(h) => {
-            const i = list.findIndex((x) => x.id === h.id);
+            const siblings = list.filter((x) => (x.categoryId ?? null) === (h.categoryId ?? null));
+            const i = siblings.findIndex((x) => x.id === h.id);
             return (
               <div className="handout-tree-row-content">
                 <TruncatedLabel label={h.title} className="handout-tree-row-label">
@@ -362,7 +374,7 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => void move(i, -1)}
+                    onClick={() => void move(h, -1)}
                     disabled={i <= 0}
                     title="Move up"
                   >
@@ -371,8 +383,8 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => void move(i, 1)}
-                    disabled={i < 0 || i === list.length - 1}
+                    onClick={() => void move(h, 1)}
+                    disabled={i < 0 || i === siblings.length - 1}
                     title="Move down"
                   >
                     ↓
