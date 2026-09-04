@@ -30,6 +30,7 @@ import { NextCampaignsPage } from './NextCampaignsPage';
 import { NextSessionsPage } from './NextSessionsPage';
 import { NextArcsPage } from './NextArcsPage';
 import { TableToolsDock } from '../components/TableToolsDock';
+import { CampaignNavTree } from '../components/CampaignNavTree';
 import { NextMapsView } from './NextMapsView';
 import { NextWikiPage } from './NextWikiPage';
 import { NextPrintShopPage } from './NextPrintShopPage';
@@ -43,9 +44,6 @@ type Tab =
   | 'tags'
   | 'consistency'
   | 'campaigns'
-  | 'sessions'
-  | 'arcs'
-  | 'encounters'
   | 'players'
   | 'sheets'
   | 'whiteboards'
@@ -70,9 +68,6 @@ const TABS: { key: Tab; label: string; group: TabGroup }[] = [
   { key: 'tags', label: 'Tags', group: 'World' },
   { key: 'consistency', label: 'Consistency', group: 'World' },
   { key: 'campaigns', label: 'Campaigns', group: 'Play' },
-  { key: 'sessions', label: 'Sessions', group: 'Play' },
-  { key: 'arcs', label: 'Story Arcs', group: 'Play' },
-  { key: 'encounters', label: 'Encounters', group: 'Play' },
   { key: 'players', label: 'Players', group: 'Play' },
   { key: 'sheets', label: 'Sheets', group: 'Play' },
   { key: 'whiteboards', label: 'Whiteboards', group: 'Play' },
@@ -92,7 +87,11 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const [toolsOpen, setToolsOpen] = useState(false);
-  const activeTabKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
+  const rawActiveKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
+  // Sessions/Story Arcs/Encounters live under the Campaigns nav item now
+  // (CampaignNavTree), not as their own top-level entries — still highlight
+  // "Campaigns" while on any of those routes.
+  const activeTabKey = ['sessions', 'arcs', 'encounters'].includes(rawActiveKey) ? 'campaigns' : rawActiveKey;
   // Only a real match highlights a group item — falling back to 'overview'
   // for anything unrecognized would wrongly highlight it while on a
   // non-grouped route like Print Shop.
@@ -130,6 +129,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
                         <SidebarMenuButton asChild size="sm" isActive={activeTab === t.key}>
                           <NavLink to={t.key}>{t.label}</NavLink>
                         </SidebarMenuButton>
+                        {t.key === 'campaigns' && <CampaignNavTree worldId={worldId} />}
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
