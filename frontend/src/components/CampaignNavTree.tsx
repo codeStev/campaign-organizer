@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { campaignsApi, sessionsApi, arcsApi, Campaign, Session, Arc } from '../api/client';
 import { TruncatedLabel } from './TruncatedLabel';
+import { PromptDialog } from './PromptDialog';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 
 interface Props {
   worldId: string;
@@ -22,6 +24,13 @@ interface CampaignChildren {
  * visual consistency, hand-rolled rather than shadcn's SidebarMenuSub
  * since that's only designed for one level, and this needs three
  * (campaign → kind → entity).
+ *
+ * The "Sessions"/"Story Arcs" kind rows are fold-only, not links — they
+ * used to route to that kind's list-only page just to get to a "+ New X"
+ * button. New items are created straight from the tree instead, via a "+"
+ * button and a matching right-click menu (same affordance as CategoryTree's
+ * category rows), so opening the fold and creating a new item are separate
+ * actions rather than one row trying to do both.
  */
 export function CampaignNavTree({ worldId }: Props) {
   const location = useLocation();
@@ -30,6 +39,7 @@ export function CampaignNavTree({ worldId }: Props) {
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [expandedKinds, setExpandedKinds] = useState<Set<string>>(new Set());
   const [children, setChildren] = useState<Map<string, CampaignChildren>>(new Map());
+  const [newArcCampaignId, setNewArcCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
     campaignsApi(worldId).list().then(setCampaigns).catch(() => {});
@@ -48,8 +58,8 @@ export function CampaignNavTree({ worldId }: Props) {
     };
   }, [location.pathname]);
 
-  async function loadChildren(campaignId: string) {
-    if (children.has(campaignId)) return;
+  async function loadChildren(campaignId: string, force = false) {
+    if (!force && children.has(campaignId)) return;
     try {
       const [sessions, arcs] = await Promise.all([
         sessionsApi(worldId, campaignId).list(),
@@ -73,6 +83,21 @@ export function CampaignNavTree({ worldId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match.campaignId, match.section]);
 
+  // Self-heal: if the open session/arc isn't in the cached branch (created
+  // or deleted from its own page rather than the tree), refetch that
+  // campaign's children so the tree catches up.
+  useEffect(() => {
+    if (!match.campaignId || !match.entityId) return;
+    if (match.section !== 'sessions' && match.section !== 'arcs') return;
+    const kids = children.get(match.campaignId);
+    if (!kids) return;
+    const list = match.section === 'sessions' ? kids.sessions : kids.arcs;
+    if (!list.some((item) => item.id === match.entityId)) {
+      void loadChildren(match.campaignId, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match.campaignId, match.section, match.entityId, children]);
+
   function toggleCampaign(id: string) {
     setExpandedCampaigns((prev) => {
       const next = new Set(prev);
@@ -92,6 +117,26 @@ export function CampaignNavTree({ worldId }: Props) {
     });
   }
 
+  function newSession(campaignId: string) {
+    navigate(`sessions/${campaignId}/new`);
+  }
+
+  async function createArc(campaignId: string, title: string) {
+    try {
+      const created = await arcsApi(worldId, campaignId).create({ title });
+      setChildren((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(campaignId) ?? { sessions: [], arcs: [] };
+        next.set(campaignId, { ...existing, arcs: [...existing.arcs, created] });
+        return next;
+      });
+      setExpandedKinds((prev) => new Set(prev).add(`${campaignId}:arcs`));
+      navigate(`arcs/${campaignId}/${created.id}`);
+    } catch {
+      // Best-effort — the dialog just closes on failure.
+    }
+  }
+
   return (
     <ul className="category-tree campaign-nav-tree">
       {campaigns.map((c) => {
@@ -99,6 +144,8 @@ export function CampaignNavTree({ worldId }: Props) {
         const kids = children.get(c.id);
         const sessionsKey = `${c.id}:sessions`;
         const arcsKey = `${c.id}:arcs`;
+        const sessionsExpanded = expandedKinds.has(sessionsKey);
+        const arcsExpanded = expandedKinds.has(arcsKey);
         return (
           <li key={c.id}>
             <div className="category-tree-row">
@@ -122,23 +169,46 @@ export function CampaignNavTree({ worldId }: Props) {
             {campaignExpanded && (
               <ul className="article-list-nested">
                 <li>
-                  <div className="category-tree-row">
-                    <button
-                      type="button"
-                      className="article-tree-toggle"
-                      onClick={() => toggleKind(sessionsKey)}
-                      title={expandedKinds.has(sessionsKey) ? 'Collapse' : 'Expand'}
-                    >
-                      {expandedKinds.has(sessionsKey) ? '▾' : '▸'}
-                    </button>
-                    <NavLink
-                      to={`sessions/${c.id}`}
-                      className={({ isActive }) => (isActive ? 'category-tree-article active' : 'category-tree-article')}
-                    >
-                      Sessions
-                    </NavLink>
-                  </div>
-                  {expandedKinds.has(sessionsKey) && (
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <div className="category-tree-row">
+                        <button
+                          type="button"
+                          className="article-tree-toggle"
+                          onClick={() => toggleKind(sessionsKey)}
+                          title={sessionsExpanded ? 'Collapse' : 'Expand'}
+                        >
+                          {sessionsExpanded ? '▾' : '▸'}
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            match.campaignId === c.id && match.section === 'sessions' && !match.entityId
+                              ? 'category-tree-article active'
+                              : 'category-tree-article'
+                          }
+                          onClick={() => toggleKind(sessionsKey)}
+                        >
+                          Sessions
+                        </button>
+                        <button
+                          type="button"
+                          className="category-tree-action"
+                          title="New session"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            newSession(c.id);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onSelect={() => newSession(c.id)}>+ New session</ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                  {sessionsExpanded && (
                     <ul className="article-list-nested">
                       {(kids?.sessions ?? []).map((s) => (
                         <li key={s.id}>
@@ -160,23 +230,46 @@ export function CampaignNavTree({ worldId }: Props) {
                   )}
                 </li>
                 <li>
-                  <div className="category-tree-row">
-                    <button
-                      type="button"
-                      className="article-tree-toggle"
-                      onClick={() => toggleKind(arcsKey)}
-                      title={expandedKinds.has(arcsKey) ? 'Collapse' : 'Expand'}
-                    >
-                      {expandedKinds.has(arcsKey) ? '▾' : '▸'}
-                    </button>
-                    <NavLink
-                      to={`arcs/${c.id}`}
-                      className={({ isActive }) => (isActive ? 'category-tree-article active' : 'category-tree-article')}
-                    >
-                      Story Arcs
-                    </NavLink>
-                  </div>
-                  {expandedKinds.has(arcsKey) && (
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <div className="category-tree-row">
+                        <button
+                          type="button"
+                          className="article-tree-toggle"
+                          onClick={() => toggleKind(arcsKey)}
+                          title={arcsExpanded ? 'Collapse' : 'Expand'}
+                        >
+                          {arcsExpanded ? '▾' : '▸'}
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            match.campaignId === c.id && match.section === 'arcs' && !match.entityId
+                              ? 'category-tree-article active'
+                              : 'category-tree-article'
+                          }
+                          onClick={() => toggleKind(arcsKey)}
+                        >
+                          Story Arcs
+                        </button>
+                        <button
+                          type="button"
+                          className="category-tree-action"
+                          title="New arc"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNewArcCampaignId(c.id);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onSelect={() => setNewArcCampaignId(c.id)}>+ New arc</ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                  {arcsExpanded && (
                     <ul className="article-list-nested">
                       {(kids?.arcs ?? []).map((a) => (
                         <li key={a.id}>
@@ -220,6 +313,19 @@ export function CampaignNavTree({ worldId }: Props) {
           </button>
         </li>
       )}
+      <PromptDialog
+        open={newArcCampaignId !== null}
+        onOpenChange={(open) => {
+          if (!open) setNewArcCampaignId(null);
+        }}
+        title="New story arc"
+        label="Arc title"
+        onSubmit={(title) => {
+          const campaignId = newArcCampaignId;
+          setNewArcCampaignId(null);
+          if (campaignId) void createArc(campaignId, title);
+        }}
+      />
     </ul>
   );
 }
