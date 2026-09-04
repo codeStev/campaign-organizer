@@ -268,6 +268,57 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  async function renameCategory(category: TableDeckCategory, newName: string) {
+    try {
+      await categoriesApi.update(category.id, { name: newName, parentId: category.parentId ?? null });
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // Mirrors moveEntityToCategory's per-kind update shape, changing title
+  // instead of categoryId.
+  async function renameItem(item: TreeItem, newTitle: string) {
+    try {
+      if (item.kind === 'table') {
+        const t = item.entity;
+        await tablesApi.update(t.id, {
+          categoryId: t.categoryId ?? null,
+          title: newTitle,
+          description: t.description ?? undefined,
+          diceExpression: t.diceExpression,
+          entries: t.entries.map((e) => ({
+            minResult: e.minResult ?? null,
+            maxResult: e.maxResult ?? null,
+            body: e.body,
+            nestedTableIds: e.nestedTableIds,
+            nestedDeckIds: e.nestedDeckIds,
+          })),
+        });
+      } else {
+        const d = item.entity;
+        await decksApi.update(d.id, {
+          categoryId: d.categoryId ?? null,
+          title: newTitle,
+          description: d.description ?? undefined,
+          cards: d.cards.map((c) => ({
+            title: c.title ?? undefined,
+            body: c.body,
+            nestedTableIds: c.nestedTableIds,
+            nestedDeckIds: c.nestedDeckIds,
+          })),
+        });
+      }
+      if (draft.kind === item.kind && draft.id === item.entity.id) {
+        setDraft((d) => ({ ...d, title: newTitle }));
+      }
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   // RollTable/CardDeck's list responses already carry every field an update
   // needs, so this can update directly without a full-fetch-first step
   // (mirrors Atlas/Handouts). categoryId must be threaded through explicitly
@@ -823,6 +874,8 @@ export function TablesView({ worldId, onAuthExpired }: Props) {
           onMoveEntity={(item, categoryId) => void moveEntityToCategory(item, categoryId)}
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
+          onRenameCategory={(c, name) => void renameCategory(c, name)}
+          onRenameEntity={(item, name) => void renameItem(item, name)}
           loading={loading}
           searchPlaceholder="Search tables & decks…"
           emptyLabel="No roll tables or card decks yet."
