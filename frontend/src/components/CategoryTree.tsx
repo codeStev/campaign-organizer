@@ -62,6 +62,11 @@ interface CategoryTreeProps<TEntity, TCategory extends CategoryLike> {
   onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
   onCreateCategory: (name: string, parentId: string | null) => void;
   onRemoveCategory: (category: TCategory) => void;
+  /** Every category here is user-created (there's always a "+ New category"
+   * button), so rename is unconditional — unlike CampaignNavTree's fixed
+   * "Sessions"/"Story Arcs" nodes, which aren't part of this component. */
+  onRenameCategory: (category: TCategory, newName: string) => void;
+  onRenameEntity: (entity: TEntity, newName: string) => void;
   /** Enables the entity row's right-click "Delete" item when provided. */
   onDeleteEntity?: (entity: TEntity) => void;
   /** Enables the entity row's right-click "Print" item when provided. */
@@ -97,6 +102,8 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   onMoveEntity,
   onCreateCategory,
   onRemoveCategory,
+  onRenameCategory,
+  onRenameEntity,
   onDeleteEntity,
   onPrintEntity,
   newEntityActions = [],
@@ -110,6 +117,8 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null | undefined>(undefined);
   const [draggingEntity, setDraggingEntity] = useState<TEntity | null>(null);
+  const [renameCategoryTarget, setRenameCategoryTarget] = useState<TCategory | null>(null);
+  const [renameEntityTarget, setRenameEntityTarget] = useState<TEntity | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -251,6 +260,28 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
           setNewCategoryParentId(undefined);
         }}
       />
+      <PromptDialog
+        open={renameCategoryTarget !== null}
+        onOpenChange={(open) => !open && setRenameCategoryTarget(null)}
+        title="Rename category"
+        label="Category name"
+        defaultValue={renameCategoryTarget?.name ?? ''}
+        onSubmit={(name) => {
+          if (renameCategoryTarget) onRenameCategory(renameCategoryTarget, name);
+          setRenameCategoryTarget(null);
+        }}
+      />
+      <PromptDialog
+        open={renameEntityTarget !== null}
+        onOpenChange={(open) => !open && setRenameEntityTarget(null)}
+        title="Rename"
+        label="Name"
+        defaultValue={renameEntityTarget ? entityLabel(renameEntityTarget) : ''}
+        onSubmit={(name) => {
+          if (renameEntityTarget) onRenameEntity(renameEntityTarget, name);
+          setRenameEntityTarget(null);
+        }}
+      />
       <ul className="category-tree">
         {rootCategories.map((c) => (
           <CategoryTreeNode
@@ -264,6 +295,8 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
             onOpenEntity={onOpenEntity}
             onAddSubcategory={(parentId) => setNewCategoryParentId(parentId)}
             onRemoveCategory={onRemoveCategory}
+            onRequestRenameCategory={setRenameCategoryTarget}
+            onRequestRenameEntity={setRenameEntityTarget}
             forceExpand={searching}
             entityId={entityId}
             entityLabel={entityLabel}
@@ -283,6 +316,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
           onToggleExpand={() => toggleExpanded(UNCATEGORIZED_KEY)}
           activeEntityId={activeEntityId}
           onOpenEntity={onOpenEntity}
+          onRequestRenameEntity={setRenameEntityTarget}
           entityId={entityId}
           entityLabel={entityLabel}
           renderEntityRow={renderEntityRow ?? defaultEntityRow(entityLabel)}
@@ -325,6 +359,8 @@ interface CategoryTreeNodeProps<TEntity, TCategory extends CategoryLike> {
   onOpenEntity: (id: string) => void;
   onAddSubcategory: (parentId: string) => void;
   onRemoveCategory: (category: TCategory) => void;
+  onRequestRenameCategory: (category: TCategory) => void;
+  onRequestRenameEntity: (entity: TEntity) => void;
   forceExpand: boolean;
   entityId: (entity: TEntity) => string;
   entityLabel: (entity: TEntity) => string;
@@ -346,6 +382,8 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
   onOpenEntity,
   onAddSubcategory,
   onRemoveCategory,
+  onRequestRenameCategory,
+  onRequestRenameEntity,
   forceExpand,
   entityId,
   entityLabel,
@@ -418,6 +456,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
       <ContextMenu>
         <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem onSelect={() => onRequestRenameCategory(category)}>Rename category</ContextMenuItem>
           <ContextMenuItem onSelect={() => onAddSubcategory(category.id)}>+ New sub-category</ContextMenuItem>
           {newEntityActions.map((action) => (
             <ContextMenuItem key={action.label} onSelect={() => action.onCreate(category.id)}>
@@ -451,6 +490,8 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               onOpenEntity={onOpenEntity}
               onAddSubcategory={onAddSubcategory}
               onRemoveCategory={onRemoveCategory}
+              onRequestRenameCategory={onRequestRenameCategory}
+              onRequestRenameEntity={onRequestRenameEntity}
               forceExpand={forceExpand}
               entityId={entityId}
               entityLabel={entityLabel}
@@ -468,6 +509,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               entity={e}
               active={entityId(e) === activeEntityId}
               onOpen={onOpenEntity}
+              onRequestRename={onRequestRenameEntity}
               entityId={entityId}
               entityLabel={entityLabel}
               render={renderEntityRow}
@@ -492,6 +534,7 @@ function CategoryLeaf<TEntity, TCategory extends CategoryLike>({
   onToggleExpand,
   activeEntityId,
   onOpenEntity,
+  onRequestRenameEntity,
   entityId,
   entityLabel,
   renderEntityRow,
@@ -508,6 +551,7 @@ function CategoryLeaf<TEntity, TCategory extends CategoryLike>({
   onToggleExpand: () => void;
   activeEntityId: string | null;
   onOpenEntity: (id: string) => void;
+  onRequestRenameEntity: (entity: TEntity) => void;
   entityId: (entity: TEntity) => string;
   entityLabel: (entity: TEntity) => string;
   renderEntityRow: (entity: TEntity) => ReactNode;
@@ -576,6 +620,7 @@ function CategoryLeaf<TEntity, TCategory extends CategoryLike>({
               entity={e}
               active={entityId(e) === activeEntityId}
               onOpen={onOpenEntity}
+              onRequestRename={onRequestRenameEntity}
               entityId={entityId}
               entityLabel={entityLabel}
               render={renderEntityRow}
@@ -596,6 +641,7 @@ function CategoryTreeEntityRow<TEntity, TCategory extends CategoryLike>({
   entity,
   active,
   onOpen,
+  onRequestRename,
   entityId,
   entityLabel,
   render,
@@ -608,6 +654,7 @@ function CategoryTreeEntityRow<TEntity, TCategory extends CategoryLike>({
   entity: TEntity;
   active: boolean;
   onOpen: (id: string) => void;
+  onRequestRename: (entity: TEntity) => void;
   entityId: (entity: TEntity) => string;
   entityLabel: (entity: TEntity) => string;
   render: (entity: TEntity) => ReactNode;
@@ -651,6 +698,7 @@ function CategoryTreeEntityRow<TEntity, TCategory extends CategoryLike>({
       <ContextMenu>
         <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem onSelect={() => onRequestRename(entity)}>Rename</ContextMenuItem>
           <ContextMenuSub>
             <ContextMenuSubTrigger>Move to</ContextMenuSubTrigger>
             <ContextMenuSubContent>
