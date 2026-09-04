@@ -1669,6 +1669,12 @@ button:disabled {
     gap: 0.5rem;
   }
 
+  /* The paper/margin/text-size pickers plus Print/Close overflow a phone
+     width in one unwrapping row (NewWindowPortal's mobile overlay). */
+  .print-toolbar {
+    flex-wrap: wrap;
+  }
+
   /* .map-bar's title + status/system selects + link/delete actions overflow
      the viewport in a single unwrapping row (used by Atlas, Campaigns,
      Timelines, Whiteboards headers alike). */
@@ -2731,6 +2737,31 @@ button:disabled {
   min-height: 100vh;
   background: #fff;
   color: #111;
+}
+
+/* Mobile fallback for the above (NewWindowPortal.tsx): a same-document
+   full-screen overlay instead of a popup window, since mobile browsers
+   frequently block popups outright. */
+.mobile-print-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+@media print {
+  /* Printing the main window would otherwise print the whole app shell
+     behind the overlay too — hide every other direct child of <body>
+     (just the app root, in practice) so only the overlay's content prints. */
+  body > *:not(.mobile-print-overlay) {
+    display: none !important;
+  }
+
+  .mobile-print-overlay {
+    position: static;
+    inset: auto;
+    overflow: visible;
+  }
 }
 
 /* Paper size / margins (PrintOptionsMenu), selected per print-doc via the
