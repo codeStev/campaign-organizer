@@ -147,8 +147,10 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
             <ul className="next-overview-list">
               {stats.openLooseThreads.map((t) => (
                 <li key={t.threadId} className="next-overview-clock">
-                  <span>{t.text}</span>
-                  <span className="muted">{t.campaignName}</span>
+                  <div className="next-overview-clock-head">
+                    <span>{t.text}</span>
+                    <span className="muted">{t.campaignName}</span>
+                  </div>
                 </li>
               ))}
             </ul>
