@@ -202,6 +202,7 @@ function EncounterCard({ encounter, statblocks, onSave, onRemove, onPrint }: Enc
         <MarkdownEditor value={encounter.notes ?? ''} onChange={setNotes} />
 
         {encounter.entries.length > 0 ? (
+          <div className="table-scroll">
           <table className="encounter-table">
             <thead>
               <tr>
@@ -238,6 +239,7 @@ function EncounterCard({ encounter, statblocks, onSave, onRemove, onPrint }: Enc
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <p className="muted">No statblocks yet.</p>
         )}

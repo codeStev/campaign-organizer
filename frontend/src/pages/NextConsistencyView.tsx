@@ -97,6 +97,7 @@ export function NextConsistencyView({ worldId, worldName, onOpenArticle, onAuthE
         )}
 
         {report && !clean && (
+          <div className="table-scroll">
           <table className="consistency-table">
             <thead>
               <tr>
@@ -157,6 +158,7 @@ export function NextConsistencyView({ worldId, worldName, onOpenArticle, onAuthE
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -180,6 +182,7 @@ export function NextConsistencyView({ worldId, worldName, onOpenArticle, onAuthE
             {report.brokenLinks.length > 0 && (
               <section className="print-map-section">
                 <h2>Broken links</h2>
+                <div className="table-scroll">
                 <table className="print-table-grid">
                   <thead>
                     <tr>
@@ -198,6 +201,7 @@ export function NextConsistencyView({ worldId, worldName, onOpenArticle, onAuthE
                     ))}
                   </tbody>
                 </table>
+                </div>
               </section>
             )}
 

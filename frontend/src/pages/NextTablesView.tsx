@@ -486,6 +486,7 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
   /** Read-only entries grid — shared by the read view and the print portal. */
   function tableEntriesGrid(entries: RollTableEntry[]) {
     return (
+      <div className="table-scroll">
       <table className="print-table-grid">
         <tbody>
           {entries.map((e) => (
@@ -507,6 +508,7 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
     );
   }
 

@@ -502,6 +502,7 @@ export function NextPrintView({ worldId, worldName, campaigns, onClose, onError 
                 <p className="print-kicker">
                   {t.diceExpression} ({t.minResult}–{t.maxResult})
                 </p>
+                <div className="table-scroll">
                 <table className="print-table-grid">
                   <tbody>
                     {t.entries.map((e) => (
@@ -522,6 +523,7 @@ export function NextPrintView({ worldId, worldName, campaigns, onClose, onError 
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             ))}
           </section>

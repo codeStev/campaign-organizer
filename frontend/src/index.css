@@ -48,6 +48,12 @@
   box-sizing: border-box;
 }
 
+/* Wrap a wide/raw <table> in this so it scrolls within its own box on a
+   narrow screen instead of blowing out the page horizontally. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 /* Color/font come from @layer base at the bottom of this file (Tailwind's
    bg-background/text-foreground/font-sans utilities), so both react to the
    .dark class toggle. */

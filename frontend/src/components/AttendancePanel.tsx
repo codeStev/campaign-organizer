@@ -110,6 +110,7 @@ export function AttendancePanel({ worldId, campaignId, sessionId, onError, readO
         <p className="muted">No roster set for this campaign yet — add players on the Roster section above.</p>
       )}
       {entries.length > 0 && (
+        <div className="table-scroll">
         <table className="attendance-table">
           <thead>
             <tr>
@@ -153,6 +154,7 @@ export function AttendancePanel({ worldId, campaignId, sessionId, onError, readO
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
