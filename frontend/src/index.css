@@ -1043,6 +1043,15 @@ button:disabled {
   opacity: 1;
 }
 
+/* :hover never fires on touch, so a touch-only device would never see this
+   handle at all — show it by default there instead of hiding it behind an
+   unreachable hover state. */
+@media (hover: none) {
+  .editor-content [data-resize-handle] {
+    opacity: 1;
+  }
+}
+
 /* Markdown formatting (ADR-0054): shared between the live editor and every
    read-only rendering of the same content (article preview, print, packets,
    cards). Milkdown ships no theme, so headings/lists/quotes/code/tables need
@@ -1709,6 +1718,15 @@ button:disabled {
   button {
     padding-top: 0.6rem;
     padding-bottom: 0.6rem;
+  }
+
+  /* The category tree's expand chevron and per-row "+"/"⋯"/"✕" action
+     buttons are sized for a mouse pointer (1.1rem) — too small to tap
+     reliably. */
+  .category-tree-action,
+  .article-tree-toggle {
+    width: 1.6rem;
+    height: 1.6rem;
   }
 
   .date-fields {
