@@ -137,6 +137,30 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     }
   }
 
+  async function renameMapCategory(category: MapCategory, newName: string) {
+    try {
+      await mapCategories.update(category.id, { name: newName, parentId: category.parentId ?? null });
+      await refreshMaps();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function renameMap(map: WorldMap, newName: string) {
+    if (map.name === newName) return;
+    try {
+      const updated = await maps.update(map.id, {
+        name: newName,
+        mediaId: map.mediaId ?? '',
+        categoryId: map.categoryId ?? null,
+      });
+      if (selected?.id === updated.id) setSelected(updated);
+      await refreshMaps();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   // WorldMap's list response already carries every field an update needs
   // (unlike Article, there's no separate "summary vs full" split to worry
   // about), so this can update directly without a full-fetch-first step.
@@ -358,6 +382,8 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           onMoveEntity={(m, categoryId) => void moveMapToCategory(m, categoryId)}
           onCreateCategory={(name, parentId) => void createMapCategory(name, parentId)}
           onRemoveCategory={(c) => void removeMapCategory(c)}
+          onRenameCategory={(c, name) => void renameMapCategory(c, name)}
+          onRenameEntity={(m, name) => void renameMap(m, name)}
           onDeleteEntity={(m) => void deleteMap(m)}
           onPrintEntity={(m) => void printMap(m)}
           newEntityActions={[
