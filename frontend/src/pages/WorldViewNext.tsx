@@ -105,14 +105,9 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
         currentWorldId={worldId}
         currentWorldName={worldName}
         rightSlot={
-          <>
-            <Button variant={toolsOpen ? 'default' : 'outline'} size="sm" onClick={() => setToolsOpen((v) => !v)}>
-              🎲 Table Tools
-            </Button>
-            <Button variant="link" size="sm" asChild>
-              <NavLink to={`/worlds/${worldId}`}>← Back to current UI</NavLink>
-            </Button>
-          </>
+          <Button variant={toolsOpen ? 'default' : 'outline'} size="sm" onClick={() => setToolsOpen((v) => !v)}>
+            🎲 Table Tools
+          </Button>
         }
       />
 

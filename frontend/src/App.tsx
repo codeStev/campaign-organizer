@@ -1,19 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { getToken, clearToken, worldsApi, World, ApiError } from './api/client';
 import { LoginPage } from './pages/LoginPage';
-import { WorldsPage } from './pages/WorldsPage';
-import { WorldView } from './pages/WorldView';
-import { SettingsPage } from './pages/SettingsPage';
-import { GlobalTemplatesPanel } from './pages/GlobalTemplatesPanel';
-import { GlobalStatblocksPanel } from './pages/GlobalStatblocksPanel';
 import { NextGlobalTemplatesPanel } from './pages/NextGlobalTemplatesPanel';
 import { NextGlobalStatblocksPanel } from './pages/NextGlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
 import { WorldsNextPage } from './pages/WorldsNextPage';
 import { NextSettingsPage } from './pages/NextSettingsPage';
 import { WorldViewNext } from './pages/WorldViewNext';
-import { AppSidebar } from './components/AppSidebar';
 import { AppSidebarNext } from './components/AppSidebarNext';
 import { NextTopBar } from './components/NextTopBar';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -49,11 +43,10 @@ export function App() {
             <LoginPage onLoggedIn={() => setAuthed(true)} />
           ) : (
             <Routes>
-              <Route path="/" element={<Navigate to="/worlds" replace />} />
-              <Route path="/worlds/:worldId/*" element={<WorldViewRoute onAuthExpired={handleLogout} />} />
+              <Route path="/" element={<Navigate to="/next" replace />} />
               <Route path="/next/worlds/:worldId/*" element={<NextWorldViewRoute onAuthExpired={handleLogout} />} />
               <Route path="/next/*" element={<AppShellNext onAuthExpired={handleLogout} />} />
-              <Route path="*" element={<AppShell onAuthExpired={handleLogout} />} />
+              <Route path="*" element={<Navigate to="/next" replace />} />
             </Routes>
           )}
         </div>
@@ -67,28 +60,6 @@ export function App() {
  * Shell for every top-level, world-independent route (ADR-0098): a
  * persistent sidebar beside the routed content. A World takes over the
  * screen with its own in-world sidebar instead of nesting under this one.
- */
-function AppShell({ onAuthExpired }: { onAuthExpired: () => void }) {
-  return (
-    <SidebarProvider className="min-h-0 gap-6 sidebar-shell">
-      <AppSidebar />
-      <SidebarInset className="app-shell-content">
-        <Routes>
-          <Route path="/worlds" element={<WorldsPageRoute onAuthExpired={onAuthExpired} />} />
-          <Route path="/templates/*" element={<TemplatesPageRoute onAuthExpired={onAuthExpired} />} />
-          <Route path="/game-systems" element={<GameSystemsPage onAuthExpired={onAuthExpired} />} />
-          <Route path="/settings/*" element={<SettingsPage onAuthExpired={onAuthExpired} />} />
-          <Route path="*" element={<Navigate to="/worlds" replace />} />
-        </Routes>
-      </SidebarInset>
-    </SidebarProvider>
-  );
-}
-
-/**
- * /next shell (docs/ui-overhaul-plan.md Phase 1) — same shape as AppShell,
- * separate sidebar/routes so the old UI stays untouched as a reference
- * throughout the migration.
  */
 function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
   return (
@@ -141,27 +112,9 @@ function NextWorldViewRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
 /**
  * World-independent global catalogs — not nested under any world. Templates
  * (ADR-0093) and statblocks (ADR-0096) are separate sub-pages; both are
- * reachable directly from AppSidebar (ADR-0098), so this is a bare route
- * switch rather than its own nav shell.
+ * reachable directly from AppSidebarNext (ADR-0098), so this is a bare
+ * route switch rather than its own nav shell.
  */
-function TemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
-  return (
-    <Routes>
-      <Route index element={<Navigate to="global" replace />} />
-      <Route path="global" element={<GlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
-      <Route path="global/:globalTemplateId" element={<GlobalTemplatesPanel onAuthExpired={onAuthExpired} />} />
-      <Route path="statblocks" element={<GlobalStatblocksPanel onAuthExpired={onAuthExpired} />} />
-      <Route
-        path="statblocks/:globalStatblockId"
-        element={<GlobalStatblocksPanel onAuthExpired={onAuthExpired} />}
-      />
-      <Route path="*" element={<Navigate to="global" replace />} />
-    </Routes>
-  );
-}
-
-/** /next's own version of TemplatesPageRoute (ADR-0106) — same route shape,
- * pointing at NextGlobalTemplatesPanel/NextGlobalStatblocksPanel instead. */
 function NextTemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
   return (
     <Routes>
@@ -175,51 +128,5 @@ function NextTemplatesPageRoute({ onAuthExpired }: { onAuthExpired: () => void }
       />
       <Route path="*" element={<Navigate to="global" replace />} />
     </Routes>
-  );
-}
-
-function WorldsPageRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
-  const navigate = useNavigate();
-  return (
-    <WorldsPage
-      onOpenWorld={(world) => navigate(`/worlds/${world.id}`)}
-      onAuthExpired={onAuthExpired}
-    />
-  );
-}
-
-/** Resolves :worldId to a World (deep links only carry the id) before rendering WorldView. */
-function WorldViewRoute({ onAuthExpired }: { onAuthExpired: () => void }) {
-  const { worldId } = useParams<{ worldId: string }>();
-  const navigate = useNavigate();
-  const [world, setWorld] = useState<World | null>(null);
-  const [notFound, setNotFound] = useState(false);
-
-  useEffect(() => {
-    if (!worldId) return;
-    setWorld(null);
-    setNotFound(false);
-    worldsApi
-      .get(worldId)
-      .then(setWorld)
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) {
-          onAuthExpired();
-          return;
-        }
-        setNotFound(true);
-      });
-  }, [worldId, onAuthExpired]);
-
-  if (!worldId || notFound) return <Navigate to="/worlds" replace />;
-  if (!world) return <p className="muted">Loading…</p>;
-
-  return (
-    <WorldView
-      worldId={world.id}
-      worldName={world.name}
-      onBack={() => navigate('/worlds')}
-      onAuthExpired={onAuthExpired}
-    />
   );
 }

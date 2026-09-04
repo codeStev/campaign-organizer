@@ -90,7 +90,7 @@ export function NextWorldSwitcher({ currentWorldId, currentWorldName }: Props) {
               size="sm"
               onClick={() => {
                 setOpen(false);
-                navigate('/worlds');
+                navigate('/next/worlds');
               }}
             >
               Manage worlds →
