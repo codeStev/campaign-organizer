@@ -5,9 +5,11 @@ import {
   arcsApi,
   campaignsApi,
   sessionsApi,
+  handoutsApi,
   Beat,
   Campaign,
   Session,
+  Handout,
   ApiError,
 } from '../api/client';
 import { fetchCampaignBeats } from '../lib/beats';
@@ -60,6 +62,7 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [campaignBeats, setCampaignBeats] = useState<Beat[]>([]);
+  const [sessionHandouts, setSessionHandouts] = useState<Handout[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [mode, setMode] = useState<'read' | 'edit'>('read');
@@ -127,6 +130,24 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
       active = false;
     };
   }, [worldId, urlCampaignId, handleError]);
+
+  // Handouts tagged to this session (Handout.sessionId), so the GM can jump
+  // straight to a prop from the session it's meant for — no server-side
+  // filter exists, so this filters the world's full handout list client-side.
+  useEffect(() => {
+    if (!urlSessionId || urlSessionId === 'new') {
+      setSessionHandouts([]);
+      return;
+    }
+    let active = true;
+    handoutsApi(worldId)
+      .list()
+      .then((all) => active && setSessionHandouts(all.filter((h) => h.sessionId === urlSessionId)))
+      .catch(handleError);
+    return () => {
+      active = false;
+    };
+  }, [worldId, urlSessionId, handleError]);
 
   function resetSummary() {
     setSummarizing(false);
@@ -342,6 +363,26 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {sessionHandouts.length > 0 && (
+              <>
+                <strong className="muted">Handouts</strong>
+                <ul>
+                  {sessionHandouts.map((h) => (
+                    <li key={h.id}>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={() => navigate(`/next/worlds/${worldId}/handouts/${h.id}`)}
+                      >
+                        {h.title}
+                      </Button>{' '}
+                      <span className="muted">{h.revealed ? '👁 Revealed' : '🔒 Not yet revealed'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
 
             <TodoListPanel worldId={worldId} campaignId={urlCampaignId!} sessionId={openSession.id} onError={handleError} />
