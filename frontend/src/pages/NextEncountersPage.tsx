@@ -11,7 +11,7 @@ import {
   GlobalFieldTemplate,
   Encounter,
 } from '../api/client';
-import { EncounterBoard } from './EncounterBoard';
+import { NextEncounterBoard } from './NextEncounterBoard';
 import { Spinner } from '../components/ui/spinner';
 
 interface Props {
@@ -24,9 +24,10 @@ interface Props {
  * builder (ADR-0097) relocated to its own /next nav entry, with a statblock
  * reference panel beside it (mirrors StatblocksPanel's list-plus-detail
  * layout) so a GM can eyeball the world's statblocks while building.
- * EncounterBoard itself is reused unchanged — "mostly reskin/relocation"
- * per the plan. Campaign selection comes from the sidebar's CampaignNavTree
- * (ADR-0105 follow-up), not a picker on this page.
+ * NextEncounterBoard (ADR-0106) is /next's own fork of EncounterBoard, with
+ * the old expand/collapse accordion cards flattened to always-open. Campaign
+ * selection comes from the sidebar's CampaignNavTree (ADR-0105 follow-up),
+ * not a picker on this page.
  */
 export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -86,7 +87,7 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
       </aside>
 
       {campaignId ? (
-        <EncounterBoard
+        <NextEncounterBoard
           worldId={worldId}
           campaignId={campaignId}
           encounters={encounters}
