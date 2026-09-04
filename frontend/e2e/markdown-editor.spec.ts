@@ -13,8 +13,15 @@ test.beforeEach(async ({ page, request }) => {
   const world = await apiCreateWorld(request, token, uniqueName('MD Editor Test World'));
   worldId = world.id;
   await login(page);
-  await page.goto(`/worlds/${worldId}/handouts`);
-  await page.getByTestId('new-handout-button').click();
+  await page.goto(`/next/worlds/${worldId}/handouts`);
+  // Handout creation now goes through CategoryTree's "+" menu on the
+  // Uncategorised leaf (a fresh world has no other categories yet).
+  await page.getByTitle('New…').click();
+  await page.getByRole('menuitem', { name: '+ New handout' }).click();
+  // The dropdown's close animation can still be intercepting pointer events
+  // for a beat after the click resolves — wait for it to actually leave the
+  // DOM before clicking into the editor below.
+  await expect(page.getByRole('menu')).toHaveCount(0);
   await page.getByTestId('handout-title-input').fill('Formatting check');
   await page.getByTestId('md-content').locator('.ProseMirror').click();
   await page.waitForTimeout(400); // let Milkdown's async editor init finish

@@ -24,8 +24,15 @@ test.beforeEach(async ({ page, request }) => {
   const world = await apiCreateWorld(request, token, uniqueName('Table Save Test World'));
   worldId = world.id;
   await login(page);
-  await page.goto(`/worlds/${worldId}/tables`);
+  await page.goto(`/next/worlds/${worldId}/tables`);
 });
+
+// Table/deck creation now goes through CategoryTree's "+" menu on the
+// Uncategorised leaf (a fresh world has no other categories yet).
+async function newTable(page: import('@playwright/test').Page) {
+  await page.getByTitle('New…').click();
+  await page.getByRole('menuitem', { name: '+ New roll table' }).click();
+}
 
 test.afterEach(async ({ request }) => {
   const token = await apiLogin(request);
@@ -33,7 +40,7 @@ test.afterEach(async ({ request }) => {
 });
 
 test('creating a table saves successfully and the button settles back to normal', async ({ page }) => {
-  await page.getByTestId('new-table-button').click();
+  await newTable(page);
   await page.getByTestId('table-title-input').fill('Random Encounters');
   await page.getByTestId('table-dice-input').fill('1d6');
   await page.getByTestId('table-entry-body-0').fill('A wandering merchant');
@@ -57,7 +64,7 @@ test('creating a table saves successfully and the button settles back to normal'
 // immediately (fast round-trips), which is easy to miss entirely — a toast
 // is meant to be the feedback that actually lingers long enough to notice.
 test('saving shows a toast that lingers, not just an instant button flip', async ({ page }) => {
-  await page.getByTestId('new-table-button').click();
+  await newTable(page);
   await page.getByTestId('table-title-input').fill('Toast Lingers Table');
   await page.getByTestId('table-dice-input').fill('1d4');
   await page.getByTestId('table-entry-body-0').fill('Something happens');
@@ -73,7 +80,7 @@ test('saving shows a toast that lingers, not just an instant button flip', async
 });
 
 test('save button shows a disabled "Saving…" state while the request is in flight', async ({ page }) => {
-  await page.getByTestId('new-table-button').click();
+  await newTable(page);
   await page.getByTestId('table-title-input').fill('Slow Save Table');
   await page.getByTestId('table-dice-input').fill('1d4');
   await page.getByTestId('table-entry-body-0').fill('Something happens');
@@ -98,7 +105,7 @@ test('save button shows a disabled "Saving…" state while the request is in fli
 // styling at all in the printed output — same root cause as the preview-pane
 // bug, just a different render site (PrintView.tsx uses the same shared CSS).
 test('a markdown bullet list in a table entry is visibly marked in the print output', async ({ page }) => {
-  await page.getByTestId('new-table-button').click();
+  await newTable(page);
   await page.getByTestId('table-title-input').fill('Print Styling Table');
   await page.getByTestId('table-dice-input').fill('1d4');
   await page.getByTestId('table-entry-body-0').fill('- printed item one\n- printed item two');
@@ -140,7 +147,7 @@ test('a chained table is labeled on the row that leads to it, in print', async (
     ],
   });
 
-  await page.goto(`/worlds/${worldId}/tables/table/${mainTable.id}`);
+  await page.goto(`/next/worlds/${worldId}/tables/table/${mainTable.id}`);
 
   const [popup] = await Promise.all([
     page.waitForEvent('popup'),
@@ -163,7 +170,7 @@ test('deleting a table asks for confirmation, and Cancel backs out safely', asyn
     entries: [{ minResult: null, maxResult: null, body: 'An outcome' }],
   });
 
-  await page.goto(`/worlds/${worldId}/tables/table/${table.id}`);
+  await page.goto(`/next/worlds/${worldId}/tables/table/${table.id}`);
   // Delete lives in the editor, not the read preview — open it first.
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   const deleteTrigger = page.getByRole('button', { name: 'Delete', exact: true });

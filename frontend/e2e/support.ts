@@ -7,7 +7,7 @@ export async function login(page: Page) {
   await page.goto('/');
   await page.getByTestId('login-password').fill(PASSWORD);
   await page.getByTestId('login-submit').click();
-  await page.waitForURL('**/worlds');
+  await page.waitForURL('**/next/worlds');
 }
 
 /**

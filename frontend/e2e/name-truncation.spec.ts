@@ -20,7 +20,7 @@ test.beforeEach(async ({ page, request }) => {
   });
 
   await login(page);
-  await page.goto(`/worlds/${worldId}/campaigns`);
+  await page.goto(`/next/worlds/${worldId}/campaigns`);
 });
 
 test.afterEach(async ({ request }) => {

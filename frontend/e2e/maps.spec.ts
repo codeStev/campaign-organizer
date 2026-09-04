@@ -35,7 +35,7 @@ test.beforeEach(async ({ page, request }) => {
   });
 
   await login(page);
-  await page.goto(`/worlds/${worldId}/maps`);
+  await page.goto(`/next/worlds/${worldId}/atlas`);
 });
 
 test.afterEach(async ({ request }) => {
