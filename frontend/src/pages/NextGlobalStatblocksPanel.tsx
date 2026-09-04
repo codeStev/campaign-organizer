@@ -17,6 +17,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Spinner } from '../components/ui/spinner';
+import { MobileBackButton } from '../components/MobileBackButton';
 import { toast } from 'sonner';
 
 const NONE_VALUE = '__none__';
@@ -217,7 +218,7 @@ export function NextGlobalStatblocksPanel({ onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={editing}>
       <aside className="wiki-sidebar">
         <Button
           className="sidebar-new-button"
@@ -281,6 +282,7 @@ export function NextGlobalStatblocksPanel({ onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         <div className="sheet-detail card">
           {editing && (
             <>

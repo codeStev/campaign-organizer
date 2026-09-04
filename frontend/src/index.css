@@ -507,6 +507,34 @@ button:disabled {
   align-items: start;
 }
 
+/* Mobile list/detail toggle (data-has-selection, set by the page itself
+   from whatever "is something open" state it already tracks): side-by-side
+   list+detail doesn't fit a phone, so show one or the other, not both — the
+   natural mobile browsing pattern, not just a squeezed single column. */
+@media (max-width: 767px) {
+  .wiki-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wiki-layout[data-has-selection='true'] .wiki-sidebar {
+    display: none;
+  }
+
+  .wiki-layout[data-has-selection='false'] .wiki-main {
+    display: none;
+  }
+}
+
+.mobile-back-button {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-back-button {
+    display: inline-flex;
+  }
+}
+
 .wiki-sidebar {
   display: flex;
   flex-direction: column;

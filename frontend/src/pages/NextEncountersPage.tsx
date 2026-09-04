@@ -73,6 +73,10 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
   }
 
   return (
+    // No data-has-selection here, deliberately: the sidebar is a read-only
+    // statblocks reference (not a picker whose selection produces the main
+    // content — campaign choice lives in the outer nav drawer), so mobile
+    // just stacks both instead of toggling one away.
     <div className="wiki-layout">
       <aside className="wiki-sidebar">
         <h4>Statblocks</h4>
@@ -86,20 +90,22 @@ export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
         </ul>
       </aside>
 
-      {campaignId ? (
-        <NextEncounterBoard
-          worldId={worldId}
-          campaignId={campaignId}
-          encounters={encounters}
-          onChanged={refreshEncounters}
-          statblocks={statblocks}
-          templates={templates}
-          globalTemplates={globalTemplates}
-          onError={onError}
-        />
-      ) : (
-        <p className="muted">Select a campaign from the sidebar to see its encounters.</p>
-      )}
+      <div className="wiki-main">
+        {campaignId ? (
+          <NextEncounterBoard
+            worldId={worldId}
+            campaignId={campaignId}
+            encounters={encounters}
+            onChanged={refreshEncounters}
+            statblocks={statblocks}
+            templates={templates}
+            globalTemplates={globalTemplates}
+            onError={onError}
+          />
+        ) : (
+          <p className="muted">Select a campaign from the sidebar to see its encounters.</p>
+        )}
+      </div>
     </div>
   );
 }

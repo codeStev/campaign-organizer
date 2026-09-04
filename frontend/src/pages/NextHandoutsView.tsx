@@ -20,6 +20,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { CategoryTree } from '../components/CategoryTree';
+import { MobileBackButton } from '../components/MobileBackButton';
 import { Toggle } from '../components/ui/toggle';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -332,7 +333,7 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
   const editingExisting = draft.id != null;
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={!!urlHandoutId || mode === 'edit'}>
       <aside className="wiki-sidebar">
         <CategoryTree
           categories={categories}
@@ -411,6 +412,7 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
 
         {(mode === 'edit' || !editingExisting) && (

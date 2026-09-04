@@ -14,6 +14,7 @@ import {
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { PromptDialog } from '../components/PromptDialog';
+import { MobileBackButton } from '../components/MobileBackButton';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
@@ -217,7 +218,7 @@ export function NextTimelinesView({ worldId, onOpenArticle, onAuthExpired }: Pro
   }
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={!!selected}>
       <aside className="wiki-sidebar">
         <Button onClick={() => setNamePromptOpen(true)}>+ New timeline</Button>
         <PromptDialog
@@ -248,6 +249,7 @@ export function NextTimelinesView({ worldId, onOpenArticle, onAuthExpired }: Pro
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
         {!selected && <p className="muted">Select or create a timeline.</p>}
         {selected && (

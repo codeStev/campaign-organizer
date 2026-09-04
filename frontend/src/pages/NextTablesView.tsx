@@ -20,6 +20,7 @@ import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { CategoryTree } from '../components/CategoryTree';
+import { MobileBackButton } from '../components/MobileBackButton';
 import { Button } from '../components/ui/button';
 import { Toggle } from '../components/ui/toggle';
 import { Spinner } from '../components/ui/spinner';
@@ -848,7 +849,7 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
   const editingExisting = draft.id != null;
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={editingExisting || mode === 'edit'}>
       <aside className="wiki-sidebar">
         <CategoryTree
           categories={categories}
@@ -911,6 +912,7 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
         {(mode === 'edit' || !editingExisting) && (
         <form className="card" onSubmit={save}>

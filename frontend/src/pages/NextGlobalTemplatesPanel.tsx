@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Spinner } from '../components/ui/spinner';
+import { MobileBackButton } from '../components/MobileBackButton';
 
 interface Props {
   onAuthExpired: () => void;
@@ -172,7 +173,7 @@ export function NextGlobalTemplatesPanel({ onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={building || !!previewing}>
       <aside className="wiki-sidebar">
         {error && <p className="error">{error}</p>}
         <p className="muted hint">
@@ -269,6 +270,7 @@ export function NextGlobalTemplatesPanel({ onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {building && (
           <TemplateBuilder
             initial={editing ? { ...editing, worldId: '' } : null}
