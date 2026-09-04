@@ -1,7 +1,7 @@
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { TimelinesView } from './TimelinesView';
-import { CalendarsView } from './CalendarsView';
+import { NextTimelinesView } from './NextTimelinesView';
+import { NextCalendarsView } from './NextCalendarsView';
 
 interface Props {
   worldId: string;
@@ -12,7 +12,8 @@ interface Props {
 /**
  * Chronicle (docs/ui-overhaul-plan.md Phase 2) — merges Timelines and
  * Calendars as sub-tabs of one screen, matching the reviewed mockup. Both
- * underlying views are reused as-is; no new backend.
+ * underlying views (NextTimelinesView/NextCalendarsView, ADR-0106) are
+ * /next's own forks, no new backend.
  *
  * Real nested routes ("timelines"/"timelines/:timelineId",
  * "calendars"/"calendars/:calendarId"), not a local-state tab switch: both
@@ -37,16 +38,16 @@ export function NextChroniclePage({ worldId, onOpenArticle, onAuthExpired }: Pro
         <Route index element={<Navigate to="timelines" replace />} />
         <Route
           path="timelines"
-          element={<TimelinesView worldId={worldId} onOpenArticle={onOpenArticle} onAuthExpired={onAuthExpired} />}
+          element={<NextTimelinesView worldId={worldId} onOpenArticle={onOpenArticle} onAuthExpired={onAuthExpired} />}
         />
         <Route
           path="timelines/:timelineId"
-          element={<TimelinesView worldId={worldId} onOpenArticle={onOpenArticle} onAuthExpired={onAuthExpired} />}
+          element={<NextTimelinesView worldId={worldId} onOpenArticle={onOpenArticle} onAuthExpired={onAuthExpired} />}
         />
-        <Route path="calendars" element={<CalendarsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
+        <Route path="calendars" element={<NextCalendarsView worldId={worldId} onAuthExpired={onAuthExpired} />} />
         <Route
           path="calendars/:calendarId"
-          element={<CalendarsView worldId={worldId} onAuthExpired={onAuthExpired} />}
+          element={<NextCalendarsView worldId={worldId} onAuthExpired={onAuthExpired} />}
         />
         <Route path="*" element={<Navigate to="timelines" replace />} />
       </Routes>
