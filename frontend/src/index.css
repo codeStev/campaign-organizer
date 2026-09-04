@@ -560,6 +560,15 @@ button:disabled {
   min-width: 0;
 }
 
+/* Primary+secondary content, not two views of the same thing (unlike
+   .wiki-layout's list/detail toggle) — mobile stacks both instead of
+   hiding either. */
+@media (max-width: 767px) {
+  .session-workspace-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* The mockup's "+ New X" trigger is a small, left-aligned accent pill
    (padding:8px 13px, ~11.5px semibold text) — not a full-width bar. Plain
    shadcn <Button>s default to align-items:stretch from .wiki-sidebar's flex
@@ -1567,31 +1576,6 @@ button:disabled {
   border-radius: 6px;
 }
 
-.settings-layout {
-  display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-}
-
-.settings-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.settings-nav-item {
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  color: var(--foreground);
-  text-decoration: none;
-}
-
-.settings-nav-item.active {
-  background: var(--muted);
-  font-weight: 600;
-}
-
 /* Next Settings (mockup-fidelity pass): single-column sectioned cards
    instead of a side-nav, since there's only ever a handful of these. */
 .settings-sections {
@@ -1664,15 +1648,22 @@ button:disabled {
   .wiki-layout {
     grid-template-columns: 220px minmax(0, 1fr);
   }
-
-  .settings-layout {
-    grid-template-columns: 140px minmax(0, 1fr);
-  }
 }
 
 /* ---- Responsive: mobile & small tablets ---- */
-@media (max-width: 680px) {
+/* 767px, not the old 680px — matches useIsMobile()'s own JS threshold
+   (hooks/use-mobile.ts), so the nav drawer and this CSS switch over at the
+   same width instead of leaving an 81px dead zone between them. */
+@media (max-width: 767px) {
   .app-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* .map-bar's title + status/system selects + link/delete actions overflow
+     the viewport in a single unwrapping row (used by Atlas, Campaigns,
+     Timelines, Whiteboards headers alike). */
+  .map-bar {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
@@ -1680,14 +1671,6 @@ button:disabled {
   /* Stack the wiki sidebar above the content on narrow screens. */
   .wiki-layout {
     grid-template-columns: 1fr;
-  }
-
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .settings-nav {
-    flex-direction: row;
   }
 
   /* On the maps view specifically, show the map before the map list/layer
@@ -1720,14 +1703,6 @@ button:disabled {
   /* Header wraps to its own row if needed. */
   .world-view-bar {
     flex-wrap: wrap;
-  }
-
-  /* Stack the app-wide and in-world sidebars above their content instead of
-     squeezing a fixed-width column beside it. */
-  .sidebar-shell,
-  .sidebar-shell-next {
-    flex-direction: column;
-    --sidebar-width: 100%;
   }
 
   /* Give tappable controls more height on touch devices. */
@@ -2545,15 +2520,9 @@ button:disabled {
 }
 
 /* On narrow screens collapse the 12-col grid to a single column. */
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .sheet-grid > .sheet-field {
     grid-column: 1 / -1 !important;
-  }
-}
-
-@media (max-width: 680px) {
-  .sheets-panel {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -3651,7 +3620,7 @@ button:disabled {
   width: 100%;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .builder-grid > .builder-field {
     grid-column: 1 / -1 !important;
   }
