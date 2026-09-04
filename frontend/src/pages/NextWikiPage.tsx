@@ -121,6 +121,34 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  async function renameCategory(category: Category, newName: string) {
+    try {
+      await categoriesApi(worldId).update(category.id, { name: newName, parentId: category.parentId ?? null });
+      await refresh();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  // Same full-fetch-first rule as moveArticleToCategory — ArticleRequest.body
+  // isn't defaulted server-side, so an update omitting it would clobber it.
+  async function renameArticle(article: ArticleSummary, newTitle: string) {
+    try {
+      const full = await articlesApi(worldId).get(article.id);
+      await articlesApi(worldId).update(full.id, {
+        title: newTitle,
+        slug: full.slug,
+        template: full.template,
+        categoryId: full.categoryId,
+        parentArticleId: full.parentArticleId,
+        body: full.body ?? undefined,
+      });
+      await refresh();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   // Fetches full article detail first (the tree only holds ArticleSummary,
   // which has no body) so the update never clobbers body with an omitted
   // field — ArticleRequest.body isn't defaulted server-side to the
@@ -172,6 +200,8 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           onMoveEntity={(a, categoryId) => void moveArticleToCategory(a, categoryId)}
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
+          onRenameCategory={(c, name) => void renameCategory(c, name)}
+          onRenameEntity={(a, name) => void renameArticle(a, name)}
           onDeleteEntity={(a) => void deleteArticle(a)}
           newEntityActions={[
             {
