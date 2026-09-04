@@ -155,6 +155,76 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
     }
   }
 
+  async function renameCategory(category: SheetCategory, newName: string) {
+    try {
+      await categoriesApiRef.update(category.id, { name: newName, parentId: category.parentId ?? null });
+      await refreshAll();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  // Mirrors moveEntityToCategory's per-kind update shape, changing name
+  // instead of categoryId.
+  async function renameItem(item: TreeItem, newName: string) {
+    try {
+      switch (item.kind) {
+        case 'sheet': {
+          const s = item.entity;
+          await sheetsApiRef.update(s.id, {
+            categoryId: s.categoryId ?? null,
+            name: newName,
+            worldTemplateId: s.worldTemplateId,
+            globalTemplateId: s.globalTemplateId,
+            articleId: s.articleId ?? null,
+            campaignId: s.campaignId ?? null,
+            values: s.values,
+          });
+          break;
+        }
+        case 'statblock': {
+          const s = item.entity;
+          await statblocksApiRef.update(s.id, {
+            categoryId: s.categoryId ?? null,
+            name: newName,
+            articleId: s.articleId ?? null,
+            campaignId: s.campaignId ?? null,
+            worldTemplateId: s.worldTemplateId ?? null,
+            globalTemplateId: s.globalTemplateId ?? null,
+            stats: s.stats,
+            notes: s.notes ?? null,
+          });
+          break;
+        }
+        case 'document': {
+          const d = item.entity;
+          await documentsApiRef.update(d.id, {
+            categoryId: d.categoryId ?? null,
+            name: newName,
+            templateId: d.templateId,
+            campaignId: d.campaignId ?? null,
+            values: d.values,
+          });
+          break;
+        }
+        case 'template': {
+          const t = item.entity;
+          await templatesApiRef.update(t.id, {
+            categoryId: t.categoryId ?? null,
+            name: newName,
+            kind: t.kind,
+            systemId: t.systemId ?? null,
+            sections: t.sections,
+          });
+          break;
+        }
+      }
+      await refreshAll();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   // Every owner's update() must carry its full existing state, or an
   // unrelated field would get clobbered — mirrors Atlas/Handouts/Tables&Decks.
   async function moveEntityToCategory(item: TreeItem, categoryId: string | null) {
@@ -292,6 +362,8 @@ export function SheetsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
           onMoveEntity={(item, categoryId) => void moveEntityToCategory(item, categoryId)}
           onCreateCategory={(name, parentId) => void createCategory(name, parentId)}
           onRemoveCategory={(c) => void removeCategory(c)}
+          onRenameCategory={(c, name) => void renameCategory(c, name)}
+          onRenameEntity={(item, name) => void renameItem(item, name)}
           loading={loading}
           searchPlaceholder="Search sheets…"
           emptyLabel="No sheets, statblocks, documents, or templates yet."
