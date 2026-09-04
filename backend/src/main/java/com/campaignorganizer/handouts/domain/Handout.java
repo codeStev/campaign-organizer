@@ -19,6 +19,7 @@ public final class Handout {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private String title;
     private Preset preset;
     private String body;
@@ -31,11 +32,12 @@ public final class Handout {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Handout(UUID id, UUID worldId, String title, Preset preset, String body,
+    private Handout(UUID id, UUID worldId, UUID categoryId, String title, Preset preset, String body,
                     UUID sessionId, Integer sortOrder, boolean revealed, Instant createdAt,
                     Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.sessionId = sessionId;
         this.sortOrder = sortOrder;
         this.revealed = revealed;
@@ -44,21 +46,22 @@ public final class Handout {
         apply(title, preset, body);
     }
 
-    public static Handout create(UUID id, UUID worldId, String title, Preset preset,
+    public static Handout create(UUID id, UUID worldId, UUID categoryId, String title, Preset preset,
                                  String body, UUID sessionId, boolean revealed, Instant now) {
-        return new Handout(id, worldId, title, preset, body, sessionId, null, revealed, now, now);
+        return new Handout(id, worldId, categoryId, title, preset, body, sessionId, null, revealed, now, now);
     }
 
-    public static Handout reconstitute(UUID id, UUID worldId, String title, Preset preset,
+    public static Handout reconstitute(UUID id, UUID worldId, UUID categoryId, String title, Preset preset,
                                        String body, UUID sessionId, Integer sortOrder,
                                        boolean revealed, Instant createdAt, Instant updatedAt) {
-        return new Handout(id, worldId, title, preset, body, sessionId, sortOrder, revealed,
+        return new Handout(id, worldId, categoryId, title, preset, body, sessionId, sortOrder, revealed,
                 createdAt, updatedAt);
     }
 
-    public void update(String title, Preset preset, String body, UUID sessionId,
+    public void update(UUID categoryId, String title, Preset preset, String body, UUID sessionId,
                        boolean revealed, Instant now) {
         apply(title, preset, body);
+        this.categoryId = categoryId;
         this.sessionId = sessionId;
         this.revealed = revealed;
         this.updatedAt = now;
@@ -91,6 +94,10 @@ public final class Handout {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public String getTitle() {

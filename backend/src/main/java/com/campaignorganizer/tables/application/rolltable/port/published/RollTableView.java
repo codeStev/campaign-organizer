@@ -8,6 +8,7 @@ import java.util.UUID;
 public record RollTableView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         String title,
         String description,
         String diceExpression,

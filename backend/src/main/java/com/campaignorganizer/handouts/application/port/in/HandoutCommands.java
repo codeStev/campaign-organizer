@@ -8,11 +8,11 @@ public final class HandoutCommands {
     private HandoutCommands() {
     }
 
-    public record CreateHandoutCommand(UUID worldId, String title, String preset, String body,
-                                       UUID sessionId, boolean revealed) {
+    public record CreateHandoutCommand(UUID worldId, UUID categoryId, String title, String preset,
+                                       String body, UUID sessionId, boolean revealed) {
     }
 
-    public record UpdateHandoutCommand(UUID worldId, UUID handoutId, String title,
+    public record UpdateHandoutCommand(UUID worldId, UUID handoutId, UUID categoryId, String title,
                                        String preset, String body, UUID sessionId,
                                        boolean revealed) {
     }

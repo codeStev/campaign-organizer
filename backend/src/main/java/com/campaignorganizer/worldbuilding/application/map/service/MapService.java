@@ -13,6 +13,7 @@ import com.campaignorganizer.worldbuilding.application.map.port.in.MapCommands.U
 import com.campaignorganizer.worldbuilding.application.map.port.in.UpdateMapUseCase;
 import com.campaignorganizer.worldbuilding.application.map.port.out.MapRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.out.WorldExistsPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
@@ -32,15 +33,17 @@ public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMap
     private final MapRepositoryPort maps;
     private final WorldExistsPort worlds;
     private final MediaLookupPort media;
+    private final MapCategoryQueryPort categories;
     private final MapViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public MapService(MapRepositoryPort maps, WorldExistsPort worlds, MediaLookupPort media,
-                      MapViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                      MapCategoryQueryPort categories, MapViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.maps = maps;
         this.worlds = worlds;
         this.media = media;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -51,6 +54,7 @@ public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMap
     public MapView create(CreateMapCommand command) {
         requireWorld(command.worldId());
         requireImage(command.worldId(), command.mediaId());
+        validateCategory(command.worldId(), command.categoryId());
         WorldMap created = WorldMap.create(ids.newId(), command.worldId(), command.name(),
                 command.mediaId(), clock.instant());
         return viewMapper.toView(maps.save(created));
@@ -61,7 +65,8 @@ public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMap
     public MapView update(UpdateMapCommand command) {
         WorldMap map = require(command.worldId(), command.mapId());
         requireImage(command.worldId(), command.mediaId());
-        map.update(command.name(), command.mediaId(), clock.instant());
+        validateCategory(command.worldId(), command.categoryId());
+        map.update(command.categoryId(), command.name(), command.mediaId(), clock.instant());
         return viewMapper.toView(maps.save(map));
     }
 
@@ -89,8 +94,8 @@ public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMap
     @Override
     @Transactional
     public MapView importMap(MapView view) {
-        WorldMap map = WorldMap.reconstitute(view.id(), view.worldId(), view.name(), view.mediaId(),
-                view.createdAt(), view.updatedAt());
+        WorldMap map = WorldMap.reconstitute(view.id(), view.worldId(), view.categoryId(), view.name(),
+                view.mediaId(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(maps.save(map));
     }
 
@@ -128,6 +133,12 @@ public class MapService implements CreateMapUseCase, UpdateMapUseCase, DeleteMap
     private void requireImage(UUID worldId, UUID mediaId) {
         if (mediaId == null || !media.existsInWorld(mediaId, worldId)) {
             throw new ValidationException("Image not found in this world");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Map category not found in this world");
         }
     }
 }

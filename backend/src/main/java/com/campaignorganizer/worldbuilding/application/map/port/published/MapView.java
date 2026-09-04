@@ -7,6 +7,7 @@ import java.util.UUID;
 public record MapView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         String name,
         UUID mediaId,
         Instant createdAt,

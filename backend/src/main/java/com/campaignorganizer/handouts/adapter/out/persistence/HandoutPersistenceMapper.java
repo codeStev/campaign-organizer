@@ -17,6 +17,7 @@ public interface HandoutPersistenceMapper {
         return Handout.reconstitute(
                 entity.getId(),
                 entity.getWorldId(),
+                entity.getCategoryId(),
                 entity.getTitle(),
                 Handout.Preset.valueOf(entity.getPreset()),
                 entity.getBody(),

@@ -14,10 +14,11 @@ public interface WorldWebMapper {
     WorldResponse toResponse(WorldView view);
 
     default CreateWorldCommand toCreateCommand(WorldRequest request) {
-        return new CreateWorldCommand(request.name(), request.description());
+        return new CreateWorldCommand(request.name(), request.description(), Boolean.TRUE.equals(request.scratch()));
     }
 
     default UpdateWorldCommand toUpdateCommand(UUID worldId, WorldRequest request) {
-        return new UpdateWorldCommand(worldId, request.name(), request.description());
+        return new UpdateWorldCommand(worldId, request.name(), request.description(),
+                Boolean.TRUE.equals(request.scratch()));
     }
 }

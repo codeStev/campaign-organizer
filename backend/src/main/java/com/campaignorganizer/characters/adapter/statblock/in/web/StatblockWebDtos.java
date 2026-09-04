@@ -12,6 +12,7 @@ public final class StatblockWebDtos {
     }
 
     public record StatblockRequest(
+            UUID categoryId,
             @NotBlank @Size(max = 200) String name,
             UUID articleId,
             UUID campaignId,
@@ -24,6 +25,7 @@ public final class StatblockWebDtos {
     public record StatblockResponse(
             UUID id,
             UUID worldId,
+            UUID categoryId,
             UUID articleId,
             UUID campaignId,
             UUID worldTemplateId,

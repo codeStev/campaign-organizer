@@ -18,6 +18,7 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockQueryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockTemplateRefPort;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.statblock.Statblock;
@@ -50,6 +51,7 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     private final GlobalFieldTemplateQueryPort globalTemplates;
     private final CampaignStatblockRefPort campaignRefs;
     private final StatblockTagLookupPort tagLookup;
+    private final SheetCategoryQueryPort categories;
     private final StatblockViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
@@ -58,6 +60,7 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
                             ArticleExistsPort articles, CampaignExistsPort campaigns,
                             FieldTemplateQueryPort templates, GlobalFieldTemplateQueryPort globalTemplates,
                             CampaignStatblockRefPort campaignRefs, StatblockTagLookupPort tagLookup,
+                            SheetCategoryQueryPort categories,
                             StatblockViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.statblocks = statblocks;
         this.worlds = worlds;
@@ -67,6 +70,7 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
         this.globalTemplates = globalTemplates;
         this.campaignRefs = campaignRefs;
         this.tagLookup = tagLookup;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -78,9 +82,10 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
         requireWorld(command.worldId());
         validateLinks(command.worldId(), command.articleId(), command.campaignId(),
                 command.worldTemplateId(), command.globalTemplateId());
-        Statblock created = Statblock.create(ids.newId(), command.worldId(), command.articleId(),
-                command.campaignId(), command.worldTemplateId(), command.globalTemplateId(), command.name(),
-                command.stats(), command.notes(), clock.instant());
+        validateCategory(command.worldId(), command.categoryId());
+        Statblock created = Statblock.create(ids.newId(), command.worldId(), command.categoryId(),
+                command.articleId(), command.campaignId(), command.worldTemplateId(),
+                command.globalTemplateId(), command.name(), command.stats(), command.notes(), clock.instant());
         return viewMapper.toView(statblocks.save(created));
     }
 
@@ -90,9 +95,10 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
         Statblock statblock = require(command.worldId(), command.statblockId());
         validateLinks(command.worldId(), command.articleId(), command.campaignId(),
                 command.worldTemplateId(), command.globalTemplateId());
-        statblock.update(command.articleId(), command.campaignId(), command.worldTemplateId(),
-                command.globalTemplateId(), command.name(), command.stats(), command.notes(),
-                clock.instant());
+        validateCategory(command.worldId(), command.categoryId());
+        statblock.update(command.categoryId(), command.articleId(), command.campaignId(),
+                command.worldTemplateId(), command.globalTemplateId(), command.name(), command.stats(),
+                command.notes(), clock.instant());
         return viewMapper.toView(statblocks.save(statblock));
     }
 
@@ -106,7 +112,7 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Transactional
     public StatblockView duplicate(UUID worldId, UUID statblockId) {
         Statblock source = require(worldId, statblockId);
-        return create(new CreateStatblockCommand(worldId, source.getArticleId(),
+        return create(new CreateStatblockCommand(worldId, source.getCategoryId(), source.getArticleId(),
                 source.getCampaignId(), source.getWorldTemplateId(), source.getGlobalTemplateId(),
                 source.getName() + " (copy)", source.getStats(), source.getNotes()));
     }
@@ -155,9 +161,9 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
     @Override
     @Transactional
     public StatblockView importStatblock(StatblockView view) {
-        Statblock statblock = Statblock.reconstitute(view.id(), view.worldId(), view.articleId(),
-                view.campaignId(), view.worldTemplateId(), view.globalTemplateId(), view.name(),
-                view.stats(), view.notes(), view.createdAt(), view.updatedAt());
+        Statblock statblock = Statblock.reconstitute(view.id(), view.worldId(), view.categoryId(),
+                view.articleId(), view.campaignId(), view.worldTemplateId(), view.globalTemplateId(),
+                view.name(), view.stats(), view.notes(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(statblocks.save(statblock));
     }
 
@@ -226,6 +232,12 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
         }
         if (kind != null && kind != TemplateKind.STATBLOCK) {
             throw new ValidationException("Template is not a statblock template");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Category not found in this world");
         }
     }
 

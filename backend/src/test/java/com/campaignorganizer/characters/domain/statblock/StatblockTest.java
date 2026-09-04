@@ -17,10 +17,10 @@ class StatblockTest {
 
     @Test
     void updateBumpsUpdatedAt() {
-        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null,
+        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null, null,
                 "Goblin", Map.of("hp", 7), "sneaky", T0);
         UUID article = UUID.randomUUID();
-        s.update(article, null, null, null, "Hobgoblin", Map.of("hp", 11), "tougher", T1);
+        s.update(null, article, null, null, null, "Hobgoblin", Map.of("hp", 11), "tougher", T1);
 
         assertThat(s.getName()).isEqualTo("Hobgoblin");
         assertThat(s.getArticleId()).isEqualTo(article);
@@ -31,21 +31,21 @@ class StatblockTest {
 
     @Test
     void nullStatsBecomeEmptyMap() {
-        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null,
+        Statblock s = Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null, null,
                 "Goblin", null, null, T0);
         assertThat(s.getStats()).isEmpty();
     }
 
     @Test
     void rejectsBlankName() {
-        assertThatThrownBy(() -> Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null,
+        assertThatThrownBy(() -> Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null,
                 null, " ", null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void rejectsBothWorldAndGlobalTemplateSet() {
-        assertThatThrownBy(() -> Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
+        assertThatThrownBy(() -> Statblock.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null,
                 UUID.randomUUID(), UUID.randomUUID(), "Goblin", null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }

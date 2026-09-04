@@ -21,9 +21,9 @@ class SheetTest {
     @Test
     void templateUpdateBumpsUpdatedAt() {
         UUID systemId = UUID.randomUUID();
-        FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic",
+        FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), null, "Generic",
                 TemplateKind.CHARACTER, systemId, List.of(), T0);
-        t.update("Generic v2", systemId, List.of(), T1);
+        t.update(null, "Generic v2", systemId, List.of(), T1);
 
         assertThat(t.getName()).isEqualTo("Generic v2");
         assertThat(t.getCreatedAt()).isEqualTo(T0);
@@ -32,7 +32,7 @@ class SheetTest {
 
     @Test
     void templateNullSectionsBecomeEmptyList() {
-        FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic",
+        FieldTemplate t = FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), null, "Generic",
                 TemplateKind.CHARACTER, null, null, T0);
         assertThat(t.getSections()).isEmpty();
     }
@@ -40,7 +40,7 @@ class SheetTest {
     @Test
     void templateRejectsBlankName() {
         assertThatThrownBy(() ->
-                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), " ", TemplateKind.CHARACTER, null,
+                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), null, " ", TemplateKind.CHARACTER, null,
                         null, T0))
                 .isInstanceOf(ValidationException.class);
     }
@@ -48,16 +48,16 @@ class SheetTest {
     @Test
     void templateRejectsNullKind() {
         assertThatThrownBy(() ->
-                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), "Generic", null, null, null, T0))
+                FieldTemplate.create(UUID.randomUUID(), UUID.randomUUID(), null, "Generic", null, null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void characterSheetUpdateBumpsUpdatedAt() {
         UUID templateId = UUID.randomUUID();
-        CharacterSheet s = CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), templateId, null,
+        CharacterSheet s = CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null, templateId, null,
                 null, null, "Aria", Map.of("hp", 10), T0);
-        s.update(templateId, null, null, null, "Aria the Bold", Map.of("hp", 12), T1);
+        s.update(null, templateId, null, null, null, "Aria the Bold", Map.of("hp", 12), T1);
 
         assertThat(s.getName()).isEqualTo("Aria the Bold");
         assertThat(s.getValues()).containsEntry("hp", 12);
@@ -66,21 +66,21 @@ class SheetTest {
 
     @Test
     void characterSheetRejectsBlankName() {
-        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(),
+        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null,
                 UUID.randomUUID(), null, null, null, " ", null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void characterSheetRequiresTemplate() {
-        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
+        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null,
                 null, null, "Aria", null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void characterSheetRejectsBothWorldAndGlobalTemplateSet() {
-        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(),
+        assertThatThrownBy(() -> CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null,
                 UUID.randomUUID(), UUID.randomUUID(), null, null, "Aria", null, T0))
                 .isInstanceOf(ValidationException.class);
     }
@@ -88,7 +88,7 @@ class SheetTest {
     @Test
     void characterSheetAcceptsGlobalTemplateOnly() {
         UUID globalTemplateId = UUID.randomUUID();
-        CharacterSheet s = CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null,
+        CharacterSheet s = CharacterSheet.create(UUID.randomUUID(), UUID.randomUUID(), null, null,
                 globalTemplateId, null, null, "Aria", null, T0);
         assertThat(s.getGlobalTemplateId()).isEqualTo(globalTemplateId);
         assertThat(s.getWorldTemplateId()).isNull();

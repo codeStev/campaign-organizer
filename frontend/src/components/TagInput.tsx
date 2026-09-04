@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { worldTagsApi } from '../api/client';
@@ -104,10 +104,18 @@ interface TagListProps {
   tags: string[];
 }
 
-/** Read-only tag chips; clicking one navigates to the cross-entity browse view (ADR-0083). */
+/**
+ * Read-only tag chips; clicking one navigates to the cross-entity browse
+ * view (ADR-0083). Rendered at variable depth (article read view, statblock
+ * detail, ...) in both the old UI and /next, so — unlike this file's other
+ * navigate() calls — a relative path can't reach "tags" reliably; branch on
+ * the current shell's prefix instead.
+ */
 export function TagList({ worldId, tags }: TagListProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   if (tags.length === 0) return null;
+  const base = location.pathname.startsWith('/next/') ? '/next/worlds' : '/worlds';
   return (
     <div className="beat-article-chips">
       {tags.map((tag) => (
@@ -115,7 +123,7 @@ export function TagList({ worldId, tags }: TagListProps) {
           key={tag}
           type="button"
           className="beat-chip tag-chip-link"
-          onClick={() => navigate(`/worlds/${worldId}/tags/${encodeURIComponent(tag)}`)}
+          onClick={() => navigate(`${base}/${worldId}/tags/${encodeURIComponent(tag)}`)}
         >
           {tag}
         </button>

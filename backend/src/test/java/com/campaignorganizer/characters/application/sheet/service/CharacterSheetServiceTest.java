@@ -3,6 +3,7 @@ package com.campaignorganizer.characters.application.sheet.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.characters.application.sheet.port.in.CharacterSheetCommands.CreateCharacterSheetCommand;
@@ -10,6 +11,7 @@ import com.campaignorganizer.characters.application.sheet.port.out.ArticleExists
 import com.campaignorganizer.characters.application.sheet.port.out.CampaignExistsPort;
 import com.campaignorganizer.characters.application.sheet.port.out.CharacterSheetRepositoryPort;
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
@@ -48,6 +50,8 @@ class CharacterSheetServiceTest {
     @Mock
     private CampaignExistsPort campaigns;
     @Mock
+    private SheetCategoryQueryPort categories;
+    @Mock
     private IdGenerator ids;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
@@ -60,12 +64,13 @@ class CharacterSheetServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(categories.existsInWorld(any(), any())).thenReturn(true);
         service = new CharacterSheetService(sheets, templates, globalTemplates, worlds, articles, campaigns,
-                viewMapper, ids, clock);
+                categories, viewMapper, ids, clock);
     }
 
     private FieldTemplateView templateView(TemplateKind kind) {
-        return new FieldTemplateView(templateId, worldId, "Template", kind, null, List.of(),
+        return new FieldTemplateView(templateId, worldId, null, "Template", kind, null, List.of(),
                 Instant.now(), Instant.now());
     }
 
@@ -78,7 +83,7 @@ class CharacterSheetServiceTest {
         when(sheets.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CharacterSheetView view = service.create(new CreateCharacterSheetCommand(
-                worldId, templateId, null, null, null, "Aria", null));
+                worldId, null, templateId, null, null, null, "Aria", null));
 
         assertThat(view.name()).isEqualTo("Aria");
     }
@@ -88,7 +93,7 @@ class CharacterSheetServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(new CreateCharacterSheetCommand(
-                worldId, templateId, null, null, null, "Aria", null)))
+                worldId, null, templateId, null, null, null, "Aria", null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -98,7 +103,7 @@ class CharacterSheetServiceTest {
         when(templates.findByIdInWorld(templateId, worldId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(new CreateCharacterSheetCommand(
-                worldId, templateId, null, null, null, "Aria", null)))
+                worldId, null, templateId, null, null, null, "Aria", null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -109,7 +114,7 @@ class CharacterSheetServiceTest {
                 .thenReturn(Optional.of(templateView(TemplateKind.STATBLOCK)));
 
         assertThatThrownBy(() -> service.create(new CreateCharacterSheetCommand(
-                worldId, templateId, null, null, null, "Aria", null)))
+                worldId, null, templateId, null, null, null, "Aria", null)))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -124,7 +129,7 @@ class CharacterSheetServiceTest {
         when(sheets.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CharacterSheetView view = service.create(new CreateCharacterSheetCommand(
-                worldId, null, globalTemplateId, null, null, "Aria", null));
+                worldId, null, null, globalTemplateId, null, null, "Aria", null));
 
         assertThat(view.name()).isEqualTo("Aria");
         assertThat(view.globalTemplateId()).isEqualTo(globalTemplateId);
@@ -135,7 +140,7 @@ class CharacterSheetServiceTest {
         when(worlds.exists(worldId)).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(new CreateCharacterSheetCommand(
-                worldId, null, null, null, null, "Aria", null)))
+                worldId, null, null, null, null, null, "Aria", null)))
                 .isInstanceOf(ValidationException.class);
     }
 }

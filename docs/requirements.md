@@ -24,7 +24,12 @@ non-functional). Each maps to a roadmap phase.
 
 ### Wiki (Phase 1)
 - **FR-3 Articles.** Create Markdown articles (live-preview editor) within a
-  world, organized by category/hierarchy. (ADR-0054)
+  world, organized by category/hierarchy. (ADR-0054; category hierarchy UI
+  landed in `/next`'s Wiki via ADR-0104, alongside ADR-0080's independent
+  parentArticleId structural nesting; the full article editor — body, tags,
+  template/parent pickers, AI draft, revision history/diff, usages — was
+  ported natively into `/next` via ADR-0105, replacing its former "Edit in
+  current UI" link-out)
 - **FR-4 Templates.** Article templates (Character, Location, Organization,
   Species, Item, etc.) provide structured prompts.
 - **FR-5 Auto-linking.** Mentions of other articles are automatically turned
@@ -43,7 +48,8 @@ non-functional). Each maps to a roadmap phase.
   labels on the map; a pin with no label falls back to its linked article's title.
   A single map can be printed on its own with scale, visual-filter, per-layer pin
   filtering (e.g. a players' copy hiding secret locations), and label/legend
-  options. (ADR-0018, ADR-0044, ADR-0045, ADR-0047, ADR-0049)
+  options. (ADR-0018, ADR-0044, ADR-0045, ADR-0047, ADR-0049; `/next`'s Atlas
+  category tree, separate from Wiki's, landed via ADR-0105)
 - **FR-9 Timelines.** Events with dates, linked to articles; parallel timelines.
 - **FR-10 Calendars.** Custom (fantasy) calendar systems that drive timeline
   dates.
@@ -65,7 +71,8 @@ non-functional). Each maps to a roadmap phase.
 ### Character sheets & dice (Phase 4)
 - **FR-16 Sheet engine.** Schema-driven character sheets supporting multiple
   game systems without hardcoding each; long-text fields render as Markdown
-  (ADR-0054).
+  (ADR-0054). `/next`'s Sheets screen groups sheets, statblocks, documents,
+  and field templates in one merged category tree, no sub-tabs (ADR-0105).
 - **FR-17 Starter systems.** Ship 2–3 systems (e.g. D&D 5e, Pathfinder, generic).
 - **FR-18 Statblocks.** Reusable NPC/monster statblocks; a statblock can
   optionally be driven by a statblock field template (FR-34) instead of
@@ -185,7 +192,8 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   prints exactly once per document** no matter how many sources reference
   it. Wiki-links in printed bodies stay anchors-only; deck draws are
   stateless (print-first). Tables/decks appear in usage backlinks and world
-  backups like every other content type. (ADR-0066)
+  backups like every other content type. (ADR-0066; `/next`'s Tables & Decks
+  screen groups both in one shared category tree, ADR-0105)
 - **FR-41 Roll-table chaining.** A table entry or deck card can chain other
   roll tables and card decks ("roll on Weather"), resolved recursively.
   Save-time validation rejects self-nesting and references outside the
@@ -223,7 +231,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   fixed presets (parchment, newspaper, poster, letter). Deliberately
   separate from GM-only content: handouts are meant to leave the table in
   the players' hands. Own bounded context; ships in world backups; reuses
-  the standalone print-window pattern (ADR-0038). (ADR-0070)
+  the standalone print-window pattern (ADR-0038). (ADR-0070; `/next`'s
+  category tree for handouts, own taxonomy separate from Wiki's, landed via
+  ADR-0105)
 - **FR-47 Folksonomy tags.** Freeform, world-scoped tags — no `type:`/
   `status:` namespacing, no colors/icons, no forced taxonomy — orthogonal to
   the article category/parent-child hierarchy (FR-1, ADR-0080). v1 covers
@@ -325,6 +335,23 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
   selections, pre-seeded with its saved quantities; HP (or whatever a
   system tracks instead) stays live/auto-detected at print time for
   every system, not persisted. (ADR-0097; extends FR-33, FR-44)
+- **FR-60 Scratch/sandbox world flag.** A world can be marked "scratch" —
+  a cosmetic label (world list badge, switcher entry) for a
+  brainstorming/sandbox space, distinct from a real campaign world. No
+  functional effect: a scratch world is a full world in search, backup,
+  and export alike. (ADR-0100)
+- **FR-61 Beat kinds.** A world-scoped, GM-defined catalog of named beat
+  kinds (name + color) — not a fixed enum — that a beat can optionally be
+  tagged with, rendering beats with their kind's color the way an arc's
+  beat list is meant to be scannable at a glance. Deleting a kind un-tags
+  any beats that used it rather than being blocked. (ADR-0101)
+- **FR-62 World overview aggregate stats.** A per-world read endpoint
+  aggregating article count, sessions-run count (sessions dated on or
+  before today), a recently-edited feed (5 most recently updated
+  articles), the next scheduled session across every campaign in the
+  world, open (not-yet-full) clocks, and open loose threads — no new
+  persisted state, composed from existing published ports. (ADR-0102,
+  ADR-0103)
 
 ---
 

@@ -12,7 +12,7 @@ public interface MapPersistenceMapper {
         if (e == null) {
             return null;
         }
-        return WorldMap.reconstitute(e.getId(), e.getWorldId(), e.getName(), e.getMediaId(),
+        return WorldMap.reconstitute(e.getId(), e.getWorldId(), e.getCategoryId(), e.getName(), e.getMediaId(),
                 e.getCreatedAt(), e.getUpdatedAt());
     }
 }

@@ -14,13 +14,13 @@ public interface DocumentWebMapper {
     DocumentResponse toResponse(DocumentView view);
 
     default CreateDocumentCommand toCreateCommand(UUID worldId, DocumentRequest request) {
-        return new CreateDocumentCommand(worldId, request.templateId(), request.campaignId(),
-                request.name(), request.values());
+        return new CreateDocumentCommand(worldId, request.categoryId(), request.templateId(),
+                request.campaignId(), request.name(), request.values());
     }
 
     default UpdateDocumentCommand toUpdateCommand(UUID worldId, UUID documentId,
                                                    DocumentRequest request) {
-        return new UpdateDocumentCommand(worldId, documentId, request.templateId(),
+        return new UpdateDocumentCommand(worldId, documentId, request.categoryId(), request.templateId(),
                 request.campaignId(), request.name(), request.values());
     }
 }

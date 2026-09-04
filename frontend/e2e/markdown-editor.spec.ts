@@ -13,8 +13,15 @@ test.beforeEach(async ({ page, request }) => {
   const world = await apiCreateWorld(request, token, uniqueName('MD Editor Test World'));
   worldId = world.id;
   await login(page);
-  await page.goto(`/worlds/${worldId}/handouts`);
-  await page.getByTestId('new-handout-button').click();
+  await page.goto(`/next/worlds/${worldId}/handouts`);
+  // Handout creation now goes through CategoryTree's "+" menu on the
+  // Uncategorised leaf (a fresh world has no other categories yet).
+  await page.getByTitle('New…').click();
+  await page.getByRole('menuitem', { name: '+ New handout' }).click();
+  // The dropdown's close animation can still be intercepting pointer events
+  // for a beat after the click resolves — wait for it to actually leave the
+  // DOM before clicking into the editor below.
+  await expect(page.getByRole('menu')).toHaveCount(0);
   await page.getByTestId('handout-title-input').fill('Formatting check');
   await page.getByTestId('md-content').locator('.ProseMirror').click();
   await page.waitForTimeout(400); // let Milkdown's async editor init finish
@@ -56,12 +63,21 @@ test('italic text actually renders italic, and the button reflects it', async ({
 
 test('H2 actually renders as a heading, and the button reflects it', async ({ page }) => {
   const content = page.getByTestId('md-content');
-  const h2Btn = page.getByTestId('md-toolbar-h2');
+  const textStyle = page.getByTestId('md-toolbar-text-style');
 
   await page.keyboard.type('normal paragraph');
   await page.keyboard.press('Enter');
-  await h2Btn.click();
-  await expect(h2Btn).toHaveAttribute('aria-pressed', 'true');
+  await textStyle.click();
+  await page.getByRole('option', { name: 'Heading 2' }).click();
+  await expect(textStyle).toHaveText('Heading 2');
+  // Picking from the Select moves focus to its portaled dropdown, same as a
+  // real click would — the editor isn't a descendant of the toolbar for
+  // focus-retention purposes (see the toolbar's onMouseDown comment), so a
+  // real user has to focus back into it before typing. Use .focus(), not
+  // .click(): a click hit-tests a coordinate and could land on either the
+  // first line or the (now-empty, now-h2) second line, whereas ProseMirror
+  // restores its own last selection on focus.
+  await content.locator('.ProseMirror').focus();
   await page.keyboard.type('Section Title');
 
   const heading = content.locator('h2', { hasText: 'Section Title' });

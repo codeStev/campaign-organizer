@@ -17,14 +17,14 @@ public interface HandoutWebMapper {
     HandoutResponse toResponse(HandoutView view);
 
     default CreateHandoutCommand toCreateCommand(UUID worldId, HandoutRequest request) {
-        return new CreateHandoutCommand(worldId, request.title(), request.preset(),
+        return new CreateHandoutCommand(worldId, request.categoryId(), request.title(), request.preset(),
                 request.body(), request.sessionId(), request.revealedOrDefault());
     }
 
     default UpdateHandoutCommand toUpdateCommand(UUID worldId, UUID handoutId,
                                                  HandoutRequest request) {
-        return new UpdateHandoutCommand(worldId, handoutId, request.title(), request.preset(),
-                request.body(), request.sessionId(), request.revealedOrDefault());
+        return new UpdateHandoutCommand(worldId, handoutId, request.categoryId(), request.title(),
+                request.preset(), request.body(), request.sessionId(), request.revealedOrDefault());
     }
 
     default ReorderHandoutsCommand toReorderCommand(UUID worldId, ReorderHandoutsRequest request) {

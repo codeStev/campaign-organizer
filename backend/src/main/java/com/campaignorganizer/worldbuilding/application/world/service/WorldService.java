@@ -47,7 +47,8 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
     @Override
     @Transactional
     public WorldView create(CreateWorldCommand command) {
-        World created = World.create(ids.newId(), command.name(), command.description(), clock.instant());
+        World created = World.create(ids.newId(), command.name(), command.description(), command.scratch(),
+                clock.instant());
         return viewMapper.toView(worlds.save(created));
     }
 
@@ -55,7 +56,7 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
     @Transactional
     public WorldView update(UpdateWorldCommand command) {
         World world = require(command.worldId());
-        world.update(command.name(), command.description(), clock.instant());
+        world.update(command.name(), command.description(), command.scratch(), clock.instant());
         return viewMapper.toView(worlds.save(world));
     }
 
@@ -97,7 +98,7 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
     @Transactional
     public WorldView importWorld(WorldView view) {
         World world = World.reconstitute(view.id(), view.name(), view.description(), view.layerStyles(),
-                view.createdAt(), view.updatedAt());
+                view.scratch(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(worlds.save(world));
     }
 

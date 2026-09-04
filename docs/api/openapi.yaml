@@ -44,6 +44,10 @@ tags:
     description: >-
       A world-scoped, reusable pool of players; campaign rosters, guest
       flags, and per-session attendance are exposed under campaigns (ADR-0091).
+  - name: beat-kinds
+    description: >-
+      A world-scoped, GM-defined catalog of named+colored beat kinds; an
+      arc beat can optionally be tagged with one (ADR-0101).
   - name: campaigns
     description: Gamemaster campaigns and their play sessions.
   - name: arcs
@@ -488,6 +492,89 @@ paths:
       responses:
         '204':
           description: Map deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/map-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [maps]
+      summary: List a world's map categories (ADR-0105, separate from Wiki's categories)
+      operationId: listMapCategories
+      responses:
+        '200':
+          description: Map categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MapCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [maps]
+      summary: Create a map category
+      operationId: createMapCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapCategoryRequest'
+      responses:
+        '201':
+          description: Map category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/map-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [maps]
+      summary: Update a map category
+      operationId: updateMapCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapCategoryRequest'
+      responses:
+        '200':
+          description: Map category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [maps]
+      summary: Delete a map category (its maps are kept, uncategorized)
+      operationId: deleteMapCategory
+      responses:
+        '204':
+          description: Map category deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -1027,6 +1114,116 @@ paths:
       responses:
         '204':
           description: Player deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/beat-kinds:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [beat-kinds]
+      summary: List a world's beat kinds
+      operationId: listBeatKinds
+      responses:
+        '200':
+          description: Beat kinds in the world.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BeatKind'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [beat-kinds]
+      summary: Create a beat kind in the world's catalog
+      operationId: createBeatKind
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatKindRequest'
+      responses:
+        '201':
+          description: Beat kind created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatKind'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A beat kind with that name already exists in this world.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/beat-kinds/{beatKindId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/BeatKindId'
+    get:
+      tags: [beat-kinds]
+      summary: Get a beat kind
+      operationId: getBeatKind
+      responses:
+        '200':
+          description: The beat kind.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatKind'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [beat-kinds]
+      summary: Rename or recolor a beat kind
+      operationId: updateBeatKind
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatKindRequest'
+      responses:
+        '200':
+          description: Beat kind updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatKind'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A beat kind with that name already exists in this world.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags: [beat-kinds]
+      summary: Delete a beat kind (un-tags any beats that used it)
+      operationId: deleteBeatKind
+      responses:
+        '204':
+          description: Beat kind deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2512,6 +2709,89 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/table-deck-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [roll-tables, card-decks]
+      summary: List a world's table/deck categories (ADR-0105, shared by roll tables and card decks)
+      operationId: listTableDeckCategories
+      responses:
+        '200':
+          description: Table/deck categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TableDeckCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [roll-tables, card-decks]
+      summary: Create a table/deck category
+      operationId: createTableDeckCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableDeckCategoryRequest'
+      responses:
+        '201':
+          description: Table/deck category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableDeckCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/table-deck-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [roll-tables, card-decks]
+      summary: Update a table/deck category
+      operationId: updateTableDeckCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableDeckCategoryRequest'
+      responses:
+        '200':
+          description: Table/deck category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableDeckCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [roll-tables, card-decks]
+      summary: Delete a table/deck category (its tables/decks are kept, uncategorized)
+      operationId: deleteTableDeckCategory
+      responses:
+        '204':
+          description: Table/deck category deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/handouts:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -2660,6 +2940,89 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Handout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/handout-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [handouts]
+      summary: List a world's handout categories (ADR-0105)
+      operationId: listHandoutCategories
+      responses:
+        '200':
+          description: Handout categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandoutCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [handouts]
+      summary: Create a handout category
+      operationId: createHandoutCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoutCategoryRequest'
+      responses:
+        '201':
+          description: Handout category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoutCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/handout-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [handouts]
+      summary: Update a handout category
+      operationId: updateHandoutCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoutCategoryRequest'
+      responses:
+        '200':
+          description: Handout category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoutCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [handouts]
+      summary: Delete a handout category (its handouts are kept, uncategorized)
+      operationId: deleteHandoutCategory
+      responses:
+        '204':
+          description: Handout category deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -3118,6 +3481,89 @@ paths:
                 format: binary
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/sheet-categories:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [sheets]
+      summary: List a world's sheet categories (ADR-0105, shared by character sheets, statblocks, documents, and field templates)
+      operationId: listSheetCategories
+      responses:
+        '200':
+          description: Sheet categories in the world, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SheetCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [sheets]
+      summary: Create a sheet category
+      operationId: createSheetCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetCategoryRequest'
+      responses:
+        '201':
+          description: Sheet category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/sheet-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [sheets]
+      summary: Update a sheet category
+      operationId: updateSheetCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetCategoryRequest'
+      responses:
+        '200':
+          description: Sheet category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [sheets]
+      summary: Delete a sheet category (its sheets/statblocks/documents/templates are kept, uncategorized)
+      operationId: deleteSheetCategory
+      responses:
+        '204':
+          description: Sheet category deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -3695,6 +4141,31 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/overview:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [worlds]
+      summary: World overview stats
+      description: >
+        Aggregate stats for the world's Overview screen (FR-62): article
+        count, sessions run (dated on or before today, across every
+        campaign), the 5 most recently updated articles, the next
+        scheduled session, open clocks, and open loose threads. Pure read
+        composition, no new persisted state (ADR-0102, ADR-0103).
+      operationId: getWorldOverview
+      responses:
+        '200':
+          description: The world's overview stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorldOverviewStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/articles/{articleId}/revisions/{revisionId}/restore:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -4099,6 +4570,14 @@ components:
       schema:
         type: string
         format: uuid
+    BeatKindId:
+      name: beatKindId
+      in: path
+      required: true
+      description: Identifier of the beat kind.
+      schema:
+        type: string
+        format: uuid
     LooseThreadId:
       name: threadId
       in: path
@@ -4495,10 +4974,49 @@ components:
           items:
             $ref: '#/components/schemas/TemplateField'
 
+    SheetCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent sheet category for nesting, or null for a root category.
+
+    SheetCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     FieldTemplateRequest:
       type: object
       required: [name, kind]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -4522,6 +5040,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         name:
           type: string
@@ -4719,6 +5240,10 @@ components:
       type: object
       required: [name]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -4759,6 +5284,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         articleId:
           type: [string, "null"]
@@ -4904,6 +5432,10 @@ components:
         Exactly one of worldTemplateId/globalTemplateId must be set
         (ADR-0093) — a character sheet always needs a template.
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -4937,6 +5469,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         worldTemplateId:
           type: [string, "null"]
           format: uuid
@@ -4965,6 +5500,10 @@ components:
       type: object
       required: [name, templateId]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Sheet category (ADR-0105); null for uncategorized.
         name:
           type: string
           minLength: 1
@@ -4990,6 +5529,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         templateId:
           type: string
@@ -5221,6 +5763,10 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional session where this beat occurred.
+        kindId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional GM-defined beat kind tag (ADR-0101), informational only.
         position:
           type: [integer, "null"]
 
@@ -5269,6 +5815,10 @@ components:
         sessionId:
           type: [string, "null"]
           format: uuid
+        kindId:
+          type: [string, "null"]
+          format: uuid
+          description: Optional GM-defined beat kind tag (ADR-0101), informational only.
         position:
           type: integer
         createdAt:
@@ -5299,6 +5849,39 @@ components:
           format: uuid
         name:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BeatKindRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        color:
+          type: [string, "null"]
+          maxLength: 20
+
+    BeatKind:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
@@ -5940,6 +6523,10 @@ components:
       type: object
       required: [title, diceExpression, entries]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Table/deck category (ADR-0105); null for uncategorized.
         title:
           type: string
           minLength: 1
@@ -5968,6 +6555,9 @@ components:
           format: uuid
         worldId:
           type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
           format: uuid
         title:
           type: string
@@ -6019,6 +6609,10 @@ components:
       type: object
       required: [title, cards]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Table/deck category (ADR-0105); null for uncategorized.
         title:
           type: string
           minLength: 1
@@ -6063,6 +6657,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         title:
           type: string
         description:
@@ -6078,10 +6675,49 @@ components:
           type: string
           format: date-time
 
+    TableDeckCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent table/deck category for nesting, or null for a root category.
+
+    TableDeckCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     HandoutRequest:
       type: object
       required: [title, preset]
       properties:
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Handout category (ADR-0105); null for uncategorized.
         title:
           type: string
           minLength: 1
@@ -6129,6 +6765,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         title:
           type: string
         preset:
@@ -6142,6 +6781,41 @@ components:
         revealed:
           type: boolean
           description: Screen-only prep flag; not access control (ADR-0079).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    HandoutCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent handout category for nesting, or null for a root category.
+
+    HandoutCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
         createdAt:
           type: string
           format: date-time
@@ -6242,10 +6916,16 @@ components:
           type: string
           maxLength: 5000
           description: Optional summary of the world.
+        scratch:
+          type: boolean
+          default: false
+          description: >-
+            Cosmetic-only sandbox/brainstorming flag (FR-60) — no functional
+            effect, just a label in the world list and switcher.
 
     World:
       type: object
-      required: [id, name, createdAt, updatedAt]
+      required: [id, name, scratch, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -6256,6 +6936,11 @@ components:
           type: [string, "null"]
         layerStyles:
           $ref: '#/components/schemas/LayerStyleMap'
+        scratch:
+          type: boolean
+          description: >-
+            Cosmetic-only sandbox/brainstorming flag (FR-60) — no functional
+            effect, just a label in the world list and switcher.
         createdAt:
           type: string
           format: date-time
@@ -6489,6 +7174,103 @@ components:
           type: string
           format: uuid
         title:
+          type: string
+
+    WorldOverviewStats:
+      type: object
+      required: [articleCount, sessionsRunCount, recentlyEdited, openClocks, openLooseThreads]
+      properties:
+        articleCount:
+          type: integer
+        sessionsRunCount:
+          type: integer
+          description: Sessions across every campaign in the world dated on or before today.
+        recentlyEdited:
+          type: array
+          description: The 5 most recently updated articles.
+          items:
+            $ref: '#/components/schemas/RecentlyEditedArticle'
+        nextSession:
+          allOf:
+            - $ref: '#/components/schemas/NextSessionSummary'
+          nullable: true
+          description: The nearest session across every campaign dated strictly after today, or absent if none is scheduled.
+        openClocks:
+          type: array
+          description: Not-yet-full clocks across every campaign, most-filled-first, capped at 8.
+          items:
+            $ref: '#/components/schemas/ClockSummary'
+        openLooseThreads:
+          type: array
+          description: Open (unresolved) loose threads across every campaign, newest-first, capped at 8.
+          items:
+            $ref: '#/components/schemas/LooseThreadSummary'
+
+    RecentlyEditedArticle:
+      type: object
+      required: [articleId, title, updatedAt]
+      properties:
+        articleId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    NextSessionSummary:
+      type: object
+      required: [sessionId, campaignId, campaignName, title, date]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+        sessionNumber:
+          type: [integer, "null"]
+
+    ClockSummary:
+      type: object
+      required: [clockId, campaignId, campaignName, title, filledSegments, totalSegments]
+      properties:
+        clockId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        title:
+          type: string
+        filledSegments:
+          type: integer
+        totalSegments:
+          type: integer
+
+    LooseThreadSummary:
+      type: object
+      required: [threadId, campaignId, campaignName, text]
+      properties:
+        threadId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        text:
           type: string
 
     ArticleRevision:
@@ -6729,6 +7511,10 @@ components:
           type: string
           format: uuid
           description: The uploaded image used as the map's base layer.
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+          description: Map category for the Atlas tree (ADR-0105), or null for uncategorized.
 
     Map:
       type: object
@@ -6740,6 +7526,9 @@ components:
         worldId:
           type: string
           format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
         name:
           type: string
         mediaId:
@@ -6748,6 +7537,41 @@ components:
         imageUrl:
           type: [string, "null"]
           description: Public URL of the base image (null if the image was deleted).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MapCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: Parent map category for nesting, or null for a root category.
+
+    MapCategory:
+      type: object
+      required: [id, worldId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        name:
+          type: string
         createdAt:
           type: string
           format: date-time

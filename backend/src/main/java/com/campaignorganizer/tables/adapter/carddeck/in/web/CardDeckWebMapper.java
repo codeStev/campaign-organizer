@@ -25,12 +25,12 @@ public interface CardDeckWebMapper {
     List<com.campaignorganizer.tables.application.carddeck.port.in.CardDeckCommands.CardInput> toCardInputs(List<CardDto> cards);
 
     default CreateCardDeckCommand toCreateCommand(UUID worldId, CardDeckRequest request) {
-        return new CreateCardDeckCommand(worldId, request.title(), request.description(),
+        return new CreateCardDeckCommand(worldId, request.categoryId(), request.title(), request.description(),
                 toCardInputs(request.cards()));
     }
 
     default UpdateCardDeckCommand toUpdateCommand(UUID worldId, UUID deckId, CardDeckRequest request) {
-        return new UpdateCardDeckCommand(worldId, deckId, request.title(), request.description(),
-                toCardInputs(request.cards()));
+        return new UpdateCardDeckCommand(worldId, deckId, request.categoryId(), request.title(),
+                request.description(), toCardInputs(request.cards()));
     }
 }

@@ -16,6 +16,7 @@ import com.campaignorganizer.campaign.application.arc.port.out.StatblockExistsPo
 import com.campaignorganizer.campaign.application.arc.port.out.TableExistsPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindQueryPort;
 import com.campaignorganizer.campaign.application.encounter.port.published.EncounterQueryPort;
 import com.campaignorganizer.campaign.domain.arc.ArcBeat;
 import com.campaignorganizer.shared.application.IdGenerator;
@@ -41,6 +42,7 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
     private final DeckExistsPort decks;
     private final SessionExistsPort sessions;
     private final EncounterQueryPort encounters;
+    private final BeatKindQueryPort beatKinds;
     private final ArcBeatViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
@@ -49,7 +51,7 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
                                  CampaignExistsPort campaigns, ArticleExistsPort articles,
                                  StatblockExistsPort statblocks, TableExistsPort tables,
                                  DeckExistsPort decks, SessionExistsPort sessions,
-                                 EncounterQueryPort encounters,
+                                 EncounterQueryPort encounters, BeatKindQueryPort beatKinds,
                                  ArcBeatViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.beats = beats;
         this.arcs = arcs;
@@ -60,6 +62,7 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
         this.decks = decks;
         this.sessions = sessions;
         this.encounters = encounters;
+        this.beatKinds = beatKinds;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -71,12 +74,12 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
         requireArc(command.worldId(), command.campaignId(), command.arcId());
         validateLinks(command.worldId(), command.campaignId(), command.articleIds(),
                 command.statblockIds(), command.encounterIds(), command.tableIds(), command.deckIds(),
-                command.sessionId());
+                command.sessionId(), command.kindId());
         int position = command.position() == null ? 0 : command.position();
         ArcBeat created = ArcBeat.create(ids.newId(), command.arcId(), command.articleIds(),
                 command.statblockIds(), command.encounterIds(), command.tableIds(), command.deckIds(),
-                command.sessionId(), command.title(), command.body(), command.done(), position,
-                clock.instant());
+                command.sessionId(), command.kindId(), command.title(), command.body(), command.done(),
+                position, clock.instant());
         return viewMapper.toView(beats.save(created));
     }
 
@@ -86,13 +89,13 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
         requireArc(command.worldId(), command.campaignId(), command.arcId());
         validateLinks(command.worldId(), command.campaignId(), command.articleIds(),
                 command.statblockIds(), command.encounterIds(), command.tableIds(), command.deckIds(),
-                command.sessionId());
+                command.sessionId(), command.kindId());
         ArcBeat beat = beats.findByIdAndArc(command.beatId(), command.arcId())
                 .orElseThrow(() -> new NotFoundException("Beat not found"));
         int position = command.position() == null ? beat.getPosition() : command.position();
         beat.update(command.articleIds(), command.statblockIds(), command.encounterIds(),
-                command.tableIds(), command.deckIds(), command.sessionId(), command.title(), command.body(),
-                command.done(), position, clock.instant());
+                command.tableIds(), command.deckIds(), command.sessionId(), command.kindId(),
+                command.title(), command.body(), command.done(), position, clock.instant());
         return viewMapper.toView(beats.save(beat));
     }
 
@@ -119,7 +122,8 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
     public ArcBeatView importArcBeat(ArcBeatView view) {
         ArcBeat beat = ArcBeat.reconstitute(view.id(), view.arcId(), view.articleIds(),
                 view.statblockIds(), view.encounterIds(), view.tableIds(), view.deckIds(), view.sessionId(),
-                view.title(), view.body(), view.done(), view.position(), view.createdAt(), view.updatedAt());
+                view.kindId(), view.title(), view.body(), view.done(), view.position(), view.createdAt(),
+                view.updatedAt());
         return viewMapper.toView(beats.save(beat));
     }
 
@@ -131,7 +135,7 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
 
     private void validateLinks(UUID worldId, UUID campaignId, List<UUID> articleIds,
                                List<UUID> statblockIds, List<UUID> encounterIds, List<UUID> tableIds,
-                               List<UUID> deckIds, UUID sessionId) {
+                               List<UUID> deckIds, UUID sessionId, UUID kindId) {
         for (UUID articleId : articleIds) {
             if (!articles.existsInWorld(articleId, worldId)) {
                 throw new ValidationException("Article not found in this world");
@@ -159,6 +163,9 @@ public class ArcBeatCommandService implements CreateBeatUseCase, UpdateBeatUseCa
         }
         if (sessionId != null && !sessions.existsInCampaign(sessionId, campaignId)) {
             throw new ValidationException("Session not found in this campaign");
+        }
+        if (kindId != null && !beatKinds.existsInWorld(kindId, worldId)) {
+            throw new ValidationException("Beat kind not found in this world");
         }
     }
 }

@@ -12,7 +12,7 @@ public interface DocumentPersistenceMapper {
         if (e == null) {
             return null;
         }
-        return Document.reconstitute(e.getId(), e.getWorldId(), e.getTemplateId(), e.getCampaignId(),
-                e.getName(), e.getValues(), e.getCreatedAt(), e.getUpdatedAt());
+        return Document.reconstitute(e.getId(), e.getWorldId(), e.getCategoryId(), e.getTemplateId(),
+                e.getCampaignId(), e.getName(), e.getValues(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

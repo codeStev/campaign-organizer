@@ -8,11 +8,11 @@ public final class DocumentCommands {
     private DocumentCommands() {
     }
 
-    public record CreateDocumentCommand(UUID worldId, UUID templateId, UUID campaignId, String name,
-                                         Map<String, Object> values) {
+    public record CreateDocumentCommand(UUID worldId, UUID categoryId, UUID templateId, UUID campaignId,
+                                         String name, Map<String, Object> values) {
     }
 
-    public record UpdateDocumentCommand(UUID worldId, UUID documentId, UUID templateId, UUID campaignId,
-                                         String name, Map<String, Object> values) {
+    public record UpdateDocumentCommand(UUID worldId, UUID documentId, UUID categoryId, UUID templateId,
+                                         UUID campaignId, String name, Map<String, Object> values) {
     }
 }

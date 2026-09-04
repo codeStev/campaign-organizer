@@ -3,6 +3,7 @@ package com.campaignorganizer.interchange.export.application.service;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcQueryPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindQueryPort;
 import com.campaignorganizer.campaign.application.clock.port.published.ClockQueryPort;
 import com.campaignorganizer.campaign.application.encounter.port.published.EncounterQueryPort;
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadQueryPort;
@@ -15,6 +16,7 @@ import com.campaignorganizer.campaign.application.campaign.port.published.Campai
 import com.campaignorganizer.campaign.application.player.port.published.PlayerQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceQueryPort;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoQueryPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
@@ -25,11 +27,14 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.interchange.export.application.port.in.ExportWorldUseCase;
 import com.campaignorganizer.interchange.export.application.port.in.WorldExportBundle;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.tagging.application.port.published.TagQueryPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryQueryPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardQueryPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapQueryPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapView;
@@ -63,6 +68,7 @@ public class ExportService implements ExportWorldUseCase {
     private final WorldQueryPort worlds;
     private final CategoryQueryPort categories;
     private final ArticleQueryPort articles;
+    private final MapCategoryQueryPort mapCategories;
     private final MapQueryPort maps;
     private final MapPinQueryPort pins;
     private final TimelineLookupPort timelines;
@@ -76,6 +82,8 @@ public class ExportService implements ExportWorldUseCase {
     private final SessionAttendanceQueryPort sessionAttendance;
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
+    private final BeatKindQueryPort beatKinds;
+    private final SheetCategoryQueryPort sheetCategories;
     private final FieldTemplateQueryPort fieldTemplates;
     private final GameSystemQueryPort gameSystems;
     private final GlobalFieldTemplateQueryPort globalFieldTemplates;
@@ -84,8 +92,10 @@ public class ExportService implements ExportWorldUseCase {
     private final StatblockQueryPort statblocks;
     private final GlobalStatblockQueryPort globalStatblocks;
     private final WhiteboardQueryPort whiteboards;
+    private final TableDeckCategoryQueryPort tableDeckCategories;
     private final RollTableQueryPort rollTables;
     private final CardDeckQueryPort cardDecks;
+    private final HandoutCategoryQueryPort handoutCategories;
     private final HandoutQueryPort handouts;
     private final CheatSheetQueryPort cheatSheets;
     private final TagQueryPort tags;
@@ -95,25 +105,30 @@ public class ExportService implements ExportWorldUseCase {
     private final TodoQueryPort todos;
 
     public ExportService(WorldQueryPort worlds, CategoryQueryPort categories, ArticleQueryPort articles,
+                         MapCategoryQueryPort mapCategories,
                          MapQueryPort maps, MapPinQueryPort pins, TimelineLookupPort timelines,
                          TimelineEventQueryPort events, CalendarQueryPort calendars,
                          RelationshipQueryPort relationships, CampaignQueryPort campaigns,
                          PlayerQueryPort players, CampaignPlayerQueryPort campaignPlayers,
                          SessionQueryPort sessions, SessionAttendanceQueryPort sessionAttendance,
-                         ArcQueryPort arcs, ArcBeatQueryPort beats,
+                         ArcQueryPort arcs, ArcBeatQueryPort beats, BeatKindQueryPort beatKinds,
+                         SheetCategoryQueryPort sheetCategories,
                          FieldTemplateQueryPort fieldTemplates, GameSystemQueryPort gameSystems,
                          GlobalFieldTemplateQueryPort globalFieldTemplates,
                          CharacterSheetQueryPort characterSheets,
                          DocumentQueryPort documents, StatblockQueryPort statblocks,
                          GlobalStatblockQueryPort globalStatblocks,
                          WhiteboardQueryPort whiteboards,
+                         TableDeckCategoryQueryPort tableDeckCategories,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
-                         HandoutQueryPort handouts, CheatSheetQueryPort cheatSheets,
+                         HandoutCategoryQueryPort handoutCategories, HandoutQueryPort handouts,
+                         CheatSheetQueryPort cheatSheets,
                          TagQueryPort tags, ClockQueryPort clocks, EncounterQueryPort encounters,
                          LooseThreadQueryPort looseThreads, TodoQueryPort todos) {
         this.worlds = worlds;
         this.categories = categories;
         this.articles = articles;
+        this.mapCategories = mapCategories;
         this.maps = maps;
         this.pins = pins;
         this.timelines = timelines;
@@ -127,6 +142,8 @@ public class ExportService implements ExportWorldUseCase {
         this.sessionAttendance = sessionAttendance;
         this.arcs = arcs;
         this.beats = beats;
+        this.beatKinds = beatKinds;
+        this.sheetCategories = sheetCategories;
         this.fieldTemplates = fieldTemplates;
         this.gameSystems = gameSystems;
         this.globalFieldTemplates = globalFieldTemplates;
@@ -135,8 +152,10 @@ public class ExportService implements ExportWorldUseCase {
         this.statblocks = statblocks;
         this.globalStatblocks = globalStatblocks;
         this.whiteboards = whiteboards;
+        this.tableDeckCategories = tableDeckCategories;
         this.rollTables = rollTables;
         this.cardDecks = cardDecks;
+        this.handoutCategories = handoutCategories;
         this.handouts = handouts;
         this.cheatSheets = cheatSheets;
         this.tags = tags;
@@ -158,6 +177,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("world", world);
         bundle.put("categories", categories.findByWorld(worldId));
         bundle.put("articles", articles.findByWorld(worldId));
+        bundle.put("mapCategories", mapCategories.findByWorld(worldId));
 
         List<Object> allPins = new ArrayList<>();
         List<MapView> worldMaps = maps.findByWorld(worldId);
@@ -213,6 +233,8 @@ public class ExportService implements ExportWorldUseCase {
         // Player pool (ADR-0091): world-scoped, reused across the world's campaigns.
         bundle.put("players", players.findByWorld(worldId));
         bundle.put("campaignPlayers", allCampaignPlayers);
+        // Beat kinds (FR-61, ADR-0101): world-scoped, reused across the world's arcs/beats.
+        bundle.put("beatKinds", beatKinds.findByWorld(worldId));
         // Session cheat sheets (FR-37): one per session, when present.
         List<CheatSheetView> cheatSheetViews = new ArrayList<>();
         // Session attendance (ADR-0091): zero or more rows per session.
@@ -225,6 +247,7 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("cheatSheets", cheatSheetViews);
         bundle.put("sessionAttendance", allAttendance);
 
+        bundle.put("sheetCategories", sheetCategories.findByWorld(worldId));
         bundle.put("fieldTemplates", fieldTemplates.findByWorld(worldId));
         // Game systems (ADR-0094) and the global template catalog (ADR-0093):
         // neither is world-scoped, but both are included so a fresh instance
@@ -243,9 +266,11 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("statblocks", statblocks.findByWorld(worldId));
         bundle.put("whiteboards", whiteboards.findByWorld(worldId));
         // Randomizers (FR-40): beats reference them, so they ship with the world.
+        bundle.put("tableDeckCategories", tableDeckCategories.findByWorld(worldId));
         bundle.put("rollTables", rollTables.findByWorld(worldId));
         bundle.put("cardDecks", cardDecks.findByWorld(worldId));
         // Player-facing props (FR-46).
+        bundle.put("handoutCategories", handoutCategories.findByWorld(worldId));
         bundle.put("handouts", handouts.findByWorld(worldId));
         // Folksonomy tags on articles/statblocks (FR-47).
         bundle.put("tags", tags.findByWorld(worldId));

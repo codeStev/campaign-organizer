@@ -1,0 +1,105 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  statblocksApi,
+  fieldTemplatesApi,
+  globalFieldTemplatesApi,
+  encountersApi,
+  ApiError,
+  Statblock,
+  FieldTemplate,
+  GlobalFieldTemplate,
+  Encounter,
+} from '../api/client';
+import { NextEncounterBoard } from './NextEncounterBoard';
+import { Spinner } from '../components/ui/spinner';
+
+interface Props {
+  worldId: string;
+  onAuthExpired: () => void;
+}
+
+/**
+ * Encounters (docs/ui-overhaul-plan.md Phase 5) — the existing encounter
+ * builder (ADR-0097) relocated to its own /next nav entry, with a statblock
+ * reference panel beside it (mirrors StatblocksPanel's list-plus-detail
+ * layout) so a GM can eyeball the world's statblocks while building.
+ * NextEncounterBoard (ADR-0106) is /next's own fork of EncounterBoard, with
+ * the old expand/collapse accordion cards flattened to always-open. Campaign
+ * selection comes from the sidebar's CampaignNavTree (ADR-0105 follow-up),
+ * not a picker on this page.
+ */
+export function NextEncountersPage({ worldId, onAuthExpired }: Props) {
+  const { campaignId } = useParams<{ campaignId: string }>();
+  const [statblocks, setStatblocks] = useState<Statblock[]>([]);
+  const [templates, setTemplates] = useState<FieldTemplate[]>([]);
+  const [globalTemplates, setGlobalTemplates] = useState<GlobalFieldTemplate[]>([]);
+  const [encounters, setEncounters] = useState<Encounter[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const onError = (err: unknown) => {
+    if (err instanceof ApiError && err.status === 401) onAuthExpired();
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([statblocksApi(worldId).list(), fieldTemplatesApi(worldId).list(), globalFieldTemplatesApi.list()])
+      .then(([s, t, g]) => {
+        setStatblocks(s);
+        setTemplates(t);
+        setGlobalTemplates(g);
+      })
+      .catch(onError)
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId]);
+
+  const refreshEncounters = useCallback(() => {
+    if (!campaignId) return;
+    encountersApi(worldId, campaignId).list().then(setEncounters).catch(onError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, campaignId]);
+
+  useEffect(() => {
+    refreshEncounters();
+  }, [refreshEncounters]);
+
+  if (loading) {
+    return (
+      <p className="muted loading-row">
+        <Spinner /> Loading…
+      </p>
+    );
+  }
+
+  return (
+    <div className="wiki-layout">
+      <aside className="wiki-sidebar">
+        <h4>Statblocks</h4>
+        <ul className="article-list article-list-scroll">
+          {statblocks.map((s) => (
+            <li key={s.id} className="muted">
+              {s.name}
+            </li>
+          ))}
+          {statblocks.length === 0 && <li className="muted">No statblocks in this world yet.</li>}
+        </ul>
+      </aside>
+
+      {campaignId ? (
+        <NextEncounterBoard
+          worldId={worldId}
+          campaignId={campaignId}
+          encounters={encounters}
+          onChanged={refreshEncounters}
+          statblocks={statblocks}
+          templates={templates}
+          globalTemplates={globalTemplates}
+          onError={onError}
+        />
+      ) : (
+        <p className="muted">Select a campaign from the sidebar to see its encounters.</p>
+      )}
+    </div>
+  );
+}

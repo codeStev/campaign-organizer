@@ -5,6 +5,8 @@ export interface World {
   id: string;
   name: string;
   description?: string | null;
+  /** Cosmetic-only sandbox/brainstorming flag (FR-60) — no functional effect. */
+  scratch: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -12,6 +14,7 @@ export interface World {
 export interface WorldRequest {
   name: string;
   description?: string;
+  scratch?: boolean;
 }
 
 interface TokenResponse {
@@ -184,10 +187,20 @@ export function articlesApi(worldId: string) {
   };
 }
 
+export interface CategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
 export function categoriesApi(worldId: string) {
   const base = `/worlds/${worldId}/categories`;
   return {
     list: () => request<Category[]>(base),
+    create: (body: CategoryRequest) =>
+      request<Category>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: CategoryRequest) =>
+      request<Category>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
@@ -221,6 +234,7 @@ export type HandoutPreset = 'PARCHMENT' | 'NEWSPAPER' | 'POSTER' | 'LETTER';
 export interface Handout {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   title: string;
   preset: HandoutPreset;
   body?: string | null;
@@ -231,11 +245,26 @@ export interface Handout {
 }
 
 interface HandoutRequestBody {
+  categoryId?: string | null;
   title: string;
   preset: HandoutPreset;
   body?: string | null;
   sessionId?: string | null;
   revealed?: boolean;
+}
+
+export interface HandoutCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HandoutCategoryRequest {
+  name: string;
+  parentId?: string | null;
 }
 
 /** FR-46: player-facing styled one-page printables. */
@@ -252,6 +281,19 @@ export function handoutsApi(worldId: string) {
     reorder: (orderedIds: string[]) =>
       request<Handout[]>(`${base}/order`, { method: 'PUT', body: JSON.stringify({ orderedIds }) }),
     duplicate: (id: string) => request<Handout>(`${base}/${id}/duplicate`, { method: 'POST' }),
+  };
+}
+
+/** ADR-0105: a handout-only taxonomy, separate from Wiki's. */
+export function handoutCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/handout-categories`;
+  return {
+    list: () => request<HandoutCategory[]>(base),
+    create: (body: HandoutCategoryRequest) =>
+      request<HandoutCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: HandoutCategoryRequest) =>
+      request<HandoutCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
@@ -283,6 +325,7 @@ export interface MediaAsset {
 export interface WorldMap {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   name: string;
   mediaId?: string | null;
   imageUrl?: string | null;
@@ -293,6 +336,7 @@ export interface WorldMap {
 export interface MapRequest {
   name: string;
   mediaId: string;
+  categoryId?: string | null;
 }
 
 export interface MapPin {
@@ -324,6 +368,33 @@ export function mapsApi(worldId: string) {
       request<WorldMap>(base, { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: MapRequest) =>
       request<WorldMap>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+/** A world's map category taxonomy (ADR-0105) — separate from Wiki's `categoriesApi`. */
+export interface MapCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MapCategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+export function mapCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/map-categories`;
+  return {
+    list: () => request<MapCategory[]>(base),
+    create: (body: MapCategoryRequest) =>
+      request<MapCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: MapCategoryRequest) =>
+      request<MapCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
@@ -581,7 +652,11 @@ export interface Beat {
   articleIds: string[];
   statblockIds: string[];
   encounterIds: string[];
+  tableIds: string[];
+  deckIds: string[];
   sessionId?: string | null;
+  /** Optional GM-defined beat kind tag (ADR-0101), informational only. */
+  kindId?: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;
@@ -594,7 +669,10 @@ export interface BeatRequest {
   articleIds?: string[];
   statblockIds?: string[];
   encounterIds?: string[];
+  tableIds?: string[];
+  deckIds?: string[];
   sessionId?: string | null;
+  kindId?: string | null;
   position?: number | null;
 }
 
@@ -687,6 +765,54 @@ export function playersApi(worldId: string) {
     update: (id: string, body: PlayerRequest) =>
       request<Player>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
+// ---- World overview stats (FR-62): read-only, consumed by the Overview dashboard ----
+
+export interface RecentlyEditedArticle {
+  articleId: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface NextSessionSummary {
+  sessionId: string;
+  campaignId: string;
+  campaignName: string;
+  title: string;
+  date: string;
+  sessionNumber?: number | null;
+}
+
+export interface ClockSummary {
+  clockId: string;
+  campaignId: string;
+  campaignName: string;
+  title: string;
+  filledSegments: number;
+  totalSegments: number;
+}
+
+export interface LooseThreadSummary {
+  threadId: string;
+  campaignId: string;
+  campaignName: string;
+  text: string;
+}
+
+export interface WorldOverviewStats {
+  articleCount: number;
+  sessionsRunCount: number;
+  recentlyEdited: RecentlyEditedArticle[];
+  nextSession?: NextSessionSummary | null;
+  openClocks: ClockSummary[];
+  openLooseThreads: LooseThreadSummary[];
+}
+
+export function worldOverviewApi(worldId: string) {
+  return {
+    get: () => request<WorldOverviewStats>(`/worlds/${worldId}/overview`),
   };
 }
 
@@ -943,6 +1069,35 @@ export function beatsApi(worldId: string, campaignId: string, arcId: string) {
   };
 }
 
+// ---- Beat kinds (ADR-0101): a world-scoped, GM-defined catalog a beat can optionally be tagged with ----
+
+export interface BeatKind {
+  id: string;
+  worldId: string;
+  name: string;
+  color?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BeatKindRequest {
+  name: string;
+  color?: string | null;
+}
+
+export function beatKindsApi(worldId: string) {
+  const base = `/worlds/${worldId}/beat-kinds`;
+  return {
+    list: () => request<BeatKind[]>(base),
+    get: (id: string) => request<BeatKind>(`${base}/${id}`),
+    create: (body: BeatKindRequest) =>
+      request<BeatKind>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: BeatKindRequest) =>
+      request<BeatKind>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
+  };
+}
+
 export type LooseThreadStatus = 'OPEN' | 'RESOLVED' | 'ABANDONED';
 export const LOOSE_THREAD_STATUSES: LooseThreadStatus[] = ['OPEN', 'RESOLVED', 'ABANDONED'];
 
@@ -1039,6 +1194,7 @@ export interface TemplateSection {
 export interface FieldTemplate {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   name: string;
   kind: TemplateKind;
   systemId?: string | null;
@@ -1048,6 +1204,7 @@ export interface FieldTemplate {
 }
 
 export interface FieldTemplateRequest {
+  categoryId?: string | null;
   name: string;
   kind: TemplateKind;
   systemId?: string | null;
@@ -1130,6 +1287,7 @@ export interface ImportGlobalStatblockRequest {
 export interface CharacterSheet {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   worldTemplateId: string | null;
   globalTemplateId: string | null;
   articleId?: string | null;
@@ -1141,6 +1299,7 @@ export interface CharacterSheet {
 }
 
 export interface CharacterSheetRequest {
+  categoryId?: string | null;
   name: string;
   worldTemplateId?: string | null;
   globalTemplateId?: string | null;
@@ -1152,6 +1311,7 @@ export interface CharacterSheetRequest {
 export interface Document {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   templateId: string;
   campaignId?: string | null;
   name: string;
@@ -1161,6 +1321,7 @@ export interface Document {
 }
 
 export interface DocumentRequest {
+  categoryId?: string | null;
   name: string;
   templateId: string;
   campaignId?: string | null;
@@ -1170,6 +1331,7 @@ export interface DocumentRequest {
 export interface Statblock {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   articleId?: string | null;
   campaignId?: string | null;
   worldTemplateId?: string | null;
@@ -1182,6 +1344,7 @@ export interface Statblock {
 }
 
 export interface StatblockRequest {
+  categoryId?: string | null;
   name: string;
   articleId?: string | null;
   campaignId?: string | null;
@@ -1311,6 +1474,33 @@ export function statblocksApi(worldId: string) {
       request<Statblock>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => request<Statblock>(`${base}/${id}/duplicate`, { method: 'POST' }),
+  };
+}
+
+export interface SheetCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SheetCategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+/** ADR-0105: one shared taxonomy across sheets, statblocks, documents, and templates. */
+export function sheetCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/sheet-categories`;
+  return {
+    list: () => request<SheetCategory[]>(base),
+    create: (body: SheetCategoryRequest) =>
+      request<SheetCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: SheetCategoryRequest) =>
+      request<SheetCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
@@ -1642,6 +1832,7 @@ export interface RollTableEntry {
 export interface RollTable {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   title: string;
   description?: string | null;
   diceExpression: string;
@@ -1653,6 +1844,7 @@ export interface RollTable {
 }
 
 export interface RollTableRequest {
+  categoryId?: string | null;
   title: string;
   description?: string;
   diceExpression: string;
@@ -1690,6 +1882,7 @@ export interface DeckCard {
 export interface CardDeck {
   id: string;
   worldId: string;
+  categoryId?: string | null;
   title: string;
   description?: string | null;
   cards: DeckCard[];
@@ -1698,6 +1891,7 @@ export interface CardDeck {
 }
 
 export interface CardDeckRequest {
+  categoryId?: string | null;
   title: string;
   description?: string;
   cards: DeckCardInput[];
@@ -1713,5 +1907,32 @@ export function cardDecksApi(worldId: string) {
       request<CardDeck>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => request<CardDeck>(`${base}/${id}/duplicate`, { method: 'POST' }),
+  };
+}
+
+export interface TableDeckCategory {
+  id: string;
+  worldId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TableDeckCategoryRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+/** ADR-0105: one shared taxonomy for both roll tables and card decks. */
+export function tableDeckCategoriesApi(worldId: string) {
+  const base = `/worlds/${worldId}/table-deck-categories`;
+  return {
+    list: () => request<TableDeckCategory[]>(base),
+    create: (body: TableDeckCategoryRequest) =>
+      request<TableDeckCategory>(base, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: TableDeckCategoryRequest) =>
+      request<TableDeckCategory>(`${base}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }

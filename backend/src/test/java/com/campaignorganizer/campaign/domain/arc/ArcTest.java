@@ -42,7 +42,7 @@ class ArcTest {
     @Test
     void beatNullLinkCollectionsBecomeEmpty() {
         ArcBeat b = ArcBeat.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null, null,
-                null, "Ambush", "body", false, 0, T0);
+                null, null, "Ambush", "body", false, 0, T0);
         assertThat(b.getArticleIds()).isEmpty();
         assertThat(b.getStatblockIds()).isEmpty();
         assertThat(b.getEncounterIds()).isEmpty();
@@ -53,9 +53,9 @@ class ArcTest {
     @Test
     void beatUpdateReplacesLinksAndBumpsUpdatedAt() {
         ArcBeat b = ArcBeat.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null, null, null,
-                null, "Ambush", "body", false, 0, T0);
+                null, null, "Ambush", "body", false, 0, T0);
         UUID article = UUID.randomUUID();
-        b.update(List.of(article), null, null, null, null, null, "Ambush!", "body2", true, 1, T1);
+        b.update(List.of(article), null, null, null, null, null, null, "Ambush!", "body2", true, 1, T1);
 
         assertThat(b.getArticleIds()).containsExactly(article);
         assertThat(b.isDone()).isTrue();
@@ -65,7 +65,7 @@ class ArcTest {
     @Test
     void beatRejectsBlankTitle() {
         assertThatThrownBy(() -> ArcBeat.create(UUID.randomUUID(), UUID.randomUUID(), null, null, null,
-                null, null, null, " ", "body", false, 0, T0))
+                null, null, null, null, " ", "body", false, 0, T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

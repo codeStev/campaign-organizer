@@ -1,0 +1,303 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  fieldTemplatesApi,
+  builtinFieldTemplatesApi,
+  gameSystemsApi,
+  FieldTemplate,
+  FieldTemplateRequest,
+  BuiltinFieldTemplate,
+  GameSystem,
+  TemplateKind,
+} from '../api/client';
+import { TemplateBuilder } from '../components/TemplateBuilder';
+import { TemplateForm } from '../components/TemplateForm';
+import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { toast } from 'sonner';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { Spinner } from '../components/ui/spinner';
+
+interface Props {
+  worldId: string;
+  templates: FieldTemplate[];
+  loading: boolean;
+  onChanged: () => void;
+  onError: (err: unknown) => void;
+}
+
+const KIND_LABEL: Record<TemplateKind, string> = {
+  CHARACTER: 'Character sheet',
+  STATBLOCK: 'Statblock',
+  DOCUMENT: 'Document',
+};
+
+export function NextFieldTemplatesPanel({ worldId, templates, loading, onChanged, onError }: Props) {
+  const navigate = useNavigate();
+  const { templateId: urlTemplateId } = useParams<{ templateId: string }>();
+  const [searchParams] = useSearchParams();
+  // Set via the tree's "+ New template" on a category (?category=<id> in the
+  // URL) — carried through both creation paths (starter, builder) below.
+  const pendingCategoryId = searchParams.get('category') || null;
+  const api = fieldTemplatesApi(worldId);
+  const [builtins, setBuiltins] = useState<BuiltinFieldTemplate[]>([]);
+  const [systems, setSystems] = useState<GameSystem[]>([]);
+  // What kind of template a new one (starter or built-from-scratch) will be.
+  const [newKind, setNewKind] = useState<TemplateKind>('CHARACTER');
+  const [choice, setChoice] = useState('');
+  // Which template is open in the builder: an existing one, 'new', or null.
+  const [editing, setEditing] = useState<FieldTemplate | null>(null);
+  const [building, setBuilding] = useState(false);
+  // Read-only layout preview of an existing template (no values, no builder chrome).
+  const [previewing, setPreviewing] = useState<FieldTemplate | null>(null);
+
+  useEffect(() => {
+    builtinFieldTemplatesApi.list().then(setBuiltins).catch(onError);
+    gameSystemsApi.list().then(setSystems).catch(onError);
+  }, [onError]);
+
+  function systemName(systemId: string | null | undefined): string {
+    if (!systemId) return 'custom';
+    return systems.find((s) => s.id === systemId)?.name ?? 'custom';
+  }
+
+  function systemColor(systemId: string | null | undefined): string | null {
+    if (!systemId) return null;
+    return systems.find((s) => s.id === systemId)?.color ?? null;
+  }
+
+  /** Finds a game system by exact case-insensitive name, creating one if none matches. */
+  async function resolveSystemId(name: string): Promise<string> {
+    const existing = systems.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+    const created = await gameSystemsApi.create({ name });
+    setSystems((s) => [...s, created]);
+    return created.id;
+  }
+
+  // The URL is the source of truth for which template is open (ADR-0053);
+  // opening an existing template shows a read-only preview first - entering
+  // the builder is an explicit Edit click. "Build new" has no id and stays
+  // purely local state.
+  useEffect(() => {
+    if (!urlTemplateId || urlTemplateId === editing?.id || urlTemplateId === previewing?.id) return;
+    const found = templates.find((t) => t.id === urlTemplateId);
+    if (found) setPreviewing(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTemplateId, templates]);
+
+  const buildersForKind = builtins.filter((b) => b.kind === newKind);
+
+  async function addFromBuiltin() {
+    const b = buildersForKind.find((x) => x.name === choice);
+    if (!b) return;
+    try {
+      const systemId = b.system ? await resolveSystemId(b.system) : null;
+      await api.create({ name: b.name, kind: b.kind, systemId, sections: b.sections, categoryId: pendingCategoryId });
+      setChoice('');
+      onChanged();
+      toast.success(`Template "${b.name}" added`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  async function saveTemplate(body: FieldTemplateRequest) {
+    try {
+      if (editing) await api.update(editing.id, body);
+      else await api.create({ ...body, categoryId: pendingCategoryId });
+      setBuilding(false);
+      setEditing(null);
+      setPreviewing(null);
+      navigate(urlTemplateId ? '..' : '.', { relative: 'path' });
+      onChanged();
+      toast.success('Template saved');
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  async function duplicate(t: FieldTemplate) {
+    try {
+      const copy = await api.duplicate(t.id);
+      onChanged();
+      navigate(copy.id);
+      toast.success(`Template "${copy.name}" created`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  // ADR-0093: repoints every sheet/statblock using this template to a new
+  // global entry, then deletes the source — CHARACTER/STATBLOCK kinds only.
+  async function promote(t: FieldTemplate) {
+    try {
+      await api.promote(t.id);
+      if (previewing?.id === t.id) {
+        setPreviewing(null);
+        navigate('.');
+      }
+      onChanged();
+      toast.success(`Promoted "${t.name}" to the global catalog`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  async function remove(t: FieldTemplate) {
+    try {
+      await api.remove(t.id);
+      onChanged();
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  function deleteConsequence(t: FieldTemplate): string {
+    if (t.kind === 'CHARACTER') return 'Character sheets using it will be removed too.';
+    if (t.kind === 'DOCUMENT') return 'Documents built from it will be deleted too.';
+    return 'Statblocks using it will fall back to freeform stats.';
+  }
+
+  if (building) {
+    return (
+      <TemplateBuilder
+        initial={editing}
+        kind={editing?.kind ?? newKind}
+        onSave={saveTemplate}
+        onCancel={() => {
+          setBuilding(false);
+          setEditing(null);
+          // Reached the builder via a preview's Edit button? Land back on
+          // that preview rather than the bare list.
+          navigate('.');
+        }}
+      />
+    );
+  }
+
+  if (previewing) {
+    return (
+      <div className="card template-preview">
+        <div className="article-read-head">
+          <div>
+            <h3>{previewing.name}</h3>
+            <small className="muted">
+              {KIND_LABEL[previewing.kind]} ·{' '}
+              {systemColor(previewing.systemId) && (
+                <span
+                  className="system-color-dot"
+                  style={{ backgroundColor: systemColor(previewing.systemId)! }}
+                />
+              )}
+              {systemName(previewing.systemId)} · {previewing.sections.length} sections
+            </small>
+          </div>
+          <div className="editor-actions">
+            <Button
+              type="button"
+              onClick={() => {
+                setEditing(previewing);
+                setBuilding(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => duplicate(previewing)}
+              title="Duplicate this template"
+            >
+              Duplicate
+            </Button>
+            {previewing.kind !== 'DOCUMENT' && (
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => promote(previewing)}
+                title="Promote to the global catalog, shared across every world"
+              >
+                Promote to global
+              </Button>
+            )}
+            <ConfirmDeleteDialog
+              trigger={
+                <Button type="button" variant="link" className="text-destructive hover:text-destructive">
+                  Delete
+                </Button>
+              }
+              title="Delete template?"
+              description={`This deletes "${previewing.name}". ${deleteConsequence(previewing)}`}
+              onConfirm={() => {
+                remove(previewing);
+                setPreviewing(null);
+                navigate('..', { relative: 'path' });
+              }}
+            />
+          </div>
+        </div>
+        <TemplateForm sections={previewing.sections} values={{}} onChange={() => {}} readOnly />
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <h3>Field templates</h3>
+      <div className="editor-actions">
+        <label className="muted">
+          What are you building?{' '}
+          <Select
+            value={newKind}
+            onValueChange={(v) => {
+              setNewKind(v as TemplateKind);
+              setChoice('');
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CHARACTER">Character sheet</SelectItem>
+              <SelectItem value="STATBLOCK">Statblock</SelectItem>
+              <SelectItem value="DOCUMENT">Document</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+        <Select value={choice} onValueChange={setChoice}>
+          <SelectTrigger>
+            <SelectValue placeholder="Starter system…" />
+          </SelectTrigger>
+          <SelectContent>
+            {buildersForKind.map((b) => (
+              <SelectItem key={b.name} value={b.name}>
+                {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={addFromBuiltin} disabled={!choice}>
+          Add starter
+        </Button>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setPreviewing(null);
+            setBuilding(true);
+          }}
+        >
+          Build new
+        </Button>
+      </div>
+      {loading && (
+        <p className="muted loading-row">
+          <Spinner /> Loading…
+        </p>
+      )}
+      {!loading && templates.length === 0 && (
+        <p className="muted">No templates yet. Add a starter or build one, or pick one from the tree.</p>
+      )}
+    </div>
+  );
+}

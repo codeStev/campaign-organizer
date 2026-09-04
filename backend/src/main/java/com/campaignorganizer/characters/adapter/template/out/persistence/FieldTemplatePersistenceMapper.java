@@ -12,7 +12,7 @@ public interface FieldTemplatePersistenceMapper {
         if (e == null) {
             return null;
         }
-        return FieldTemplate.reconstitute(e.getId(), e.getWorldId(), e.getName(), e.getKind(),
-                e.getSystemId(), e.getSections(), e.getCreatedAt(), e.getUpdatedAt());
+        return FieldTemplate.reconstitute(e.getId(), e.getWorldId(), e.getCategoryId(), e.getName(),
+                e.getKind(), e.getSystemId(), e.getSections(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

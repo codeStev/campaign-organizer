@@ -157,7 +157,7 @@ class GlobalStatblockServiceTest {
         GlobalStatblock source = GlobalStatblock.create(id, systemId, templateId, "Adult Red Dragon",
                 Map.of("HP", 256), "Breathes fire", clock.instant());
         when(statblocks.findById(id)).thenReturn(Optional.of(source));
-        when(createStatblock.create(any())).thenReturn(new StatblockView(UUID.randomUUID(), worldId, null,
+        when(createStatblock.create(any())).thenReturn(new StatblockView(UUID.randomUUID(), worldId, null, null,
                 campaignId, null, templateId, "Adult Red Dragon", Map.of("HP", 256), "Breathes fire",
                 clock.instant(), clock.instant()));
 
@@ -182,7 +182,7 @@ class GlobalStatblockServiceTest {
         GlobalStatblock source = GlobalStatblock.create(id, systemId, null, "Adult Red Dragon", Map.of(),
                 null, clock.instant());
         when(statblocks.findById(id)).thenReturn(Optional.of(source));
-        when(createStatblock.create(any())).thenReturn(new StatblockView(UUID.randomUUID(), worldId, null,
+        when(createStatblock.create(any())).thenReturn(new StatblockView(UUID.randomUUID(), worldId, null, null,
                 campaignId, null, null, "Bahamut", Map.of(), null, clock.instant(), clock.instant()));
 
         service.importIntoCampaign(id, worldId, campaignId, "Bahamut");

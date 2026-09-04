@@ -13,30 +13,34 @@ public final class World {
     private String name;
     private String description;
     private Map<String, LayerStyle> layerStyles;
+    /** Cosmetic-only sandbox/brainstorming flag (FR-60, ADR-0100) — no functional effect. */
+    private boolean scratch;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private World(UUID id, String name, String description, Map<String, LayerStyle> layerStyles,
-                  Instant createdAt, Instant updatedAt) {
+                  boolean scratch, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.layerStyles = layerStyles == null ? new HashMap<>() : layerStyles;
+        this.scratch = scratch;
         applyDetails(name, description);
     }
 
-    public static World create(UUID id, String name, String description, Instant now) {
-        return new World(id, name, description, new HashMap<>(), now, now);
+    public static World create(UUID id, String name, String description, boolean scratch, Instant now) {
+        return new World(id, name, description, new HashMap<>(), scratch, now, now);
     }
 
     public static World reconstitute(UUID id, String name, String description,
-                                     Map<String, LayerStyle> layerStyles, Instant createdAt,
+                                     Map<String, LayerStyle> layerStyles, boolean scratch, Instant createdAt,
                                      Instant updatedAt) {
-        return new World(id, name, description, layerStyles, createdAt, updatedAt);
+        return new World(id, name, description, layerStyles, scratch, createdAt, updatedAt);
     }
 
-    public void update(String name, String description, Instant now) {
+    public void update(String name, String description, boolean scratch, Instant now) {
         applyDetails(name, description);
+        this.scratch = scratch;
         this.updatedAt = now;
     }
 
@@ -67,6 +71,10 @@ public final class World {
 
     public Map<String, LayerStyle> getLayerStyles() {
         return layerStyles;
+    }
+
+    public boolean isScratch() {
+        return scratch;
     }
 
     public Instant getCreatedAt() {

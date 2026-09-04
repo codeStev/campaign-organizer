@@ -4,6 +4,8 @@ import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImpo
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindImportPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerImportPort;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerView;
@@ -23,6 +25,8 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoImportPort;
 import com.campaignorganizer.campaign.application.todo.port.published.TodoView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryImportPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryView;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -42,10 +46,14 @@ import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryImportPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryView;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryImportPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryView;
 import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableImportPort;
@@ -56,6 +64,8 @@ import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImp
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardView;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarView;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryImportPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryView;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinView;
@@ -100,6 +110,7 @@ public class ImportService implements ImportBackupUseCase {
     private final WorldImportPort worldImportPort;
     private final CategoryImportPort categoryImportPort;
     private final ArticleImportPort articleImportPort;
+    private final MapCategoryImportPort mapCategoryImportPort;
     private final MapImportPort mapImportPort;
     private final MapPinImportPort mapPinImportPort;
     private final CalendarImportPort calendarImportPort;
@@ -112,6 +123,8 @@ public class ImportService implements ImportBackupUseCase {
     private final SessionImportPort sessionImportPort;
     private final SessionAttendanceImportPort sessionAttendanceImportPort;
     private final ArcImportPort arcImportPort;
+    private final BeatKindImportPort beatKindImportPort;
+    private final SheetCategoryImportPort sheetCategoryImportPort;
     private final FieldTemplateImportPort fieldTemplateImportPort;
     private final GameSystemImportPort gameSystemImportPort;
     private final GlobalFieldTemplateImportPort globalFieldTemplateImportPort;
@@ -123,8 +136,10 @@ public class ImportService implements ImportBackupUseCase {
     private final ArcBeatImportPort arcBeatImportPort;
     private final WhiteboardImportPort whiteboardImportPort;
     private final MediaImportPort mediaImportPort;
+    private final TableDeckCategoryImportPort tableDeckCategoryImportPort;
     private final RollTableImportPort rollTableImportPort;
     private final CardDeckImportPort cardDeckImportPort;
+    private final HandoutCategoryImportPort handoutCategoryImportPort;
     private final HandoutImportPort handoutImportPort;
     private final CheatSheetImportPort cheatSheetImportPort;
     private final TagImportPort tagImportPort;
@@ -134,21 +149,26 @@ public class ImportService implements ImportBackupUseCase {
 
     public ImportService(ObjectMapper objectMapper, WorldImportPort worldImportPort,
             CategoryImportPort categoryImportPort, ArticleImportPort articleImportPort,
+            MapCategoryImportPort mapCategoryImportPort,
             MapImportPort mapImportPort, MapPinImportPort mapPinImportPort,
             CalendarImportPort calendarImportPort, TimelineImportPort timelineImportPort,
             TimelineEventImportPort timelineEventImportPort, RelationshipImportPort relationshipImportPort,
             CampaignImportPort campaignImportPort, PlayerImportPort playerImportPort,
             CampaignPlayerImportPort campaignPlayerImportPort, SessionImportPort sessionImportPort,
             SessionAttendanceImportPort sessionAttendanceImportPort,
-            ArcImportPort arcImportPort, FieldTemplateImportPort fieldTemplateImportPort,
+            ArcImportPort arcImportPort, BeatKindImportPort beatKindImportPort,
+            SheetCategoryImportPort sheetCategoryImportPort,
+            FieldTemplateImportPort fieldTemplateImportPort,
             GameSystemImportPort gameSystemImportPort,
             GlobalFieldTemplateImportPort globalFieldTemplateImportPort,
             GlobalStatblockImportPort globalStatblockImportPort,
             CharacterSheetImportPort characterSheetImportPort, DocumentImportPort documentImportPort,
             StatblockImportPort statblockImportPort, EncounterImportPort encounterImportPort,
             ArcBeatImportPort arcBeatImportPort, WhiteboardImportPort whiteboardImportPort,
-            MediaImportPort mediaImportPort, RollTableImportPort rollTableImportPort,
-            CardDeckImportPort cardDeckImportPort, HandoutImportPort handoutImportPort,
+            MediaImportPort mediaImportPort,
+            TableDeckCategoryImportPort tableDeckCategoryImportPort, RollTableImportPort rollTableImportPort,
+            CardDeckImportPort cardDeckImportPort,
+            HandoutCategoryImportPort handoutCategoryImportPort, HandoutImportPort handoutImportPort,
             CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
             ClockImportPort clockImportPort, LooseThreadImportPort looseThreadImportPort,
             TodoImportPort todoImportPort) {
@@ -156,6 +176,7 @@ public class ImportService implements ImportBackupUseCase {
         this.worldImportPort = worldImportPort;
         this.categoryImportPort = categoryImportPort;
         this.articleImportPort = articleImportPort;
+        this.mapCategoryImportPort = mapCategoryImportPort;
         this.mapImportPort = mapImportPort;
         this.mapPinImportPort = mapPinImportPort;
         this.calendarImportPort = calendarImportPort;
@@ -168,6 +189,8 @@ public class ImportService implements ImportBackupUseCase {
         this.sessionImportPort = sessionImportPort;
         this.sessionAttendanceImportPort = sessionAttendanceImportPort;
         this.arcImportPort = arcImportPort;
+        this.beatKindImportPort = beatKindImportPort;
+        this.sheetCategoryImportPort = sheetCategoryImportPort;
         this.fieldTemplateImportPort = fieldTemplateImportPort;
         this.gameSystemImportPort = gameSystemImportPort;
         this.globalFieldTemplateImportPort = globalFieldTemplateImportPort;
@@ -179,8 +202,10 @@ public class ImportService implements ImportBackupUseCase {
         this.arcBeatImportPort = arcBeatImportPort;
         this.whiteboardImportPort = whiteboardImportPort;
         this.mediaImportPort = mediaImportPort;
+        this.tableDeckCategoryImportPort = tableDeckCategoryImportPort;
         this.rollTableImportPort = rollTableImportPort;
         this.cardDeckImportPort = cardDeckImportPort;
+        this.handoutCategoryImportPort = handoutCategoryImportPort;
         this.handoutImportPort = handoutImportPort;
         this.cheatSheetImportPort = cheatSheetImportPort;
         this.tagImportPort = tagImportPort;
@@ -212,6 +237,7 @@ public class ImportService implements ImportBackupUseCase {
         List<MediaBundleEntry> media = readList(root, "media", MediaBundleEntry.class);
         List<CategoryView> categories = readList(root, "categories", CategoryView.class);
         List<ArticleView> articles = readList(root, "articles", ArticleView.class);
+        List<MapCategoryView> mapCategories = readList(root, "mapCategories", MapCategoryView.class);
         List<MapView> maps = readList(root, "maps", MapView.class);
         List<MapPinView> mapPins = readList(root, "mapPins", MapPinView.class);
         List<CalendarView> calendars = readList(root, "calendars", CalendarView.class);
@@ -226,7 +252,9 @@ public class ImportService implements ImportBackupUseCase {
         List<SessionAttendanceView> sessionAttendance =
                 readList(root, "sessionAttendance", SessionAttendanceView.class);
         List<ArcView> arcs = readList(root, "arcs", ArcView.class);
+        List<BeatKindView> beatKinds = readList(root, "beatKinds", BeatKindView.class);
         List<GameSystemView> gameSystems = readList(root, "gameSystems", GameSystemView.class);
+        List<SheetCategoryView> sheetCategories = readList(root, "sheetCategories", SheetCategoryView.class);
         List<FieldTemplateView> fieldTemplates = readList(root, "fieldTemplates", FieldTemplateView.class);
         List<GlobalFieldTemplateView> globalFieldTemplates =
                 readList(root, "globalFieldTemplates", GlobalFieldTemplateView.class);
@@ -239,8 +267,12 @@ public class ImportService implements ImportBackupUseCase {
         List<EncounterView> encounters = readList(root, "encounters", EncounterView.class);
         List<ArcBeatView> beats = readList(root, "beats", ArcBeatView.class);
         List<WhiteboardView> whiteboards = readList(root, "whiteboards", WhiteboardView.class);
+        List<TableDeckCategoryView> tableDeckCategories =
+                readList(root, "tableDeckCategories", TableDeckCategoryView.class);
         List<RollTableView> rollTables = readList(root, "rollTables", RollTableView.class);
         List<CardDeckView> cardDecks = readList(root, "cardDecks", CardDeckView.class);
+        List<HandoutCategoryView> handoutCategories =
+                readList(root, "handoutCategories", HandoutCategoryView.class);
         List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
         List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
         List<TagView> tags = readList(root, "tags", TagView.class);
@@ -255,6 +287,7 @@ public class ImportService implements ImportBackupUseCase {
         media.forEach(m -> remap.assign(m.id()));
         categories.forEach(c -> remap.assign(c.id()));
         articles.forEach(a -> remap.assign(a.id()));
+        mapCategories.forEach(c -> remap.assign(c.id()));
         maps.forEach(m -> remap.assign(m.id()));
         mapPins.forEach(p -> remap.assign(p.id()));
         calendars.forEach(c -> remap.assign(c.id()));
@@ -267,6 +300,8 @@ public class ImportService implements ImportBackupUseCase {
         sessions.forEach(s -> remap.assign(s.id()));
         sessionAttendance.forEach(a -> remap.assign(a.id()));
         arcs.forEach(a -> remap.assign(a.id()));
+        beatKinds.forEach(k -> remap.assign(k.id()));
+        sheetCategories.forEach(c -> remap.assign(c.id()));
         fieldTemplates.forEach(f -> remap.assign(f.id()));
         characterSheets.forEach(s -> remap.assign(s.id()));
         documents.forEach(d -> remap.assign(d.id()));
@@ -274,8 +309,10 @@ public class ImportService implements ImportBackupUseCase {
         encounters.forEach(e -> remap.assign(e.id()));
         beats.forEach(b -> remap.assign(b.id()));
         whiteboards.forEach(w -> remap.assign(w.id()));
+        tableDeckCategories.forEach(c -> remap.assign(c.id()));
         rollTables.forEach(t -> remap.assign(t.id()));
         cardDecks.forEach(d -> remap.assign(d.id()));
+        handoutCategories.forEach(c -> remap.assign(c.id()));
         handouts.forEach(h -> remap.assign(h.id()));
         cheatSheets.forEach(cs -> remap.assign(cs.id()));
         tags.forEach(t -> remap.assign(t.id()));
@@ -286,7 +323,7 @@ public class ImportService implements ImportBackupUseCase {
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
         worldImportPort.importWorld(new WorldView(newWorldId, world.name(), world.description(),
-                world.layerStyles(), world.createdAt(), world.updatedAt()));
+                world.layerStyles(), world.scratch(), world.createdAt(), world.updatedAt()));
 
         for (MediaBundleEntry m : media) {
             byte[] bytes = mediaByOldId.get(m.id());
@@ -308,9 +345,14 @@ public class ImportService implements ImportBackupUseCase {
                     a.slug(), a.template(), body, a.createdAt(), a.updatedAt()));
         }
 
+        for (MapCategoryView c : mapCategories) {
+            mapCategoryImportPort.importMapCategory(new MapCategoryView(remap.get(c.id()), newWorldId,
+                    remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         for (MapView m : maps) {
-            mapImportPort.importMap(new MapView(remap.get(m.id()), newWorldId, m.name(),
-                    remap.getOrNull(m.mediaId()), m.createdAt(), m.updatedAt()));
+            mapImportPort.importMap(new MapView(remap.get(m.id()), newWorldId, remap.getOrNull(m.categoryId()),
+                    m.name(), remap.getOrNull(m.mediaId()), m.createdAt(), m.updatedAt()));
         }
 
         for (MapPinView p : mapPins) {
@@ -381,6 +423,12 @@ public class ImportService implements ImportBackupUseCase {
                     a.description(), a.status(), a.position(), a.createdAt(), a.updatedAt()));
         }
 
+        // Beat kinds (FR-61, ADR-0101): world-scoped, no other id references inside.
+        for (BeatKindView k : beatKinds) {
+            beatKindImportPort.importBeatKind(new BeatKindView(remap.get(k.id()), newWorldId, k.name(),
+                    k.color(), k.createdAt(), k.updatedAt()));
+        }
+
         // Clocks (FR-48): campaign-scoped, no other id references inside.
         for (ClockView c : clocks) {
             clockImportPort.importClock(new ClockView(remap.get(c.id()), remap.get(c.campaignId()),
@@ -400,10 +448,15 @@ public class ImportService implements ImportBackupUseCase {
                     remap.getOrNull(t.sessionId()), t.text(), t.done(), t.createdAt(), t.updatedAt()));
         }
 
+        for (SheetCategoryView c : sheetCategories) {
+            sheetCategoryImportPort.importSheetCategory(new SheetCategoryView(remap.get(c.id()), newWorldId,
+                    remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         for (FieldTemplateView f : fieldTemplates) {
             fieldTemplateImportPort.importFieldTemplate(new FieldTemplateView(remap.get(f.id()),
-                    newWorldId, f.name(), f.kind(), gameSystemResolution.get(f.systemId()), f.sections(),
-                    f.createdAt(), f.updatedAt()));
+                    newWorldId, remap.getOrNull(f.categoryId()), f.name(), f.kind(),
+                    gameSystemResolution.get(f.systemId()), f.sections(), f.createdAt(), f.updatedAt()));
         }
 
         // Global template catalog (ADR-0093): resolved-or-reused by (kind, systemId,
@@ -434,7 +487,7 @@ public class ImportService implements ImportBackupUseCase {
 
         for (CharacterSheetView s : characterSheets) {
             characterSheetImportPort.importCharacterSheet(new CharacterSheetView(remap.get(s.id()),
-                    newWorldId, remap.getOrNull(s.worldTemplateId()),
+                    newWorldId, remap.getOrNull(s.categoryId()), remap.getOrNull(s.worldTemplateId()),
                     globalTemplateResolution.get(s.globalTemplateId()), remap.getOrNull(s.articleId()),
                     remap.getOrNull(s.campaignId()), s.name(), s.values(), s.createdAt(), s.updatedAt()));
         }
@@ -442,15 +495,16 @@ public class ImportService implements ImportBackupUseCase {
         // General-purpose documents (FR-50): templateId and campaignId are remapped.
         for (DocumentView d : documents) {
             documentImportPort.importDocument(new DocumentView(remap.get(d.id()), newWorldId,
-                    remap.getOrNull(d.templateId()), remap.getOrNull(d.campaignId()), d.name(),
-                    d.values(), d.createdAt(), d.updatedAt()));
+                    remap.getOrNull(d.categoryId()), remap.getOrNull(d.templateId()),
+                    remap.getOrNull(d.campaignId()), d.name(), d.values(), d.createdAt(), d.updatedAt()));
         }
 
         for (StatblockView s : statblocks) {
             statblockImportPort.importStatblock(new StatblockView(remap.get(s.id()), newWorldId,
-                    remap.getOrNull(s.articleId()), remap.getOrNull(s.campaignId()),
-                    remap.getOrNull(s.worldTemplateId()), globalTemplateResolution.get(s.globalTemplateId()),
-                    s.name(), s.stats(), s.notes(), s.createdAt(), s.updatedAt()));
+                    remap.getOrNull(s.categoryId()), remap.getOrNull(s.articleId()),
+                    remap.getOrNull(s.campaignId()), remap.getOrNull(s.worldTemplateId()),
+                    globalTemplateResolution.get(s.globalTemplateId()), s.name(), s.stats(), s.notes(),
+                    s.createdAt(), s.updatedAt()));
         }
 
         // Encounters (ADR-0097): campaign-scoped, ordinary data (not resolve-or-reuse
@@ -472,27 +526,39 @@ public class ImportService implements ImportBackupUseCase {
                     remap.get(t.entityId()), t.name(), t.createdAt()));
         }
 
+        for (TableDeckCategoryView c : tableDeckCategories) {
+            tableDeckCategoryImportPort.importTableDeckCategory(new TableDeckCategoryView(remap.get(c.id()),
+                    newWorldId, remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
+        }
+
         // Tables and decks before beats: beats reference them (FR-40). Nested
         // chains (FR-41) are rewritten to the new ids; bodies carry no other
         // id-based links.
         for (RollTableView t : rollTables) {
             rollTableImportPort.importRollTable(new RollTableView(remap.get(t.id()), newWorldId,
-                    t.title(), t.description(), t.diceExpression(), t.minResult(), t.maxResult(),
-                    remapEntries(t.entries(), remap), t.createdAt(), t.updatedAt()));
+                    remap.getOrNull(t.categoryId()), t.title(), t.description(), t.diceExpression(),
+                    t.minResult(), t.maxResult(), remapEntries(t.entries(), remap), t.createdAt(),
+                    t.updatedAt()));
         }
 
         for (CardDeckView d : cardDecks) {
             cardDeckImportPort.importCardDeck(new CardDeckView(remap.get(d.id()), newWorldId,
-                    d.title(), d.description(), remapCards(d.cards(), remap), d.createdAt(),
-                    d.updatedAt()));
+                    remap.getOrNull(d.categoryId()), d.title(), d.description(), remapCards(d.cards(), remap),
+                    d.createdAt(), d.updatedAt()));
+        }
+
+        for (HandoutCategoryView c : handoutCategories) {
+            handoutCategoryImportPort.importHandoutCategory(new HandoutCategoryView(remap.get(c.id()),
+                    newWorldId, remap.getOrNull(c.parentId()), c.name(), c.createdAt(), c.updatedAt()));
         }
 
         // Handouts (FR-46/ADR-0077): after sessions, so an optional session tag
         // remaps along with everything else.
         for (HandoutView h : handouts) {
             handoutImportPort.importHandout(new HandoutView(remap.get(h.id()), newWorldId,
-                    h.title(), h.preset(), h.body(), remap.getOrNull(h.sessionId()), h.sortOrder(),
-                    h.revealed(), h.createdAt(), h.updatedAt()));
+                    remap.getOrNull(h.categoryId()), h.title(), h.preset(), h.body(),
+                    remap.getOrNull(h.sessionId()), h.sortOrder(), h.revealed(), h.createdAt(),
+                    h.updatedAt()));
         }
 
         // Cheat sheets (FR-37) after sessions: their session id is remapped.
@@ -520,7 +586,8 @@ public class ImportService implements ImportBackupUseCase {
             List<UUID> deckIds = b.deckIds() == null ? List.of() : b.deckIds().stream().map(remap::get).toList();
             arcBeatImportPort.importArcBeat(new ArcBeatView(remap.get(b.id()), remap.get(b.arcId()),
                     b.title(), b.body(), b.done(), articleIds, statblockIds, encounterIds, tableIds, deckIds,
-                    remap.getOrNull(b.sessionId()), b.position(), b.createdAt(), b.updatedAt()));
+                    remap.getOrNull(b.sessionId()), remap.getOrNull(b.kindId()), b.position(),
+                    b.createdAt(), b.updatedAt()));
         }
 
         for (WhiteboardView w : whiteboards) {

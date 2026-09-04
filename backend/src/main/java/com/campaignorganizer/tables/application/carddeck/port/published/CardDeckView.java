@@ -8,6 +8,7 @@ import java.util.UUID;
 public record CardDeckView(
         UUID id,
         UUID worldId,
+        UUID categoryId,
         String title,
         String description,
         List<DeckCardView> cards,

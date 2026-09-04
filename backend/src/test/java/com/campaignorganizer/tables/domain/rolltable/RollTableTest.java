@@ -19,7 +19,7 @@ class RollTableTest {
 
     @Test
     void createDerivesRangeFromDiceExpression() {
-        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Weather",
+        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Weather",
                 "Daily weather", "2d6", List.of(entry(2, 7, "Rain"), entry(8, 12, "Sun")), NOW);
 
         assertThat(table.getMinResult()).isEqualTo(2);
@@ -31,7 +31,7 @@ class RollTableTest {
 
     @Test
     void entryWithoutBoundsCoversEverythingElse() {
-        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Weather", null,
+        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Weather", null,
                 "1d20", List.of(entry(1, 19, "Ordinary"), entry(null, null, "Something strange")),
                 NOW);
         assertThat(table.getEntries()).hasSize(2);
@@ -39,14 +39,14 @@ class RollTableTest {
 
     @Test
     void gapsBetweenEntriesAreAllowed() {
-        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Gaps", null,
+        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Gaps", null,
                 "1d10", List.of(entry(1, 4, "Low"), entry(9, 10, "High")), NOW);
         assertThat(table.getEntries()).hasSize(2);
     }
 
     @Test
     void rejectsHalfBoundedEntries() {
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Half",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Half",
                 null, "1d6", List.of(entry(1, null, "A")), NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("both result bounds");
@@ -54,7 +54,7 @@ class RollTableTest {
 
     @Test
     void rejectsSecondCatchAllEntry() {
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Twofold",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Twofold",
                 null, "1d6", List.of(entry(null, null, "A"), entry(null, null, "B")), NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("remaining results");
@@ -62,7 +62,7 @@ class RollTableTest {
 
     @Test
     void rejectsOverlappingEntries() {
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Overlap",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Overlap",
                 null, "1d10", List.of(entry(1, 5, "A"), entry(5, 7, "B")), NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("overlap");
@@ -70,11 +70,11 @@ class RollTableTest {
 
     @Test
     void rejectsEntriesOutsideTheDiceRange() {
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Out",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Out",
                 null, "1d6", List.of(entry(0, 3, "A")), NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("outside");
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Out",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Out",
                 null, "1d6", List.of(entry(1, 7, "A")), NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("outside");
@@ -82,7 +82,7 @@ class RollTableTest {
 
     @Test
     void rejectsInvertedEntryRange() {
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Inverted",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Inverted",
                 null, "1d6", List.of(entry(4, 2, "A")), NOW))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("inverted");
@@ -90,21 +90,21 @@ class RollTableTest {
 
     @Test
     void rejectsBlankOrTooLongTitle() {
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "  ",
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "  ",
                 null, "1d6", List.of(), NOW))
                 .isInstanceOf(ValidationException.class);
-        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "x".repeat(201),
+        assertThatThrownBy(() -> RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "x".repeat(201),
                 null, "1d6", List.of(), NOW))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void updateRecomputesRangeAndTimestamp() {
-        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), "Old", null,
+        RollTable table = RollTable.create(UUID.randomUUID(), UUID.randomUUID(), null, "Old", null,
                 "1d6", List.of(entry(1, 3, "Heads-ish"), entry(4, 6, "Tails-ish")), NOW);
 
         Instant later = NOW.plusSeconds(60);
-        table.update("New", "desc", "1d10",
+        table.update(null, "New", "desc", "1d10",
                 List.of(entry(1, 5, "First half"), entry(6, 10, "Second half")), later);
 
         assertThat(table.getTitle()).isEqualTo("New");

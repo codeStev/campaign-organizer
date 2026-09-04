@@ -117,7 +117,7 @@ public class GlobalStatblockService implements CreateGlobalStatblockUseCase, Upd
         }
         GlobalStatblock source = require(globalStatblockId);
         String name = nameOverride == null || nameOverride.isBlank() ? source.getName() : nameOverride;
-        return createStatblock.create(new CreateStatblockCommand(worldId, null, campaignId, null,
+        return createStatblock.create(new CreateStatblockCommand(worldId, null, null, campaignId, null,
                 source.getGlobalTemplateId(), name, source.getStats(), source.getNotes()));
     }
 

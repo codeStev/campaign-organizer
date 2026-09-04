@@ -16,6 +16,7 @@ public final class FieldTemplate {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private String name;
     private TemplateKind kind;
     private UUID systemId;
@@ -23,28 +24,32 @@ public final class FieldTemplate {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private FieldTemplate(UUID id, UUID worldId, String name, TemplateKind kind, UUID systemId,
-                          List<TemplateSection> sections, Instant createdAt, Instant updatedAt) {
+    private FieldTemplate(UUID id, UUID worldId, UUID categoryId, String name, TemplateKind kind,
+                          UUID systemId, List<TemplateSection> sections, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(name, kind, systemId, sections);
     }
 
-    public static FieldTemplate create(UUID id, UUID worldId, String name, TemplateKind kind, UUID systemId,
-                                       List<TemplateSection> sections, Instant now) {
-        return new FieldTemplate(id, worldId, name, kind, systemId, sections, now, now);
+    public static FieldTemplate create(UUID id, UUID worldId, UUID categoryId, String name, TemplateKind kind,
+                                       UUID systemId, List<TemplateSection> sections, Instant now) {
+        return new FieldTemplate(id, worldId, categoryId, name, kind, systemId, sections, now, now);
     }
 
-    public static FieldTemplate reconstitute(UUID id, UUID worldId, String name, TemplateKind kind,
-                                             UUID systemId, List<TemplateSection> sections, Instant createdAt,
-                                             Instant updatedAt) {
-        return new FieldTemplate(id, worldId, name, kind, systemId, sections, createdAt, updatedAt);
+    public static FieldTemplate reconstitute(UUID id, UUID worldId, UUID categoryId, String name,
+                                             TemplateKind kind, UUID systemId, List<TemplateSection> sections,
+                                             Instant createdAt, Instant updatedAt) {
+        return new FieldTemplate(id, worldId, categoryId, name, kind, systemId, sections, createdAt,
+                updatedAt);
     }
 
-    public void update(String name, UUID systemId, List<TemplateSection> sections, Instant now) {
+    public void update(UUID categoryId, String name, UUID systemId, List<TemplateSection> sections,
+                       Instant now) {
         apply(name, this.kind, systemId, sections);
+        this.categoryId = categoryId;
         this.updatedAt = now;
     }
 
@@ -67,6 +72,10 @@ public final class FieldTemplate {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public String getName() {

@@ -22,6 +22,7 @@ public interface CardDeckPersistenceMapper {
         return CardDeck.reconstitute(
                 entity.getId(),
                 entity.getWorldId(),
+                entity.getCategoryId(),
                 entity.getTitle(),
                 entity.getDescription(),
                 entity.getCards().stream().map(this::toCard).toList(),

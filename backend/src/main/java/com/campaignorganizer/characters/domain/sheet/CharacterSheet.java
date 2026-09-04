@@ -11,6 +11,7 @@ public final class CharacterSheet {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private UUID worldTemplateId;
     private UUID globalTemplateId;
     private UUID articleId;
@@ -20,34 +21,36 @@ public final class CharacterSheet {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private CharacterSheet(UUID id, UUID worldId, UUID worldTemplateId, UUID globalTemplateId,
+    private CharacterSheet(UUID id, UUID worldId, UUID categoryId, UUID worldTemplateId, UUID globalTemplateId,
                            UUID articleId, UUID campaignId, String name, Map<String, Object> values,
                            Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(worldTemplateId, globalTemplateId, articleId, campaignId, name, values);
     }
 
-    public static CharacterSheet create(UUID id, UUID worldId, UUID worldTemplateId, UUID globalTemplateId,
-                                        UUID articleId, UUID campaignId, String name,
+    public static CharacterSheet create(UUID id, UUID worldId, UUID categoryId, UUID worldTemplateId,
+                                        UUID globalTemplateId, UUID articleId, UUID campaignId, String name,
                                         Map<String, Object> values, Instant now) {
-        return new CharacterSheet(id, worldId, worldTemplateId, globalTemplateId, articleId, campaignId,
-                name, values, now, now);
+        return new CharacterSheet(id, worldId, categoryId, worldTemplateId, globalTemplateId, articleId,
+                campaignId, name, values, now, now);
     }
 
-    public static CharacterSheet reconstitute(UUID id, UUID worldId, UUID worldTemplateId,
+    public static CharacterSheet reconstitute(UUID id, UUID worldId, UUID categoryId, UUID worldTemplateId,
                                               UUID globalTemplateId, UUID articleId, UUID campaignId,
                                               String name, Map<String, Object> values, Instant createdAt,
                                               Instant updatedAt) {
-        return new CharacterSheet(id, worldId, worldTemplateId, globalTemplateId, articleId, campaignId,
-                name, values, createdAt, updatedAt);
+        return new CharacterSheet(id, worldId, categoryId, worldTemplateId, globalTemplateId, articleId,
+                campaignId, name, values, createdAt, updatedAt);
     }
 
-    public void update(UUID worldTemplateId, UUID globalTemplateId, UUID articleId, UUID campaignId,
-                       String name, Map<String, Object> values, Instant now) {
+    public void update(UUID categoryId, UUID worldTemplateId, UUID globalTemplateId, UUID articleId,
+                       UUID campaignId, String name, Map<String, Object> values, Instant now) {
         apply(worldTemplateId, globalTemplateId, articleId, campaignId, name, values);
+        this.categoryId = categoryId;
         this.updatedAt = now;
     }
 
@@ -76,6 +79,10 @@ public final class CharacterSheet {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public UUID getWorldTemplateId() {

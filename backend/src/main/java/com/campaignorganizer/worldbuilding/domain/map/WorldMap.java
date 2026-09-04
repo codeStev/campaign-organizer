@@ -9,41 +9,43 @@ public final class WorldMap {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private String name;
     private UUID mediaId;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private WorldMap(UUID id, UUID worldId, String name, UUID mediaId, Instant createdAt,
+    private WorldMap(UUID id, UUID worldId, UUID categoryId, String name, UUID mediaId, Instant createdAt,
                      Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        apply(name, mediaId);
+        apply(categoryId, name, mediaId);
     }
 
     public static WorldMap create(UUID id, UUID worldId, String name, UUID mediaId, Instant now) {
-        return new WorldMap(id, worldId, name, mediaId, now, now);
+        return new WorldMap(id, worldId, null, name, mediaId, now, now);
     }
 
-    public static WorldMap reconstitute(UUID id, UUID worldId, String name, UUID mediaId,
+    public static WorldMap reconstitute(UUID id, UUID worldId, UUID categoryId, String name, UUID mediaId,
                                         Instant createdAt, Instant updatedAt) {
-        return new WorldMap(id, worldId, name, mediaId, createdAt, updatedAt);
+        return new WorldMap(id, worldId, categoryId, name, mediaId, createdAt, updatedAt);
     }
 
-    public void update(String name, UUID mediaId, Instant now) {
-        apply(name, mediaId);
+    public void update(UUID categoryId, String name, UUID mediaId, Instant now) {
+        apply(categoryId, name, mediaId);
         this.updatedAt = now;
     }
 
-    private void apply(String name, UUID mediaId) {
+    private void apply(UUID categoryId, String name, UUID mediaId) {
         if (name == null || name.isBlank()) {
             throw new ValidationException("Map name must not be blank");
         }
         if (mediaId == null) {
             throw new ValidationException("A map needs an image");
         }
+        this.categoryId = categoryId;
         this.name = name;
         this.mediaId = mediaId;
     }
@@ -54,6 +56,10 @@ public final class WorldMap {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public String getName() {

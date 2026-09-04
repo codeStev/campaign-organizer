@@ -75,8 +75,8 @@ class BackupImportServiceTest {
         UUID existingB = UUID.randomUUID();
         Instant now = Instant.parse("2026-01-01T00:00:00Z");
         when(listWorlds.list()).thenReturn(List.of(
-                new WorldView(existingA, "A", null, Map.of(), now, now),
-                new WorldView(existingB, "B", null, Map.of(), now, now)));
+                new WorldView(existingA, "A", null, Map.of(), false, now, now),
+                new WorldView(existingB, "B", null, Map.of(), false, now, now)));
 
         service().importBackup(zipWithOneWorld(worldId, mediaId), ImportMode.OVERWRITE);
 

@@ -15,33 +15,36 @@ public final class CardDeck {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private String title;
     private String description;
     private List<DeckCard> cards;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private CardDeck(UUID id, UUID worldId, String title, String description, List<DeckCard> cards,
-                     Instant createdAt, Instant updatedAt) {
+    private CardDeck(UUID id, UUID worldId, UUID categoryId, String title, String description,
+                     List<DeckCard> cards, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(title, description, cards);
     }
 
-    public static CardDeck create(UUID id, UUID worldId, String title, String description,
+    public static CardDeck create(UUID id, UUID worldId, UUID categoryId, String title, String description,
                                   List<DeckCard> cards, Instant now) {
-        return new CardDeck(id, worldId, title, description, cards, now, now);
+        return new CardDeck(id, worldId, categoryId, title, description, cards, now, now);
     }
 
-    public static CardDeck reconstitute(UUID id, UUID worldId, String title, String description,
+    public static CardDeck reconstitute(UUID id, UUID worldId, UUID categoryId, String title, String description,
                                         List<DeckCard> cards, Instant createdAt, Instant updatedAt) {
-        return new CardDeck(id, worldId, title, description, cards, createdAt, updatedAt);
+        return new CardDeck(id, worldId, categoryId, title, description, cards, createdAt, updatedAt);
     }
 
-    public void update(String title, String description, List<DeckCard> cards, Instant now) {
+    public void update(UUID categoryId, String title, String description, List<DeckCard> cards, Instant now) {
         apply(title, description, cards);
+        this.categoryId = categoryId;
         this.updatedAt = now;
     }
 
@@ -63,6 +66,10 @@ public final class CardDeck {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public String getTitle() {

@@ -11,6 +11,7 @@ public final class Statblock {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private UUID articleId;
     private UUID campaignId;
     private UUID worldTemplateId;
@@ -21,34 +22,37 @@ public final class Statblock {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Statblock(UUID id, UUID worldId, UUID articleId, UUID campaignId, UUID worldTemplateId,
-                      UUID globalTemplateId, String name, Map<String, Object> stats, String notes,
-                      Instant createdAt, Instant updatedAt) {
+    private Statblock(UUID id, UUID worldId, UUID categoryId, UUID articleId, UUID campaignId,
+                      UUID worldTemplateId, UUID globalTemplateId, String name, Map<String, Object> stats,
+                      String notes, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(articleId, campaignId, worldTemplateId, globalTemplateId, name, stats, notes);
     }
 
-    public static Statblock create(UUID id, UUID worldId, UUID articleId, UUID campaignId,
+    public static Statblock create(UUID id, UUID worldId, UUID categoryId, UUID articleId, UUID campaignId,
                                    UUID worldTemplateId, UUID globalTemplateId, String name,
                                    Map<String, Object> stats, String notes, Instant now) {
-        return new Statblock(id, worldId, articleId, campaignId, worldTemplateId, globalTemplateId, name,
-                stats, notes, now, now);
+        return new Statblock(id, worldId, categoryId, articleId, campaignId, worldTemplateId, globalTemplateId,
+                name, stats, notes, now, now);
     }
 
-    public static Statblock reconstitute(UUID id, UUID worldId, UUID articleId, UUID campaignId,
-                                         UUID worldTemplateId, UUID globalTemplateId, String name,
-                                         Map<String, Object> stats, String notes, Instant createdAt,
-                                         Instant updatedAt) {
-        return new Statblock(id, worldId, articleId, campaignId, worldTemplateId, globalTemplateId, name,
-                stats, notes, createdAt, updatedAt);
+    public static Statblock reconstitute(UUID id, UUID worldId, UUID categoryId, UUID articleId,
+                                         UUID campaignId, UUID worldTemplateId, UUID globalTemplateId,
+                                         String name, Map<String, Object> stats, String notes,
+                                         Instant createdAt, Instant updatedAt) {
+        return new Statblock(id, worldId, categoryId, articleId, campaignId, worldTemplateId, globalTemplateId,
+                name, stats, notes, createdAt, updatedAt);
     }
 
-    public void update(UUID articleId, UUID campaignId, UUID worldTemplateId, UUID globalTemplateId,
-                       String name, Map<String, Object> stats, String notes, Instant now) {
+    public void update(UUID categoryId, UUID articleId, UUID campaignId, UUID worldTemplateId,
+                       UUID globalTemplateId, String name, Map<String, Object> stats, String notes,
+                       Instant now) {
         apply(articleId, campaignId, worldTemplateId, globalTemplateId, name, stats, notes);
+        this.categoryId = categoryId;
         this.updatedAt = now;
     }
 
@@ -76,6 +80,10 @@ public final class Statblock {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public UUID getArticleId() {

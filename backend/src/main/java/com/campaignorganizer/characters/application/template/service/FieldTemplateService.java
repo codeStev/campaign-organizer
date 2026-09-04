@@ -9,7 +9,9 @@ import com.campaignorganizer.characters.application.template.port.in.FieldTempla
 import com.campaignorganizer.characters.application.template.port.in.FieldTemplateCommands.UpdateFieldTemplateCommand;
 import com.campaignorganizer.characters.application.template.port.in.UpdateFieldTemplateUseCase;
 import com.campaignorganizer.characters.application.template.port.out.FieldTemplateRepositoryPort;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.out.WorldExistsPort;
+import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateImportPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateView;
@@ -32,14 +34,17 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
 
     private final FieldTemplateRepositoryPort templates;
     private final WorldExistsPort worlds;
+    private final SheetCategoryQueryPort categories;
     private final FieldTemplateViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public FieldTemplateService(FieldTemplateRepositoryPort templates, WorldExistsPort worlds,
+                                SheetCategoryQueryPort categories,
                                 FieldTemplateViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.templates = templates;
         this.worlds = worlds;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -49,8 +54,9 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional
     public FieldTemplateView create(CreateFieldTemplateCommand command) {
         requireWorld(command.worldId());
-        FieldTemplate created = FieldTemplate.create(ids.newId(), command.worldId(), command.name(),
-                command.kind(), command.systemId(), command.sections(), clock.instant());
+        validateCategory(command.worldId(), command.categoryId());
+        FieldTemplate created = FieldTemplate.create(ids.newId(), command.worldId(), command.categoryId(),
+                command.name(), command.kind(), command.systemId(), command.sections(), clock.instant());
         return viewMapper.toView(templates.save(created));
     }
 
@@ -58,7 +64,9 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional
     public FieldTemplateView update(UpdateFieldTemplateCommand command) {
         FieldTemplate template = require(command.worldId(), command.templateId());
-        template.update(command.name(), command.systemId(), command.sections(), clock.instant());
+        validateCategory(command.worldId(), command.categoryId());
+        template.update(command.categoryId(), command.name(), command.systemId(), command.sections(),
+                clock.instant());
         return viewMapper.toView(templates.save(template));
     }
 
@@ -72,8 +80,8 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Transactional
     public FieldTemplateView duplicate(UUID worldId, UUID templateId) {
         FieldTemplate source = require(worldId, templateId);
-        return create(new CreateFieldTemplateCommand(worldId, source.getName() + " (copy)",
-                source.getKind(), source.getSystemId(), source.getSections()));
+        return create(new CreateFieldTemplateCommand(worldId, source.getCategoryId(),
+                source.getName() + " (copy)", source.getKind(), source.getSystemId(), source.getSections()));
     }
 
     @Override
@@ -94,8 +102,9 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     @Override
     @Transactional
     public FieldTemplateView importFieldTemplate(FieldTemplateView view) {
-        FieldTemplate template = FieldTemplate.reconstitute(view.id(), view.worldId(), view.name(),
-                view.kind(), view.systemId(), view.sections(), view.createdAt(), view.updatedAt());
+        FieldTemplate template = FieldTemplate.reconstitute(view.id(), view.worldId(), view.categoryId(),
+                view.name(), view.kind(), view.systemId(), view.sections(), view.createdAt(),
+                view.updatedAt());
         return viewMapper.toView(templates.save(template));
     }
 
@@ -133,6 +142,12 @@ public class FieldTemplateService implements CreateFieldTemplateUseCase, UpdateF
     private void requireWorld(UUID worldId) {
         if (!worlds.exists(worldId)) {
             throw new NotFoundException("World not found");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Category not found in this world");
         }
     }
 }

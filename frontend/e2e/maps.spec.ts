@@ -35,7 +35,7 @@ test.beforeEach(async ({ page, request }) => {
   });
 
   await login(page);
-  await page.goto(`/worlds/${worldId}/maps`);
+  await page.goto(`/next/worlds/${worldId}/atlas`);
 });
 
 test.afterEach(async ({ request }) => {
@@ -44,6 +44,10 @@ test.afterEach(async ({ request }) => {
 });
 
 test('long map name truncates with an ellipsis and shows the full name on hover', async ({ page }) => {
+  // The new map has no category, so it's tucked under the collapsed
+  // "Uncategorised" bucket in the category tree (ADR-0105) until expanded.
+  await page.getByTitle('Expand').click();
+
   const nameSpan = page.getByTestId('map-name').filter({ hasText: 'The Sprawling Northern' });
   await expect(nameSpan).toBeVisible();
 
@@ -59,7 +63,7 @@ test('long map name truncates with an ellipsis and shows the full name on hover'
   // container, i.e. the name is genuinely clipped, not just styled to clip.
   expect(overflowsContainer).toBe(true);
 
-  const link = page.locator('.article-link').filter({ has: nameSpan });
+  const link = page.locator('.category-tree-article').filter({ has: nameSpan });
   const [linkBox, sidebarBox] = await Promise.all([
     link.boundingBox(),
     page.locator('.wiki-sidebar').boundingBox(),
@@ -75,6 +79,7 @@ test('long map name truncates with an ellipsis and shows the full name on hover'
 // a real user, even though the attribute was present and correct. Verifies
 // the shadcn/Radix Tooltip replacement actually renders on hover.
 test('hovering the truncated name shows a real tooltip with the full text', async ({ page }) => {
+  await page.getByTitle('Expand').click();
   const nameSpan = page.getByTestId('map-name').filter({ hasText: 'The Sprawling Northern' });
 
   await expect(page.locator('[data-slot="tooltip-content"]')).toHaveCount(0);

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindImportPort;
+import com.campaignorganizer.campaign.application.beatkind.port.published.BeatKindView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcView;
 import com.campaignorganizer.campaign.application.arc.port.published.ArcImportPort;
@@ -32,6 +34,7 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentImportPort;
 import com.campaignorganizer.characters.application.document.port.published.DocumentView;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetImportPort;
@@ -48,8 +51,10 @@ import com.campaignorganizer.characters.application.template.port.published.Fiel
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
+import com.campaignorganizer.handouts.application.port.published.HandoutCategoryImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckImportPort;
+import com.campaignorganizer.tables.application.category.port.published.TableDeckCategoryImportPort;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
 import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
@@ -60,6 +65,7 @@ import com.campaignorganizer.tagging.application.port.published.TagView;
 import com.campaignorganizer.tagging.domain.EntityType;
 import com.campaignorganizer.whiteboard.application.port.published.WhiteboardImportPort;
 import com.campaignorganizer.worldbuilding.application.calendar.port.published.CalendarImportPort;
+import com.campaignorganizer.worldbuilding.application.map.port.published.MapCategoryImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapImportPort;
 import com.campaignorganizer.worldbuilding.application.map.port.published.MapPinImportPort;
 import com.campaignorganizer.worldbuilding.application.relationship.port.published.RelationshipImportPort;
@@ -98,6 +104,8 @@ class ImportServiceTest {
     @Mock
     private ArticleImportPort articleImportPort;
     @Mock
+    private MapCategoryImportPort mapCategoryImportPort;
+    @Mock
     private MapImportPort mapImportPort;
     @Mock
     private MapPinImportPort mapPinImportPort;
@@ -122,6 +130,8 @@ class ImportServiceTest {
     @Mock
     private ArcImportPort arcImportPort;
     @Mock
+    private SheetCategoryImportPort sheetCategoryImportPort;
+    @Mock
     private FieldTemplateImportPort fieldTemplateImportPort;
     @Mock
     private GameSystemImportPort gameSystemImportPort;
@@ -140,13 +150,19 @@ class ImportServiceTest {
     @Mock
     private ArcBeatImportPort arcBeatImportPort;
     @Mock
+    private BeatKindImportPort beatKindImportPort;
+    @Mock
     private WhiteboardImportPort whiteboardImportPort;
     @Mock
     private MediaImportPort mediaImportPort;
     @Mock
+    private TableDeckCategoryImportPort tableDeckCategoryImportPort;
+    @Mock
     private RollTableImportPort rollTableImportPort;
     @Mock
     private CardDeckImportPort cardDeckImportPort;
+    @Mock
+    private HandoutCategoryImportPort handoutCategoryImportPort;
     @Mock
     private HandoutImportPort handoutImportPort;
     @Mock
@@ -167,14 +183,17 @@ class ImportServiceTest {
     @BeforeEach
     void setUp() {
         service = new ImportService(objectMapper, worldImportPort, categoryImportPort, articleImportPort,
-                mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
+                mapCategoryImportPort, mapImportPort, mapPinImportPort, calendarImportPort, timelineImportPort,
                 timelineEventImportPort, relationshipImportPort, campaignImportPort, playerImportPort,
                 campaignPlayerImportPort, sessionImportPort, sessionAttendanceImportPort,
-                arcImportPort, fieldTemplateImportPort, gameSystemImportPort, globalFieldTemplateImportPort,
+                arcImportPort, beatKindImportPort, sheetCategoryImportPort, fieldTemplateImportPort,
+                gameSystemImportPort,
+                globalFieldTemplateImportPort,
                 globalStatblockImportPort,
                 characterSheetImportPort, documentImportPort, statblockImportPort, encounterImportPort,
-                arcBeatImportPort, whiteboardImportPort, mediaImportPort, rollTableImportPort,
-                cardDeckImportPort, handoutImportPort,
+                arcBeatImportPort, whiteboardImportPort, mediaImportPort,
+                tableDeckCategoryImportPort, rollTableImportPort,
+                cardDeckImportPort, handoutCategoryImportPort, handoutImportPort,
                 cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
                 todoImportPort);
     }
@@ -190,7 +209,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("media", List.of(Map.of("id", oldMediaId, "worldId", oldWorldId, "filename", "cover.png",
                 "contentType", "image/png", "sizeBytes", 3, "createdAt", now.toString())));
         bundle.put("categories", List.of(
@@ -266,10 +285,10 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, null, null,
                 "Tortuga", "tortuga", "LOCATION", "Plain.", now, now)));
-        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null,
                 null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("tags", List.of(
                 new TagView(UUID.randomUUID(), oldWorldId, EntityType.ARTICLE, oldArticleId, "npc", now),
@@ -320,11 +339,11 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("globalFieldTemplates", List.of(new GlobalFieldTemplateView(oldGlobalTemplateId,
                 "D&D 5e Monster", TemplateKind.STATBLOCK, UUID.randomUUID(), List.of(), now, now)));
-        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
-                null, oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null, null,
+                oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "campaigns", "sessions", "arcs", "beats",
                 "fieldTemplates", "characterSheets", "whiteboards", "tags")) {
@@ -361,7 +380,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
                 now, now)));
         bundle.put("globalStatblocks", List.of(new GlobalStatblockView(oldStatblockId, oldSystemId, null,
@@ -400,7 +419,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
                 now, now)));
         bundle.put("campaigns", List.of(new CampaignView(oldCampaignId, oldWorldId, "The Society", null,
@@ -429,7 +448,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -467,11 +486,11 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
-        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null,
+        bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null,
                 null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", "notes",
                 List.of(new EncounterEntryView(oldStatblockId, 3)), now, now)));
@@ -506,14 +525,15 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", null,
                 List.of(), now, now)));
         bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
-                List.of(), List.of(), List.of(oldEncounterId), List.of(), List.of(), null, 0, now, now)));
+                List.of(), List.of(), List.of(oldEncounterId), List.of(), List.of(), null, null, 0, now,
+                now)));
         bundle.put("arcs", List.of(new ArcView(oldArcId, oldCampaignId, "Main Arc", null, "ACTIVE", 0,
                 now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
@@ -532,6 +552,46 @@ class ImportServiceTest {
     }
 
     @Test
+    void remapsBeatKindId() throws Exception {
+        UUID oldWorldId = UUID.randomUUID();
+        UUID oldCampaignId = UUID.randomUUID();
+        UUID oldArcId = UUID.randomUUID();
+        UUID oldBeatId = UUID.randomUUID();
+        UUID oldBeatKindId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("campaigns", List.of(
+                new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
+                        CampaignStatus.ACTIVE, null, now, now)));
+        bundle.put("beatKinds", List.of(new BeatKindView(oldBeatKindId, oldWorldId, "Combat", "#ff0000",
+                now, now)));
+        bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
+                List.of(), List.of(), List.of(), List.of(), List.of(), null, oldBeatKindId, 0, now, now)));
+        bundle.put("arcs", List.of(new ArcView(oldArcId, oldCampaignId, "Main Arc", null, "ACTIVE", 0,
+                now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
+                "timelines", "timelineEvents", "relationships", "sessions",
+                "fieldTemplates", "characterSheets", "statblocks", "whiteboards", "encounters")) {
+            bundle.put(key, List.of());
+        }
+        byte[] json = objectMapper.writeValueAsBytes(bundle);
+
+        service.importWorld(json, Map.of());
+
+        ArgumentCaptor<BeatKindView> kindCaptor = ArgumentCaptor.forClass(BeatKindView.class);
+        verify(beatKindImportPort).importBeatKind(kindCaptor.capture());
+        assertThat(kindCaptor.getValue().id()).isNotEqualTo(oldBeatKindId);
+        assertThat(kindCaptor.getValue().worldId()).isNotEqualTo(oldWorldId);
+
+        ArgumentCaptor<ArcBeatView> beatCaptor = ArgumentCaptor.forClass(ArcBeatView.class);
+        verify(arcBeatImportPort).importArcBeat(beatCaptor.capture());
+        assertThat(beatCaptor.getValue().kindId()).isEqualTo(kindCaptor.getValue().id());
+    }
+
+    @Test
     void remapsLooseThreadSessionAndCampaignIds() throws Exception {
         UUID oldWorldId = UUID.randomUUID();
         UUID oldCampaignId = UUID.randomUUID();
@@ -541,7 +601,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
@@ -578,13 +638,13 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, now, now)));
-        bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId,
+        bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId, null,
                 "Session Zero", TemplateKind.DOCUMENT, null, List.of(), now, now)));
-        bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, oldTemplateId,
+        bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, null, oldTemplateId,
                 oldCampaignId, "Ashes Zero", Map.of("lines", "No animal harm"), now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats", "clocks",
@@ -616,13 +676,13 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), now, now));
-        bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, "Ambush", null,
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, null, "Ambush", null,
                 "1d1", 1, 1,
                 List.of(new RollTableEntryView(UUID.randomUUID(), 1, 1, "Bandits",
                         List.of(danglingTableId), List.of())),
                 now, now)));
-        bundle.put("cardDecks", List.of(new CardDeckView(oldDeckId, oldWorldId, "Twists", null,
+        bundle.put("cardDecks", List.of(new CardDeckView(oldDeckId, oldWorldId, null, "Twists", null,
                 List.of(new DeckCardView(UUID.randomUUID(), "Ambush", "More foes",
                         List.of(), List.of(danglingTableId))),
                 now, now)));

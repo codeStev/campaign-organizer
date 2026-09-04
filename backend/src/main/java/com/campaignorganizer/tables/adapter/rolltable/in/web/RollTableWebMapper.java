@@ -26,12 +26,12 @@ public interface RollTableWebMapper {
     List<EntryInput> toEntryInputs(List<EntryDto> entries);
 
     default CreateRollTableCommand toCreateCommand(UUID worldId, RollTableRequest request) {
-        return new CreateRollTableCommand(worldId, request.title(), request.description(),
+        return new CreateRollTableCommand(worldId, request.categoryId(), request.title(), request.description(),
                 request.diceExpression(), toEntryInputs(request.entries()));
     }
 
     default UpdateRollTableCommand toUpdateCommand(UUID worldId, UUID tableId, RollTableRequest request) {
-        return new UpdateRollTableCommand(worldId, tableId, request.title(), request.description(),
-                request.diceExpression(), toEntryInputs(request.entries()));
+        return new UpdateRollTableCommand(worldId, tableId, request.categoryId(), request.title(),
+                request.description(), request.diceExpression(), toEntryInputs(request.entries()));
     }
 }

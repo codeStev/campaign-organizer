@@ -15,6 +15,7 @@ import com.campaignorganizer.characters.application.sheet.port.published.Charact
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetQueryPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetTemplateRefPort;
 import com.campaignorganizer.characters.application.sheet.port.published.CharacterSheetView;
+import com.campaignorganizer.characters.application.category.port.published.SheetCategoryQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.FieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.domain.sheet.CharacterSheet;
@@ -41,6 +42,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     private final WorldExistsPort worlds;
     private final ArticleExistsPort articles;
     private final CampaignExistsPort campaigns;
+    private final SheetCategoryQueryPort categories;
     private final CharacterSheetViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
@@ -48,6 +50,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     public CharacterSheetService(CharacterSheetRepositoryPort sheets, FieldTemplateQueryPort templates,
                                  GlobalFieldTemplateQueryPort globalTemplates, WorldExistsPort worlds,
                                  ArticleExistsPort articles, CampaignExistsPort campaigns,
+                                 SheetCategoryQueryPort categories,
                                  CharacterSheetViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.sheets = sheets;
         this.templates = templates;
@@ -55,6 +58,7 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         this.worlds = worlds;
         this.articles = articles;
         this.campaigns = campaigns;
+        this.categories = categories;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
@@ -66,7 +70,8 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         requireWorld(command.worldId());
         validateLinks(command.worldId(), command.worldTemplateId(), command.globalTemplateId(),
                 command.articleId(), command.campaignId());
-        CharacterSheet created = CharacterSheet.create(ids.newId(), command.worldId(),
+        validateCategory(command.worldId(), command.categoryId());
+        CharacterSheet created = CharacterSheet.create(ids.newId(), command.worldId(), command.categoryId(),
                 command.worldTemplateId(), command.globalTemplateId(), command.articleId(),
                 command.campaignId(), command.name(), command.values(), clock.instant());
         return viewMapper.toView(sheets.save(created));
@@ -78,8 +83,9 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         CharacterSheet sheet = require(command.worldId(), command.sheetId());
         validateLinks(command.worldId(), command.worldTemplateId(), command.globalTemplateId(),
                 command.articleId(), command.campaignId());
-        sheet.update(command.worldTemplateId(), command.globalTemplateId(), command.articleId(),
-                command.campaignId(), command.name(), command.values(), clock.instant());
+        validateCategory(command.worldId(), command.categoryId());
+        sheet.update(command.categoryId(), command.worldTemplateId(), command.globalTemplateId(),
+                command.articleId(), command.campaignId(), command.name(), command.values(), clock.instant());
         return viewMapper.toView(sheets.save(sheet));
     }
 
@@ -110,9 +116,9 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
     @Override
     @Transactional
     public CharacterSheetView importCharacterSheet(CharacterSheetView view) {
-        CharacterSheet sheet = CharacterSheet.reconstitute(view.id(), view.worldId(), view.worldTemplateId(),
-                view.globalTemplateId(), view.articleId(), view.campaignId(), view.name(), view.values(),
-                view.createdAt(), view.updatedAt());
+        CharacterSheet sheet = CharacterSheet.reconstitute(view.id(), view.worldId(), view.categoryId(),
+                view.worldTemplateId(), view.globalTemplateId(), view.articleId(), view.campaignId(),
+                view.name(), view.values(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(sheets.save(sheet));
     }
 
@@ -175,6 +181,12 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
         }
         if (campaignId != null && !campaigns.existsInWorld(campaignId, worldId)) {
             throw new ValidationException("Campaign not found in this world");
+        }
+    }
+
+    private void validateCategory(UUID worldId, UUID categoryId) {
+        if (categoryId != null && !categories.existsInWorld(categoryId, worldId)) {
+            throw new ValidationException("Category not found in this world");
         }
     }
 

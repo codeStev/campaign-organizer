@@ -16,11 +16,11 @@ public interface MapWebMapper {
     MapResponse toResponse(MapView view);
 
     default CreateMapCommand toCreateCommand(UUID worldId, MapRequest request) {
-        return new CreateMapCommand(worldId, request.name(), request.mediaId());
+        return new CreateMapCommand(worldId, request.categoryId(), request.name(), request.mediaId());
     }
 
     default UpdateMapCommand toUpdateCommand(UUID worldId, UUID mapId, MapRequest request) {
-        return new UpdateMapCommand(worldId, mapId, request.name(), request.mediaId());
+        return new UpdateMapCommand(worldId, mapId, request.categoryId(), request.name(), request.mediaId());
     }
 
     default String imageUrl(UUID mediaId) {

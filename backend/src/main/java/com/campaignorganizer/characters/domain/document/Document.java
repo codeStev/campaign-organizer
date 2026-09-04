@@ -11,6 +11,7 @@ public final class Document {
 
     private final UUID id;
     private final UUID worldId;
+    private UUID categoryId;
     private UUID templateId;
     private UUID campaignId;
     private String name;
@@ -18,29 +19,32 @@ public final class Document {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Document(UUID id, UUID worldId, UUID templateId, UUID campaignId, String name,
+    private Document(UUID id, UUID worldId, UUID categoryId, UUID templateId, UUID campaignId, String name,
                      Map<String, Object> values, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.worldId = worldId;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         apply(templateId, campaignId, name, values);
     }
 
-    public static Document create(UUID id, UUID worldId, UUID templateId, UUID campaignId, String name,
-                                  Map<String, Object> values, Instant now) {
-        return new Document(id, worldId, templateId, campaignId, name, values, now, now);
+    public static Document create(UUID id, UUID worldId, UUID categoryId, UUID templateId, UUID campaignId,
+                                  String name, Map<String, Object> values, Instant now) {
+        return new Document(id, worldId, categoryId, templateId, campaignId, name, values, now, now);
     }
 
-    public static Document reconstitute(UUID id, UUID worldId, UUID templateId, UUID campaignId,
-                                        String name, Map<String, Object> values, Instant createdAt,
-                                        Instant updatedAt) {
-        return new Document(id, worldId, templateId, campaignId, name, values, createdAt, updatedAt);
+    public static Document reconstitute(UUID id, UUID worldId, UUID categoryId, UUID templateId,
+                                        UUID campaignId, String name, Map<String, Object> values,
+                                        Instant createdAt, Instant updatedAt) {
+        return new Document(id, worldId, categoryId, templateId, campaignId, name, values, createdAt,
+                updatedAt);
     }
 
-    public void update(UUID templateId, UUID campaignId, String name, Map<String, Object> values,
-                       Instant now) {
+    public void update(UUID categoryId, UUID templateId, UUID campaignId, String name,
+                       Map<String, Object> values, Instant now) {
         apply(templateId, campaignId, name, values);
+        this.categoryId = categoryId;
         this.updatedAt = now;
     }
 
@@ -63,6 +67,10 @@ public final class Document {
 
     public UUID getWorldId() {
         return worldId;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
     public UUID getTemplateId() {
