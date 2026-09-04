@@ -117,6 +117,32 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  async function renameHandoutCategory(category: HandoutCategory, newName: string) {
+    try {
+      await categoriesApi.update(category.id, { name: newName, parentId: category.parentId ?? null });
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function renameHandout(h: Handout, newTitle: string) {
+    try {
+      const updated = await api.update(h.id, {
+        categoryId: h.categoryId ?? null,
+        title: newTitle,
+        preset: h.preset,
+        body: h.body ?? null,
+        sessionId: h.sessionId ?? null,
+        revealed: h.revealed,
+      });
+      if (draft.id === updated.id) setDraft((d) => ({ ...d, title: updated.title }));
+      await refresh();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   // Handout's list response already carries every field an update needs
   // (unlike Article, there's no separate "summary vs full" split), so this
   // can update directly without a full-fetch-first step (mirrors Atlas).
@@ -308,6 +334,8 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
           onMoveEntity={(h, categoryId) => void moveHandoutToCategory(h, categoryId)}
           onCreateCategory={(name, parentId) => void createHandoutCategory(name, parentId)}
           onRemoveCategory={(c) => void removeHandoutCategory(c)}
+          onRenameCategory={(c, name) => void renameHandoutCategory(c, name)}
+          onRenameEntity={(h, name) => void renameHandout(h, name)}
           onDeleteEntity={(h) => void deleteHandout(h)}
           onPrintEntity={(h) => void printHandout(h)}
           newEntityActions={[
