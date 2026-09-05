@@ -735,8 +735,12 @@ button:disabled {
   border-radius: 4px;
 }
 
+/* pan-y, not none: lets touch scrolling pass through to the browser while
+   dnd-kit's PointerSensor (activationConstraint distance: 4, CategoryTree.tsx)
+   still detects a genuine drag — `none` blocked ALL touch handling on these
+   rows, including vertical scroll, making the tree unscrollable by touch. */
 .category-tree-article {
-  touch-action: none;
+  touch-action: pan-y;
 }
 
 .category-tree-drag-overlay {
