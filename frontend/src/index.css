@@ -259,10 +259,24 @@ button:disabled {
 
 .next-world-switcher {
   position: relative;
+  /* Lets the trigger shrink below its content's natural width (the flex
+     default is a min-width floor at content size) so a long world name
+     truncates instead of forcing .next-top-bar wider than the viewport and
+     pushing rightSlot (e.g. the Table Tools button) off-screen. */
+  min-width: 0;
 }
 
 .next-world-switcher-trigger {
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.next-world-switcher-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .next-world-dot {

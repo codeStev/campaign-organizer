@@ -59,7 +59,7 @@ export function NextWorldSwitcher({ currentWorldId, currentWorldName }: Props) {
         onClick={() => setOpen((o) => !o)}
       >
         <span className="next-world-dot" aria-hidden="true" />
-        <span>{currentWorldName ?? 'Choose a world'}</span>
+        <span className="next-world-switcher-name">{currentWorldName ?? 'Choose a world'}</span>
         <span className="muted">WORLD ▾</span>
       </Button>
       {open && (
