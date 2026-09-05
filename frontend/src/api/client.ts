@@ -590,6 +590,7 @@ export interface Campaign {
   notes?: string | null;
   status: CampaignStatus;
   systemId?: string | null;
+  color?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -600,6 +601,7 @@ export interface CampaignRequest {
   notes?: string | null;
   status?: CampaignStatus;
   systemId?: string | null;
+  color?: string | null;
 }
 
 export interface Session {

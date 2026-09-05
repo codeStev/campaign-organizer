@@ -107,7 +107,7 @@ class WorldOverviewServiceTest {
     void countsOnlySessionsDatedTodayOrEarlierAcrossEveryCampaign() {
         when(articles.findByWorld(worldId)).thenReturn(List.of());
         CampaignView campaign = new CampaignView(campaignId, worldId, "Chronicle", null, null,
-                CampaignStatus.ACTIVE, null, Instant.EPOCH, Instant.EPOCH);
+                CampaignStatus.ACTIVE, null, null, Instant.EPOCH, Instant.EPOCH);
         when(campaigns.findByWorld(worldId)).thenReturn(List.of(campaign));
         when(sessions.findOrdered(campaignId)).thenReturn(List.of(
                 session(LocalDate.parse("2026-03-01")), // run
@@ -183,8 +183,8 @@ class WorldOverviewServiceTest {
     }
 
     private CampaignView campaign(UUID id, String name) {
-        return new CampaignView(id, worldId, name, null, null, CampaignStatus.ACTIVE, null, Instant.EPOCH,
-                Instant.EPOCH);
+        return new CampaignView(id, worldId, name, null, null, CampaignStatus.ACTIVE, null, null,
+                Instant.EPOCH, Instant.EPOCH);
     }
 
     private SessionView session(UUID forCampaignId, String title, LocalDate date) {

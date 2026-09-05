@@ -16,7 +16,8 @@ public final class CampaignWebDtos {
             @Size(max = 5000) String description,
             @Size(max = 20000) String notes,
             CampaignStatus status,
-            UUID systemId) {
+            UUID systemId,
+            @Size(max = 20) String color) {
     }
 
     public record CampaignResponse(
@@ -27,6 +28,7 @@ public final class CampaignWebDtos {
             String notes,
             CampaignStatus status,
             UUID systemId,
+            String color,
             Instant createdAt,
             Instant updatedAt) {
     }

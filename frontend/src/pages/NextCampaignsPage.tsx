@@ -53,6 +53,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
   const [arcs, setArcs] = useState<Arc[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
+  const [colorDraft, setColorDraft] = useState('#888888');
   const [error, setError] = useState<string | null>(null);
   const [namePromptOpen, setNamePromptOpen] = useState(false);
 
@@ -83,6 +84,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
     setSelected(campaign);
     setNotes(campaign.notes ?? '');
     setNotesDirty(false);
+    setColorDraft(campaign.color ?? '#888888');
   }
 
   // Compact dashboard summary only — full session/arc management lives on
@@ -163,6 +165,23 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
       toast.success(
         systemId ? `"${campaign.name}" set to ${systemName(systemId)}` : `"${campaign.name}" system cleared`,
       );
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function setColor(campaign: Campaign, color: string) {
+    try {
+      const updated = await api.update(campaign.id, {
+        name: campaign.name,
+        description: campaign.description,
+        notes: campaign.notes,
+        status: campaign.status,
+        systemId: campaign.systemId,
+        color,
+      });
+      setSelected(updated);
+      await refresh();
     } catch (err) {
       handleError(err);
     }
@@ -271,6 +290,15 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
                   ))}
                 </SelectContent>
               </Select>
+              <input
+                type="color"
+                value={colorDraft}
+                onChange={(e) => setColorDraft(e.target.value)}
+                onBlur={() => {
+                  if (colorDraft !== (selected.color ?? '#888888')) void setColor(selected, colorDraft);
+                }}
+                title="Campaign color (used on the session calendar)"
+              />
               <Button variant="link" size="sm" onClick={() => navigate(`/next/worlds/${worldId}/chronicle`)}>
                 Chronicle →
               </Button>

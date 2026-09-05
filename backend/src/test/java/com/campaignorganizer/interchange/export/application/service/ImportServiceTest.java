@@ -423,7 +423,7 @@ class ImportServiceTest {
         bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
                 now, now)));
         bundle.put("campaigns", List.of(new CampaignView(oldCampaignId, oldWorldId, "The Society", null,
-                null, CampaignStatus.ACTIVE, oldSystemId, now, now)));
+                null, CampaignStatus.ACTIVE, oldSystemId, null, now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "sessions", "arcs", "beats",
                 "fieldTemplates", "globalFieldTemplates", "characterSheets", "statblocks", "whiteboards",
@@ -451,7 +451,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, null, now, now)));
+                        CampaignStatus.ACTIVE, null, null, now, now)));
         bundle.put("clocks", List.of(new ClockView(oldClockId, oldCampaignId, "Doom", null,
                 List.of(new ClockSegmentView(true, null, null),
                         new ClockSegmentView(false, "Alarm", "Guards notice")),
@@ -489,7 +489,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, null, now, now)));
+                        CampaignStatus.ACTIVE, null, null, now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null,
                 null, null, "Goblin", Map.of(), null, now, now)));
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", "notes",
@@ -528,7 +528,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, null, now, now)));
+                        CampaignStatus.ACTIVE, null, null, now, now)));
         bundle.put("encounters", List.of(new EncounterView(oldEncounterId, oldCampaignId, "Ambush", null,
                 List.of(), now, now)));
         bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
@@ -565,7 +565,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, null, now, now)));
+                        CampaignStatus.ACTIVE, null, null, now, now)));
         bundle.put("beatKinds", List.of(new BeatKindView(oldBeatKindId, oldWorldId, "Combat", "#ff0000",
                 now, now)));
         bundle.put("beats", List.of(new ArcBeatView(oldBeatId, oldArcId, "The road ambush", null, false,
@@ -604,7 +604,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, null, now, now)));
+                        CampaignStatus.ACTIVE, null, null, now, now)));
         bundle.put("sessions", List.of(
                 new SessionView(oldSessionId, oldCampaignId, "Session 1", 1, null, null, null, now, now)));
         bundle.put("looseThreads", List.of(new LooseThreadView(oldThreadId, oldSessionId, oldCampaignId,
@@ -641,7 +641,7 @@ class ImportServiceTest {
         bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
-                        CampaignStatus.ACTIVE, null, now, now)));
+                        CampaignStatus.ACTIVE, null, null, now, now)));
         bundle.put("fieldTemplates", List.of(new FieldTemplateView(oldTemplateId, oldWorldId, null,
                 "Session Zero", TemplateKind.DOCUMENT, null, List.of(), now, now)));
         bundle.put("documents", List.of(new DocumentView(oldDocumentId, oldWorldId, null, oldTemplateId,

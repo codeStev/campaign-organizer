@@ -45,11 +45,12 @@ class CampaignControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(put("/api/worlds/{w}/campaigns/{c}", worldId, id)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Echoes (rev)\",\"description\":\"main run\",\"status\":\"ACTIVE\"}"))
+                        .content("{\"name\":\"Echoes (rev)\",\"description\":\"main run\",\"status\":\"ACTIVE\",\"color\":\"#c0392b\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Echoes (rev)"))
                 .andExpect(jsonPath("$.description").value("main run"))
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.color").value("#c0392b"));
 
         mockMvc.perform(delete("/api/worlds/{w}/campaigns/{c}", worldId, id)
                         .header(HttpHeaders.AUTHORIZATION, auth))

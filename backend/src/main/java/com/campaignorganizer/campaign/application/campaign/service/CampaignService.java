@@ -55,7 +55,7 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
         requireGameSystem(command.systemId());
         Campaign created = Campaign.create(ids.newId(), command.worldId(), command.name(),
                 command.description(), command.notes(), command.status(), command.systemId(),
-                clock.instant());
+                command.color(), clock.instant());
         return viewMapper.toView(campaigns.save(created));
     }
 
@@ -65,7 +65,7 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
         Campaign campaign = require(command.worldId(), command.campaignId());
         requireGameSystem(command.systemId());
         campaign.update(command.name(), command.description(), command.notes(), command.status(),
-                command.systemId(), clock.instant());
+                command.systemId(), command.color(), clock.instant());
         return viewMapper.toView(campaigns.save(campaign));
     }
 
@@ -94,8 +94,8 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
     @Transactional
     public CampaignView importCampaign(CampaignView view) {
         Campaign campaign = Campaign.reconstitute(view.id(), view.worldId(), view.name(),
-                view.description(), view.notes(), view.status(), view.systemId(), view.createdAt(),
-                view.updatedAt());
+                view.description(), view.notes(), view.status(), view.systemId(), view.color(),
+                view.createdAt(), view.updatedAt());
         return viewMapper.toView(campaigns.save(campaign));
     }
 

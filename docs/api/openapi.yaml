@@ -5914,6 +5914,10 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional game system this campaign runs (ADR-0095); null = undecided/agnostic.
+        color:
+          type: [string, "null"]
+          maxLength: 20
+          description: User-assignable color badge (ADR-0107) — used to distinguish this campaign on the session calendar.
 
     Campaign:
       type: object
@@ -5937,6 +5941,8 @@ components:
         systemId:
           type: [string, "null"]
           format: uuid
+        color:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
