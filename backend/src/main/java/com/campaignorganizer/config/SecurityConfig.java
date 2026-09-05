@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(PUBLIC_API_PATHS).permitAll()
                         // Public image serving, addressed by unguessable id (ADR-0016).
                         .requestMatchers(HttpMethod.GET, "/api/media/*/content").permitAll()
+                        // Public .ics subscription feed, addressed by unguessable token (ADR-0108).
+                        .requestMatchers(HttpMethod.GET, "/api/calendar/*.ics").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(eh -> eh

@@ -18,13 +18,14 @@ class CampaignTest {
     void updateBumpsUpdatedAt() {
         UUID systemId = UUID.randomUUID();
         Campaign c = Campaign.create(UUID.randomUUID(), UUID.randomUUID(), "Rise of the Dragon",
-                "desc", "notes", CampaignStatus.ACTIVE, systemId, T0);
-        c.update("Fall of the Dragon", "desc2", "notes2", CampaignStatus.ON_HIATUS, systemId, T1);
+                "desc", "notes", CampaignStatus.ACTIVE, systemId, "#c0392b", T0);
+        c.update("Fall of the Dragon", "desc2", "notes2", CampaignStatus.ON_HIATUS, systemId, "#e74c3c", T1);
 
         assertThat(c.getName()).isEqualTo("Fall of the Dragon");
         assertThat(c.getNotes()).isEqualTo("notes2");
         assertThat(c.getStatus()).isEqualTo(CampaignStatus.ON_HIATUS);
         assertThat(c.getSystemId()).isEqualTo(systemId);
+        assertThat(c.getColor()).isEqualTo("#e74c3c");
         assertThat(c.getCreatedAt()).isEqualTo(T0);
         assertThat(c.getUpdatedAt()).isEqualTo(T1);
     }
@@ -32,7 +33,7 @@ class CampaignTest {
     @Test
     void defaultsStatusToPlannedWhenNull() {
         Campaign c = Campaign.create(UUID.randomUUID(), UUID.randomUUID(), "Rise of the Dragon",
-                "desc", "notes", null, null, T0);
+                "desc", "notes", null, null, null, T0);
 
         assertThat(c.getStatus()).isEqualTo(CampaignStatus.PLANNED);
     }
@@ -40,15 +41,23 @@ class CampaignTest {
     @Test
     void systemIdIsNullableAndUnvalidated() {
         Campaign c = Campaign.create(UUID.randomUUID(), UUID.randomUUID(), "Rise of the Dragon",
-                "desc", "notes", CampaignStatus.ACTIVE, null, T0);
+                "desc", "notes", CampaignStatus.ACTIVE, null, null, T0);
 
         assertThat(c.getSystemId()).isNull();
     }
 
     @Test
+    void colorIsOptional() {
+        Campaign c = Campaign.create(UUID.randomUUID(), UUID.randomUUID(), "Rise of the Dragon",
+                "desc", "notes", CampaignStatus.ACTIVE, null, null, T0);
+
+        assertThat(c.getColor()).isNull();
+    }
+
+    @Test
     void rejectsBlankName() {
         assertThatThrownBy(() ->
-                Campaign.create(UUID.randomUUID(), UUID.randomUUID(), " ", null, null, null, null, T0))
+                Campaign.create(UUID.randomUUID(), UUID.randomUUID(), " ", null, null, null, null, null, T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

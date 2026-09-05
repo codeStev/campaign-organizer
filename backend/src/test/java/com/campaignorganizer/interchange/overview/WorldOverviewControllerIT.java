@@ -51,7 +51,11 @@ class WorldOverviewControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.recentlyEdited.length()").value(2))
                 .andExpect(jsonPath("$.recentlyEdited[0].title").value("Harbor"))
                 .andExpect(jsonPath("$.nextSession.title").value("Not yet"))
-                .andExpect(jsonPath("$.nextSession.campaignName").value("Main"));
+                .andExpect(jsonPath("$.nextSession.campaignName").value("Main"))
+                .andExpect(jsonPath("$.scheduledSessions.length()").value(3))
+                .andExpect(jsonPath("$.scheduledSessions[0].title").value("Played it"))
+                .andExpect(jsonPath("$.scheduledSessions[2].title").value("Not yet"))
+                .andExpect(jsonPath("$.scheduledSessions[0].campaignName").value("Main"));
     }
 
     @Test

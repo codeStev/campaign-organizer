@@ -1327,6 +1327,89 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/calendar-feed:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      summary: Get (or create) the campaign's .ics subscription token (ADR-0108)
+      operationId: getOrCreateCalendarFeed
+      responses:
+        '200':
+          description: The subscription token — build the feed URL as /api/calendar/{token}.ics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarFeedToken'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/calendar-feed/regenerate:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    post:
+      tags: [campaigns]
+      summary: Mint a fresh subscription token, invalidating the previous feed URL (ADR-0108)
+      operationId: regenerateCalendarFeed
+      responses:
+        '200':
+          description: The new subscription token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarFeedToken'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/campaigns/{campaignId}/calendar.ics:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      summary: Download the campaign's dated sessions as an .ics file (ADR-0108)
+      operationId: downloadCampaignIcs
+      responses:
+        '200':
+          description: The .ics calendar.
+          content:
+            text/calendar:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /calendar/{token}.ics:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [campaigns]
+      summary: Public, unauthenticated .ics subscription feed, addressed by unguessable token (ADR-0108)
+      operationId: getCalendarFeed
+      security: []
+      responses:
+        '200':
+          description: The .ics calendar.
+          content:
+            text/calendar:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/roster:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -5914,6 +5997,10 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional game system this campaign runs (ADR-0095); null = undecided/agnostic.
+        color:
+          type: [string, "null"]
+          maxLength: 20
+          description: User-assignable color badge (ADR-0107) — used to distinguish this campaign on the session calendar.
 
     Campaign:
       type: object
@@ -5937,12 +6024,23 @@ components:
         systemId:
           type: [string, "null"]
           format: uuid
+        color:
+          type: [string, "null"]
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+
+    CalendarFeedToken:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          format: uuid
+          description: Build the public feed URL as /api/calendar/{token}.ics (ADR-0108).
 
     RosterEntryInput:
       type: object
@@ -7178,7 +7276,7 @@ components:
 
     WorldOverviewStats:
       type: object
-      required: [articleCount, sessionsRunCount, recentlyEdited, openClocks, openLooseThreads]
+      required: [articleCount, sessionsRunCount, recentlyEdited, openClocks, openLooseThreads, scheduledSessions]
       properties:
         articleCount:
           type: integer
@@ -7205,6 +7303,11 @@ components:
           description: Open (unresolved) loose threads across every campaign, newest-first, capped at 8.
           items:
             $ref: '#/components/schemas/LooseThreadSummary'
+        scheduledSessions:
+          type: array
+          description: Every dated session across every campaign in the world, date-ascending (ADR-0107, for the session calendar).
+          items:
+            $ref: '#/components/schemas/ScheduledSessionSummary'
 
     RecentlyEditedArticle:
       type: object
@@ -7272,6 +7375,29 @@ components:
           type: string
         text:
           type: string
+
+    ScheduledSessionSummary:
+      type: object
+      required: [sessionId, campaignId, campaignName, title, date]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        campaignColor:
+          type: [string, "null"]
+          description: The campaign's raw persisted color (ADR-0107) — null if unset; the frontend resolves a fallback.
+        title:
+          type: string
+        sessionNumber:
+          type: [integer, "null"]
+        date:
+          type: string
+          format: date
 
     ArticleRevision:
       type: object

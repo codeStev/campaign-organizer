@@ -13,6 +13,7 @@ public interface CampaignPersistenceMapper {
             return null;
         }
         return Campaign.reconstitute(e.getId(), e.getWorldId(), e.getName(), e.getDescription(),
-                e.getNotes(), e.getStatus(), e.getSystemId(), e.getCreatedAt(), e.getUpdatedAt());
+                e.getNotes(), e.getStatus(), e.getSystemId(), e.getColor(), e.getCreatedAt(),
+                e.getUpdatedAt());
     }
 }

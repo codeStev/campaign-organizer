@@ -57,7 +57,7 @@ class CampaignServiceTest {
         when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CampaignView view = service.create(
-                new CreateCampaignCommand(worldId, "Rise", "desc", "notes", CampaignStatus.ACTIVE, null));
+                new CreateCampaignCommand(worldId, "Rise", "desc", "notes", CampaignStatus.ACTIVE, null, null));
 
         assertThat(view.id()).isEqualTo(id);
         assertThat(view.name()).isEqualTo("Rise");
@@ -72,7 +72,7 @@ class CampaignServiceTest {
         when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CampaignView view = service.create(
-                new CreateCampaignCommand(worldId, "Rise", null, null, null, null));
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, null, null));
 
         assertThat(view.status()).isEqualTo(CampaignStatus.PLANNED);
     }
@@ -82,7 +82,7 @@ class CampaignServiceTest {
         when(worlds.exists(worldId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(
-                new CreateCampaignCommand(worldId, "Rise", null, null, null, null)))
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -96,7 +96,7 @@ class CampaignServiceTest {
         when(campaigns.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CampaignView view = service.create(
-                new CreateCampaignCommand(worldId, "Rise", null, null, null, systemId));
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, systemId, null));
 
         assertThat(view.systemId()).isEqualTo(systemId);
     }
@@ -108,7 +108,7 @@ class CampaignServiceTest {
         when(gameSystems.exists(systemId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(
-                new CreateCampaignCommand(worldId, "Rise", null, null, null, systemId)))
+                new CreateCampaignCommand(worldId, "Rise", null, null, null, systemId, null)))
                 .isInstanceOf(ValidationException.class);
     }
 }

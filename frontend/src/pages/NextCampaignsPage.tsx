@@ -17,6 +17,9 @@ import { ClockBoard } from './ClockBoard';
 import { RosterPanel } from '../components/RosterPanel';
 import { TodoListPanel } from '../components/TodoListPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { SessionCalendar } from '../components/SessionCalendar';
+import { CampaignCalendarExport } from '../components/CampaignCalendarExport';
+import { getCampaignColor } from '../lib/campaignColor';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
@@ -53,6 +56,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
   const [arcs, setArcs] = useState<Arc[]>([]);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
+  const [colorDraft, setColorDraft] = useState('#888888');
   const [error, setError] = useState<string | null>(null);
   const [namePromptOpen, setNamePromptOpen] = useState(false);
 
@@ -83,6 +87,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
     setSelected(campaign);
     setNotes(campaign.notes ?? '');
     setNotesDirty(false);
+    setColorDraft(campaign.color ?? '#888888');
   }
 
   // Compact dashboard summary only — full session/arc management lives on
@@ -163,6 +168,23 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
       toast.success(
         systemId ? `"${campaign.name}" set to ${systemName(systemId)}` : `"${campaign.name}" system cleared`,
       );
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function setColor(campaign: Campaign, color: string) {
+    try {
+      const updated = await api.update(campaign.id, {
+        name: campaign.name,
+        description: campaign.description,
+        notes: campaign.notes,
+        status: campaign.status,
+        systemId: campaign.systemId,
+        color,
+      });
+      setSelected(updated);
+      await refresh();
     } catch (err) {
       handleError(err);
     }
@@ -271,6 +293,16 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
                   ))}
                 </SelectContent>
               </Select>
+              <input
+                type="color"
+                value={colorDraft}
+                onChange={(e) => setColorDraft(e.target.value)}
+                onBlur={() => {
+                  if (colorDraft !== (selected.color ?? '#888888')) void setColor(selected, colorDraft);
+                }}
+                title="Campaign color (used on the session calendar)"
+              />
+              <CampaignCalendarExport worldId={worldId} campaignId={selected.id} />
               <Button variant="link" size="sm" onClick={() => navigate(`/next/worlds/${worldId}/chronicle`)}>
                 Chronicle →
               </Button>
@@ -315,6 +347,25 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
                     ))}
                     {sessions.length === 0 && <li className="muted">No sessions logged yet.</li>}
                   </ul>
+                </section>
+
+                <section className="card">
+                  <h3 className="eyebrow">Calendar</h3>
+                  <SessionCalendar
+                    entries={sessions
+                      .filter((s) => !!s.date)
+                      .map((s) => ({
+                        id: s.id,
+                        date: s.date!,
+                        title: s.title,
+                        sessionNumber: s.sessionNumber,
+                        campaignId: selected.id,
+                        color: getCampaignColor(selected),
+                      }))}
+                    onSelectSession={(entry) =>
+                      navigate(`/next/worlds/${worldId}/sessions/${selected.id}/${entry.id}`)
+                    }
+                  />
                 </section>
 
                 <section className="card">

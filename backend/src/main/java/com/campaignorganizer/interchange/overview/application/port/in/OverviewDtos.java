@@ -43,12 +43,26 @@ public final class OverviewDtos {
             String text) {
     }
 
+    /** One dated session, world-scoped, for the session calendar (ADR-0107).
+     * {@code campaignColor} is the raw persisted value (nullable) — the
+     * frontend resolves an uncolored campaign's fallback color itself. */
+    public record ScheduledSessionSummary(
+            UUID sessionId,
+            UUID campaignId,
+            String campaignName,
+            String campaignColor,
+            String title,
+            Integer sessionNumber,
+            LocalDate date) {
+    }
+
     public record WorldOverviewStats(
             int articleCount,
             int sessionsRunCount,
             List<RecentlyEditedArticle> recentlyEdited,
             NextSessionSummary nextSession,
             List<ClockSummary> openClocks,
-            List<LooseThreadSummary> openLooseThreads) {
+            List<LooseThreadSummary> openLooseThreads,
+            List<ScheduledSessionSummary> scheduledSessions) {
     }
 }

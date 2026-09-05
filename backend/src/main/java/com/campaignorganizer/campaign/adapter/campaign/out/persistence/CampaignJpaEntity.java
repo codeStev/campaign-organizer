@@ -37,6 +37,9 @@ public class CampaignJpaEntity {
     @Column(name = "system_id")
     private UUID systemId;
 
+    @Column(length = 20)
+    private String color;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -100,6 +103,14 @@ public class CampaignJpaEntity {
 
     public void setSystemId(UUID systemId) {
         this.systemId = systemId;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 
     public Instant getCreatedAt() {

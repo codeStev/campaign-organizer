@@ -397,7 +397,7 @@ public class ImportService implements ImportBackupUseCase {
         for (CampaignView c : campaigns) {
             campaignImportPort.importCampaign(new CampaignView(remap.get(c.id()), newWorldId, c.name(),
                     c.description(), c.notes(), c.status(), gameSystemResolution.get(c.systemId()),
-                    c.createdAt(), c.updatedAt()));
+                    c.color(), c.createdAt(), c.updatedAt()));
         }
 
         // Player pool (ADR-0091): world-scoped, no other id references inside.

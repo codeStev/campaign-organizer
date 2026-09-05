@@ -590,6 +590,7 @@ export interface Campaign {
   notes?: string | null;
   status: CampaignStatus;
   systemId?: string | null;
+  color?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -600,6 +601,7 @@ export interface CampaignRequest {
   notes?: string | null;
   status?: CampaignStatus;
   systemId?: string | null;
+  color?: string | null;
 }
 
 export interface Session {
@@ -741,6 +743,49 @@ export function campaignsApi(worldId: string) {
   };
 }
 
+// ---- Campaign .ics export (ADR-0108): download + subscribe feed ----
+
+export interface CalendarFeedToken {
+  token: string;
+}
+
+export function campaignCalendarApi(worldId: string, campaignId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}`;
+  return {
+    getOrCreateFeed: () => request<CalendarFeedToken>(`${base}/calendar-feed`),
+    regenerateFeed: () =>
+      request<CalendarFeedToken>(`${base}/calendar-feed/regenerate`, { method: 'POST' }),
+    downloadIcs: () => exportCampaignIcs(worldId, campaignId),
+  };
+}
+
+/** Downloads a campaign's dated sessions as an .ics file (ADR-0108). */
+export async function exportCampaignIcs(worldId: string, campaignId: string): Promise<void> {
+  const token = getToken();
+  const response = await fetch(`/api/worlds/${worldId}/campaigns/${campaignId}/calendar.ics`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (response.status === 401) {
+    clearToken();
+    throw new ApiError(401, 'Not authenticated');
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeProblemDetail(response));
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : `campaign-${campaignId}.ics`;
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ---- Players (FR-53): a world-scoped, reusable pool shared across campaigns ----
 
 export interface Player {
@@ -801,6 +846,16 @@ export interface LooseThreadSummary {
   text: string;
 }
 
+export interface ScheduledSessionSummary {
+  sessionId: string;
+  campaignId: string;
+  campaignName: string;
+  campaignColor?: string | null;
+  title: string;
+  sessionNumber?: number | null;
+  date: string;
+}
+
 export interface WorldOverviewStats {
   articleCount: number;
   sessionsRunCount: number;
@@ -808,6 +863,7 @@ export interface WorldOverviewStats {
   nextSession?: NextSessionSummary | null;
   openClocks: ClockSummary[];
   openLooseThreads: LooseThreadSummary[];
+  scheduledSessions: ScheduledSessionSummary[];
 }
 
 export function worldOverviewApi(worldId: string) {

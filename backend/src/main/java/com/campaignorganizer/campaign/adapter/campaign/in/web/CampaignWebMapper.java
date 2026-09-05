@@ -15,12 +15,12 @@ public interface CampaignWebMapper {
 
     default CreateCampaignCommand toCreateCommand(UUID worldId, CampaignRequest request) {
         return new CreateCampaignCommand(worldId, request.name(), request.description(), request.notes(),
-                request.status(), request.systemId());
+                request.status(), request.systemId(), request.color());
     }
 
     default UpdateCampaignCommand toUpdateCommand(UUID worldId, UUID campaignId,
                                                   CampaignRequest request) {
         return new UpdateCampaignCommand(worldId, campaignId, request.name(), request.description(),
-                request.notes(), request.status(), request.systemId());
+                request.notes(), request.status(), request.systemId(), request.color());
     }
 }

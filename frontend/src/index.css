@@ -425,6 +425,112 @@ button:disabled {
   gap: 0.5rem;
 }
 
+/* Session calendar (ADR-0107): a plain Gregorian month grid, shared by the
+   world Overview (every campaign, colored) and a campaign's own page (one
+   color). */
+.session-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.session-calendar-nav strong {
+  flex: 1;
+  text-align: center;
+}
+
+.session-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.session-calendar-weekday {
+  background: var(--background);
+  padding: 0.25rem;
+  text-align: center;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.session-calendar-day {
+  background: var(--background);
+  min-height: 4.5rem;
+  padding: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.session-calendar-day.today {
+  background: var(--accent);
+}
+
+.session-calendar-day-number {
+  font-size: 0.75rem;
+}
+
+.session-calendar-pill {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  border: none;
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.7rem;
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-calendar-empty {
+  margin-top: 0.5rem;
+}
+
+/* Cells shrink to dot-only on narrow screens — a full title pill doesn't
+   fit a 7-column grid on a phone, same mobile-safety discipline as the
+   rest of /next (no page-level horizontal overflow). */
+@media (max-width: 767px) {
+  .session-calendar-day {
+    min-height: 2.5rem;
+  }
+
+  .session-calendar-pill {
+    height: 0.5rem;
+    padding: 0;
+    font-size: 0;
+    border-radius: 50%;
+  }
+}
+
+/* Campaign .ics export popover (ADR-0108). */
+.calendar-export-subscribe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.calendar-export-link-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.calendar-export-link-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+}
+
 /* A real flex column inside .sidebar-shell-next's row, sliding in from the
    right the same way the left <Sidebar> slides in from the left — not a
    fixed overlay floating on top of the top bar/content. Always mounted so

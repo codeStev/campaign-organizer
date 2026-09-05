@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { worldOverviewApi, ApiError, WorldOverviewStats } from '../api/client';
 import { Spinner } from '../components/ui/spinner';
 import { Button } from '../components/ui/button';
+import { SessionCalendar } from '../components/SessionCalendar';
+import { getCampaignColor } from '../lib/campaignColor';
 
 interface Props {
   worldId: string;
@@ -31,12 +34,13 @@ function relativeTime(iso: string): string {
 /**
  * World Overview dashboard (docs/ui-overhaul-plan.md Phase 4): stats strip,
  * next-session card, recently-edited feed, Clocks widget, Loose Threads
- * widget — all one composed read from worldOverviewApi (FR-62, ADR-0102,
- * ADR-0103). No in-world-date widget: nothing in this app persists a
- * campaign's current in-world date yet, and Phase 4 is scoped to
- * composing existing data, not new domain state.
+ * widget, session calendar (ADR-0107) — all one composed read from
+ * worldOverviewApi (FR-62, ADR-0102, ADR-0103). No in-world-date widget:
+ * nothing in this app persists a campaign's current in-world date yet,
+ * and Phase 4 is scoped to composing existing data, not new domain state.
  */
 export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<WorldOverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -93,6 +97,24 @@ export function NextOverviewPage({ worldId, onOpenArticle, onAuthExpired }: Prop
           )}
         </div>
       </div>
+
+      <section className="card">
+        <h3 className="eyebrow">Session calendar</h3>
+        <SessionCalendar
+          entries={stats.scheduledSessions.map((s) => ({
+            id: s.sessionId,
+            date: s.date,
+            title: s.title,
+            sessionNumber: s.sessionNumber,
+            campaignId: s.campaignId,
+            campaignName: s.campaignName,
+            color: getCampaignColor({ id: s.campaignId, color: s.campaignColor }),
+          }))}
+          onSelectSession={(entry) =>
+            navigate(`/next/worlds/${worldId}/sessions/${entry.campaignId}/${entry.id}`)
+          }
+        />
+      </section>
 
       <div className="next-overview-grid">
         <section className="card">

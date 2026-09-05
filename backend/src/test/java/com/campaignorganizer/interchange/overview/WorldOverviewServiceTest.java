@@ -107,7 +107,7 @@ class WorldOverviewServiceTest {
     void countsOnlySessionsDatedTodayOrEarlierAcrossEveryCampaign() {
         when(articles.findByWorld(worldId)).thenReturn(List.of());
         CampaignView campaign = new CampaignView(campaignId, worldId, "Chronicle", null, null,
-                CampaignStatus.ACTIVE, null, Instant.EPOCH, Instant.EPOCH);
+                CampaignStatus.ACTIVE, null, null, Instant.EPOCH, Instant.EPOCH);
         when(campaigns.findByWorld(worldId)).thenReturn(List.of(campaign));
         when(sessions.findOrdered(campaignId)).thenReturn(List.of(
                 session(LocalDate.parse("2026-03-01")), // run
@@ -182,9 +182,30 @@ class WorldOverviewServiceTest {
                 .containsExactly("Newer open thread", "Older open thread");
     }
 
+    @Test
+    void scheduledSessionsIncludesEveryDatedSessionAcrossCampaignsSortedByDate() {
+        when(articles.findByWorld(worldId)).thenReturn(List.of());
+        UUID otherCampaignId = UUID.randomUUID();
+        CampaignView campaign = new CampaignView(campaignId, worldId, "Chronicle", null, null,
+                CampaignStatus.ACTIVE, null, "#c0392b", Instant.EPOCH, Instant.EPOCH);
+        CampaignView otherCampaign = campaign(otherCampaignId, "Side Quest");
+        when(campaigns.findByWorld(worldId)).thenReturn(List.of(campaign, otherCampaign));
+        when(sessions.findOrdered(campaignId)).thenReturn(List.of(
+                session(campaignId, "Later", LocalDate.parse("2026-04-01")),
+                session(campaignId, "Undated", null)));
+        when(sessions.findOrdered(otherCampaignId)).thenReturn(List.of(
+                session(otherCampaignId, "Earlier", LocalDate.parse("2026-03-05"))));
+
+        WorldOverviewStats stats = service.overview(worldId);
+
+        assertThat(stats.scheduledSessions()).extracting("title").containsExactly("Earlier", "Later");
+        assertThat(stats.scheduledSessions().get(1).campaignColor()).isEqualTo("#c0392b");
+        assertThat(stats.scheduledSessions().get(0).campaignName()).isEqualTo("Side Quest");
+    }
+
     private CampaignView campaign(UUID id, String name) {
-        return new CampaignView(id, worldId, name, null, null, CampaignStatus.ACTIVE, null, Instant.EPOCH,
-                Instant.EPOCH);
+        return new CampaignView(id, worldId, name, null, null, CampaignStatus.ACTIVE, null, null,
+                Instant.EPOCH, Instant.EPOCH);
     }
 
     private SessionView session(UUID forCampaignId, String title, LocalDate date) {
