@@ -513,6 +513,24 @@ button:disabled {
   }
 }
 
+/* Campaign .ics export popover (ADR-0108). */
+.calendar-export-subscribe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.calendar-export-link-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.calendar-export-link-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+}
+
 /* A real flex column inside .sidebar-shell-next's row, sliding in from the
    right the same way the left <Sidebar> slides in from the left — not a
    fixed overlay floating on top of the top bar/content. Always mounted so

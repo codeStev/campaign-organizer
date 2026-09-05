@@ -18,6 +18,7 @@ import { RosterPanel } from '../components/RosterPanel';
 import { TodoListPanel } from '../components/TodoListPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { SessionCalendar } from '../components/SessionCalendar';
+import { CampaignCalendarExport } from '../components/CampaignCalendarExport';
 import { getCampaignColor } from '../lib/campaignColor';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -301,6 +302,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
                 }}
                 title="Campaign color (used on the session calendar)"
               />
+              <CampaignCalendarExport worldId={worldId} campaignId={selected.id} />
               <Button variant="link" size="sm" onClick={() => navigate(`/next/worlds/${worldId}/chronicle`)}>
                 Chronicle →
               </Button>
