@@ -803,6 +803,16 @@ export interface LooseThreadSummary {
   text: string;
 }
 
+export interface ScheduledSessionSummary {
+  sessionId: string;
+  campaignId: string;
+  campaignName: string;
+  campaignColor?: string | null;
+  title: string;
+  sessionNumber?: number | null;
+  date: string;
+}
+
 export interface WorldOverviewStats {
   articleCount: number;
   sessionsRunCount: number;
@@ -810,6 +820,7 @@ export interface WorldOverviewStats {
   nextSession?: NextSessionSummary | null;
   openClocks: ClockSummary[];
   openLooseThreads: LooseThreadSummary[];
+  scheduledSessions: ScheduledSessionSummary[];
 }
 
 export function worldOverviewApi(worldId: string) {

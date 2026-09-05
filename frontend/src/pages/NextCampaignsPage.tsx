@@ -17,6 +17,8 @@ import { ClockBoard } from './ClockBoard';
 import { RosterPanel } from '../components/RosterPanel';
 import { TodoListPanel } from '../components/TodoListPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import { SessionCalendar } from '../components/SessionCalendar';
+import { getCampaignColor } from '../lib/campaignColor';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TruncatedLabel } from '../components/TruncatedLabel';
@@ -343,6 +345,25 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
                     ))}
                     {sessions.length === 0 && <li className="muted">No sessions logged yet.</li>}
                   </ul>
+                </section>
+
+                <section className="card">
+                  <h3 className="eyebrow">Calendar</h3>
+                  <SessionCalendar
+                    entries={sessions
+                      .filter((s) => !!s.date)
+                      .map((s) => ({
+                        id: s.id,
+                        date: s.date!,
+                        title: s.title,
+                        sessionNumber: s.sessionNumber,
+                        campaignId: selected.id,
+                        color: getCampaignColor(selected),
+                      }))}
+                    onSelectSession={(entry) =>
+                      navigate(`/next/worlds/${worldId}/sessions/${selected.id}/${entry.id}`)
+                    }
+                  />
                 </section>
 
                 <section className="card">

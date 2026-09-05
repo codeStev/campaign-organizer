@@ -14,6 +14,7 @@ import com.campaignorganizer.interchange.overview.application.port.in.OverviewDt
 import com.campaignorganizer.interchange.overview.application.port.in.OverviewDtos.LooseThreadSummary;
 import com.campaignorganizer.interchange.overview.application.port.in.OverviewDtos.NextSessionSummary;
 import com.campaignorganizer.interchange.overview.application.port.in.OverviewDtos.RecentlyEditedArticle;
+import com.campaignorganizer.interchange.overview.application.port.in.OverviewDtos.ScheduledSessionSummary;
 import com.campaignorganizer.interchange.overview.application.port.in.OverviewDtos.WorldOverviewStats;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
@@ -74,6 +75,7 @@ public class WorldOverviewService implements GetWorldOverviewUseCase {
         NextSessionSummary nextSession = null;
         List<ClockSummary> openClocks = new ArrayList<>();
         List<OpenThread> openThreads = new ArrayList<>();
+        List<ScheduledSessionSummary> scheduledSessions = new ArrayList<>();
 
         for (CampaignView c : campaigns.findByWorld(worldId)) {
             for (SessionView s : sessions.findOrdered(c.id())) {
@@ -86,6 +88,8 @@ public class WorldOverviewService implements GetWorldOverviewUseCase {
                     nextSession = new NextSessionSummary(s.id(), c.id(), c.name(), s.title(), s.date(),
                             s.sessionNumber());
                 }
+                scheduledSessions.add(new ScheduledSessionSummary(s.id(), c.id(), c.name(), c.color(),
+                        s.title(), s.sessionNumber(), s.date()));
             }
             for (ClockView clockView : clocks.findByCampaign(c.id())) {
                 int filled = (int) clockView.segments().stream().filter(ClockSegmentView::filled).count();
@@ -121,8 +125,12 @@ public class WorldOverviewService implements GetWorldOverviewUseCase {
                 .map(a -> new RecentlyEditedArticle(a.id(), a.title(), a.updatedAt()))
                 .toList();
 
+        scheduledSessions = scheduledSessions.stream()
+                .sorted(Comparator.comparing(ScheduledSessionSummary::date))
+                .toList();
+
         return new WorldOverviewStats(worldArticles.size(), sessionsRun, recentlyEdited, nextSession,
-                openClocks, openLooseThreads);
+                openClocks, openLooseThreads, scheduledSessions);
     }
 
     /** A loose thread plus its campaign context, kept around only long enough to sort by createdAt. */

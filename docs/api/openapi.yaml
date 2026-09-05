@@ -7184,7 +7184,7 @@ components:
 
     WorldOverviewStats:
       type: object
-      required: [articleCount, sessionsRunCount, recentlyEdited, openClocks, openLooseThreads]
+      required: [articleCount, sessionsRunCount, recentlyEdited, openClocks, openLooseThreads, scheduledSessions]
       properties:
         articleCount:
           type: integer
@@ -7211,6 +7211,11 @@ components:
           description: Open (unresolved) loose threads across every campaign, newest-first, capped at 8.
           items:
             $ref: '#/components/schemas/LooseThreadSummary'
+        scheduledSessions:
+          type: array
+          description: Every dated session across every campaign in the world, date-ascending (ADR-0107, for the session calendar).
+          items:
+            $ref: '#/components/schemas/ScheduledSessionSummary'
 
     RecentlyEditedArticle:
       type: object
@@ -7278,6 +7283,29 @@ components:
           type: string
         text:
           type: string
+
+    ScheduledSessionSummary:
+      type: object
+      required: [sessionId, campaignId, campaignName, title, date]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        campaignColor:
+          type: [string, "null"]
+          description: The campaign's raw persisted color (ADR-0107) — null if unset; the frontend resolves a fallback.
+        title:
+          type: string
+        sessionNumber:
+          type: [integer, "null"]
+        date:
+          type: string
+          format: date
 
     ArticleRevision:
       type: object
