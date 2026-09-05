@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { PromptDialog } from '../components/PromptDialog';
+import { MobileBackButton } from '../components/MobileBackButton';
 
 interface Props {
   worldId: string;
@@ -114,7 +115,7 @@ export function NextWhiteboardsView({ worldId, onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={!!selected}>
       <aside className="wiki-sidebar">
         <Button className="sidebar-new-button" size="sm" onClick={() => setNamePromptOpen(true)}>
           + New whiteboard
@@ -147,6 +148,7 @@ export function NextWhiteboardsView({ worldId, onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
         {!selected && <p className="muted">Select or create a whiteboard.</p>}
         {selected && (

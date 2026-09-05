@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { getToken, clearToken, worldsApi, World, ApiError } from './api/client';
 import { LoginPage } from './pages/LoginPage';
 import { NextGlobalTemplatesPanel } from './pages/NextGlobalTemplatesPanel';
@@ -62,10 +62,18 @@ export function App() {
  * screen with its own in-world sidebar instead of nesting under this one.
  */
 function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
+  const location = useLocation();
+  const [navOpen, setNavOpen] = useState(false);
+  // Tapping a nav link doesn't otherwise close the mobile drawer — the
+  // link's own navigation and the drawer's open state are unrelated.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="next-shell">
-      <NextTopBar />
-      <SidebarProvider className="min-h-0 sidebar-shell-next">
+      <NextTopBar onMenuClick={() => setNavOpen(true)} />
+      <SidebarProvider className="min-h-0 sidebar-shell-next" openMobile={navOpen} onOpenMobileChange={setNavOpen}>
         <AppSidebarNext />
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>

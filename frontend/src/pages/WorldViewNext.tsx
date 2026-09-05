@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -15,6 +15,7 @@ import {
 } from '../components/ui/sidebar';
 import { Button } from '../components/ui/button';
 import { NextTopBar } from '../components/NextTopBar';
+import { useIsMobile } from '../hooks/use-mobile';
 import { NextRelationshipsView } from './NextRelationshipsView';
 import { NextConsistencyView } from './NextConsistencyView';
 import { NextWhiteboardsView } from './NextWhiteboardsView';
@@ -86,7 +87,14 @@ interface Props {
 export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  // Tapping a nav link doesn't otherwise close the mobile drawer — the
+  // link's own navigation and the drawer's open state are unrelated.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
   const rawActiveKey = location.pathname.replace(`/next/worlds/${worldId}`, '').split('/').filter(Boolean)[0];
   // Sessions/Story Arcs/Encounters live under the Campaigns nav item now
   // (CampaignNavTree), not as their own top-level entries — still highlight
@@ -104,6 +112,7 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
       <NextTopBar
         currentWorldId={worldId}
         currentWorldName={worldName}
+        onMenuClick={() => setNavOpen(true)}
         rightSlot={
           <Button variant={toolsOpen ? 'default' : 'outline'} size="sm" onClick={() => setToolsOpen((v) => !v)}>
             🎲 Table Tools
@@ -111,8 +120,12 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
         }
       />
 
-      <SidebarProvider className="min-h-0 sidebar-shell-next">
-        <Sidebar collapsible="none" className="border-r border-sidebar-border" style={{ alignSelf: 'stretch', height: 'auto' }}>
+      <SidebarProvider className="min-h-0 sidebar-shell-next" openMobile={navOpen} onOpenMobileChange={setNavOpen}>
+        <Sidebar
+          collapsible={isMobile ? 'offcanvas' : 'none'}
+          className="border-r border-sidebar-border"
+          style={{ alignSelf: 'stretch', height: 'auto' }}
+        >
           <SidebarContent>
             {TAB_GROUPS.map((group) => (
               <SidebarGroup key={group}>

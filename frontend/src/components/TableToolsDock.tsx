@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { rollTablesApi, worldOverviewApi, diceApi, ApiError, RollTable, RollTableEntry, ClockSummary } from '../api/client';
 import { DiceRollerWidget } from './DiceRollerWidget';
 import { Button } from './ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
+import { useIsMobile } from '../hooks/use-mobile';
 
 interface Props {
   worldId: string;
@@ -31,6 +33,7 @@ function matchingEntry(entries: RollTableEntry[], total: number): RollTableEntry
  * openClocks (FR-62/ADR-0103) for the mini Clocks view — no new backend.
  */
 export function TableToolsDock({ worldId, open, onAuthExpired, onClose }: Props) {
+  const isMobile = useIsMobile();
   const [tables, setTables] = useState<RollTable[]>([]);
   const [rolledTableId, setRolledTableId] = useState('');
   const [tableRoll, setTableRoll] = useState<{ total: number; breakdown: string; entry: RollTableEntry | null } | null>(null);
@@ -61,72 +64,93 @@ export function TableToolsDock({ worldId, open, onAuthExpired, onClose }: Props)
     }
   }
 
-  return (
-    <aside className="table-tools-dock" data-open={open}>
-      <div className="table-tools-dock-inner">
-        <div className="table-tools-dock-head">
-          <strong>Table Tools</strong>
-          <Button variant="link" size="sm" onClick={onClose}>
-            ✕
-          </Button>
-        </div>
+  const content = (
+    <div className="table-tools-dock-inner">
+      <div className="table-tools-dock-head">
+        <strong>Table Tools</strong>
+        <Button variant="link" size="sm" onClick={onClose}>
+          ✕
+        </Button>
+      </div>
 
-        <DiceRollerWidget onAuthExpired={onAuthExpired} />
+      <DiceRollerWidget onAuthExpired={onAuthExpired} />
 
-        <div className="card">
-          <strong>🎲 Roll tables</strong>
-          {tables.length === 0 ? (
-            <p className="muted">No roll tables in this world yet.</p>
-          ) : (
-            <>
-              <ul className="table-tools-roll-list">
-                {tables.map((t) => (
-                  <li key={t.id}>
-                    <button type="button" className="table-tools-roll-item" onClick={() => void rollTable(t)}>
-                      {t.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {tableRoll && (
-                <p className="dice-result">
-                  <span className="dice-total">{tableRoll.total}</span>
-                  <span className="muted">
-                    {tables.find((t) => t.id === rolledTableId)?.title} — {tableRoll.breakdown}
-                    {tableRoll.entry ? ` — ${tableRoll.entry.body}` : ' — no entry covers this result'}
-                  </span>
-                </p>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="card">
-          <strong>⏱ Clocks</strong>
-          {clocks.length === 0 ? (
-            <p className="muted">No clocks in progress.</p>
-          ) : (
-            <ul className="next-overview-list">
-              {clocks.map((c) => (
-                <li key={c.clockId} className="next-overview-clock">
-                  <div className="next-overview-clock-head">
-                    <span>{c.title}</span>
-                    <span className="muted">
-                      {c.filledSegments}/{c.totalSegments} · {c.campaignName}
-                    </span>
-                  </div>
-                  <div className="next-overview-progress">
-                    <div
-                      className="next-overview-progress-fill"
-                      style={{ width: `${(100 * c.filledSegments) / c.totalSegments}%` }}
-                    />
-                  </div>
+      <div className="card">
+        <strong>🎲 Roll tables</strong>
+        {tables.length === 0 ? (
+          <p className="muted">No roll tables in this world yet.</p>
+        ) : (
+          <>
+            <ul className="table-tools-roll-list">
+              {tables.map((t) => (
+                <li key={t.id}>
+                  <button type="button" className="table-tools-roll-item" onClick={() => void rollTable(t)}>
+                    {t.title}
+                  </button>
                 </li>
               ))}
             </ul>
-          )}
-        </div>
+            {tableRoll && (
+              <p className="dice-result">
+                <span className="dice-total">{tableRoll.total}</span>
+                <span className="muted">
+                  {tables.find((t) => t.id === rolledTableId)?.title} — {tableRoll.breakdown}
+                  {tableRoll.entry ? ` — ${tableRoll.entry.body}` : ' — no entry covers this result'}
+                </span>
+              </p>
+            )}
+          </>
+        )}
       </div>
+
+      <div className="card">
+        <strong>⏱ Clocks</strong>
+        {clocks.length === 0 ? (
+          <p className="muted">No clocks in progress.</p>
+        ) : (
+          <ul className="next-overview-list">
+            {clocks.map((c) => (
+              <li key={c.clockId} className="next-overview-clock">
+                <div className="next-overview-clock-head">
+                  <span>{c.title}</span>
+                  <span className="muted">
+                    {c.filledSegments}/{c.totalSegments} · {c.campaignName}
+                  </span>
+                </div>
+                <div className="next-overview-progress">
+                  <div
+                    className="next-overview-progress-fill"
+                    style={{ width: `${(100 * c.filledSegments) / c.totalSegments}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+
+  // A fixed 300px in-flow column doesn't fit a phone viewport — on mobile
+  // this becomes a real overlay (Sheet) instead of a permanent flex
+  // sibling squeezing the content column.
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+        <SheetContent side="right" showCloseButton={false} className="table-tools-sheet">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Table Tools</SheetTitle>
+            <SheetDescription>Dice roller, roll tables, and clocks.</SheetDescription>
+          </SheetHeader>
+          {content}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <aside className="table-tools-dock" data-open={open}>
+      {content}
     </aside>
   );
 }

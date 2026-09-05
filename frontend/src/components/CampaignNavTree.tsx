@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { MoreHorizontal } from 'lucide-react';
 import { campaignsApi, sessionsApi, arcsApi, Campaign, Session, Arc } from '../api/client';
 import { TruncatedLabel } from './TruncatedLabel';
 import { PromptDialog } from './PromptDialog';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 interface Props {
   worldId: string;
@@ -37,6 +39,28 @@ type RenameTarget =
  * category rows), so opening the fold and creating a new item are separate
  * actions rather than one row trying to do both.
  */
+// Tap-accessible equivalent of a row's right-click "Rename" item — touch
+// devices have no right-click.
+function RowActionsMenu({ onRename }: { onRename: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="category-tree-action"
+          title="Actions"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function CampaignNavTree({ worldId }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -240,6 +264,7 @@ export function CampaignNavTree({ worldId }: Props) {
                   >
                     <TruncatedLabel label={c.name}>{c.name}</TruncatedLabel>
                   </NavLink>
+                  <RowActionsMenu onRename={() => setRenameTarget({ kind: 'campaign', campaign: c })} />
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent>
@@ -294,30 +319,35 @@ export function CampaignNavTree({ worldId }: Props) {
                     <ul className="article-list-nested">
                       {(kids?.sessions ?? []).map((s) => (
                         <li key={s.id}>
-                          <ContextMenu>
-                            <ContextMenuTrigger asChild>
-                              <NavLink
-                                to={`sessions/${c.id}/${s.id}`}
-                                className={({ isActive }) =>
-                                  isActive ? 'category-tree-article active' : 'category-tree-article'
-                                }
-                              >
-                                <TruncatedLabel label={s.title}>
-                                  {s.sessionNumber != null && (
-                                    <span className="session-num">#{s.sessionNumber} </span>
-                                  )}
-                                  {s.title}
-                                </TruncatedLabel>
-                              </NavLink>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent>
-                              <ContextMenuItem
-                                onSelect={() => setRenameTarget({ kind: 'session', campaignId: c.id, session: s })}
-                              >
-                                Rename
-                              </ContextMenuItem>
-                            </ContextMenuContent>
-                          </ContextMenu>
+                          <div className="category-tree-row">
+                            <ContextMenu>
+                              <ContextMenuTrigger asChild>
+                                <NavLink
+                                  to={`sessions/${c.id}/${s.id}`}
+                                  className={({ isActive }) =>
+                                    isActive ? 'category-tree-article active' : 'category-tree-article'
+                                  }
+                                >
+                                  <TruncatedLabel label={s.title}>
+                                    {s.sessionNumber != null && (
+                                      <span className="session-num">#{s.sessionNumber} </span>
+                                    )}
+                                    {s.title}
+                                  </TruncatedLabel>
+                                </NavLink>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuItem
+                                  onSelect={() => setRenameTarget({ kind: 'session', campaignId: c.id, session: s })}
+                                >
+                                  Rename
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                            <RowActionsMenu
+                              onRename={() => setRenameTarget({ kind: 'session', campaignId: c.id, session: s })}
+                            />
+                          </div>
                         </li>
                       ))}
                       {kids && kids.sessions.length === 0 && <li className="muted">No sessions yet.</li>}
@@ -368,30 +398,35 @@ export function CampaignNavTree({ worldId }: Props) {
                     <ul className="article-list-nested">
                       {(kids?.arcs ?? []).map((a) => (
                         <li key={a.id}>
-                          <ContextMenu>
-                            <ContextMenuTrigger asChild>
-                              <NavLink
-                                to={`arcs/${c.id}/${a.id}`}
-                                className={({ isActive }) =>
-                                  isActive ? 'category-tree-article active' : 'category-tree-article'
-                                }
-                              >
-                                <TruncatedLabel label={a.title}>
-                                  <span className={`arc-status arc-${a.status.toLowerCase()}`}>
-                                    {a.status.toLowerCase()}
-                                  </span>{' '}
-                                  {a.title}
-                                </TruncatedLabel>
-                              </NavLink>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent>
-                              <ContextMenuItem
-                                onSelect={() => setRenameTarget({ kind: 'arc', campaignId: c.id, arc: a })}
-                              >
-                                Rename
-                              </ContextMenuItem>
-                            </ContextMenuContent>
-                          </ContextMenu>
+                          <div className="category-tree-row">
+                            <ContextMenu>
+                              <ContextMenuTrigger asChild>
+                                <NavLink
+                                  to={`arcs/${c.id}/${a.id}`}
+                                  className={({ isActive }) =>
+                                    isActive ? 'category-tree-article active' : 'category-tree-article'
+                                  }
+                                >
+                                  <TruncatedLabel label={a.title}>
+                                    <span className={`arc-status arc-${a.status.toLowerCase()}`}>
+                                      {a.status.toLowerCase()}
+                                    </span>{' '}
+                                    {a.title}
+                                  </TruncatedLabel>
+                                </NavLink>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuItem
+                                  onSelect={() => setRenameTarget({ kind: 'arc', campaignId: c.id, arc: a })}
+                                >
+                                  Rename
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                            <RowActionsMenu
+                              onRename={() => setRenameTarget({ kind: 'arc', campaignId: c.id, arc: a })}
+                            />
+                          </div>
                         </li>
                       ))}
                       {kids && kids.arcs.length === 0 && <li className="muted">No arcs yet.</li>}

@@ -7,6 +7,7 @@ import { TruncatedLabel } from '../components/TruncatedLabel';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { MobileBackButton } from '../components/MobileBackButton';
 
 interface Props {
   worldId: string;
@@ -129,7 +130,7 @@ export function NextCalendarsView({ worldId, onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={!!draft.id || mode === 'edit'}>
       <aside className="wiki-sidebar">
         <Button
           onClick={() => {
@@ -162,6 +163,7 @@ export function NextCalendarsView({ worldId, onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
         {(mode === 'edit' || !draft.id) && (
         <form className="card" onSubmit={save}>

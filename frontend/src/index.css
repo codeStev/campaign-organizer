@@ -48,6 +48,12 @@
   box-sizing: border-box;
 }
 
+/* Wrap a wide/raw <table> in this so it scrolls within its own box on a
+   narrow screen instead of blowing out the page horizontally. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 /* Color/font come from @layer base at the bottom of this file (Tailwind's
    bg-background/text-foreground/font-sans utilities), so both react to the
    .dark class toggle. */
@@ -448,6 +454,13 @@ button:disabled {
   gap: 0.75rem;
 }
 
+/* Mobile variant (TableToolsDock renders through a Sheet instead of the
+   fixed-width in-flow dock above) — the 300px inner width would overflow
+   the Sheet's own (viewport-relative) bounds on a narrow phone. */
+.table-tools-sheet .table-tools-dock-inner {
+  width: 100%;
+}
+
 .table-tools-dock-head {
   display: flex;
   align-items: center;
@@ -500,6 +513,34 @@ button:disabled {
   align-items: start;
 }
 
+/* Mobile list/detail toggle (data-has-selection, set by the page itself
+   from whatever "is something open" state it already tracks): side-by-side
+   list+detail doesn't fit a phone, so show one or the other, not both — the
+   natural mobile browsing pattern, not just a squeezed single column. */
+@media (max-width: 767px) {
+  .wiki-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wiki-layout[data-has-selection='true'] .wiki-sidebar {
+    display: none;
+  }
+
+  .wiki-layout[data-has-selection='false'] .wiki-main {
+    display: none;
+  }
+}
+
+.mobile-back-button {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-back-button {
+    display: inline-flex;
+  }
+}
+
 .wiki-sidebar {
   display: flex;
   flex-direction: column;
@@ -523,6 +564,15 @@ button:disabled {
 
 .session-workspace-side {
   min-width: 0;
+}
+
+/* Primary+secondary content, not two views of the same thing (unlike
+   .wiki-layout's list/detail toggle) — mobile stacks both instead of
+   hiding either. */
+@media (max-width: 767px) {
+  .session-workspace-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* The mockup's "+ New X" trigger is a small, left-aligned accent pill
@@ -997,6 +1047,15 @@ button:disabled {
 .editor-content [data-resize-wrapper]:hover [data-resize-handle],
 .editor-content [data-resize-container][data-resize-state='true'] [data-resize-handle] {
   opacity: 1;
+}
+
+/* :hover never fires on touch, so a touch-only device would never see this
+   handle at all — show it by default there instead of hiding it behind an
+   unreachable hover state. */
+@media (hover: none) {
+  .editor-content [data-resize-handle] {
+    opacity: 1;
+  }
 }
 
 /* Markdown formatting (ADR-0054): shared between the live editor and every
@@ -1532,31 +1591,6 @@ button:disabled {
   border-radius: 6px;
 }
 
-.settings-layout {
-  display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-}
-
-.settings-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.settings-nav-item {
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  color: var(--foreground);
-  text-decoration: none;
-}
-
-.settings-nav-item.active {
-  background: var(--muted);
-  font-weight: 600;
-}
-
 /* Next Settings (mockup-fidelity pass): single-column sectioned cards
    instead of a side-nav, since there's only ever a handful of these. */
 .settings-sections {
@@ -1629,15 +1663,28 @@ button:disabled {
   .wiki-layout {
     grid-template-columns: 220px minmax(0, 1fr);
   }
-
-  .settings-layout {
-    grid-template-columns: 140px minmax(0, 1fr);
-  }
 }
 
 /* ---- Responsive: mobile & small tablets ---- */
-@media (max-width: 680px) {
+/* 767px, not the old 680px — matches useIsMobile()'s own JS threshold
+   (hooks/use-mobile.ts), so the nav drawer and this CSS switch over at the
+   same width instead of leaving an 81px dead zone between them. */
+@media (max-width: 767px) {
   .app-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* The paper/margin/text-size pickers plus Print/Close overflow a phone
+     width in one unwrapping row (NewWindowPortal's mobile overlay). */
+  .print-toolbar {
+    flex-wrap: wrap;
+  }
+
+  /* .map-bar's title + status/system selects + link/delete actions overflow
+     the viewport in a single unwrapping row (used by Atlas, Campaigns,
+     Timelines, Whiteboards headers alike). */
+  .map-bar {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
@@ -1645,14 +1692,6 @@ button:disabled {
   /* Stack the wiki sidebar above the content on narrow screens. */
   .wiki-layout {
     grid-template-columns: 1fr;
-  }
-
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .settings-nav {
-    flex-direction: row;
   }
 
   /* On the maps view specifically, show the map before the map list/layer
@@ -1687,18 +1726,19 @@ button:disabled {
     flex-wrap: wrap;
   }
 
-  /* Stack the app-wide and in-world sidebars above their content instead of
-     squeezing a fixed-width column beside it. */
-  .sidebar-shell,
-  .sidebar-shell-next {
-    flex-direction: column;
-    --sidebar-width: 100%;
-  }
-
   /* Give tappable controls more height on touch devices. */
   button {
     padding-top: 0.6rem;
     padding-bottom: 0.6rem;
+  }
+
+  /* The category tree's expand chevron and per-row "+"/"⋯"/"✕" action
+     buttons are sized for a mouse pointer (1.1rem) — too small to tap
+     reliably. */
+  .category-tree-action,
+  .article-tree-toggle {
+    width: 1.6rem;
+    height: 1.6rem;
   }
 
   .date-fields {
@@ -2510,15 +2550,9 @@ button:disabled {
 }
 
 /* On narrow screens collapse the 12-col grid to a single column. */
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .sheet-grid > .sheet-field {
     grid-column: 1 / -1 !important;
-  }
-}
-
-@media (max-width: 680px) {
-  .sheets-panel {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -2709,6 +2743,31 @@ button:disabled {
   min-height: 100vh;
   background: #fff;
   color: #111;
+}
+
+/* Mobile fallback for the above (NewWindowPortal.tsx): a same-document
+   full-screen overlay instead of a popup window, since mobile browsers
+   frequently block popups outright. */
+.mobile-print-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+@media print {
+  /* Printing the main window would otherwise print the whole app shell
+     behind the overlay too — hide every other direct child of <body>
+     (just the app root, in practice) so only the overlay's content prints. */
+  body > *:not(.mobile-print-overlay) {
+    display: none !important;
+  }
+
+  .mobile-print-overlay {
+    position: static;
+    inset: auto;
+    overflow: visible;
+  }
 }
 
 /* Paper size / margins (PrintOptionsMenu), selected per print-doc via the
@@ -3616,7 +3675,7 @@ button:disabled {
   width: 100%;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .builder-grid > .builder-field {
     grid-column: 1 / -1 !important;
   }

@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from './ui/sidebar';
+import { useIsMobile } from '../hooks/use-mobile';
 
 /**
  * /next app-wide nav (docs/ui-overhaul-plan.md Phase 1) — two sections:
@@ -32,9 +33,14 @@ const BOTTOM_ITEMS = [{ to: '/next/settings', label: 'Settings', icon: '⚙' }];
 
 export function AppSidebarNext() {
   const location = useLocation();
+  const isMobile = useIsMobile();
   const isActive = (to: string) => location.pathname.startsWith(to);
   return (
-    <Sidebar collapsible="none" className="border-r border-sidebar-border" style={{ alignSelf: 'stretch', height: 'auto' }}>
+    <Sidebar
+      collapsible={isMobile ? 'offcanvas' : 'none'}
+      className="border-r border-sidebar-border"
+      style={{ alignSelf: 'stretch', height: 'auto' }}
+    >
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>

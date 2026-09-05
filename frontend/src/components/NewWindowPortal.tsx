@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
+import { useIsMobile } from '../hooks/use-mobile';
 
 const NewWindowContainerContext = createContext<HTMLElement | null>(null);
 const NewWindowRefContext = createContext<Window | null>(null);
@@ -53,12 +54,30 @@ interface Props {
  * Renders its children into a separate browser tab (ADR-0038) so print/PDF views
  * don't hijack the app tab. Clones the app's stylesheets into the new document so
  * the `.print-*` styles apply, and calls onClose when that tab is closed.
+ *
+ * On mobile, `window.open()` popups are frequently blocked and "open a
+ * second window" has no real mobile equivalent, so instead this renders the
+ * same content into a full-screen overlay in the current document and prints
+ * the main window — `.mobile-print-overlay`'s `@media print` rule (index.css)
+ * hides everything else on the page for that print.
  */
 export function NewWindowPortal({ title, onClose, children }: Props) {
+  const isMobile = useIsMobile();
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [windowRef, setWindowRef] = useState<Window | null>(null);
 
   useEffect(() => {
+    if (isMobile) {
+      const mount = document.createElement('div');
+      mount.className = 'print-window mobile-print-overlay';
+      document.body.appendChild(mount);
+      setContainer(mount);
+      setWindowRef(window);
+      return () => {
+        document.body.removeChild(mount);
+      };
+    }
+
     const win = window.open('', '_blank');
     if (!win) {
       // Popup blocked — nothing to render; let the parent reset its state.
@@ -93,7 +112,7 @@ export function NewWindowPortal({ title, onClose, children }: Props) {
       win.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isMobile]);
 
   if (!container) return null;
   return createPortal(

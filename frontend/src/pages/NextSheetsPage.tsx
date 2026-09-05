@@ -22,6 +22,7 @@ import {
   ApiError,
 } from '../api/client';
 import { CategoryTree } from '../components/CategoryTree';
+import { MobileBackButton } from '../components/MobileBackButton';
 import { NextCharacterSheetsPanel } from './NextCharacterSheetsPanel';
 import { NextStatblocksPanel } from './NextStatblocksPanel';
 import { NextDocumentsPanel } from './NextDocumentsPanel';
@@ -68,6 +69,14 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
     if (!last || last === 'new' || KIND_SEGMENTS.includes(last)) return null;
     return last;
   }, [location.pathname]);
+  // Mobile list/detail toggle: an open entity or an in-progress "new X" flow
+  // both count as "detail" even without an id in the URL yet — sheet/
+  // statblock/document creation route to their own /new sentinel, but
+  // templates build inline on the bare `templates` route (no sentinel), so
+  // that bare route (only ever reached by tapping "+ New template", never
+  // by the index redirect, which goes to "characters") counts too.
+  const hasSelection =
+    activeEntityId != null || location.pathname.endsWith('/new') || location.pathname.endsWith('/templates');
   const sheetsApiRef = useMemo(() => characterSheetsApi(worldId), [worldId]);
   const statblocksApiRef = useMemo(() => statblocksApi(worldId), [worldId]);
   const documentsApiRef = useMemo(() => documentsApi(worldId), [worldId]);
@@ -367,7 +376,7 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
   );
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={hasSelection}>
       <aside className="wiki-sidebar">
         <CategoryTree
           categories={categories}
@@ -417,6 +426,7 @@ export function NextSheetsPage({ worldId, onOpenArticle, onAuthExpired }: Props)
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
         <Routes>
           <Route index element={<Navigate to="characters" replace />} />

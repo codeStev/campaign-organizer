@@ -18,6 +18,7 @@ import { MapCanvas } from '../components/MapCanvas';
 import { MapPrintView } from './MapPrintView';
 import { TruncatedLabel } from '../components/TruncatedLabel';
 import { CategoryTree } from '../components/CategoryTree';
+import { MobileBackButton } from '../components/MobileBackButton';
 import { LAYER_ICONS, iconComponent, iconSvg } from '../components/mapIcons';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -360,7 +361,7 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
   }
 
   return (
-    <div className="wiki-layout maps-layout">
+    <div className="wiki-layout maps-layout" data-has-selection={!!selected}>
       <aside className="wiki-sidebar">
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleNewMapFile} />
         <PromptDialog
@@ -448,6 +449,7 @@ export function NextMapsView({ worldId, onOpenArticle, onAuthExpired }: Props) {
       </aside>
 
       <div className="wiki-main">
+        <MobileBackButton />
         {error && <p className="error">{error}</p>}
         {!selected && <p className="muted">Select or create a map. Click the image to drop a pin.</p>}
         {selected && (

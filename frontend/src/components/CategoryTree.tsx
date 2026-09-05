@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -31,6 +32,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 
@@ -695,52 +699,112 @@ function CategoryTreeEntityRow<TEntity, TCategory extends CategoryLike>({
   );
   return (
     <li>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onSelect={() => onRequestRename(entity)}>Rename</ContextMenuItem>
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>Move to</ContextMenuSubTrigger>
-            <ContextMenuSubContent>
-              <ContextMenuItem
-                disabled={currentCategoryId === null}
-                onSelect={() => onMoveEntity(entity, null)}
-              >
-                Uncategorised
-              </ContextMenuItem>
-              {flatCategories.length > 0 && <ContextMenuSeparator />}
-              {flatCategories.map(({ category, depth }) => (
+      <div className="category-tree-row">
+        <ContextMenu>
+          <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onSelect={() => onRequestRename(entity)}>Rename</ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>Move to</ContextMenuSubTrigger>
+              <ContextMenuSubContent>
                 <ContextMenuItem
-                  key={category.id}
-                  disabled={category.id === currentCategoryId}
-                  onSelect={() => onMoveEntity(entity, category.id)}
-                  style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+                  disabled={currentCategoryId === null}
+                  onSelect={() => onMoveEntity(entity, null)}
                 >
-                  {category.name}
+                  Uncategorised
                 </ContextMenuItem>
-              ))}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-          {onPrintEntity && (
-            <ContextMenuItem onSelect={() => onPrintEntity(entity)}>🖨 Print</ContextMenuItem>
-          )}
-          {onDeleteEntity && (
-            <>
-              <ContextMenuSeparator />
-              <ConfirmDeleteDialog
-                trigger={
-                  <ContextMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
-                    Delete
+                {flatCategories.length > 0 && <ContextMenuSeparator />}
+                {flatCategories.map(({ category, depth }) => (
+                  <ContextMenuItem
+                    key={category.id}
+                    disabled={category.id === currentCategoryId}
+                    onSelect={() => onMoveEntity(entity, category.id)}
+                    style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+                  >
+                    {category.name}
                   </ContextMenuItem>
-                }
-                title={`Delete "${label}"?`}
-                description={`This permanently deletes "${label}" and cannot be undone.`}
-                onConfirm={() => onDeleteEntity(entity)}
-              />
-            </>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            {onPrintEntity && (
+              <ContextMenuItem onSelect={() => onPrintEntity(entity)}>🖨 Print</ContextMenuItem>
+            )}
+            {onDeleteEntity && (
+              <>
+                <ContextMenuSeparator />
+                <ConfirmDeleteDialog
+                  trigger={
+                    <ContextMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                      Delete
+                    </ContextMenuItem>
+                  }
+                  title={`Delete "${label}"?`}
+                  description={`This permanently deletes "${label}" and cannot be undone.`}
+                  onConfirm={() => onDeleteEntity(entity)}
+                />
+              </>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
+        {/* Tap-accessible equivalent of the right-click menu above — touch
+            devices have no right-click, so Rename/Move to/Print/Delete would
+            otherwise be unreachable there. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="category-tree-action"
+              title="Actions"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onSelect={() => onRequestRename(entity)}>Rename</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem
+                  disabled={currentCategoryId === null}
+                  onSelect={() => onMoveEntity(entity, null)}
+                >
+                  Uncategorised
+                </DropdownMenuItem>
+                {flatCategories.length > 0 && <DropdownMenuSeparator />}
+                {flatCategories.map(({ category, depth }) => (
+                  <DropdownMenuItem
+                    key={category.id}
+                    disabled={category.id === currentCategoryId}
+                    onSelect={() => onMoveEntity(entity, category.id)}
+                    style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+                  >
+                    {category.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            {onPrintEntity && (
+              <DropdownMenuItem onSelect={() => onPrintEntity(entity)}>🖨 Print</DropdownMenuItem>
+            )}
+            {onDeleteEntity && (
+              <>
+                <DropdownMenuSeparator />
+                <ConfirmDeleteDialog
+                  trigger={
+                    <DropdownMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                      Delete
+                    </DropdownMenuItem>
+                  }
+                  title={`Delete "${label}"?`}
+                  description={`This permanently deletes "${label}" and cannot be undone.`}
+                  onConfirm={() => onDeleteEntity(entity)}
+                />
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </li>
   );
 }

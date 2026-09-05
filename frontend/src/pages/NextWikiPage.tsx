@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { CategoryTree } from '../components/CategoryTree';
 import { ArticleEditor } from '../components/ArticleEditor';
+import { MobileBackButton } from '../components/MobileBackButton';
 
 interface Props {
   worldId: string;
@@ -186,7 +187,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const tagFilteredArticles = tagMatchIds ? articles.filter((a) => tagMatchIds.has(a.id)) : articles;
 
   return (
-    <div className="wiki-layout">
+    <div className="wiki-layout" data-has-selection={!!articleId}>
       <aside className="wiki-sidebar">
         {error && <p className="error">{error}</p>}
         <CategoryTree
@@ -235,6 +236,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
         )}
       </aside>
       <div className="wiki-main">
+        <MobileBackButton />
         <ArticleEditor
           worldId={worldId}
           articleId={articleId ?? null}
