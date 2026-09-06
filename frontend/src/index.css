@@ -61,6 +61,25 @@ body {
   margin: 0;
 }
 
+/* react-remove-scroll (used internally by every Radix Select/Dialog/Popover/
+   DropdownMenu to lock background scroll while open) compensates for a
+   scrollbar's width by adding `margin-right: <gap>px !important` to <body>
+   while locked (see body[data-scroll-locked] in
+   react-remove-scroll-bar/dist/.../component.js). On real mobile devices
+   that computed gap is apparently non-zero even with no visible scrollbar
+   to make way for, so opening any of these narrows the whole page and
+   visibly reflows content (confirmed via screen recording: a month/year
+   label wrapped to two lines, and everything below it shifted down, for as
+   long as the menu stayed open). `html body[...]` matches Radix's own
+   attribute-selector specificity plus one extra element, so this wins
+   regardless of which <style> tag was inserted later. The scroll lock
+   itself (overflow: hidden) is left alone — losing background scroll while
+   a menu is open is correct; only the width compensation is unwanted here. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
 /* min-height (not height) + flex-column: bounds the app to at least the
    viewport so /next's full-height shell has something to fill, but still
    grows taller and lets the browser window scroll for the old UI's long
