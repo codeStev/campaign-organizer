@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,6 +79,8 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
 
     @Override
     @Transactional
+    @PreAuthorize("#command.globalTemplateId() == null "
+            + "or hasPermission(#command.globalTemplateId(), 'GlobalFieldTemplate', 'ACCESS')")
     public StatblockView create(CreateStatblockCommand command) {
         requireWorld(command.worldId());
         validateLinks(command.worldId(), command.articleId(), command.campaignId(),
@@ -91,6 +94,8 @@ public class StatblockService implements CreateStatblockUseCase, UpdateStatblock
 
     @Override
     @Transactional
+    @PreAuthorize("#command.globalTemplateId() == null "
+            + "or hasPermission(#command.globalTemplateId(), 'GlobalFieldTemplate', 'ACCESS')")
     public StatblockView update(UpdateStatblockCommand command) {
         Statblock statblock = require(command.worldId(), command.statblockId());
         validateLinks(command.worldId(), command.articleId(), command.campaignId(),

@@ -73,7 +73,7 @@ class CampaignControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void acceptsAValidGameSystemAndRejectsAnUnknownOne() throws Exception {
+    void acceptsAValidGameSystemAndRejectsAnUnrecognizedOne() throws Exception {
         String auth = authHeader();
         String worldId = createWorld(auth);
         String systemId = JsonPath.read(mockMvc.perform(post("/api/game-systems")
@@ -89,10 +89,13 @@ class CampaignControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.systemId").value(systemId));
 
+        // An unrecognized systemId is denied as 404, not 400 (ADR-0109, anti-enumeration):
+        // "doesn't exist" and "isn't yours" must look identical, so this can't surface as a
+        // distinguishable validation error.
         mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Bad System\",\"systemId\":\"" + UUID.randomUUID() + "\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 }

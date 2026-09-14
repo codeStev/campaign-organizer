@@ -48,8 +48,11 @@ class AiControllerIT extends AbstractIntegrationTest {
     @Test
     void blankInstructions_is400() throws Exception {
         stubProviderIds();
-        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"instructions\":\"   \"}"))
                 .andExpect(status().isBadRequest());
@@ -61,9 +64,11 @@ class AiControllerIT extends AbstractIntegrationTest {
         Mockito.when(groq.configured()).thenReturn(true);
         Mockito.when(groq.generate(anyString(), anyString(), anyString()))
                 .thenReturn(new com.campaignorganizer.ai.domain.DraftResult("Salt on the wind.", "groq"));
+        String auth = authHeader();
+        String worldId = createWorld(auth);
 
-        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"instructions\":\"a gruff dockmaster\",\"existingContent\":\"\"}"))
                 .andExpect(status().isOk())
@@ -76,9 +81,11 @@ class AiControllerIT extends AbstractIntegrationTest {
         Mockito.when(groq.configured()).thenReturn(true);
         Mockito.when(groq.generate(anyString(), anyString(), anyString()))
                 .thenReturn(new com.campaignorganizer.ai.domain.DraftResult("Salt on the wind.", "groq"));
+        String auth = authHeader();
+        String worldId = createWorld(auth);
 
-        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(draftBody()))
                 .andExpect(status().isOk())
@@ -95,9 +102,11 @@ class AiControllerIT extends AbstractIntegrationTest {
                 .thenThrow(new TextGenerationFailedException("down"));
         Mockito.when(openRouter.generate(anyString(), anyString(), anyString()))
                 .thenThrow(new TextGenerationFailedException("down"));
+        String auth = authHeader();
+        String worldId = createWorld(auth);
 
-        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        mockMvc.perform(post("/api/worlds/{w}/ai/draft-article-text", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(draftBody()))
                 .andExpect(status().isServiceUnavailable())
@@ -153,8 +162,11 @@ class AiControllerIT extends AbstractIntegrationTest {
     @Test
     void summarize_blankNotesIs400() throws Exception {
         stubProviderIds();
-        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"notes\":\"   \"}"))
                 .andExpect(status().isBadRequest());
@@ -166,9 +178,11 @@ class AiControllerIT extends AbstractIntegrationTest {
         Mockito.when(groq.configured()).thenReturn(true);
         Mockito.when(groq.generate(anyString(), anyString(), anyString()))
                 .thenReturn(new com.campaignorganizer.ai.domain.DraftResult("The party found the map.", "groq"));
+        String auth = authHeader();
+        String worldId = createWorld(auth);
 
-        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"notes\":\"we found a map in the crypt\"}"))
                 .andExpect(status().isOk())
@@ -185,9 +199,11 @@ class AiControllerIT extends AbstractIntegrationTest {
                 .thenThrow(new TextGenerationFailedException("down"));
         Mockito.when(openRouter.generate(anyString(), anyString(), anyString()))
                 .thenThrow(new TextGenerationFailedException("down"));
+        String auth = authHeader();
+        String worldId = createWorld(auth);
 
-        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+        mockMvc.perform(post("/api/worlds/{w}/ai/summarize-session-notes", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"notes\":\"we found a map in the crypt\"}"))
                 .andExpect(status().isServiceUnavailable())

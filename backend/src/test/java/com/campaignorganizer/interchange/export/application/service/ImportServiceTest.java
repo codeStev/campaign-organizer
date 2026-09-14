@@ -209,7 +209,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("media", List.of(Map.of("id", oldMediaId, "worldId", oldWorldId, "filename", "cover.png",
                 "contentType", "image/png", "sizeBytes", 3, "createdAt", now.toString())));
         bundle.put("categories", List.of(
@@ -285,7 +285,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("articles", List.of(new ArticleView(oldArticleId, oldWorldId, null, null,
                 "Tortuga", "tortuga", "LOCATION", "Plain.", now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null,
@@ -334,14 +334,14 @@ class ImportServiceTest {
         when(globalFieldTemplateImportPort.importOrReuse(any())).thenAnswer(inv -> {
             GlobalFieldTemplateView v = inv.getArgument(0);
             return new GlobalFieldTemplateView(reusedGlobalTemplateId, v.name(), v.kind(), v.systemId(),
-                    v.sections(), v.createdAt(), v.updatedAt());
+                    v.sections(), UUID.randomUUID(), v.createdAt(), v.updatedAt());
         });
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("globalFieldTemplates", List.of(new GlobalFieldTemplateView(oldGlobalTemplateId,
-                "D&D 5e Monster", TemplateKind.STATBLOCK, UUID.randomUUID(), List.of(), now, now)));
+                "D&D 5e Monster", TemplateKind.STATBLOCK, UUID.randomUUID(), List.of(), UUID.randomUUID(), now, now)));
         bundle.put("statblocks", List.of(new StatblockView(oldStatblockId, oldWorldId, null, null, null, null,
                 oldGlobalTemplateId, "Goblin", Map.of(), null, now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
@@ -373,18 +373,18 @@ class ImportServiceTest {
         // THAT id, not the bundle's original systemId.
         when(gameSystemImportPort.importOrReuse(any())).thenAnswer(inv -> {
             GameSystemView v = inv.getArgument(0);
-            return new GameSystemView(reusedSystemId, v.name(), v.tagline(), v.color(), v.notes(),
+            return new GameSystemView(reusedSystemId, v.name(), v.tagline(), v.color(), v.notes(), UUID.randomUUID(),
                     v.createdAt(), v.updatedAt());
         });
         when(globalStatblockImportPort.importOrReuse(any())).thenAnswer(inv -> inv.getArgument(0));
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
-        bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
+        bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null, UUID.randomUUID(),
                 now, now)));
         bundle.put("globalStatblocks", List.of(new GlobalStatblockView(oldStatblockId, oldSystemId, null,
-                "The Vaettir", Map.of("HP", 10), null, now, now)));
+                "The Vaettir", Map.of("HP", 10), null, UUID.randomUUID(), now, now)));
         for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars",
                 "timelines", "timelineEvents", "relationships", "campaigns", "sessions", "arcs", "beats",
                 "fieldTemplates", "globalFieldTemplates", "characterSheets", "statblocks", "whiteboards",
@@ -413,14 +413,14 @@ class ImportServiceTest {
         // system: importOrReuse resolves to a DIFFERENT id than the bundle's.
         when(gameSystemImportPort.importOrReuse(any())).thenAnswer(inv -> {
             GameSystemView v = inv.getArgument(0);
-            return new GameSystemView(reusedSystemId, v.name(), v.tagline(), v.color(), v.notes(),
+            return new GameSystemView(reusedSystemId, v.name(), v.tagline(), v.color(), v.notes(), UUID.randomUUID(),
                     v.createdAt(), v.updatedAt());
         });
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
-        bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null,
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
+        bundle.put("gameSystems", List.of(new GameSystemView(oldSystemId, "Vaesen", null, null, null, UUID.randomUUID(),
                 now, now)));
         bundle.put("campaigns", List.of(new CampaignView(oldCampaignId, oldWorldId, "The Society", null,
                 null, CampaignStatus.ACTIVE, oldSystemId, null, now, now)));
@@ -448,7 +448,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, null, now, now)));
@@ -486,7 +486,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, null, now, now)));
@@ -525,7 +525,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, null, now, now)));
@@ -562,7 +562,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, null, now, now)));
@@ -601,7 +601,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, null, now, now)));
@@ -638,7 +638,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("campaigns", List.of(
                 new CampaignView(oldCampaignId, oldWorldId, "Chronicle", null, null,
                         CampaignStatus.ACTIVE, null, null, now, now)));
@@ -676,7 +676,7 @@ class ImportServiceTest {
 
         Map<String, Object> bundle = new LinkedHashMap<>();
         bundle.put("exportVersion", ExportService.EXPORT_VERSION);
-        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, now, now));
+        bundle.put("world", new WorldView(oldWorldId, "Dark Caribbean", null, Map.of(), false, UUID.randomUUID(), now, now));
         bundle.put("rollTables", List.of(new RollTableView(oldTableId, oldWorldId, null, "Ambush", null,
                 "1d1", 1, 1,
                 List.of(new RollTableEntryView(UUID.randomUUID(), 1, 1, "Bandits",
