@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.campaignorganizer.accounts.domain.account.Role;
 import com.campaignorganizer.config.AppProperties;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -20,12 +21,12 @@ class JwtServiceTest {
         AppProperties props = new AppProperties(
                 new AppProperties.Jwt(SECRET, hours),
                 new AppProperties.Media("/tmp"),
-                new AppProperties.Ai(null, null, null, null));
+                new AppProperties.Ai(null, null, null, null), null);
         return new JwtService(props);
     }
 
     @Test
-    void issuesTokenThatParses() {
+    void issuesFullyAuthenticatedTokenThatParses() {
         JwtService service = jwtServiceWithExpiryHours(1);
 
         JwtService.IssuedToken issued = service.issue(ACCOUNT_ID, Role.USER, 0);
@@ -33,7 +34,28 @@ class JwtServiceTest {
         assertThat(issued.token()).isNotBlank();
         assertThat(issued.expiresAt()).isAfter(Instant.now());
         assertThat(service.parse(issued.token())).contains(
-                new JwtService.ParsedToken(ACCOUNT_ID, Role.USER, 0));
+                new JwtService.ParsedToken(ACCOUNT_ID, Role.USER, 0,
+                        Set.of(JwtService.PASSWORD_FACTOR, JwtService.MFA_FACTOR)));
+    }
+
+    @Test
+    void issuesPasswordOnlyTokenWithOnlyThatFactor() {
+        JwtService service = jwtServiceWithExpiryHours(1);
+
+        JwtService.IssuedToken issued = service.issue(ACCOUNT_ID, Role.USER, 0, Set.of(JwtService.PASSWORD_FACTOR));
+
+        assertThat(service.parse(issued.token())).contains(
+                new JwtService.ParsedToken(ACCOUNT_ID, Role.USER, 0, Set.of(JwtService.PASSWORD_FACTOR)));
+    }
+
+    @Test
+    void passwordOnlyTokenExpiresSoonerThanFullyAuthenticatedToken() {
+        JwtService service = jwtServiceWithExpiryHours(1);
+
+        JwtService.IssuedToken full = service.issue(ACCOUNT_ID, Role.USER, 0);
+        JwtService.IssuedToken pending = service.issue(ACCOUNT_ID, Role.USER, 0, Set.of(JwtService.PASSWORD_FACTOR));
+
+        assertThat(pending.expiresAt()).isBefore(full.expiresAt());
     }
 
     @Test
@@ -49,7 +71,7 @@ class JwtServiceTest {
         AppProperties otherProps = new AppProperties(
                 new AppProperties.Jwt("a-completely-different-secret-32-bytes-xx", 1),
                 new AppProperties.Media("/tmp"),
-                new AppProperties.Ai(null, null, null, null));
+                new AppProperties.Ai(null, null, null, null), null);
         JwtService verifier = new JwtService(otherProps);
 
         String token = issuer.issue(ACCOUNT_ID, Role.USER, 0).token();

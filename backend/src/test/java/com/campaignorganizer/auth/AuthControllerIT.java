@@ -13,17 +13,58 @@ class AuthControllerIT extends AbstractIntegrationTest {
 
     private static final String PASSWORD = "integration-test-password";
 
+    /**
+     * A fresh account has no MFA method yet (ADR-0111) — login succeeds at the password
+     * check, but the response flags setup as required rather than handing back a directly
+     * usable token. {@code com.campaignorganizer.accounts.MfaControllerIT} covers the rest
+     * of the flow (setup, challenge, recovery) end-to-end.
+     */
     @Test
-    void loginSucceedsWithRegisteredAccount() throws Exception {
+    void loginWithFreshAccountRequiresMfaSetup() throws Exception {
         String email = register();
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("MFA_SETUP_REQUIRED"))
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+    }
+
+    /** A password-only token (MFA not yet completed) can't reach ordinary API resources. */
+    @Test
+    void passwordOnlyTokenCannotAccessProtectedResources() throws Exception {
+        String email = register();
+        String body = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
+                .andReturn().getResponse().getContentAsString();
+        String token = com.jayway.jsonpath.JsonPath.read(body, "$.token");
+
+        mockMvc.perform(post("/api/worlds")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Should be rejected\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /** The same password-only token IS accepted by the MFA endpoints themselves. */
+    @Test
+    void passwordOnlyTokenCanReachMfaSetupEndpoint() throws Exception {
+        String email = register();
+        String body = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
+                .andReturn().getResponse().getContentAsString();
+        String token = com.jayway.jsonpath.JsonPath.read(body, "$.token");
+
+        mockMvc.perform(post("/api/auth/mfa/setup/totp/start")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.secret").isNotEmpty())
+                .andExpect(jsonPath("$.qrCodeDataUri").value(org.hamcrest.Matchers.startsWith("data:image/png;base64,")));
     }
 
     @Test

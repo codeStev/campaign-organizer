@@ -99,7 +99,10 @@ paths:
         Always returns the same generic 401 for a wrong password, an
         unknown email, and a disabled account — none of these are
         distinguished, deliberately, to avoid confirming which emails have
-        accounts (ADR-0110).
+        accounts (ADR-0110). A correct password alone never grants full
+        access (ADR-0111, mandatory MFA): the returned token only carries
+        the PASSWORD factor until a second factor is also completed, and
+        `status` tells the client which step comes next.
       operationId: login
       security: []
       requestBody:
@@ -110,13 +113,149 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Authentication succeeded.
+          description: >-
+            Password check succeeded. `status` tells the client whether the
+            account still needs to complete MFA setup or clear a challenge
+            — either way the returned token only works against
+            `/auth/mfa/**` until then.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/mfa/setup/totp/start:
+    post:
+      tags: [auth]
+      summary: Begin TOTP enrollment
+      description: >-
+        Requires a token carrying at least the PASSWORD factor (ADR-0111).
+        Generates a new TOTP secret for the account, held pending until
+        confirmed via /auth/mfa/setup/totp/confirm — calling this again
+        before confirming replaces the pending secret.
+      operationId: startTotpSetup
+      responses:
+        '200':
+          description: New pending TOTP secret.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpSetupStart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/mfa/setup/totp/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm TOTP enrollment
+      description: >-
+        Verifies a code against the pending secret from
+        /auth/mfa/setup/totp/start. On success, TOTP becomes the account's
+        active MFA method, a fresh set of recovery codes is issued (shown
+        only in this response — save them now), and the returned token
+        carries both the PASSWORD and MFA factors.
+      operationId: confirmTotpSetup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+      responses:
+        '200':
+          description: TOTP enrolled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaEnrollmentResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/mfa/verify:
+    post:
+      tags: [auth]
+      summary: Complete a TOTP login challenge
+      description: >-
+        Requires a token carrying at least the PASSWORD factor, issued by
+        /auth/login when the account's MFA method is TOTP. On success,
+        returns a fully authenticated token.
+      operationId: verifyTotpChallenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+      responses:
+        '200':
+          description: Challenge passed.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /auth/mfa/verify-recovery-code:
+    post:
+      tags: [auth]
+      summary: Use a recovery code in place of a lost second factor
+      description: >-
+        Requires a token carrying at least the PASSWORD factor. Consumes
+        one single-use recovery code and resets the account's MFA method
+        back to unset, since the original device may be gone for good — the
+        response routes straight back into MFA setup rather than granting
+        full access.
+      operationId: verifyRecoveryCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryCodeRequest'
+      responses:
+        '200':
+          description: Recovery code accepted; MFA setup required again.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/recover-password:
+    post:
+      tags: [auth]
+      summary: Reset a forgotten password using a recovery code
+      description: >-
+        No token involved — identity is proven by a single-use recovery
+        code instead. Always takes comparable time whether or not the email
+        exists (ADR-0110-style anti-enumeration). Does not change the
+        account's MFA method: if the authenticator is still available, the
+        next login challenges as usual.
+      operationId: recoverPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoverPasswordRequest'
+      responses:
+        '204':
+          description: >-
+            Request processed. Identical response whether or not the email/
+            recovery-code pair was valid, to avoid confirming which emails
+            have accounts.
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -325,6 +464,34 @@ paths:
           description: Password reset.
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/{accountId}/reset-mfa:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      tags: [accounts]
+      summary: Clear an account's MFA enrollment (admin only)
+      description: >-
+        Resets mfaMethod to NONE, discards any TOTP secret, and invalidates every
+        outstanding recovery code, forcing re-enrollment on next login (ADR-0111).
+        The recovery path for a lost device with no codes left, or an enrollment
+        the admin believes wasn't done by the legitimate owner — this app has no
+        out-of-band channel to verify identity beyond the password itself, so a
+        leaked password alone is enough to complete enrollment.
+      operationId: resetAccountMfa
+      responses:
+        '200':
+          description: MFA cleared.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -7243,6 +7410,111 @@ components:
           format: date-time
           description: Expiry instant of the token (UTC).
 
+    LoginStatus:
+      type: string
+      enum: [MFA_SETUP_REQUIRED, MFA_CHALLENGE_REQUIRED]
+      description: >-
+        A correct password never grants full access on its own (ADR-0111,
+        mandatory MFA) — login always returns one of these two statuses,
+        never a directly-usable token. MFA_SETUP_REQUIRED: the account has
+        no active MFA method yet (new registration or a pre-MFA account) —
+        the returned token only works against /auth/mfa/setup/**.
+        MFA_CHALLENGE_REQUIRED: the account has an active MFA method — the
+        token only works against /auth/mfa/verify* until that's cleared.
+
+    LoginResponse:
+      type: object
+      required: [status, token, tokenType, expiresAt]
+      properties:
+        status:
+          $ref: '#/components/schemas/LoginStatus'
+        token:
+          type: string
+          description: >-
+            Signed JWT to send as `Authorization: Bearer <token>`. Carries
+            only the PASSWORD factor — usable only against the
+            /auth/mfa/** endpoints named by `status`, not general API
+            access.
+        tokenType:
+          type: string
+          const: Bearer
+        expiresAt:
+          type: string
+          format: date-time
+        method:
+          allOf:
+            - $ref: '#/components/schemas/MfaMethod'
+          description: Present only when status is MFA_CHALLENGE_REQUIRED.
+
+    MfaMethod:
+      type: string
+      enum: [NONE, TOTP, WEBAUTHN]
+      description: An account's active second factor, or NONE if not yet enrolled (ADR-0111).
+
+    TotpSetupStart:
+      type: object
+      required: [secret, provisioningUri, qrCodeDataUri]
+      properties:
+        secret:
+          type: string
+          description: Base32 secret, for manual entry if the QR code can't be scanned.
+        provisioningUri:
+          type: string
+          description: "otpauth:// URI encoded by qrCodeDataUri."
+        qrCodeDataUri:
+          type: string
+          description: "data:image/png;base64,... — render directly in an <img> tag."
+
+    MfaCodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: 6-digit TOTP code.
+          examples: ["123456"]
+
+    MfaEnrollmentResult:
+      type: object
+      required: [token, tokenType, expiresAt, recoveryCodes]
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          const: Bearer
+        expiresAt:
+          type: string
+          format: date-time
+        recoveryCodes:
+          type: array
+          items:
+            type: string
+          description: >-
+            Shown only in this response — store them now. Each is single-use
+            and consumable via /auth/mfa/verify-recovery-code or
+            /auth/recover-password.
+
+    RecoveryCodeRequest:
+      type: object
+      required: [recoveryCode]
+      properties:
+        recoveryCode:
+          type: string
+
+    RecoverPasswordRequest:
+      type: object
+      required: [email, recoveryCode, newPassword]
+      properties:
+        email:
+          type: string
+          format: email
+        recoveryCode:
+          type: string
+        newPassword:
+          type: string
+          minLength: 12
+
     Role:
       type: string
       enum: [ADMIN, USER]
@@ -7253,7 +7525,7 @@ components:
 
     Account:
       type: object
-      required: [id, email, role, enabled, createdAt]
+      required: [id, email, role, enabled, mfaMethod, createdAt]
       properties:
         id:
           type: string
@@ -7265,6 +7537,8 @@ components:
           $ref: '#/components/schemas/Role'
         enabled:
           type: boolean
+        mfaMethod:
+          $ref: '#/components/schemas/MfaMethod'
         createdAt:
           type: string
           format: date-time

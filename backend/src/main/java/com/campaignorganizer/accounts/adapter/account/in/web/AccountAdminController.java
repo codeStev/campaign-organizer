@@ -12,6 +12,7 @@ import com.campaignorganizer.accounts.application.account.port.in.LogoutAllUseCa
 import com.campaignorganizer.accounts.application.account.port.in.ResetPasswordUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.SetEnabledUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.UpdateRoleUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.ResetMfaUseCase;
 import com.campaignorganizer.security.CurrentUserPort;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -45,6 +46,7 @@ public class AccountAdminController {
     private final ChangeOwnPasswordUseCase changeOwnPasswordUseCase;
     private final LogoutAllUseCase logoutAllUseCase;
     private final DeleteAccountUseCase deleteUseCase;
+    private final ResetMfaUseCase resetMfaUseCase;
     private final CurrentUserPort currentUser;
     private final AccountWebMapper mapper;
 
@@ -53,7 +55,8 @@ public class AccountAdminController {
                                   ResetPasswordUseCase resetPasswordUseCase,
                                   ChangeOwnPasswordUseCase changeOwnPasswordUseCase,
                                   LogoutAllUseCase logoutAllUseCase, DeleteAccountUseCase deleteUseCase,
-                                  CurrentUserPort currentUser, AccountWebMapper mapper) {
+                                  ResetMfaUseCase resetMfaUseCase, CurrentUserPort currentUser,
+                                  AccountWebMapper mapper) {
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
         this.updateRoleUseCase = updateRoleUseCase;
@@ -62,6 +65,7 @@ public class AccountAdminController {
         this.changeOwnPasswordUseCase = changeOwnPasswordUseCase;
         this.logoutAllUseCase = logoutAllUseCase;
         this.deleteUseCase = deleteUseCase;
+        this.resetMfaUseCase = resetMfaUseCase;
         this.currentUser = currentUser;
         this.mapper = mapper;
     }
@@ -120,5 +124,18 @@ public class AccountAdminController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID accountId) {
         deleteUseCase.delete(accountId);
+    }
+
+    /**
+     * Clears an account's MFA method, secrets, and outstanding recovery codes, forcing
+     * re-enrollment on next login (ADR-0111) — the recovery path for a lost device with no
+     * codes left, or an enrollment the admin believes wasn't done by the legitimate owner
+     * (this app has no out-of-band channel to verify identity beyond the password itself, so
+     * a leaked password alone is enough to complete enrollment).
+     */
+    @PostMapping("/{accountId}/reset-mfa")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AccountResponse resetMfa(@PathVariable UUID accountId) {
+        return mapper.toResponse(resetMfaUseCase.resetMfa(accountId));
     }
 }

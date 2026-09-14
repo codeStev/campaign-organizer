@@ -208,6 +208,6 @@ public class AccountService implements RegisterAccountUseCase, ListAccountsUseCa
 
     private static AccountView toView(Account account) {
         return new AccountView(account.getId(), account.getEmail(), account.getRole(), account.isEnabled(),
-                account.getTokenVersion(), account.getCreatedAt());
+                account.getTokenVersion(), account.getMfaMethod(), account.getCreatedAt());
     }
 }

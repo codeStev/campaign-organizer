@@ -43,6 +43,14 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jjwtVersion")
 
+    // TOTP generation/verification (ADR-0111) — WebAuthn needs no extra dependency, it's
+    // already on the classpath via spring-boot-starter-security.
+    implementation("dev.samstevens.totp:totp:1.7.1")
+    // Server-rendered TOTP enrollment QR code (data:image/png;base64,... — no client-side
+    // QR-rendering library needed).
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:javase:3.5.3")
+
     implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20240325.1")
 
     // Compile-time bean mapping between rings (domain <-> entity <-> DTO).

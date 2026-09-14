@@ -3,6 +3,9 @@ package com.campaignorganizer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.accounts.application.account.port.published.AuthenticateAccountPort;
+import com.campaignorganizer.security.JwtService;
 import com.jayway.jsonpath.JsonPath;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,10 +54,21 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected MockMvc mockMvc;
 
+    @Autowired
+    private AuthenticateAccountPort authenticateAccountPort;
+
+    @Autowired
+    private JwtService jwtService;
+
     /**
-     * Registers a fresh, unique account and logs in as it, returning a ready
-     * {@code Bearer <jwt>} header value. A new account per call is deliberate — every
-     * caller in this suite uses the header within a single test method, never expecting
+     * Registers a fresh, unique account and returns a ready, fully-authenticated
+     * {@code Bearer <jwt>} header value — bypassing the real MFA enrollment ceremony
+     * (ADR-0111) by minting the token directly via {@link JwtService} in-process, since the
+     * vast majority of callers in this suite are testing something else entirely and would
+     * otherwise all need to carry the TOTP setup/confirm dance.
+     * {@code com.campaignorganizer.accounts.MfaControllerIT} exercises that real flow
+     * end-to-end via HTTP. A new account per call is deliberate —
+     * every caller in this suite uses the header within a single test method, never expecting
      * a *specific* identity across calls, and each account's data is private to it
      * (ADR-0109), so reusing one shared login across tests would only entangle them.
      */
@@ -64,11 +78,9 @@ public abstract class AbstractIntegrationTest {
         mockMvc.perform(post("/api/accounts/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"));
-        String body = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"))
-                .andReturn().getResponse().getContentAsString();
-        return "Bearer " + JsonPath.read(body, "$.token");
+        AccountView account = authenticateAccountPort.authenticate(email, password).orElseThrow();
+        JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        return "Bearer " + issued.token();
     }
 
     /** Creates a world and returns its id. */

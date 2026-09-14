@@ -1,5 +1,6 @@
 package com.campaignorganizer.accounts.adapter.account.in.web;
 
+import com.campaignorganizer.accounts.domain.account.MfaMethod;
 import com.campaignorganizer.accounts.domain.account.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -27,6 +28,7 @@ public final class AccountWebDtos {
             String email,
             Role role,
             boolean enabled,
+            MfaMethod mfaMethod,
             Instant createdAt) {
     }
 
