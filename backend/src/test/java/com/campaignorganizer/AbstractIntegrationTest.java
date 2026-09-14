@@ -51,11 +51,22 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected MockMvc mockMvc;
 
-    /** Logs in with the test password and returns a ready {@code Bearer <jwt>} header value. */
+    /**
+     * Registers a fresh, unique account and logs in as it, returning a ready
+     * {@code Bearer <jwt>} header value. A new account per call is deliberate — every
+     * caller in this suite uses the header within a single test method, never expecting
+     * a *specific* identity across calls, and each account's data is private to it
+     * (ADR-0109), so reusing one shared login across tests would only entangle them.
+     */
     protected String authHeader() throws Exception {
+        String email = "it-" + java.util.UUID.randomUUID() + "@test.local";
+        String password = "integration-test-password";
+        mockMvc.perform(post("/api/accounts/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"));
         String body = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"password\":\"test-password\"}"))
+                        .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"))
                 .andReturn().getResponse().getContentAsString();
         return "Bearer " + JsonPath.read(body, "$.token");
     }
