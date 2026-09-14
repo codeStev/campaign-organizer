@@ -34,6 +34,18 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    // Not bundled with spring-boot-starter-security — a separate module (ADR-0111
+    // "Consequences" originally claimed otherwise; corrected after direct jar
+    // inspection found no org.springframework.security.web.webauthn.* package in
+    // spring-security-web). No explicit version: Spring Boot's BOM manages it.
+    implementation("org.springframework.security:spring-security-webauthn")
+    // Spring's WebAuthnConfigurer wraps this internally (Webauthn4JRelyingPartyOperations)
+    // but Spring's own docs still list it as a required companion dependency. No explicit
+    // version: spring-security-webauthn:7.1.1 itself declares 0.31.9.RELEASE as its own
+    // dependency — pinning an older version here (an earlier draft tried 0.29.1.RELEASE,
+    // based on a stale Maven Central search-index result) would silently downgrade below
+    // what Spring actually built and tested against.
+    implementation("com.webauthn4j:webauthn4j-core")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
@@ -47,8 +59,7 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jjwtVersion")
 
-    // TOTP generation/verification (ADR-0111) — WebAuthn needs no extra dependency, it's
-    // already on the classpath via spring-boot-starter-security.
+    // TOTP generation/verification (ADR-0111).
     implementation("dev.samstevens.totp:totp:1.7.1")
     // Server-rendered TOTP enrollment QR code (data:image/png;base64,... — no client-side
     // QR-rendering library needed).
