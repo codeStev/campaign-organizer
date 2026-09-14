@@ -1,12 +1,16 @@
 package com.campaignorganizer.accounts.adapter.account.out.persistence;
 
 import com.campaignorganizer.accounts.adapter.account.out.mfa.WebAuthnUserHandle;
+import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
+import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialRepositoryPort;
+import com.campaignorganizer.accounts.domain.account.MfaMethod;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.webauthn.api.AuthenticatorTransport;
 import org.springframework.security.web.webauthn.api.Bytes;
 import org.springframework.security.web.webauthn.api.CredentialRecord;
@@ -24,14 +28,27 @@ import org.springframework.stereotype.Component;
  * here. Also implements {@link WebAuthnCredentialRepositoryPort}, the narrow slice {@code
  * MfaService} itself needs (ADR-0111 follow-up: admin-triggered MFA reset must delete the
  * credential too, not just clear the account's mfaMethod flag).
+ *
+ * <p>{@link #save} refuses to persist a *new* credential for an account whose
+ * {@code mfaMethod} isn't already {@code NONE} — found missing during this feature's own
+ * {@code security-review} pass. {@code WebAuthnRegistrationFilter} (Spring's own, the only
+ * caller of this method) has no authorization check beyond "holds some valid PASSWORD-factor
+ * token", so without this guard an attacker who only has an account's leaked password (not its
+ * real, already-active second factor) could silently plant their own passkey here and use it to
+ * log in indefinitely — completely bypassing whatever second factor the legitimate owner
+ * actually has configured. {@code Account.beginTotpEnrollment} enforces the same invariant on
+ * the TOTP side; this is its WebAuthn-side equivalent, just enforced here rather than on the
+ * domain aggregate, since the credential itself never touches {@code Account}.
  */
 @Component
 public class WebAuthnCredentialRepositoryAdapter implements UserCredentialRepository, WebAuthnCredentialRepositoryPort {
 
     private final WebAuthnCredentialJpaRepository repository;
+    private final AccountQueryPort accounts;
 
-    public WebAuthnCredentialRepositoryAdapter(WebAuthnCredentialJpaRepository repository) {
+    public WebAuthnCredentialRepositoryAdapter(WebAuthnCredentialJpaRepository repository, AccountQueryPort accounts) {
         this.repository = repository;
+        this.accounts = accounts;
     }
 
     @Override
@@ -39,8 +56,14 @@ public class WebAuthnCredentialRepositoryAdapter implements UserCredentialReposi
         WebAuthnCredentialJpaEntity entity = repository.findByCredentialId(credentialRecord.getCredentialId().getBytes())
                 .orElseGet(WebAuthnCredentialJpaEntity::new);
         if (entity.getId() == null) {
+            UUID accountId = WebAuthnUserHandle.toAccountId(credentialRecord.getUserEntityUserId());
+            AccountView account = accounts.findById(accountId)
+                    .orElseThrow(() -> new AccessDeniedException("No such account"));
+            if (account.mfaMethod() != MfaMethod.NONE) {
+                throw new AccessDeniedException("Account already has an active MFA method");
+            }
             entity.setId(UUID.randomUUID());
-            entity.setAccountId(WebAuthnUserHandle.toAccountId(credentialRecord.getUserEntityUserId()));
+            entity.setAccountId(accountId);
             entity.setCreatedAt(credentialRecord.getCreated());
         }
         entity.setCredentialId(credentialRecord.getCredentialId().getBytes());
