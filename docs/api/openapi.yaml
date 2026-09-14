@@ -176,6 +176,34 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /auth/mfa/setup/webauthn/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm WebAuthn/passkey enrollment
+      description: >-
+        Requires a token carrying at least the PASSWORD factor. Call this
+        after Spring Security's own WebAuthn registration ceremony
+        (/webauthn/register/options, then /webauthn/register — not part of
+        this contract; Spring Security's own filters handle them) has
+        already stored a credential for the account. No code parameter is
+        needed: the ceremony itself is the proof of possession. On success,
+        WebAuthn becomes the account's active MFA method, a fresh set of
+        recovery codes is issued (shown only in this response — save them
+        now), and the returned token carries both the PASSWORD and MFA
+        factors.
+      operationId: confirmWebauthnSetup
+      responses:
+        '200':
+          description: WebAuthn enrolled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaEnrollmentResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /auth/mfa/verify:
     post:
       tags: [auth]
@@ -478,8 +506,9 @@ paths:
       tags: [accounts]
       summary: Clear an account's MFA enrollment (admin only)
       description: >-
-        Resets mfaMethod to NONE, discards any TOTP secret, and invalidates every
-        outstanding recovery code, forcing re-enrollment on next login (ADR-0111).
+        Resets mfaMethod to NONE, discards any TOTP secret or WebAuthn credential,
+        and invalidates every outstanding recovery code, forcing re-enrollment on
+        next login (ADR-0111).
         The recovery path for a lost device with no codes left, or an enrollment
         the admin believes wasn't done by the legitimate owner — this app has no
         out-of-band channel to verify identity beyond the password itself, so a
