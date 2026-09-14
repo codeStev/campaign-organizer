@@ -30,12 +30,14 @@ server:
     include-message: always
 
 app:
-  # Single-password authentication (see docs/adr/0006-single-password-auth.md).
-  password: ${APP_PASSWORD:changeme}
+  # Per-account authentication (see docs/adr/0110-self-registration-and-role-based-jwt.md).
   jwt:
     # HS256 secret; must be >= 32 bytes. Override in production.
     secret: ${APP_JWT_SECRET:dev-secret-change-me-please-32-bytes-minimum}
-    expiration-hours: ${APP_JWT_EXPIRATION_HOURS:720}
+    # A leaked-but-not-yet-revoked token's blast radius is bounded by this;
+    # explicit revocation (disable/role change/password reset/logout-all)
+    # takes effect immediately regardless, via the account's token_version.
+    expiration-hours: ${APP_JWT_EXPIRATION_HOURS:24}
   media:
     # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
     dir: ${APP_MEDIA_DIR:./data/media}
