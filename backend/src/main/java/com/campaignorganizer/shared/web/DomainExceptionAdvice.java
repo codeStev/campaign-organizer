@@ -1,6 +1,7 @@
 package com.campaignorganizer.shared.web;
 
 import com.campaignorganizer.ai.domain.AiUnavailableException;
+import com.campaignorganizer.shared.domain.AuthenticationFailedException;
 import com.campaignorganizer.shared.domain.ConflictException;
 import com.campaignorganizer.shared.domain.DomainException;
 import com.campaignorganizer.shared.domain.NotFoundException;
@@ -31,6 +32,11 @@ public class DomainExceptionAdvice {
     @ExceptionHandler(ConflictException.class)
     public ProblemDetail handleConflict(ConflictException ex) {
         return problem(HttpStatus.CONFLICT, "Conflict", ex);
+    }
+
+    @ExceptionHandler(AuthenticationFailedException.class)
+    public ProblemDetail handleAuthenticationFailed(AuthenticationFailedException ex) {
+        return problem(HttpStatus.UNAUTHORIZED, "Unauthorized", ex);
     }
 
     @ExceptionHandler(AiUnavailableException.class)
