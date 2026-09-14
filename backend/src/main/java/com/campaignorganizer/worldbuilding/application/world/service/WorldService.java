@@ -1,5 +1,6 @@
 package com.campaignorganizer.worldbuilding.application.world.service;
 
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.world.port.in.CreateWorldUseCase;
@@ -13,6 +14,7 @@ import com.campaignorganizer.worldbuilding.application.world.port.in.WorldComman
 import com.campaignorganizer.worldbuilding.application.world.port.in.WorldCommands.UpdateWorldCommand;
 import com.campaignorganizer.worldbuilding.application.world.port.out.WorldRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldImportPort;
+import com.campaignorganizer.worldbuilding.application.world.port.published.WorldOwnershipPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
 import com.campaignorganizer.worldbuilding.domain.world.LayerStyle;
@@ -25,30 +27,32 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** World use cases; also implements the published query port for every other context. */
+/** World use cases; also implements the published query/ownership ports for every other context. */
 @Service
 public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, DeleteWorldUseCase,
         GetWorldUseCase, ListWorldsUseCase, GetLayerStylesUseCase, ReplaceLayerStylesUseCase,
-        WorldQueryPort, WorldImportPort {
+        WorldQueryPort, WorldImportPort, WorldOwnershipPort {
 
     private final WorldRepositoryPort worlds;
     private final WorldViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
+    private final CurrentUserPort currentUser;
 
     public WorldService(WorldRepositoryPort worlds, WorldViewMapper viewMapper, IdGenerator ids,
-                        Clock clock) {
+                        Clock clock, CurrentUserPort currentUser) {
         this.worlds = worlds;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
+        this.currentUser = currentUser;
     }
 
     @Override
     @Transactional
     public WorldView create(CreateWorldCommand command) {
         World created = World.create(ids.newId(), command.name(), command.description(), command.scratch(),
-                clock.instant());
+                currentUser.currentAccountId(), clock.instant());
         return viewMapper.toView(worlds.save(created));
     }
 
@@ -75,7 +79,8 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
     @Override
     @Transactional(readOnly = true)
     public List<WorldView> list() {
-        return worlds.findAllOrderByCreatedAtDesc().stream().map(viewMapper::toView).toList();
+        return worlds.findAllByOwnerIdOrderByCreatedAtDesc(currentUser.currentAccountId()).stream()
+                .map(viewMapper::toView).toList();
     }
 
     @Override
@@ -97,8 +102,11 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
     @Override
     @Transactional
     public WorldView importWorld(WorldView view) {
+        // Owned by whoever is importing, regardless of what the backup payload
+        // says (ADR-0109) — a backup can only ever land in the importer's own
+        // account, never silently attributed to someone else.
         World world = World.reconstitute(view.id(), view.name(), view.description(), view.layerStyles(),
-                view.scratch(), view.createdAt(), view.updatedAt());
+                view.scratch(), currentUser.currentAccountId(), view.createdAt(), view.updatedAt());
         return viewMapper.toView(worlds.save(world));
     }
 
@@ -114,6 +122,14 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
     @Transactional(readOnly = true)
     public Optional<WorldView> findById(UUID worldId) {
         return worlds.findById(worldId).map(viewMapper::toView);
+    }
+
+    // --- published ownership port (ADR-0109) ---
+
+    @Override
+    @Transactional
+    public void assignUnownedTo(UUID ownerId) {
+        worlds.assignUnownedTo(ownerId);
     }
 
     private World require(UUID worldId) {

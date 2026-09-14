@@ -24,6 +24,11 @@ public class WorldPersistenceAdapter implements WorldRepositoryPort {
     }
 
     @Override
+    public List<World> findAllByOwnerIdOrderByCreatedAtDesc(UUID ownerId) {
+        return repository.findAllByOwnerIdOrderByCreatedAtDesc(ownerId).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
     public Optional<World> findById(UUID worldId) {
         return repository.findById(worldId).map(mapper::toDomain);
     }
@@ -41,5 +46,10 @@ public class WorldPersistenceAdapter implements WorldRepositoryPort {
     @Override
     public void delete(World world) {
         repository.deleteById(world.getId());
+    }
+
+    @Override
+    public void assignUnownedTo(UUID ownerId) {
+        repository.assignUnownedTo(ownerId);
     }
 }

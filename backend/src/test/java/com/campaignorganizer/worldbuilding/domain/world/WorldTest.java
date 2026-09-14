@@ -14,10 +14,11 @@ class WorldTest {
 
     private static final Instant T0 = Instant.parse("2026-01-01T00:00:00Z");
     private static final Instant T1 = Instant.parse("2026-02-02T00:00:00Z");
+    private static final UUID OWNER_ID = UUID.randomUUID();
 
     @Test
     void updateBumpsUpdatedAt() {
-        World w = World.create(UUID.randomUUID(), "Aetheria", "desc", false, T0);
+        World w = World.create(UUID.randomUUID(), "Aetheria", "desc", false, OWNER_ID, T0);
         w.update("Aetheria II", "desc2", false, T1);
 
         assertThat(w.getName()).isEqualTo("Aetheria II");
@@ -27,7 +28,7 @@ class WorldTest {
 
     @Test
     void scratchDefaultsToFalseAndIsToggleableViaUpdate() {
-        World w = World.create(UUID.randomUUID(), "Sketchbook", null, false, T0);
+        World w = World.create(UUID.randomUUID(), "Sketchbook", null, false, OWNER_ID, T0);
         assertThat(w.isScratch()).isFalse();
 
         w.update("Sketchbook", null, true, T1);
@@ -37,19 +38,19 @@ class WorldTest {
 
     @Test
     void createCanStartAsScratch() {
-        World w = World.create(UUID.randomUUID(), "Sketchbook", null, true, T0);
+        World w = World.create(UUID.randomUUID(), "Sketchbook", null, true, OWNER_ID, T0);
         assertThat(w.isScratch()).isTrue();
     }
 
     @Test
     void createStartsWithEmptyLayerStyles() {
-        World w = World.create(UUID.randomUUID(), "Aetheria", null, false, T0);
+        World w = World.create(UUID.randomUUID(), "Aetheria", null, false, OWNER_ID, T0);
         assertThat(w.getLayerStyles()).isEmpty();
     }
 
     @Test
     void replaceLayerStylesBumpsUpdatedAt() {
-        World w = World.create(UUID.randomUUID(), "Aetheria", null, false, T0);
+        World w = World.create(UUID.randomUUID(), "Aetheria", null, false, OWNER_ID, T0);
         w.replaceLayerStyles(Map.of("towns", new LayerStyle("#ff0000", "castle")), T1);
 
         assertThat(w.getLayerStyles()).containsKey("towns");
@@ -58,7 +59,7 @@ class WorldTest {
 
     @Test
     void rejectsBlankName() {
-        assertThatThrownBy(() -> World.create(UUID.randomUUID(), " ", null, false, T0))
+        assertThatThrownBy(() -> World.create(UUID.randomUUID(), " ", null, false, OWNER_ID, T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

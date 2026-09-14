@@ -35,6 +35,10 @@ public class WorldJpaEntity {
     @Column(name = "is_scratch", nullable = false)
     private boolean scratch;
 
+    /** Nullable only for rows predating accounts entirely (ADR-0109). */
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -82,6 +86,14 @@ public class WorldJpaEntity {
 
     public void setScratch(boolean scratch) {
         this.scratch = scratch;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
     }
 
     public Instant getCreatedAt() {

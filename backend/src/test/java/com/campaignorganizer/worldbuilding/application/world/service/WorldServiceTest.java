@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.world.port.in.WorldCommands.CreateWorldCommand;
@@ -32,6 +33,8 @@ class WorldServiceTest {
     private WorldRepositoryPort worlds;
     @Mock
     private IdGenerator ids;
+    @Mock
+    private CurrentUserPort currentUser;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
     private final WorldViewMapper viewMapper = new WorldViewMapperImpl();
@@ -39,15 +42,17 @@ class WorldServiceTest {
     private WorldService service;
 
     private final UUID worldId = UUID.randomUUID();
+    private final UUID ownerId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new WorldService(worlds, viewMapper, ids, clock);
+        service = new WorldService(worlds, viewMapper, ids, clock, currentUser);
     }
 
     @Test
     void createReturnsViewWithGeneratedId() {
         when(ids.newId()).thenReturn(worldId);
+        when(currentUser.currentAccountId()).thenReturn(ownerId);
         when(worlds.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorldView view = service.create(new CreateWorldCommand("Aetheria", "desc", false));
@@ -60,6 +65,7 @@ class WorldServiceTest {
     @Test
     void createCanStartAsScratch() {
         when(ids.newId()).thenReturn(worldId);
+        when(currentUser.currentAccountId()).thenReturn(ownerId);
         when(worlds.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorldView view = service.create(new CreateWorldCommand("Sketchbook", null, true));
@@ -76,7 +82,7 @@ class WorldServiceTest {
 
     @Test
     void replaceLayerStylesPersistsAndReturns() {
-        World world = World.create(worldId, "Aetheria", null, false, clock.instant());
+        World world = World.create(worldId, "Aetheria", null, false, ownerId, clock.instant());
         when(worlds.findById(worldId)).thenReturn(Optional.of(world));
         when(worlds.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
