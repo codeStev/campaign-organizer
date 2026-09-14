@@ -48,6 +48,14 @@ public class WebAuthnCreationOptionsRepositoryAdapter implements PublicKeyCreden
     @Override
     @Transactional
     public void save(HttpServletRequest request, HttpServletResponse response, PublicKeyCredentialCreationOptions options) {
+        // WebAuthnRegistrationFilter calls save(..., null) to invalidate the pending challenge
+        // right after loading it, before the actual credential verification runs — an explicit
+        // delete here (rather than overwriting with a JSON "null" string, which load() happened
+        // to also treat as absent) makes that single-use redemption obvious rather than implicit.
+        if (options == null) {
+            repository.deleteById(currentUser.currentAccountId());
+            return;
+        }
         WebAuthnChallengeJpaEntity entity = new WebAuthnChallengeJpaEntity();
         entity.setAccountId(currentUser.currentAccountId());
         entity.setPurpose(PURPOSE);
