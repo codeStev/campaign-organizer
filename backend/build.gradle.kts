@@ -51,7 +51,7 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.zxing:javase:3.5.3")
 
-    implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20240325.1")
+    implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20260313.1")
 
     // Compile-time bean mapping between rings (domain <-> entity <-> DTO).
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
