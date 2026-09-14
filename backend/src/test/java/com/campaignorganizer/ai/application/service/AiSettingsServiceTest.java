@@ -1,6 +1,7 @@
 package com.campaignorganizer.ai.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -12,7 +13,9 @@ import com.campaignorganizer.ai.application.port.in.UpdateAiSettingsUseCase.Upda
 import com.campaignorganizer.ai.application.port.out.AiProviderSettingsRepositoryPort;
 import com.campaignorganizer.ai.application.port.out.TextGenerationPort;
 import com.campaignorganizer.ai.domain.ProviderSetting;
+import com.campaignorganizer.security.CurrentUserPort;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +32,10 @@ class AiSettingsServiceTest {
     private TextGenerationPort groq;
     @Mock
     private TextGenerationPort openRouter;
+    @Mock
+    private CurrentUserPort currentUser;
+
+    private final UUID ownerId = UUID.randomUUID();
 
     private AiSettingsService service;
 
@@ -38,12 +45,13 @@ class AiSettingsServiceTest {
         lenient().when(groq.defaultModel()).thenReturn("groq-default");
         lenient().when(openRouter.providerId()).thenReturn("openrouter");
         lenient().when(openRouter.defaultModel()).thenReturn("openrouter-default");
-        service = new AiSettingsService(repository, List.of(groq, openRouter));
+        lenient().when(currentUser.currentAccountId()).thenReturn(ownerId);
+        service = new AiSettingsService(repository, List.of(groq, openRouter), currentUser);
     }
 
     @Test
     void getWithNoSavedSettings_returnsBuiltInDefaultsInOrder() {
-        when(repository.findAllOrderedByPriority()).thenReturn(List.of());
+        when(repository.findAllOrderedByPriority(ownerId)).thenReturn(List.of());
 
         List<ProviderSettingView> views = service.get();
 
@@ -55,7 +63,7 @@ class AiSettingsServiceTest {
     void getWithSavedSettings_reflectsPersistedModelAndConfiguredFlag() {
         when(groq.configured()).thenReturn(true);
         when(openRouter.configured()).thenReturn(false);
-        when(repository.findAllOrderedByPriority()).thenReturn(List.of(
+        when(repository.findAllOrderedByPriority(ownerId)).thenReturn(List.of(
                 new ProviderSetting("openrouter", "custom-model", 0),
                 new ProviderSetting("groq", null, 1)));
 
@@ -79,7 +87,7 @@ class AiSettingsServiceTest {
         service.update(command);
 
         ArgumentCaptor<List<ProviderSetting>> captor = ArgumentCaptor.forClass(List.class);
-        verify(repository).replaceAll(captor.capture());
+        verify(repository).replaceAll(any(), captor.capture());
         List<ProviderSetting> saved = captor.getValue();
         assertThat(saved).extracting(ProviderSetting::providerId).containsExactly("openrouter", "groq");
         assertThat(saved).extracting(ProviderSetting::priority).containsExactly(0, 1);
@@ -87,7 +95,7 @@ class AiSettingsServiceTest {
 
     @Test
     void update_returnsViewsReflectingTheNewPersistedSettings() {
-        when(repository.findAllOrderedByPriority()).thenReturn(List.of(
+        when(repository.findAllOrderedByPriority(ownerId)).thenReturn(List.of(
                 new ProviderSetting("groq", "custom-model", 0),
                 new ProviderSetting("openrouter", null, 1)));
         var command = new UpdateAiSettingsCommand(List.of(new ProviderSettingInput("groq", "custom-model")));
@@ -96,6 +104,6 @@ class AiSettingsServiceTest {
 
         assertThat(views).extracting(ProviderSettingView::providerId).containsExactly("groq", "openrouter");
         assertThat(views).extracting(ProviderSettingView::model).containsExactly("custom-model", null);
-        verify(repository).replaceAll(anyList());
+        verify(repository).replaceAll(any(), anyList());
     }
 }
