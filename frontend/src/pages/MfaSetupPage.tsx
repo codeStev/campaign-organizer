@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { confirmTotpSetup, startTotpSetup } from '../api/client';
+import { FormEvent, useState } from 'react';
+import { confirmTotpSetup, enrollWebauthn, startTotpSetup } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
@@ -10,27 +10,40 @@ interface Props {
 }
 
 type Stage =
-  | { kind: 'loading' }
-  | { kind: 'error' }
-  | { kind: 'enter-code'; secret: string; provisioningUri: string; qrCodeDataUri: string }
+  | { kind: 'choose-method' }
+  | { kind: 'totp-loading' }
+  | { kind: 'totp-error' }
+  | { kind: 'totp-enter-code'; secret: string; provisioningUri: string; qrCodeDataUri: string }
+  | { kind: 'webauthn-prompt' }
+  | { kind: 'webauthn-error'; message: string }
   | { kind: 'show-recovery-codes'; token: string; recoveryCodes: string[] };
 
-/**
- * TOTP is the only enrollment method offered today (WebAuthn is a planned follow-up, ADR-0111)
- * — no method-choice step yet, setup starts immediately.
- */
 export function MfaSetupPage({ pendingToken, onAuthenticated }: Props) {
-  const [stage, setStage] = useState<Stage>({ kind: 'loading' });
+  const [stage, setStage] = useState<Stage>({ kind: 'choose-method' });
   const [code, setCode] = useState('');
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
 
-  useEffect(() => {
+  function chooseTotp() {
+    setStage({ kind: 'totp-loading' });
     startTotpSetup(pendingToken)
-      .then((start) => setStage({ kind: 'enter-code', ...start }))
-      .catch(() => setStage({ kind: 'error' }));
-  }, [pendingToken]);
+      .then((start) => setStage({ kind: 'totp-enter-code', ...start }))
+      .catch(() => setStage({ kind: 'totp-error' }));
+  }
+
+  async function chooseWebauthn() {
+    setStage({ kind: 'webauthn-prompt' });
+    try {
+      const result = await enrollWebauthn(pendingToken);
+      setStage({ kind: 'show-recovery-codes', token: result.token, recoveryCodes: result.recoveryCodes });
+    } catch {
+      setStage({
+        kind: 'webauthn-error',
+        message: "Couldn't create a passkey — the prompt may have been cancelled. Try again.",
+      });
+    }
+  }
 
   async function handleConfirm(event: FormEvent) {
     event.preventDefault();
@@ -46,12 +59,45 @@ export function MfaSetupPage({ pendingToken, onAuthenticated }: Props) {
     }
   }
 
-  if (stage.kind === 'loading') {
+  if (stage.kind === 'choose-method') {
+    return (
+      <div className="card login">
+        <h2>Set up two-factor authentication</h2>
+        <p className="muted hint">Every account needs a second factor — choose how to verify it's you.</p>
+        <Button type="button" onClick={chooseTotp} data-testid="mfa-choose-totp">
+          Use an authenticator app
+        </Button>
+        <Button type="button" onClick={chooseWebauthn} data-testid="mfa-choose-webauthn">
+          Use a passkey or security key
+        </Button>
+      </div>
+    );
+  }
+
+  if (stage.kind === 'totp-loading') {
     return <p className="muted">Setting up two-factor authentication…</p>;
   }
 
-  if (stage.kind === 'error') {
+  if (stage.kind === 'totp-error') {
     return <p className="error">Couldn't start two-factor setup. Please refresh and try again.</p>;
+  }
+
+  if (stage.kind === 'webauthn-prompt') {
+    return <p className="muted">Follow your browser's prompt to create a passkey…</p>;
+  }
+
+  if (stage.kind === 'webauthn-error') {
+    return (
+      <div className="card login">
+        <p className="error">{stage.message}</p>
+        <Button type="button" onClick={chooseWebauthn}>
+          Try again
+        </Button>
+        <Button type="button" onClick={() => setStage({ kind: 'choose-method' })}>
+          Choose a different method
+        </Button>
+      </div>
+    );
   }
 
   if (stage.kind === 'show-recovery-codes') {
