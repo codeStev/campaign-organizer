@@ -5,8 +5,12 @@ conventions so changes stay consistent. Full rationale lives in
 [`docs/adr/`](docs/adr/); requirements in [`docs/requirements.md`](docs/requirements.md).
 
 ## What this is
-A **personal, single-user** worldbuilding + RPG campaign manager, inspired by
-World Anvil. Not multi-tenant, no community features.
+A **multi-account** worldbuilding + RPG campaign manager, inspired by World
+Anvil. Every account's worlds/campaigns/content are strictly private to it,
+including from other accounts with the ADMIN role — ADMIN only grants rights
+over the account roster itself. Self-registration is open; the first account
+ever registered becomes ADMIN automatically. No sharing/collaboration
+features yet (see ADR-0109's "future sharing" note).
 
 ## Major decisions (see ADRs)
 - **Backend:** Spring Boot 4.1 (Java 25), JUnit 6. — ADR-0001, superseded by ADR-0051
@@ -14,9 +18,11 @@ World Anvil. Not multi-tenant, no community features.
 - **Frontend:** React 18 + TypeScript, Vite. — ADR-0002
 - **Datastore:** PostgreSQL; JSONB for flexible data later. — ADR-0003
 - **Deployment:** Docker multi-stage images + `docker-compose.yml`. — ADR-0004
-- **Scope:** single owner user; no sharing/community; spoilers via a per-article
-  "GM-only" flag. — ADR-0005
-- **Auth:** one configured password → stateless HS256 JWT bearer tokens. — ADR-0006
+- **Scope:** multi-account; every World (and per-account catalogs) is
+  strictly private, even from other ADMINs. — ADR-0005, superseded by ADR-0109
+- **Auth:** self-registered accounts, BCrypt-hashed passwords, role-bearing
+  stateless HS256 JWTs with DB-checked revocation
+  (`token_version`). — ADR-0006, superseded by ADR-0110
 - **Media:** stored on a local volume (no S3/MinIO), behind an abstraction. — ADR-0007
 - **API:** contract-first; `docs/api/openapi.yaml` (OpenAPI 3.1) is canonical. — ADR-0008
 - **Errors:** RFC 9457/7807 `application/problem+json`. — ADR-0009
@@ -39,7 +45,8 @@ migration to this shape is complete (2026-08-19). Two documents govern it and ar
 Bounded contexts: `worldbuilding`, `campaign`, `characters`, `media`, `whiteboard`,
 `interchange` (export/usage/packet orchestration), `ai` (LLM-backed text drafting,
 ADR-0064/0065), `tables` (roll tables + card decks, ADR-0066), `handouts`
-(player-facing printables, ADR-0070). Each has
+(player-facing printables, ADR-0070), `accounts` (self-registration, roles,
+ownership; ADR-0109/0110). Each has
 a full domain/
 application/adapter ring; cross-context references go only through the target's
 `application.port.published` interfaces — an ArchUnit fitness function
