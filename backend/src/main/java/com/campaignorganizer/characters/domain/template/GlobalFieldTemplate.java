@@ -20,26 +20,30 @@ public final class GlobalFieldTemplate {
     private TemplateKind kind;
     private UUID systemId;
     private List<TemplateSection> sections;
+    /** Nullable only for rows predating accounts entirely (ADR-0109). */
+    private UUID ownerId;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private GlobalFieldTemplate(UUID id, String name, TemplateKind kind, UUID systemId,
-                                List<TemplateSection> sections, Instant createdAt, Instant updatedAt) {
+                                List<TemplateSection> sections, UUID ownerId, Instant createdAt,
+                                Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.ownerId = ownerId;
         apply(name, kind, systemId, sections);
     }
 
     public static GlobalFieldTemplate create(UUID id, String name, TemplateKind kind, UUID systemId,
-                                             List<TemplateSection> sections, Instant now) {
-        return new GlobalFieldTemplate(id, name, kind, systemId, sections, now, now);
+                                             List<TemplateSection> sections, UUID ownerId, Instant now) {
+        return new GlobalFieldTemplate(id, name, kind, systemId, sections, ownerId, now, now);
     }
 
     public static GlobalFieldTemplate reconstitute(UUID id, String name, TemplateKind kind, UUID systemId,
-                                                    List<TemplateSection> sections, Instant createdAt,
-                                                    Instant updatedAt) {
-        return new GlobalFieldTemplate(id, name, kind, systemId, sections, createdAt, updatedAt);
+                                                    List<TemplateSection> sections, UUID ownerId,
+                                                    Instant createdAt, Instant updatedAt) {
+        return new GlobalFieldTemplate(id, name, kind, systemId, sections, ownerId, createdAt, updatedAt);
     }
 
     public void update(String name, UUID systemId, List<TemplateSection> sections, Instant now) {
@@ -81,6 +85,10 @@ public final class GlobalFieldTemplate {
 
     public List<TemplateSection> getSections() {
         return sections;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
     }
 
     public Instant getCreatedAt() {

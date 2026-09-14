@@ -27,6 +27,10 @@ public class GameSystemJpaEntity {
     @Column(columnDefinition = "text")
     private String notes;
 
+    /** Nullable only for rows predating accounts entirely (ADR-0109). */
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -74,6 +78,14 @@ public class GameSystemJpaEntity {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
     }
 
     public Instant getCreatedAt() {

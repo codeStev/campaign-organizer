@@ -37,6 +37,10 @@ public class GlobalFieldTemplateJpaEntity {
     @Column(nullable = false, columnDefinition = "jsonb")
     private List<TemplateSection> sections = new ArrayList<>();
 
+    /** Nullable only for rows predating accounts entirely (ADR-0109). */
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -84,6 +88,14 @@ public class GlobalFieldTemplateJpaEntity {
 
     public void setSections(List<TemplateSection> sections) {
         this.sections = sections == null ? new ArrayList<>() : sections;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
     }
 
     public Instant getCreatedAt() {

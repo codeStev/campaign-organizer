@@ -17,25 +17,28 @@ public final class GameSystem {
     private String tagline;
     private String color;
     private String notes;
+    /** Nullable only for rows predating accounts entirely (ADR-0109). */
+    private UUID ownerId;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private GameSystem(UUID id, String name, String tagline, String color, String notes, Instant createdAt,
-                       Instant updatedAt) {
+    private GameSystem(UUID id, String name, String tagline, String color, String notes, UUID ownerId,
+                       Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.ownerId = ownerId;
         apply(name, tagline, color, notes);
     }
 
     public static GameSystem create(UUID id, String name, String tagline, String color, String notes,
-                                    Instant now) {
-        return new GameSystem(id, name, tagline, color, notes, now, now);
+                                    UUID ownerId, Instant now) {
+        return new GameSystem(id, name, tagline, color, notes, ownerId, now, now);
     }
 
     public static GameSystem reconstitute(UUID id, String name, String tagline, String color, String notes,
-                                          Instant createdAt, Instant updatedAt) {
-        return new GameSystem(id, name, tagline, color, notes, createdAt, updatedAt);
+                                          UUID ownerId, Instant createdAt, Instant updatedAt) {
+        return new GameSystem(id, name, tagline, color, notes, ownerId, createdAt, updatedAt);
     }
 
     public void update(String name, String tagline, String color, String notes, Instant now) {
@@ -71,6 +74,10 @@ public final class GameSystem {
 
     public String getNotes() {
         return notes;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
     }
 
     public Instant getCreatedAt() {

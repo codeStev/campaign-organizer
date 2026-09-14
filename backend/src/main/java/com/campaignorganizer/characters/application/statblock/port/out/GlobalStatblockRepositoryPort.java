@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface GlobalStatblockRepositoryPort {
 
-    List<GlobalStatblock> findAll();
+    List<GlobalStatblock> findAllByOwnerId(UUID ownerId);
 
     List<GlobalStatblock> findBySystemId(UUID systemId);
 
@@ -20,4 +20,7 @@ public interface GlobalStatblockRepositoryPort {
     GlobalStatblock save(GlobalStatblock statblock);
 
     void delete(GlobalStatblock statblock);
+
+    /** One-time backfill only (ADR-0109). */
+    void assignUnownedTo(UUID ownerId);
 }

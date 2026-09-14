@@ -4,6 +4,7 @@ import com.campaignorganizer.characters.application.template.port.out.GlobalFiel
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateQueryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
+import com.campaignorganizer.security.CurrentUserPort;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,23 +27,27 @@ public class GlobalFieldTemplateQueryService implements GlobalFieldTemplateQuery
 
     private final GlobalFieldTemplateRepositoryPort templates;
     private final GlobalFieldTemplateViewMapper viewMapper;
+    private final CurrentUserPort currentUser;
 
     public GlobalFieldTemplateQueryService(GlobalFieldTemplateRepositoryPort templates,
-                                           GlobalFieldTemplateViewMapper viewMapper) {
+                                           GlobalFieldTemplateViewMapper viewMapper, CurrentUserPort currentUser) {
         this.templates = templates;
         this.viewMapper = viewMapper;
+        this.currentUser = currentUser;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<GlobalFieldTemplateView> findAll() {
-        return templates.findAll().stream().map(viewMapper::toView).toList();
+        return templates.findAllByOwnerId(currentUser.currentAccountId()).stream()
+                .map(viewMapper::toView).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<GlobalFieldTemplateView> findByKind(TemplateKind kind) {
-        return templates.findByKind(kind).stream().map(viewMapper::toView).toList();
+        return templates.findByOwnerIdAndKind(currentUser.currentAccountId(), kind).stream()
+                .map(viewMapper::toView).toList();
     }
 
     @Override

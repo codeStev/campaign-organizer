@@ -19,26 +19,31 @@ public final class GlobalStatblock {
     private String name;
     private Map<String, Object> stats;
     private String notes;
+    /** Nullable only for rows predating accounts entirely (ADR-0109). */
+    private UUID ownerId;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private GlobalStatblock(UUID id, UUID systemId, UUID globalTemplateId, String name,
-                            Map<String, Object> stats, String notes, Instant createdAt, Instant updatedAt) {
+                            Map<String, Object> stats, String notes, UUID ownerId, Instant createdAt,
+                            Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.ownerId = ownerId;
         apply(systemId, globalTemplateId, name, stats, notes);
     }
 
     public static GlobalStatblock create(UUID id, UUID systemId, UUID globalTemplateId, String name,
-                                         Map<String, Object> stats, String notes, Instant now) {
-        return new GlobalStatblock(id, systemId, globalTemplateId, name, stats, notes, now, now);
+                                         Map<String, Object> stats, String notes, UUID ownerId, Instant now) {
+        return new GlobalStatblock(id, systemId, globalTemplateId, name, stats, notes, ownerId, now, now);
     }
 
     public static GlobalStatblock reconstitute(UUID id, UUID systemId, UUID globalTemplateId, String name,
-                                               Map<String, Object> stats, String notes, Instant createdAt,
-                                               Instant updatedAt) {
-        return new GlobalStatblock(id, systemId, globalTemplateId, name, stats, notes, createdAt, updatedAt);
+                                               Map<String, Object> stats, String notes, UUID ownerId,
+                                               Instant createdAt, Instant updatedAt) {
+        return new GlobalStatblock(id, systemId, globalTemplateId, name, stats, notes, ownerId, createdAt,
+                updatedAt);
     }
 
     public void update(UUID systemId, UUID globalTemplateId, String name, Map<String, Object> stats,
@@ -84,6 +89,10 @@ public final class GlobalStatblock {
 
     public String getNotes() {
         return notes;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
     }
 
     public Instant getCreatedAt() {

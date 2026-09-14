@@ -3,6 +3,7 @@ package com.campaignorganizer.characters.application.statblock.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,7 @@ import com.campaignorganizer.characters.application.template.port.published.Glob
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.domain.statblock.GlobalStatblock;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -49,6 +51,8 @@ class GlobalStatblockServiceTest {
     private CreateStatblockUseCase createStatblock;
     @Mock
     private IdGenerator ids;
+    @Mock
+    private CurrentUserPort currentUser;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
     private final GlobalStatblockViewMapper viewMapper = new GlobalStatblockViewMapperImpl();
@@ -58,16 +62,18 @@ class GlobalStatblockServiceTest {
     private final UUID systemId = UUID.randomUUID();
     private final UUID otherSystemId = UUID.randomUUID();
     private final UUID templateId = UUID.randomUUID();
+    private final UUID ownerId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
+        lenient().when(currentUser.currentAccountId()).thenReturn(ownerId);
         service = new GlobalStatblockService(statblocks, systems, templates, createStatblock, viewMapper,
-                ids, clock);
+                ids, clock, currentUser);
     }
 
     private GlobalFieldTemplateView templateView(TemplateKind kind, UUID system) {
-        return new GlobalFieldTemplateView(templateId, "Monster", kind, system, List.of(), Instant.now(),
-                Instant.now());
+        return new GlobalFieldTemplateView(templateId, "Monster", kind, system, List.of(), ownerId,
+                Instant.now(), Instant.now());
     }
 
     @Test
@@ -120,7 +126,7 @@ class GlobalStatblockServiceTest {
     @Test
     void deleteRemovesTheCatalogEntry() {
         UUID id = UUID.randomUUID();
-        GlobalStatblock existing = GlobalStatblock.create(id, systemId, null, "Goblin", Map.of(), null,
+        GlobalStatblock existing = GlobalStatblock.create(id, systemId, null, "Goblin", Map.of(), null, ownerId,
                 clock.instant());
         when(statblocks.findById(id)).thenReturn(Optional.of(existing));
 
@@ -155,7 +161,7 @@ class GlobalStatblockServiceTest {
         UUID worldId = UUID.randomUUID();
         UUID campaignId = UUID.randomUUID();
         GlobalStatblock source = GlobalStatblock.create(id, systemId, templateId, "Adult Red Dragon",
-                Map.of("HP", 256), "Breathes fire", clock.instant());
+                Map.of("HP", 256), "Breathes fire", ownerId, clock.instant());
         when(statblocks.findById(id)).thenReturn(Optional.of(source));
         when(createStatblock.create(any())).thenReturn(new StatblockView(UUID.randomUUID(), worldId, null, null,
                 campaignId, null, templateId, "Adult Red Dragon", Map.of("HP", 256), "Breathes fire",
@@ -180,7 +186,7 @@ class GlobalStatblockServiceTest {
         UUID worldId = UUID.randomUUID();
         UUID campaignId = UUID.randomUUID();
         GlobalStatblock source = GlobalStatblock.create(id, systemId, null, "Adult Red Dragon", Map.of(),
-                null, clock.instant());
+                null, ownerId, clock.instant());
         when(statblocks.findById(id)).thenReturn(Optional.of(source));
         when(createStatblock.create(any())).thenReturn(new StatblockView(UUID.randomUUID(), worldId, null, null,
                 campaignId, null, null, "Bahamut", Map.of(), null, clock.instant(), clock.instant()));
@@ -198,11 +204,11 @@ class GlobalStatblockServiceTest {
     void importOrReuseReusesAnExistingMatchByNameAndSystem() {
         UUID existingId = UUID.randomUUID();
         GlobalStatblock existing = GlobalStatblock.create(existingId, systemId, null, "Goblin", Map.of(),
-                null, clock.instant());
+                null, ownerId, clock.instant());
         when(statblocks.findBySystemIdAndName(systemId, "Goblin")).thenReturn(Optional.of(existing));
 
         GlobalStatblockView imported = new GlobalStatblockView(UUID.randomUUID(), systemId, null, "Goblin",
-                Map.of(), null, clock.instant(), clock.instant());
+                Map.of(), null, ownerId, clock.instant(), clock.instant());
         GlobalStatblockView result = service.importOrReuse(imported);
 
         assertThat(result.id()).isEqualTo(existingId);
@@ -215,7 +221,7 @@ class GlobalStatblockServiceTest {
 
         UUID newId = UUID.randomUUID();
         GlobalStatblockView imported = new GlobalStatblockView(newId, systemId, null, "Goblin", Map.of(),
-                null, clock.instant(), clock.instant());
+                null, ownerId, clock.instant(), clock.instant());
         GlobalStatblockView result = service.importOrReuse(imported);
 
         assertThat(result.id()).isEqualTo(newId);

@@ -13,6 +13,6 @@ public interface GlobalFieldTemplatePersistenceMapper {
             return null;
         }
         return GlobalFieldTemplate.reconstitute(e.getId(), e.getName(), e.getKind(), e.getSystemId(),
-                e.getSections(), e.getCreatedAt(), e.getUpdatedAt());
+                e.getSections(), e.getOwnerId(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

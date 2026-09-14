@@ -8,9 +8,9 @@ import java.util.UUID;
 
 public interface GlobalFieldTemplateRepositoryPort {
 
-    List<GlobalFieldTemplate> findAll();
+    List<GlobalFieldTemplate> findAllByOwnerId(UUID ownerId);
 
-    List<GlobalFieldTemplate> findByKind(TemplateKind kind);
+    List<GlobalFieldTemplate> findByOwnerIdAndKind(UUID ownerId, TemplateKind kind);
 
     Optional<GlobalFieldTemplate> findById(UUID templateId);
 
@@ -21,4 +21,7 @@ public interface GlobalFieldTemplateRepositoryPort {
     GlobalFieldTemplate save(GlobalFieldTemplate template);
 
     void delete(GlobalFieldTemplate template);
+
+    /** One-time backfill only (ADR-0109). */
+    void assignUnownedTo(UUID ownerId);
 }
