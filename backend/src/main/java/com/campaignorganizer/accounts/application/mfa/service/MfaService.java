@@ -3,6 +3,7 @@ package com.campaignorganizer.accounts.application.mfa.service;
 import com.campaignorganizer.accounts.application.account.port.out.AccountRepositoryPort;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmTotpSetupUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmWebauthnSetupUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.MfaEnrollmentOutcome;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSetupStart;
 import com.campaignorganizer.accounts.application.mfa.port.in.RecoverPasswordUseCase;
@@ -12,6 +13,7 @@ import com.campaignorganizer.accounts.application.mfa.port.in.VerifyRecoveryCode
 import com.campaignorganizer.accounts.application.mfa.port.in.VerifyTotpChallengeUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.out.RecoveryCodePort;
 import com.campaignorganizer.accounts.application.mfa.port.out.RecoveryCodeRepositoryPort;
+import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialRepositoryPort;
 import com.campaignorganizer.accounts.application.account.port.out.TotpPort;
 import com.campaignorganizer.accounts.domain.account.Account;
 import com.campaignorganizer.accounts.domain.account.MfaMethod;
@@ -38,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCase, VerifyTotpChallengeUseCase,
-        VerifyRecoveryCodeUseCase, RecoverPasswordUseCase, ResetMfaUseCase {
+        ConfirmWebauthnSetupUseCase, VerifyRecoveryCodeUseCase, RecoverPasswordUseCase, ResetMfaUseCase {
 
     private static final int RECOVERY_CODE_COUNT = 10;
 
@@ -56,18 +58,21 @@ public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCas
     private final RecoveryCodePort recoveryCodeGenerator;
     private final PasswordEncoder passwordEncoder;
     private final TextEncryptor totpSecretEncryptor;
+    private final WebAuthnCredentialRepositoryPort webAuthnCredentials;
     private final IdGenerator ids;
     private final Clock clock;
 
     public MfaService(AccountRepositoryPort accounts, RecoveryCodeRepositoryPort recoveryCodeRepository,
                       TotpPort totp, RecoveryCodePort recoveryCodeGenerator, PasswordEncoder passwordEncoder,
-                      TextEncryptor totpSecretEncryptor, IdGenerator ids, Clock clock) {
+                      TextEncryptor totpSecretEncryptor, WebAuthnCredentialRepositoryPort webAuthnCredentials,
+                      IdGenerator ids, Clock clock) {
         this.accounts = accounts;
         this.recoveryCodeRepository = recoveryCodeRepository;
         this.totp = totp;
         this.recoveryCodeGenerator = recoveryCodeGenerator;
         this.passwordEncoder = passwordEncoder;
         this.totpSecretEncryptor = totpSecretEncryptor;
+        this.webAuthnCredentials = webAuthnCredentials;
         this.ids = ids;
         this.clock = clock;
     }
@@ -97,6 +102,22 @@ public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCas
             throw new AuthenticationFailedException("Invalid TOTP code");
         }
         account.completeTotpEnrollment(clock.instant());
+        accounts.save(account);
+        return new MfaEnrollmentOutcome(toView(account), issueRecoveryCodes(account.getId()));
+    }
+
+    @Override
+    @Transactional
+    public MfaEnrollmentOutcome confirmWebauthnSetup(UUID accountId) {
+        Account account = require(accountId);
+        // Spring's own WebAuthnRegistrationFilter already persisted the credential (via
+        // UserCredentialRepository) and cryptographically verified the ceremony before this
+        // endpoint is ever reached — this just promotes the account's mfaMethod, same as
+        // confirmTotpSetup does after its own proof-of-possession check.
+        if (!webAuthnCredentials.existsByAccountId(accountId)) {
+            throw new ValidationException("No WebAuthn credential registered for this account");
+        }
+        account.completeWebauthnEnrollment(clock.instant());
         accounts.save(account);
         return new MfaEnrollmentOutcome(toView(account), issueRecoveryCodes(account.getId()));
     }
@@ -162,6 +183,9 @@ public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCas
         // method flag — otherwise it could still be spent via recoverPassword/verifyRecoveryCode
         // after an admin has "fixed" this account.
         recoveryCodeRepository.deleteAllByAccountId(accountId);
+        // Same reasoning for a WebAuthn credential: leaving it in UserCredentialRepository would
+        // let it still authenticate a challenge even after mfaMethod no longer says WEBAUTHN.
+        webAuthnCredentials.deleteByAccountId(accountId);
         return toView(account);
     }
 
