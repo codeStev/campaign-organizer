@@ -120,6 +120,20 @@ public final class Account {
     }
 
     /**
+     * Activates WebAuthn as the account's MFA method once a credential has been successfully
+     * registered. Unlike TOTP there's no "pending secret" to promote here — the credential
+     * itself lives in the separate webauthn_credentials table, and the ceremony's challenge
+     * state lives in its own stateless repository, neither on this aggregate.
+     */
+    public void completeWebauthnEnrollment(Instant now) {
+        if (mfaMethod != MfaMethod.NONE) {
+            throw new ValidationException("Account already has an active MFA method");
+        }
+        this.mfaMethod = MfaMethod.WEBAUTHN;
+        this.updatedAt = now;
+    }
+
+    /**
      * Spending a recovery code to regain access resets MFA back to unset rather than granting
      * full access outright — the lost device may be gone for good, so re-enrollment is forced
      * through the normal setup path. Bumps the token version: any other outstanding token
