@@ -59,6 +59,15 @@ app:
   mfa:
     encryption-key: ${APP_MFA_ENCRYPTION_KEY:dev-mfa-key-change-me-in-production}
     encryption-salt: ${APP_MFA_ENCRYPTION_SALT:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4}
+  # WebAuthn/passkeys (see docs/adr/0111-mandatory-mfa.md). relying-party-id must be a
+  # registrable domain suffix of the browser's actual hostname (bare host, no scheme/port);
+  # allowed-origins must match the browser's origin *exactly* (scheme + host + port). Both
+  # MUST be overridden for any real deployment — the defaults only work for this app's own
+  # docker-compose frontend on localhost.
+  webauthn:
+    relying-party-id: ${APP_WEBAUTHN_RP_ID:localhost}
+    relying-party-name: ${APP_WEBAUTHN_RP_NAME:Campaign Organizer}
+    allowed-origins: ${APP_WEBAUTHN_ALLOWED_ORIGINS:http://localhost:3001}
   media:
     # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
     dir: ${APP_MEDIA_DIR:./data/media}

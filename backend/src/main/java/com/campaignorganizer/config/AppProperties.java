@@ -1,12 +1,13 @@
 package com.campaignorganizer.config;
 
+import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Strongly-typed access to {@code app.*} configuration.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa) {
+public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webauthn) {
 
     public record Jwt(String secret, long expirationHours) {
     }
@@ -26,6 +27,18 @@ public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa) {
      * secret).
      */
     public record Mfa(String encryptionKey, String encryptionSalt) {
+    }
+
+    /**
+     * WebAuthn relying-party identity (ADR-0111 follow-up). {@code relyingPartyId} must be a
+     * registrable domain suffix of whatever origin the browser actually reports (bare hostname,
+     * no scheme/port — {@code localhost} in dev); {@code allowedOrigins} must match the
+     * browser's origin *exactly* (scheme + host + port). Getting either wrong doesn't error
+     * loudly — WebAuthn ceremonies just fail, the single most common integration mistake with
+     * this API. Override both per environment; the dev defaults only work for this app's own
+     * docker-compose frontend.
+     */
+    public record Webauthn(String relyingPartyId, String relyingPartyName, Set<String> allowedOrigins) {
     }
 
     /**
