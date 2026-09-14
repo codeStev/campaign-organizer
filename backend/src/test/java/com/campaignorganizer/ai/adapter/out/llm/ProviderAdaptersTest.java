@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 class ProviderAdaptersTest {
 
     private static AppProperties props(String groqKey, String openRouterKey) {
-        return new AppProperties("pw", null, null,
+        return new AppProperties(null, null,
                 new AppProperties.Ai(groqKey, openRouterKey, null, null));
     }
 
