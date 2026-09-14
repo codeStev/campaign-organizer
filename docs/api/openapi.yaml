@@ -21,7 +21,13 @@ servers:
 
 tags:
   - name: auth
-    description: Authentication for the single owner user.
+    description: Email/password login, exchanged for a bearer token.
+  - name: accounts
+    description: >-
+      Self-registration and account management (ADR-0110). Every world and
+      account-scoped catalog is private to the account that owns it, even
+      from other accounts with the ADMIN role — ADMIN only grants rights
+      over the account roster itself (ADR-0109).
   - name: worlds
     description: Top-level worldbuilding containers.
   - name: categories
@@ -88,7 +94,12 @@ paths:
   /auth/login:
     post:
       tags: [auth]
-      summary: Exchange the app password for a bearer token
+      summary: Exchange account credentials for a bearer token
+      description: >-
+        Always returns the same generic 401 for a wrong password, an
+        unknown email, and a disabled account — none of these are
+        distinguished, deliberately, to avoid confirming which emails have
+        accounts (ADR-0110).
       operationId: login
       security: []
       requestBody:
@@ -108,6 +119,218 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '400':
           $ref: '#/components/responses/BadRequest'
+
+  /accounts/register:
+    post:
+      tags: [accounts]
+      summary: Register a new account
+      description: >-
+        Always responds identically whether or not the email was already
+        registered (anti-enumeration, ADR-0110) — log in to find out rather
+        than relying on this response. The first account ever registered on
+        this instance is automatically granted the ADMIN role; every account
+        after that defaults to USER.
+      operationId: registerAccount
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          description: >-
+            Request accepted. If the email was available, the account now
+            exists; if it was already taken, nothing changed — either way,
+            the response is identical.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /accounts:
+    get:
+      tags: [accounts]
+      summary: List all accounts (admin only)
+      operationId: listAccounts
+      responses:
+        '200':
+          description: Every account on this instance.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /accounts/me:
+    get:
+      tags: [accounts]
+      summary: Get the current account
+      operationId: getCurrentAccount
+      responses:
+        '200':
+          description: The authenticated account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/password:
+    patch:
+      tags: [accounts]
+      summary: Change the current account's password
+      operationId: changeOwnPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/logout-all:
+    post:
+      tags: [accounts]
+      summary: Invalidate every token currently issued for this account
+      description: >-
+        Bumps the account's token version, so this call's own bearer token
+        (and every other one previously issued) stops working immediately —
+        the caller must log in again.
+      operationId: logoutAllSessions
+      responses:
+        '204':
+          description: All sessions invalidated.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/{accountId}:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    delete:
+      tags: [accounts]
+      summary: Delete an account (admin only)
+      operationId: deleteAccount
+      responses:
+        '204':
+          description: Account deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/{accountId}/role:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    patch:
+      tags: [accounts]
+      summary: Change an account's role (admin only)
+      operationId: updateAccountRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Role updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/{accountId}/disable:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      tags: [accounts]
+      summary: Disable an account (admin only)
+      operationId: disableAccount
+      responses:
+        '200':
+          description: Account disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/{accountId}/enable:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      tags: [accounts]
+      summary: Re-enable a disabled account (admin only)
+      operationId: enableAccount
+      responses:
+        '200':
+          description: Account enabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/{accountId}/reset-password:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      tags: [accounts]
+      summary: Set a new password for another account (admin only)
+      operationId: resetAccountPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password reset.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /backup:
     get:
@@ -4581,6 +4804,14 @@ components:
       schema:
         type: string
         format: uuid
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      description: Identifier of the account.
+      schema:
+        type: string
+        format: uuid
     CategoryId:
       name: categoryId
       in: path
@@ -4839,6 +5070,14 @@ components:
             $ref: '#/components/schemas/ProblemDetail'
     Unauthorized:
       description: Missing or invalid bearer token / password.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Forbidden:
+      description: >-
+        Authenticated, but the account's role does not permit this action
+        (e.g. a non-admin calling an admin-only account-management endpoint).
       content:
         application/problem+json:
           schema:
@@ -6978,12 +7217,15 @@ components:
 
     LoginRequest:
       type: object
-      required: [password]
+      required: [email, password]
       properties:
+        email:
+          type: string
+          format: email
+          examples: ["gm@example.com"]
         password:
           type: string
           minLength: 1
-          description: The configured application password.
           examples: ["changeme"]
 
     TokenResponse:
@@ -7000,6 +7242,78 @@ components:
           type: string
           format: date-time
           description: Expiry instant of the token (UTC).
+
+    Role:
+      type: string
+      enum: [ADMIN, USER]
+      description: >-
+        ADMIN additionally grants account-roster management
+        (docs/adr/0109-multi-account-scope.md); it never grants access to
+        another account's worlds or content.
+
+    Account:
+      type: object
+      required: [id, email, role, enabled, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/Role'
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+
+    RegistrationAccepted:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          examples:
+            - "If that email was available, your account has been created. Log in to continue."
+
+    UpdateRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+
+    ResetPasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        newPassword:
+          type: string
+          minLength: 12
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 12
 
     WorldRequest:
       type: object
