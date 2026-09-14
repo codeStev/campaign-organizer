@@ -81,13 +81,71 @@ async function safeProblemDetail(response: Response): Promise<string> {
   }
 }
 
-export async function login(password: string): Promise<void> {
+export async function login(email: string, password: string): Promise<void> {
   const result = await request<TokenResponse>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ email, password }),
   });
   setToken(result.token);
 }
+
+// ---- Accounts (ADR-0109/ADR-0110): self-registration, roles, roster management ----
+
+export type Role = 'ADMIN' | 'USER';
+
+export interface Account {
+  id: string;
+  email: string;
+  role: Role;
+  enabled: boolean;
+  createdAt: string;
+}
+
+interface RegistrationAccepted {
+  message: string;
+}
+
+/**
+ * Always resolves the same way whether or not the email was already taken
+ * (anti-enumeration, ADR-0110) — the returned message never confirms which.
+ */
+export async function registerAccount(email: string, password: string): Promise<string> {
+  const result = await request<RegistrationAccepted>('/accounts/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+  return result.message;
+}
+
+export function getCurrentAccount(): Promise<Account> {
+  return request<Account>('/accounts/me');
+}
+
+export function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
+  return request<void>('/accounts/me/password', {
+    method: 'PATCH',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+export function logoutAllSessions(): Promise<void> {
+  return request<void>('/accounts/me/logout-all', { method: 'POST' });
+}
+
+/** Admin-only account roster management. */
+export const accountsApi = {
+  list: () => request<Account[]>('/accounts'),
+  updateRole: (id: string, role: Role) =>
+    request<Account>(`/accounts/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  disable: (id: string) => request<Account>(`/accounts/${id}/disable`, { method: 'POST' }),
+  enable: (id: string) => request<Account>(`/accounts/${id}/enable`, { method: 'POST' }),
+  resetPassword: (id: string, newPassword: string) =>
+    request<void>(`/accounts/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    }),
+  remove: (id: string) => request<void>(`/accounts/${id}`, { method: 'DELETE' }),
+};
 
 export const worldsApi = {
   list: () => request<World[]>('/worlds'),

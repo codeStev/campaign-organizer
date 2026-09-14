@@ -5,9 +5,11 @@ import { Input } from '../components/ui/input';
 
 interface Props {
   onLoggedIn: () => void;
+  onRegister: () => void;
 }
 
-export function LoginPage({ onLoggedIn }: Props) {
+export function LoginPage({ onLoggedIn, onRegister }: Props) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -17,10 +19,10 @@ export function LoginPage({ onLoggedIn }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await login(password);
+      await login(email, password);
       onLoggedIn();
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? 'Wrong password' : 'Login failed');
+      setError(err instanceof ApiError && err.status === 401 ? 'Invalid email or password' : 'Login failed');
     } finally {
       setBusy(false);
     }
@@ -29,18 +31,33 @@ export function LoginPage({ onLoggedIn }: Props) {
   return (
     <form className="card login" onSubmit={handleSubmit}>
       <h2>Sign in</h2>
+      <label htmlFor="email">Email</label>
+      <Input
+        id="email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoFocus
+        data-testid="login-email"
+      />
       <label htmlFor="password">Password</label>
       <Input
         id="password"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        autoFocus
         data-testid="login-password"
       />
       {error && <p className="error">{error}</p>}
-      <Button type="submit" disabled={busy || password.length === 0} data-testid="login-submit">
+      <Button
+        type="submit"
+        disabled={busy || email.length === 0 || password.length === 0}
+        data-testid="login-submit"
+      >
         {busy ? 'Signing in…' : 'Sign in'}
+      </Button>
+      <Button type="button" variant="link" onClick={onRegister}>
+        Create an account
       </Button>
     </form>
   );

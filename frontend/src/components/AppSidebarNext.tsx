@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
 } from './ui/sidebar';
 import { useIsMobile } from '../hooks/use-mobile';
+import { Role } from '../api/client';
 
 /**
  * /next app-wide nav (docs/ui-overhaul-plan.md Phase 1) — two sections:
@@ -31,7 +32,9 @@ const LIBRARY_ITEMS = [
 
 const BOTTOM_ITEMS = [{ to: '/next/settings', label: 'Settings', icon: '⚙' }];
 
-export function AppSidebarNext() {
+const ADMIN_ITEMS = [{ to: '/next/accounts', label: 'Accounts', icon: '👤' }];
+
+export function AppSidebarNext({ role }: { role: Role }) {
   const location = useLocation();
   const isMobile = useIsMobile();
   const isActive = (to: string) => location.pathname.startsWith(to);
@@ -90,6 +93,17 @@ export function AppSidebarNext() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {role === 'ADMIN' &&
+                ADMIN_ITEMS.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild size="sm" isActive={isActive(item.to)}>
+                      <NavLink to={item.to}>
+                        <span aria-hidden="true">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
