@@ -23,11 +23,15 @@ public final class Account {
     private int tokenVersion;
     private int failedAttempts;
     private Instant lockedUntil;
+    private MfaMethod mfaMethod;
+    private String totpSecretEncrypted;
+    private String totpSecretPendingEncrypted;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private Account(UUID id, String email, String passwordHash, Role role, boolean enabled, int tokenVersion,
-                    int failedAttempts, Instant lockedUntil, Instant createdAt, Instant updatedAt) {
+                    int failedAttempts, Instant lockedUntil, MfaMethod mfaMethod, String totpSecretEncrypted,
+                    String totpSecretPendingEncrypted, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -35,20 +39,24 @@ public final class Account {
         this.tokenVersion = tokenVersion;
         this.failedAttempts = failedAttempts;
         this.lockedUntil = lockedUntil;
+        this.mfaMethod = mfaMethod == null ? MfaMethod.NONE : mfaMethod;
+        this.totpSecretEncrypted = totpSecretEncrypted;
+        this.totpSecretPendingEncrypted = totpSecretPendingEncrypted;
         applyEmail(email);
         applyPasswordHash(passwordHash);
         this.role = requireRole(role);
     }
 
     public static Account create(UUID id, String email, String passwordHash, Role role, Instant now) {
-        return new Account(id, email, passwordHash, role, true, 0, 0, null, now, now);
+        return new Account(id, email, passwordHash, role, true, 0, 0, null, MfaMethod.NONE, null, null, now, now);
     }
 
     public static Account reconstitute(UUID id, String email, String passwordHash, Role role, boolean enabled,
-                                       int tokenVersion, int failedAttempts, Instant lockedUntil, Instant createdAt,
-                                       Instant updatedAt) {
+                                       int tokenVersion, int failedAttempts, Instant lockedUntil, MfaMethod mfaMethod,
+                                       String totpSecretEncrypted, String totpSecretPendingEncrypted,
+                                       Instant createdAt, Instant updatedAt) {
         return new Account(id, email, passwordHash, role, enabled, tokenVersion, failedAttempts, lockedUntil,
-                createdAt, updatedAt);
+                mfaMethod, totpSecretEncrypted, totpSecretPendingEncrypted, createdAt, updatedAt);
     }
 
     /** Password change bumps the token version: every previously-issued token stops working. */
@@ -79,6 +87,48 @@ public final class Account {
 
     /** Self- or admin-triggered "log out everywhere": bumps the token version with no other side effect. */
     public void logoutAll(Instant now) {
+        this.tokenVersion++;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Stores a new in-progress TOTP secret pending confirmation. Doesn't touch the active
+     * method/secret — calling this again before confirming just replaces the pending attempt.
+     * Only valid while no MFA method is active yet; replacing an already-active method goes
+     * through {@link #resetMfaForRecovery} instead (ADR-0111).
+     */
+    public void beginTotpEnrollment(String pendingSecretEncrypted, Instant now) {
+        if (mfaMethod != MfaMethod.NONE) {
+            throw new ValidationException("Account already has an active MFA method");
+        }
+        if (pendingSecretEncrypted == null || pendingSecretEncrypted.isBlank()) {
+            throw new ValidationException("Pending TOTP secret must not be blank");
+        }
+        this.totpSecretPendingEncrypted = pendingSecretEncrypted;
+        this.updatedAt = now;
+    }
+
+    /** Promotes the pending TOTP secret to active once its code has been verified by the caller. */
+    public void completeTotpEnrollment(Instant now) {
+        if (totpSecretPendingEncrypted == null) {
+            throw new ValidationException("No pending TOTP enrollment to confirm");
+        }
+        this.mfaMethod = MfaMethod.TOTP;
+        this.totpSecretEncrypted = totpSecretPendingEncrypted;
+        this.totpSecretPendingEncrypted = null;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Spending a recovery code to regain access resets MFA back to unset rather than granting
+     * full access outright — the lost device may be gone for good, so re-enrollment is forced
+     * through the normal setup path. Bumps the token version: any other outstanding token
+     * (a stale session on another device) is invalidated by this same security-relevant event.
+     */
+    public void resetMfaForRecovery(Instant now) {
+        this.mfaMethod = MfaMethod.NONE;
+        this.totpSecretEncrypted = null;
+        this.totpSecretPendingEncrypted = null;
         this.tokenVersion++;
         this.updatedAt = now;
     }
@@ -152,6 +202,18 @@ public final class Account {
 
     public Instant getLockedUntil() {
         return lockedUntil;
+    }
+
+    public MfaMethod getMfaMethod() {
+        return mfaMethod;
+    }
+
+    public String getTotpSecretEncrypted() {
+        return totpSecretEncrypted;
+    }
+
+    public String getTotpSecretPendingEncrypted() {
+        return totpSecretPendingEncrypted;
     }
 
     public Instant getCreatedAt() {

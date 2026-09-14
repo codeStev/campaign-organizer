@@ -36,6 +36,15 @@ public class AccountJpaEntity {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    @Column(name = "mfa_method", nullable = false, length = 20)
+    private String mfaMethod;
+
+    @Column(name = "totp_secret_encrypted", length = 500)
+    private String totpSecretEncrypted;
+
+    @Column(name = "totp_secret_pending_encrypted", length = 500)
+    private String totpSecretPendingEncrypted;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -107,6 +116,30 @@ public class AccountJpaEntity {
 
     public void setLockedUntil(Instant lockedUntil) {
         this.lockedUntil = lockedUntil;
+    }
+
+    public String getMfaMethod() {
+        return mfaMethod;
+    }
+
+    public void setMfaMethod(String mfaMethod) {
+        this.mfaMethod = mfaMethod;
+    }
+
+    public String getTotpSecretEncrypted() {
+        return totpSecretEncrypted;
+    }
+
+    public void setTotpSecretEncrypted(String totpSecretEncrypted) {
+        this.totpSecretEncrypted = totpSecretEncrypted;
+    }
+
+    public String getTotpSecretPendingEncrypted() {
+        return totpSecretPendingEncrypted;
+    }
+
+    public void setTotpSecretPendingEncrypted(String totpSecretPendingEncrypted) {
+        this.totpSecretPendingEncrypted = totpSecretPendingEncrypted;
     }
 
     public Instant getCreatedAt() {
