@@ -77,6 +77,16 @@ export function AccountsPage({ onAuthExpired }: Props) {
     }
   }
 
+  async function resetMfa(account: Account) {
+    try {
+      const updated = await accountsApi.resetMfa(account.id);
+      setAccounts((a) => a.map((x) => (x.id === updated.id ? updated : x)));
+      toast.success(`MFA cleared for ${updated.email} — they'll be asked to re-enroll`);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   async function removeAccount(account: Account) {
     try {
       await accountsApi.remove(account.id);
@@ -102,6 +112,8 @@ export function AccountsPage({ onAuthExpired }: Props) {
               <small className="muted">
                 — {a.role}
                 {!a.enabled && ' · disabled'}
+                {' · MFA: '}
+                {a.mfaMethod === 'NONE' ? 'not set up' : a.mfaMethod}
               </small>
             </span>
             <select
@@ -147,6 +159,18 @@ export function AccountsPage({ onAuthExpired }: Props) {
               <Button type="button" variant="link" onClick={() => setResettingId(a.id)}>
                 Reset password
               </Button>
+            )}
+            {a.mfaMethod !== 'NONE' && (
+              <ConfirmDeleteDialog
+                trigger={
+                  <Button type="button" variant="link">
+                    Reset MFA
+                  </Button>
+                }
+                title="Reset MFA?"
+                description={`${a.email} will be signed out everywhere and asked to set up two-factor authentication again on next login.`}
+                onConfirm={() => resetMfa(a)}
+              />
             )}
             <ConfirmDeleteDialog
               trigger={

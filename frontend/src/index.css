@@ -211,6 +211,30 @@ button:disabled {
   color: var(--destructive);
 }
 
+/* MFA recovery-codes display (ADR-0111) — shown exactly once at enrollment. */
+.recovery-codes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.recovery-codes code {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  background: var(--muted);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Worlds list: make the whole card body a clickable open target. */
 .world-open {
   background: none;

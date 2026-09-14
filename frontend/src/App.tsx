@@ -1,8 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import { getToken, clearToken, getCurrentAccount, worldsApi, World, Role, ApiError } from './api/client';
+import {
+  getToken,
+  setToken,
+  clearToken,
+  getCurrentAccount,
+  worldsApi,
+  World,
+  Role,
+  MfaMethod,
+  LoginResponse,
+  ApiError,
+} from './api/client';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { RecoverPasswordPage } from './pages/RecoverPasswordPage';
+import { MfaSetupPage } from './pages/MfaSetupPage';
+import { MfaChallengePage } from './pages/MfaChallengePage';
 import { NextGlobalTemplatesPanel } from './pages/NextGlobalTemplatesPanel';
 import { NextGlobalStatblocksPanel } from './pages/NextGlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
@@ -18,13 +32,27 @@ import { TooltipProvider } from './components/ui/tooltip';
 import { Toaster } from './components/ui/sonner';
 import { SidebarInset, SidebarProvider } from './components/ui/sidebar';
 
+/**
+ * A correct password never grants full access on its own (ADR-0111, mandatory MFA) — login
+ * lands in 'mfa-setup' or 'mfa-challenge' with a PASSWORD-only pending token, never straight
+ * into 'authenticated'.
+ */
+type AuthStage =
+  | { kind: 'anonymous' }
+  | { kind: 'register' }
+  | { kind: 'recover-password' }
+  | { kind: 'mfa-setup'; pendingToken: string }
+  | { kind: 'mfa-challenge'; pendingToken: string; method: MfaMethod }
+  | { kind: 'authenticated' };
+
 export function App() {
-  const [authed, setAuthed] = useState(() => getToken() !== null);
+  const [stage, setStage] = useState<AuthStage>(() =>
+    getToken() !== null ? { kind: 'authenticated' } : { kind: 'anonymous' },
+  );
   const [role, setRole] = useState<Role | null>(null);
-  const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
-    if (!authed) {
+    if (stage.kind !== 'authenticated') {
       setRole(null);
       return;
     }
@@ -32,11 +60,28 @@ export function App() {
       .then((account) => setRole(account.role))
       .catch(() => handleLogout());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authed]);
+  }, [stage]);
 
   function handleLogout() {
     clearToken();
-    setAuthed(false);
+    setStage({ kind: 'anonymous' });
+  }
+
+  function handleLoginResult(result: LoginResponse) {
+    setStage(
+      result.status === 'MFA_SETUP_REQUIRED'
+        ? { kind: 'mfa-setup', pendingToken: result.token }
+        : { kind: 'mfa-challenge', pendingToken: result.token, method: result.method! },
+    );
+  }
+
+  function handleAuthenticated(fullToken: string) {
+    setToken(fullToken);
+    setStage({ kind: 'authenticated' });
+  }
+
+  function handleNeedsSetup(pendingToken: string) {
+    setStage({ kind: 'mfa-setup', pendingToken });
   }
 
   return (
@@ -46,7 +91,7 @@ export function App() {
           <h1>Campaign Organizer</h1>
           <div className="app-header-actions">
             <ThemeToggle />
-            {authed && (
+            {stage.kind === 'authenticated' && (
               <Button variant="link" onClick={handleLogout}>
                 Log out
               </Button>
@@ -54,22 +99,44 @@ export function App() {
           </div>
         </header>
         <div className="app-body">
-          {!authed ? (
-            showRegister ? (
-              <RegisterPage onBackToLogin={() => setShowRegister(false)} />
-            ) : (
-              <LoginPage onLoggedIn={() => setAuthed(true)} onRegister={() => setShowRegister(true)} />
-            )
-          ) : !role ? (
-            <p className="muted">Loading…</p>
-          ) : (
-            <Routes>
-              <Route path="/" element={<Navigate to="/next" replace />} />
-              <Route path="/next/worlds/:worldId/*" element={<NextWorldViewRoute onAuthExpired={handleLogout} />} />
-              <Route path="/next/*" element={<AppShellNext onAuthExpired={handleLogout} role={role} />} />
-              <Route path="*" element={<Navigate to="/next" replace />} />
-            </Routes>
+          {stage.kind === 'anonymous' && (
+            <LoginPage
+              onLoginResult={handleLoginResult}
+              onRegister={() => setStage({ kind: 'register' })}
+              onForgotPassword={() => setStage({ kind: 'recover-password' })}
+            />
           )}
+          {stage.kind === 'register' && (
+            <RegisterPage onBackToLogin={() => setStage({ kind: 'anonymous' })} />
+          )}
+          {stage.kind === 'recover-password' && (
+            <RecoverPasswordPage onBackToLogin={() => setStage({ kind: 'anonymous' })} />
+          )}
+          {stage.kind === 'mfa-setup' && (
+            <MfaSetupPage pendingToken={stage.pendingToken} onAuthenticated={handleAuthenticated} />
+          )}
+          {stage.kind === 'mfa-challenge' && (
+            <MfaChallengePage
+              pendingToken={stage.pendingToken}
+              method={stage.method}
+              onAuthenticated={handleAuthenticated}
+              onNeedsSetup={handleNeedsSetup}
+            />
+          )}
+          {stage.kind === 'authenticated' &&
+            (!role ? (
+              <p className="muted">Loading…</p>
+            ) : (
+              <Routes>
+                <Route path="/" element={<Navigate to="/next" replace />} />
+                <Route
+                  path="/next/worlds/:worldId/*"
+                  element={<NextWorldViewRoute onAuthExpired={handleLogout} />}
+                />
+                <Route path="/next/*" element={<AppShellNext onAuthExpired={handleLogout} role={role} />} />
+                <Route path="*" element={<Navigate to="/next" replace />} />
+              </Routes>
+            ))}
         </div>
         <Toaster position="bottom-right" />
       </div>

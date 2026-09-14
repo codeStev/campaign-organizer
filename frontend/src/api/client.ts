@@ -17,7 +17,7 @@ export interface WorldRequest {
   scratch?: boolean;
 }
 
-interface TokenResponse {
+export interface TokenResponse {
   token: string;
   tokenType: string;
   expiresAt: string;
@@ -46,8 +46,15 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken();
+/**
+ * `tokenOverride` lets the MFA setup/challenge flow (ADR-0111) send its short-lived,
+ * PASSWORD-only pending token explicitly — that token deliberately isn't stored via
+ * setToken()/getToken() (the "real" token used everywhere else), since it isn't usable for
+ * general API access and storing it there would make the app briefly look logged-in before
+ * MFA is actually complete.
+ */
+async function request<T>(path: string, init: RequestInit = {}, tokenOverride?: string): Promise<T> {
+  const token = tokenOverride ?? getToken();
   const headers = new Headers(init.headers);
   if (init.body) {
     headers.set('Content-Type', 'application/json');
@@ -81,23 +88,94 @@ async function safeProblemDetail(response: Response): Promise<string> {
   }
 }
 
-export async function login(email: string, password: string): Promise<void> {
-  const result = await request<TokenResponse>('/auth/login', {
+// ---- Login and MFA (ADR-0111): a correct password alone never grants full access ----
+
+export type LoginStatus = 'MFA_SETUP_REQUIRED' | 'MFA_CHALLENGE_REQUIRED';
+
+export interface LoginResponse {
+  status: LoginStatus;
+  /** PASSWORD-only pending token — pass to the MFA functions below, don't store via setToken(). */
+  token: string;
+  tokenType: string;
+  expiresAt: string;
+  /** Present only when status is MFA_CHALLENGE_REQUIRED. */
+  method: MfaMethod | null;
+}
+
+/**
+ * Never resolves to a directly-usable token — the caller must inspect `status` and continue
+ * through either /auth/mfa/setup/** (MFA_SETUP_REQUIRED) or /auth/mfa/verify* (MFA_CHALLENGE_REQUIRED).
+ */
+export function login(email: string, password: string): Promise<LoginResponse> {
+  return request<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  setToken(result.token);
+}
+
+export interface TotpSetupStart {
+  secret: string;
+  provisioningUri: string;
+  qrCodeDataUri: string;
+}
+
+export interface MfaEnrollmentResult {
+  token: string;
+  tokenType: string;
+  expiresAt: string;
+  /** Shown only in this response — the caller must display them once and move on. */
+  recoveryCodes: string[];
+}
+
+export function startTotpSetup(pendingToken: string): Promise<TotpSetupStart> {
+  return request<TotpSetupStart>('/auth/mfa/setup/totp/start', { method: 'POST' }, pendingToken);
+}
+
+export function confirmTotpSetup(pendingToken: string, code: string): Promise<MfaEnrollmentResult> {
+  return request<MfaEnrollmentResult>(
+    '/auth/mfa/setup/totp/confirm',
+    { method: 'POST', body: JSON.stringify({ code }) },
+    pendingToken,
+  );
+}
+
+export function verifyTotpChallenge(pendingToken: string, code: string): Promise<TokenResponse> {
+  return request<TokenResponse>(
+    '/auth/mfa/verify',
+    { method: 'POST', body: JSON.stringify({ code }) },
+    pendingToken,
+  );
+}
+
+/** Consumes one recovery code and forces re-enrollment (the old device may be gone for good). */
+export function verifyRecoveryCode(pendingToken: string, recoveryCode: string): Promise<LoginResponse> {
+  return request<LoginResponse>(
+    '/auth/mfa/verify-recovery-code',
+    { method: 'POST', body: JSON.stringify({ recoveryCode }) },
+    pendingToken,
+  );
+}
+
+/** No token involved — identity is proven by the recovery code itself. */
+export function recoverPassword(email: string, recoveryCode: string, newPassword: string): Promise<void> {
+  return request<void>('/auth/recover-password', {
+    method: 'POST',
+    body: JSON.stringify({ email, recoveryCode, newPassword }),
+  });
 }
 
 // ---- Accounts (ADR-0109/ADR-0110): self-registration, roles, roster management ----
 
 export type Role = 'ADMIN' | 'USER';
 
+export type MfaMethod = 'NONE' | 'TOTP' | 'WEBAUTHN';
+
 export interface Account {
   id: string;
   email: string;
   role: Role;
   enabled: boolean;
+  mfaMethod: MfaMethod;
   createdAt: string;
 }
 
@@ -144,6 +222,8 @@ export const accountsApi = {
       method: 'POST',
       body: JSON.stringify({ newPassword }),
     }),
+  /** Forces re-enrollment (ADR-0111) — the recovery path for a lost device or a suspicious enrollment. */
+  resetMfa: (id: string) => request<Account>(`/accounts/${id}/reset-mfa`, { method: 'POST' }),
   remove: (id: string) => request<void>(`/accounts/${id}`, { method: 'DELETE' }),
 };
 

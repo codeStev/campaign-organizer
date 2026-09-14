@@ -1,14 +1,17 @@
 import { FormEvent, useState } from 'react';
-import { login, ApiError } from '../api/client';
+import { login, ApiError, LoginResponse } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
 interface Props {
-  onLoggedIn: () => void;
+  /** A correct password never grants full access on its own (ADR-0111) — the caller decides
+   * whether to route into MFA setup or a challenge based on `result.status`. */
+  onLoginResult: (result: LoginResponse) => void;
   onRegister: () => void;
+  onForgotPassword: () => void;
 }
 
-export function LoginPage({ onLoggedIn, onRegister }: Props) {
+export function LoginPage({ onLoginResult, onRegister, onForgotPassword }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -19,8 +22,8 @@ export function LoginPage({ onLoggedIn, onRegister }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await login(email, password);
-      onLoggedIn();
+      const result = await login(email, password);
+      onLoginResult(result);
     } catch (err) {
       setError(err instanceof ApiError && err.status === 401 ? 'Invalid email or password' : 'Login failed');
     } finally {
@@ -58,6 +61,9 @@ export function LoginPage({ onLoggedIn, onRegister }: Props) {
       </Button>
       <Button type="button" variant="link" onClick={onRegister}>
         Create an account
+      </Button>
+      <Button type="button" variant="link" onClick={onForgotPassword}>
+        Forgot password?
       </Button>
     </form>
   );
