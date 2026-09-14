@@ -29,6 +29,20 @@ server:
   error:
     include-message: always
 
+# Explicit even though these match Boot's own defaults: only /actuator/health
+# is reachable over HTTP, and it never returns component details (DB URL,
+# disk paths, etc.) to a caller — this is a public, unauthenticated path
+# (see SecurityConfig.PUBLIC_API_PATHS) for container/orchestrator liveness
+# checks, so nothing beyond a bare UP/DOWN status may ever be exposed there.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 app:
   # Per-account authentication (see docs/adr/0110-self-registration-and-role-based-jwt.md).
   jwt:
