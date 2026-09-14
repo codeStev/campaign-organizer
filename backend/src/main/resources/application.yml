@@ -52,6 +52,13 @@ app:
     # explicit revocation (disable/role change/password reset/logout-all)
     # takes effect immediately regardless, via the account's token_version.
     expiration-hours: ${APP_JWT_EXPIRATION_HOURS:24}
+  # TOTP secret encryption at rest (see docs/adr/0111-mandatory-mfa.md). Both values feed
+  # Spring Security Crypto's Encryptors.delux(key, salt) — override both in production; the
+  # salt isn't secret but must stay fixed (changing it makes every already-encrypted secret
+  # undecryptable, forcing every TOTP-enrolled account to re-enroll).
+  mfa:
+    encryption-key: ${APP_MFA_ENCRYPTION_KEY:dev-mfa-key-change-me-in-production}
+    encryption-salt: ${APP_MFA_ENCRYPTION_SALT:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4}
   media:
     # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
     dir: ${APP_MEDIA_DIR:./data/media}

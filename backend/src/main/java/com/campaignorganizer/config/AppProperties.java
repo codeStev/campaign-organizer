@@ -6,12 +6,26 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Strongly-typed access to {@code app.*} configuration.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Jwt jwt, Media media, Ai ai) {
+public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa) {
 
     public record Jwt(String secret, long expirationHours) {
     }
 
     public record Media(String dir) {
+    }
+
+    /**
+     * Key material for encrypting TOTP secrets at rest (ADR-0111) — never the secrets
+     * themselves. {@code encryptionKey} is the password fed into Spring Security Crypto's
+     * {@code Encryptors.delux(password, salt)} (AES-256-GCM under a text/Base64 wrapper —
+     * {@code Encryptors.stronger(...)} returns the lower-level {@code BytesEncryptor} this
+     * wraps, not a {@code TextEncryptor}, so {@code delux} is the one that fits a VARCHAR
+     * column directly); {@code encryptionSalt} is a fixed, hex-encoded, non-secret salt for
+     * its PBKDF2 key derivation (each encrypted value still gets its own random GCM IV, so
+     * one fixed salt for the whole app is the documented, standard usage — not a per-value
+     * secret).
+     */
+    public record Mfa(String encryptionKey, String encryptionSalt) {
     }
 
     /**
