@@ -8,10 +8,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -21,7 +25,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Reads the {@code Authorization: Bearer <jwt>} header and, if the token is
  * well-formed and the account it names is still valid, populates the
- * security context with that account's id and role.
+ * security context with that account's id, role, and completed
+ * authentication factors.
  *
  * "Still valid" is checked against the database on every request, not just
  * the token's own signature/expiry: an account that's been disabled, had its
@@ -29,6 +34,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * existing tokens invalidated immediately rather than waiting out the
  * token's natural expiry (ADR-0110) — a deliberate, small move away from
  * pure statelessness in exchange for actual revocability.
+ *
+ * Each entry in the token's {@code factors} claim becomes a real
+ * {@link FactorGrantedAuthority} here, exactly as Spring Security's own
+ * {@code AuthenticationProvider}s would grant one at login time — the
+ * {@code multiFactor()} authorization rule in
+ * {@code com.campaignorganizer.config.SecurityConfig} only cares that the
+ * authority is present, not how it got there (ADR-0111).
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -77,6 +89,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 .filter(AccountView::enabled)
                 .filter(account -> account.tokenVersion() == parsed.tokenVersion())
                 .map(account -> new UsernamePasswordAuthenticationToken(
-                        account.id(), null, List.of(new SimpleGrantedAuthority(ROLE_PREFIX + account.role()))));
+                        account.id(), null, authorities(account, parsed)));
+    }
+
+    private List<GrantedAuthority> authorities(AccountView account, ParsedToken parsed) {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + account.role()));
+        Instant issuedAt = Instant.now();
+        for (String factor : parsed.factors()) {
+            authorities.add(FactorGrantedAuthority.withFactor(factor).issuedAt(issuedAt).build());
+        }
+        return authorities;
     }
 }
