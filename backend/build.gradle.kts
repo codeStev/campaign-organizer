@@ -2,7 +2,11 @@ import org.gradle.api.tasks.testing.Test
 
 plugins {
     java
-    id("org.springframework.boot") version "4.1.0"
+    // 4.1.1, not 4.1.0: manages Spring Security 7.1.1, which fixes CVE-2026-47841
+    // (WebAuthn user-verification bypass via session deserialization identity comparison).
+    // Doesn't affect this app's exploit surface directly (no distributed session store here),
+    // but there's no reason to build new WebAuthn support on a version with a known WebAuthn CVE.
+    id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
     jacoco
 }
