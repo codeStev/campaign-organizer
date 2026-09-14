@@ -2,6 +2,7 @@ package com.campaignorganizer.ai.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -19,8 +20,10 @@ import com.campaignorganizer.ai.domain.ArticleKind;
 import com.campaignorganizer.ai.domain.DraftLevel;
 import com.campaignorganizer.ai.domain.DraftResult;
 import com.campaignorganizer.ai.domain.ProviderSetting;
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +45,8 @@ class DraftArticleTextServiceTest {
     private TextGenerationPort openRouter;
     @Mock
     private AiProviderSettingsRepositoryPort settingsRepository;
+    @Mock
+    private CurrentUserPort currentUser;
 
     private DraftArticleTextService service;
 
@@ -53,10 +58,11 @@ class DraftArticleTextServiceTest {
         lenient().when(openRouter.providerId()).thenReturn("openrouter");
         lenient().when(openRouter.defaultModel()).thenReturn("openrouter-default");
         lenient().when(openRouter.configured()).thenReturn(true);
+        lenient().when(currentUser.currentAccountId()).thenReturn(UUID.randomUUID());
         // Empty settings -> DefaultProviderSettings.orDefaults() applies: groq then openrouter.
-        lenient().when(settingsRepository.findAllOrderedByPriority()).thenReturn(List.of());
+        lenient().when(settingsRepository.findAllOrderedByPriority(any())).thenReturn(List.of());
         service = new DraftArticleTextService(
-                new ProviderFallbackTextGenerator(List.of(groq, openRouter), settingsRepository));
+                new ProviderFallbackTextGenerator(List.of(groq, openRouter), settingsRepository, currentUser));
     }
 
     @Test
@@ -168,7 +174,7 @@ class DraftArticleTextServiceTest {
 
     @Test
     void savedPrioritySwapsTryOrder() {
-        when(settingsRepository.findAllOrderedByPriority()).thenReturn(List.of(
+        when(settingsRepository.findAllOrderedByPriority(any())).thenReturn(List.of(
                 new ProviderSetting("openrouter", "custom-model", 0),
                 new ProviderSetting("groq", null, 1)));
         when(openRouter.generate(anyString(), anyString(), eq("custom-model")))

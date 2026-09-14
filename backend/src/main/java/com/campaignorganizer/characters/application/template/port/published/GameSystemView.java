@@ -4,6 +4,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 /** Published read model for a game system. */
-public record GameSystemView(UUID id, String name, String tagline, String color, String notes,
+public record GameSystemView(UUID id, String name, String tagline, String color, String notes, UUID ownerId,
                              Instant createdAt, Instant updatedAt) {
 }

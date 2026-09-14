@@ -1,0 +1,52 @@
+name: CodeQL
+
+# Static analysis (SAST) for both languages in this repo. Added alongside the
+# multi-account/self-registration rework (ADR-0109/ADR-0110) — nothing like
+# this existed before, and the app now handles real credentials for
+# internet-facing accounts rather than a single trusted owner.
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+  schedule:
+    # Weekly, independent of any push — catches newly-disclosed query
+    # patterns against code that hasn't changed.
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # Java needs an actual build so CodeQL can trace through compiled code;
+      # JS/TS is analyzed source-only (autobuild is a no-op for it).
+      - uses: actions/setup-java@v5
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+      - name: Build backend
+        if: matrix.language == 'java-kotlin'
+        run: ./gradlew --no-daemon :backend:compileJava :backend:compileTestJava
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

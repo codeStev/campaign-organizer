@@ -13,11 +13,12 @@ class GameSystemTest {
 
     private static final Instant T0 = Instant.parse("2026-01-01T00:00:00Z");
     private static final Instant T1 = Instant.parse("2026-02-02T00:00:00Z");
+    private static final UUID OWNER_ID = UUID.randomUUID();
 
     @Test
     void updateBumpsUpdatedAt() {
         GameSystem s = GameSystem.create(UUID.randomUUID(), "D&D 5e", "Crunchy d20 fantasy", "#c0392b",
-                "SRD: https://example.com", T0);
+                "SRD: https://example.com", OWNER_ID, T0);
         s.update("D&D 5e (revised)", "Still crunchy", "#e74c3c", "Updated notes", T1);
 
         assertThat(s.getName()).isEqualTo("D&D 5e (revised)");
@@ -30,7 +31,7 @@ class GameSystemTest {
 
     @Test
     void taglineColorAndNotesAreOptional() {
-        GameSystem s = GameSystem.create(UUID.randomUUID(), "Triangle Agency", null, null, null, T0);
+        GameSystem s = GameSystem.create(UUID.randomUUID(), "Triangle Agency", null, null, null, OWNER_ID, T0);
 
         assertThat(s.getTagline()).isNull();
         assertThat(s.getColor()).isNull();
@@ -39,13 +40,13 @@ class GameSystemTest {
 
     @Test
     void rejectsBlankName() {
-        assertThatThrownBy(() -> GameSystem.create(UUID.randomUUID(), " ", null, null, null, T0))
+        assertThatThrownBy(() -> GameSystem.create(UUID.randomUUID(), " ", null, null, null, OWNER_ID, T0))
                 .isInstanceOf(ValidationException.class);
     }
 
     @Test
     void rejectsNullName() {
-        assertThatThrownBy(() -> GameSystem.create(UUID.randomUUID(), null, null, null, null, T0))
+        assertThatThrownBy(() -> GameSystem.create(UUID.randomUUID(), null, null, null, null, OWNER_ID, T0))
                 .isInstanceOf(ValidationException.class);
     }
 }

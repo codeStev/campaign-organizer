@@ -4,6 +4,7 @@ import com.campaignorganizer.ai.application.port.in.TestAiProviderUseCase;
 import com.campaignorganizer.ai.application.port.out.AiProviderSettingsRepositoryPort;
 import com.campaignorganizer.ai.application.port.out.TextGenerationFailedException;
 import com.campaignorganizer.ai.application.port.out.TextGenerationPort;
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,13 @@ public class TestAiProviderService implements TestAiProviderUseCase {
 
     private final List<TextGenerationPort> providers;
     private final AiProviderSettingsRepositoryPort settings;
+    private final CurrentUserPort currentUser;
 
-    public TestAiProviderService(List<TextGenerationPort> providers, AiProviderSettingsRepositoryPort settings) {
+    public TestAiProviderService(List<TextGenerationPort> providers, AiProviderSettingsRepositoryPort settings,
+                                 CurrentUserPort currentUser) {
         this.providers = providers;
         this.settings = settings;
+        this.currentUser = currentUser;
     }
 
     @Override
@@ -49,7 +53,7 @@ public class TestAiProviderService implements TestAiProviderUseCase {
     }
 
     private String persistedModel(String providerId) {
-        return settings.findAllOrderedByPriority().stream()
+        return settings.findAllOrderedByPriority(currentUser.currentAccountId()).stream()
                 .filter(s -> s.providerId().equals(providerId))
                 .findAny()
                 .map(s -> s.model())

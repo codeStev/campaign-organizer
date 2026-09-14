@@ -13,6 +13,6 @@ public interface GameSystemPersistenceMapper {
             return null;
         }
         return GameSystem.reconstitute(e.getId(), e.getName(), e.getTagline(), e.getColor(), e.getNotes(),
-                e.getCreatedAt(), e.getUpdatedAt());
+                e.getOwnerId(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

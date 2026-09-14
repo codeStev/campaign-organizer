@@ -15,27 +15,35 @@ public final class World {
     private Map<String, LayerStyle> layerStyles;
     /** Cosmetic-only sandbox/brainstorming flag (FR-60, ADR-0100) — no functional effect. */
     private boolean scratch;
+    /**
+     * The account this World belongs to (ADR-0109). Nullable only for rows that
+     * predate accounts entirely — backfilled to the first-registered (ADMIN)
+     * account at that registration; never null for a World created after that.
+     */
+    private UUID ownerId;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private World(UUID id, String name, String description, Map<String, LayerStyle> layerStyles,
-                  boolean scratch, Instant createdAt, Instant updatedAt) {
+                  boolean scratch, UUID ownerId, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.layerStyles = layerStyles == null ? new HashMap<>() : layerStyles;
         this.scratch = scratch;
+        this.ownerId = ownerId;
         applyDetails(name, description);
     }
 
-    public static World create(UUID id, String name, String description, boolean scratch, Instant now) {
-        return new World(id, name, description, new HashMap<>(), scratch, now, now);
+    public static World create(UUID id, String name, String description, boolean scratch, UUID ownerId,
+                               Instant now) {
+        return new World(id, name, description, new HashMap<>(), scratch, ownerId, now, now);
     }
 
     public static World reconstitute(UUID id, String name, String description,
-                                     Map<String, LayerStyle> layerStyles, boolean scratch, Instant createdAt,
-                                     Instant updatedAt) {
-        return new World(id, name, description, layerStyles, scratch, createdAt, updatedAt);
+                                     Map<String, LayerStyle> layerStyles, boolean scratch, UUID ownerId,
+                                     Instant createdAt, Instant updatedAt) {
+        return new World(id, name, description, layerStyles, scratch, ownerId, createdAt, updatedAt);
     }
 
     public void update(String name, String description, boolean scratch, Instant now) {
@@ -75,6 +83,10 @@ public final class World {
 
     public boolean isScratch() {
         return scratch;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
     }
 
     public Instant getCreatedAt() {

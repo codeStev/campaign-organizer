@@ -21,13 +21,14 @@ public class GlobalFieldTemplatePersistenceAdapter implements GlobalFieldTemplat
     }
 
     @Override
-    public List<GlobalFieldTemplate> findAll() {
-        return repository.findAllByOrderByCreatedAtDesc().stream().map(mapper::toDomain).toList();
+    public List<GlobalFieldTemplate> findAllByOwnerId(UUID ownerId) {
+        return repository.findAllByOwnerIdOrderByCreatedAtDesc(ownerId).stream().map(mapper::toDomain).toList();
     }
 
     @Override
-    public List<GlobalFieldTemplate> findByKind(TemplateKind kind) {
-        return repository.findByKindOrderByCreatedAtDesc(kind).stream().map(mapper::toDomain).toList();
+    public List<GlobalFieldTemplate> findByOwnerIdAndKind(UUID ownerId, TemplateKind kind) {
+        return repository.findByOwnerIdAndKindOrderByCreatedAtDesc(ownerId, kind).stream()
+                .map(mapper::toDomain).toList();
     }
 
     @Override
@@ -54,5 +55,10 @@ public class GlobalFieldTemplatePersistenceAdapter implements GlobalFieldTemplat
     @Override
     public void delete(GlobalFieldTemplate template) {
         repository.deleteById(template.getId());
+    }
+
+    @Override
+    public void assignUnownedTo(UUID ownerId) {
+        repository.assignUnownedTo(ownerId);
     }
 }

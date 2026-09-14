@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import { getToken, clearToken, worldsApi, World, ApiError } from './api/client';
+import { getToken, clearToken, getCurrentAccount, worldsApi, World, Role, ApiError } from './api/client';
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { NextGlobalTemplatesPanel } from './pages/NextGlobalTemplatesPanel';
 import { NextGlobalStatblocksPanel } from './pages/NextGlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
 import { WorldsNextPage } from './pages/WorldsNextPage';
 import { NextSettingsPage } from './pages/NextSettingsPage';
+import { AccountsPage } from './pages/AccountsPage';
 import { WorldViewNext } from './pages/WorldViewNext';
 import { AppSidebarNext } from './components/AppSidebarNext';
 import { NextTopBar } from './components/NextTopBar';
@@ -18,6 +20,19 @@ import { SidebarInset, SidebarProvider } from './components/ui/sidebar';
 
 export function App() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
+
+  useEffect(() => {
+    if (!authed) {
+      setRole(null);
+      return;
+    }
+    getCurrentAccount()
+      .then((account) => setRole(account.role))
+      .catch(() => handleLogout());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed]);
 
   function handleLogout() {
     clearToken();
@@ -40,12 +55,18 @@ export function App() {
         </header>
         <div className="app-body">
           {!authed ? (
-            <LoginPage onLoggedIn={() => setAuthed(true)} />
+            showRegister ? (
+              <RegisterPage onBackToLogin={() => setShowRegister(false)} />
+            ) : (
+              <LoginPage onLoggedIn={() => setAuthed(true)} onRegister={() => setShowRegister(true)} />
+            )
+          ) : !role ? (
+            <p className="muted">Loading…</p>
           ) : (
             <Routes>
               <Route path="/" element={<Navigate to="/next" replace />} />
               <Route path="/next/worlds/:worldId/*" element={<NextWorldViewRoute onAuthExpired={handleLogout} />} />
-              <Route path="/next/*" element={<AppShellNext onAuthExpired={handleLogout} />} />
+              <Route path="/next/*" element={<AppShellNext onAuthExpired={handleLogout} role={role} />} />
               <Route path="*" element={<Navigate to="/next" replace />} />
             </Routes>
           )}
@@ -61,7 +82,7 @@ export function App() {
  * persistent sidebar beside the routed content. A World takes over the
  * screen with its own in-world sidebar instead of nesting under this one.
  */
-function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
+function AppShellNext({ onAuthExpired, role }: { onAuthExpired: () => void; role: Role }) {
   const location = useLocation();
   const [navOpen, setNavOpen] = useState(false);
   // Tapping a nav link doesn't otherwise close the mobile drawer — the
@@ -74,13 +95,16 @@ function AppShellNext({ onAuthExpired }: { onAuthExpired: () => void }) {
     <div className="next-shell">
       <NextTopBar onMenuClick={() => setNavOpen(true)} />
       <SidebarProvider className="min-h-0 sidebar-shell-next" openMobile={navOpen} onOpenMobileChange={setNavOpen}>
-        <AppSidebarNext />
+        <AppSidebarNext role={role} />
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
             <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
             <Route path="templates/*" element={<NextTemplatesPageRoute onAuthExpired={onAuthExpired} />} />
             <Route path="game-systems" element={<GameSystemsPage onAuthExpired={onAuthExpired} />} />
             <Route path="settings/*" element={<NextSettingsPage onAuthExpired={onAuthExpired} />} />
+            {role === 'ADMIN' && (
+              <Route path="accounts" element={<AccountsPage onAuthExpired={onAuthExpired} />} />
+            )}
             <Route path="*" element={<Navigate to="/next/worlds" replace />} />
           </Routes>
         </SidebarInset>

@@ -12,7 +12,7 @@ import com.campaignorganizer.characters.application.statblock.port.in.StatblockC
 import com.campaignorganizer.characters.application.statblock.port.in.UpdateGlobalStatblockUseCase;
 import com.campaignorganizer.characters.application.statblock.port.out.GlobalStatblockRepositoryPort;
 import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockImportPort;
-import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockQueryPort;
+import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockOwnershipPort;
 import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockRefPort;
 import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockView;
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
@@ -21,6 +21,7 @@ import com.campaignorganizer.characters.application.template.port.published.Glob
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.domain.statblock.GlobalStatblock;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
@@ -28,22 +29,21 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Global (catalog) statblock use cases (ADR-0096); also implements the
- * published import/query/ref ports. Unlike {@code GlobalFieldTemplateService}
- * (ADR-0093), no separate query-service bean is needed — nothing this service
- * depends on ({@code GameSystemQueryPort}, {@code GlobalFieldTemplateQueryPort},
- * {@code CreateStatblockUseCase}) depends back on {@code GlobalStatblockQueryPort}
- * or {@code GlobalStatblockRefPort}, so there's no Spring bean-construction cycle.
+ * Global (catalog) statblock use cases (ADR-0096); also implements the published
+ * import/ref/ownership ports. The published query port is served by the separate
+ * {@link GlobalStatblockQueryService} bean instead — see its Javadoc for why (a Spring
+ * bean-construction cycle through {@code @PreAuthorize}'s AOP infrastructure, ADR-0109).
  */
 @Service
 public class GlobalStatblockService implements CreateGlobalStatblockUseCase, UpdateGlobalStatblockUseCase,
         DeleteGlobalStatblockUseCase, GetGlobalStatblockUseCase, ListGlobalStatblocksUseCase,
-        ImportGlobalStatblockUseCase, GlobalStatblockImportPort, GlobalStatblockQueryPort,
-        GlobalStatblockRefPort {
+        ImportGlobalStatblockUseCase, GlobalStatblockImportPort,
+        GlobalStatblockRefPort, GlobalStatblockOwnershipPort {
 
     private final GlobalStatblockRepositoryPort statblocks;
     private final GameSystemQueryPort systems;
@@ -52,10 +52,12 @@ public class GlobalStatblockService implements CreateGlobalStatblockUseCase, Upd
     private final GlobalStatblockViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
+    private final CurrentUserPort currentUser;
 
     public GlobalStatblockService(GlobalStatblockRepositoryPort statblocks, GameSystemQueryPort systems,
                                   GlobalFieldTemplateQueryPort templates, CreateStatblockUseCase createStatblock,
-                                  GlobalStatblockViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                                  GlobalStatblockViewMapper viewMapper, IdGenerator ids, Clock clock,
+                                  CurrentUserPort currentUser) {
         this.statblocks = statblocks;
         this.systems = systems;
         this.templates = templates;
@@ -63,20 +65,29 @@ public class GlobalStatblockService implements CreateGlobalStatblockUseCase, Upd
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
+        this.currentUser = currentUser;
     }
 
     @Override
     @Transactional
+    @PreAuthorize("hasPermission(#command.systemId(), 'GameSystem', 'ACCESS') "
+            + "and (#command.globalTemplateId() == null "
+            + "or hasPermission(#command.globalTemplateId(), 'GlobalFieldTemplate', 'ACCESS'))")
     public GlobalStatblockView create(CreateGlobalStatblockCommand command) {
         requireSystem(command.systemId());
         validateTemplate(command.systemId(), command.globalTemplateId());
         GlobalStatblock created = GlobalStatblock.create(ids.newId(), command.systemId(),
-                command.globalTemplateId(), command.name(), command.stats(), command.notes(), clock.instant());
+                command.globalTemplateId(), command.name(), command.stats(), command.notes(),
+                currentUser.currentAccountId(), clock.instant());
         return viewMapper.toView(statblocks.save(created));
     }
 
     @Override
     @Transactional
+    @PreAuthorize("hasPermission(#command.globalStatblockId(), 'GlobalStatblock', 'ACCESS') "
+            + "and hasPermission(#command.systemId(), 'GameSystem', 'ACCESS') "
+            + "and (#command.globalTemplateId() == null "
+            + "or hasPermission(#command.globalTemplateId(), 'GlobalFieldTemplate', 'ACCESS'))")
     public GlobalStatblockView update(UpdateGlobalStatblockCommand command) {
         GlobalStatblock statblock = require(command.globalStatblockId());
         requireSystem(command.systemId());
@@ -88,21 +99,25 @@ public class GlobalStatblockService implements CreateGlobalStatblockUseCase, Upd
 
     @Override
     @Transactional
+    @PreAuthorize("hasPermission(#globalStatblockId, 'GlobalStatblock', 'ACCESS')")
     public void delete(UUID globalStatblockId) {
         statblocks.delete(require(globalStatblockId));
     }
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasPermission(#globalStatblockId, 'GlobalStatblock', 'ACCESS')")
     public GlobalStatblockView get(UUID globalStatblockId) {
         return viewMapper.toView(require(globalStatblockId));
     }
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("#systemId == null or hasPermission(#systemId, 'GameSystem', 'ACCESS')")
     public List<GlobalStatblockView> list(UUID systemId) {
-        List<GlobalStatblock> result =
-                systemId == null ? statblocks.findAll() : statblocks.findBySystemId(systemId);
+        List<GlobalStatblock> result = systemId == null
+                ? statblocks.findAllByOwnerId(currentUser.currentAccountId())
+                : statblocks.findBySystemId(systemId);
         return result.stream().map(viewMapper::toView).toList();
     }
 
@@ -110,6 +125,12 @@ public class GlobalStatblockService implements CreateGlobalStatblockUseCase, Upd
 
     @Override
     @Transactional
+    // Both ids need checking: this endpoint (POST /api/statblocks/global/{id}/import) is NOT
+    // nested under /api/worlds/{worldId}/**, so WorldAccessAuthorizationManager never sees the
+    // destination worldId — without this, any account could write a statblock into any other
+    // account's world/campaign just by knowing its id (a cross-account IDOR).
+    @PreAuthorize("hasPermission(#globalStatblockId, 'GlobalStatblock', 'ACCESS') "
+            + "and hasPermission(#worldId, 'World', 'ACCESS')")
     public StatblockView importIntoCampaign(UUID globalStatblockId, UUID worldId, UUID campaignId,
                                             String nameOverride) {
         if (campaignId == null) {
@@ -131,17 +152,17 @@ public class GlobalStatblockService implements CreateGlobalStatblockUseCase, Upd
             return viewMapper.toView(existing.get());
         }
         GlobalStatblock created = GlobalStatblock.reconstitute(view.id(), view.systemId(),
-                view.globalTemplateId(), view.name(), view.stats(), view.notes(), view.createdAt(),
-                view.updatedAt());
+                view.globalTemplateId(), view.name(), view.stats(), view.notes(), currentUser.currentAccountId(),
+                view.createdAt(), view.updatedAt());
         return viewMapper.toView(statblocks.save(created));
     }
 
-    // --- published query port ---
+    // --- published ownership port (ADR-0109) ---
 
     @Override
-    @Transactional(readOnly = true)
-    public List<GlobalStatblockView> findAll() {
-        return statblocks.findAll().stream().map(viewMapper::toView).toList();
+    @Transactional
+    public void assignUnownedTo(UUID ownerId) {
+        statblocks.assignUnownedTo(ownerId);
     }
 
     // --- published ref port (used by GlobalFieldTemplateService.delete()) ---

@@ -322,8 +322,10 @@ public class ImportService implements ImportBackupUseCase {
 
         // Pass 2: persist in table-dependency order; every FK is already resolvable via remap.
         UUID newWorldId = remap.get(world.id());
+        // ownerId is always overwritten by WorldService.importWorld to the importing
+        // account (ADR-0109), regardless of what's passed here.
         worldImportPort.importWorld(new WorldView(newWorldId, world.name(), world.description(),
-                world.layerStyles(), world.scratch(), world.createdAt(), world.updatedAt()));
+                world.layerStyles(), world.scratch(), null, world.createdAt(), world.updatedAt()));
 
         for (MediaBundleEntry m : media) {
             byte[] bytes = mediaByOldId.get(m.id());
@@ -465,8 +467,10 @@ public class ImportService implements ImportBackupUseCase {
         // returns, tracked here rather than through the normal id remap.
         Map<UUID, UUID> globalTemplateResolution = new HashMap<>();
         for (GlobalFieldTemplateView g : globalFieldTemplates) {
+            // ownerId is always overwritten by GameSystemService/GlobalFieldTemplateService's
+            // importOrReuse to the importing account (ADR-0109), regardless of what's passed here.
             GlobalFieldTemplateView withResolvedSystem = new GlobalFieldTemplateView(g.id(), g.name(),
-                    g.kind(), gameSystemResolution.get(g.systemId()), g.sections(), g.createdAt(),
+                    g.kind(), gameSystemResolution.get(g.systemId()), g.sections(), null, g.createdAt(),
                     g.updatedAt());
             GlobalFieldTemplateView resolved = globalFieldTemplateImportPort.importOrReuse(withResolvedSystem);
             globalTemplateResolution.put(g.id(), resolved.id());
@@ -481,7 +485,7 @@ public class ImportService implements ImportBackupUseCase {
         for (GlobalStatblockView g : globalStatblocks) {
             GlobalStatblockView withResolved = new GlobalStatblockView(g.id(),
                     gameSystemResolution.get(g.systemId()), globalTemplateResolution.get(g.globalTemplateId()),
-                    g.name(), g.stats(), g.notes(), g.createdAt(), g.updatedAt());
+                    g.name(), g.stats(), g.notes(), null, g.createdAt(), g.updatedAt());
             globalStatblockImportPort.importOrReuse(withResolved);
         }
 

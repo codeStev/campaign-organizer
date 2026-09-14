@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,7 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
 
     @Override
     @Transactional
+    @PreAuthorize("#command.systemId() == null or hasPermission(#command.systemId(), 'GameSystem', 'ACCESS')")
     public CampaignView create(CreateCampaignCommand command) {
         requireWorld(command.worldId());
         requireGameSystem(command.systemId());
@@ -61,6 +63,7 @@ public class CampaignService implements CreateCampaignUseCase, UpdateCampaignUse
 
     @Override
     @Transactional
+    @PreAuthorize("#command.systemId() == null or hasPermission(#command.systemId(), 'GameSystem', 'ACCESS')")
     public CampaignView update(UpdateCampaignCommand command) {
         Campaign campaign = require(command.worldId(), command.campaignId());
         requireGameSystem(command.systemId());

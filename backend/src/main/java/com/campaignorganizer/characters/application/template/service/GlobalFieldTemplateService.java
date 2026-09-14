@@ -14,10 +14,12 @@ import com.campaignorganizer.characters.application.template.port.in.UpdateGloba
 import com.campaignorganizer.characters.application.template.port.out.FieldTemplateRepositoryPort;
 import com.campaignorganizer.characters.application.template.port.out.GlobalFieldTemplateRepositoryPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateImportPort;
+import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateOwnershipPort;
 import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateView;
 import com.campaignorganizer.characters.domain.template.FieldSchema.TemplateKind;
 import com.campaignorganizer.characters.domain.template.FieldTemplate;
 import com.campaignorganizer.characters.domain.template.GlobalFieldTemplate;
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.ConflictException;
 import com.campaignorganizer.shared.domain.NotFoundException;
@@ -26,6 +28,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +45,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseCase,
         UpdateGlobalFieldTemplateUseCase, DeleteGlobalFieldTemplateUseCase, GetGlobalFieldTemplateUseCase,
-        ListGlobalFieldTemplatesUseCase, PromoteFieldTemplateUseCase, GlobalFieldTemplateImportPort {
+        ListGlobalFieldTemplatesUseCase, PromoteFieldTemplateUseCase, GlobalFieldTemplateImportPort,
+        GlobalFieldTemplateOwnershipPort {
 
     private final GlobalFieldTemplateRepositoryPort templates;
     private final FieldTemplateRepositoryPort worldTemplates;
@@ -52,13 +56,15 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     private final GlobalFieldTemplateViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
+    private final CurrentUserPort currentUser;
 
     public GlobalFieldTemplateService(GlobalFieldTemplateRepositoryPort templates,
                                       FieldTemplateRepositoryPort worldTemplates,
                                       CharacterSheetTemplateRefPort characterSheetRefs,
                                       StatblockTemplateRefPort statblockRefs,
                                       GlobalStatblockRefPort globalStatblockRefs,
-                                      GlobalFieldTemplateViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                                      GlobalFieldTemplateViewMapper viewMapper, IdGenerator ids, Clock clock,
+                                      CurrentUserPort currentUser) {
         this.templates = templates;
         this.worldTemplates = worldTemplates;
         this.characterSheetRefs = characterSheetRefs;
@@ -67,18 +73,22 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
+        this.currentUser = currentUser;
     }
 
     @Override
     @Transactional
+    @PreAuthorize("hasPermission(#command.systemId(), 'GameSystem', 'ACCESS')")
     public GlobalFieldTemplateView create(CreateGlobalFieldTemplateCommand command) {
         GlobalFieldTemplate created = GlobalFieldTemplate.create(ids.newId(), command.name(), command.kind(),
-                command.systemId(), command.sections(), clock.instant());
+                command.systemId(), command.sections(), currentUser.currentAccountId(), clock.instant());
         return viewMapper.toView(templates.save(created));
     }
 
     @Override
     @Transactional
+    @PreAuthorize("hasPermission(#command.templateId(), 'GlobalFieldTemplate', 'ACCESS') "
+            + "and hasPermission(#command.systemId(), 'GameSystem', 'ACCESS')")
     public GlobalFieldTemplateView update(UpdateGlobalFieldTemplateCommand command) {
         GlobalFieldTemplate template = require(command.templateId());
         template.update(command.name(), command.systemId(), command.sections(), clock.instant());
@@ -87,6 +97,7 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
 
     @Override
     @Transactional
+    @PreAuthorize("hasPermission(#templateId, 'GlobalFieldTemplate', 'ACCESS')")
     public void delete(UUID templateId) {
         GlobalFieldTemplate template = require(templateId);
         if (characterSheetRefs.existsReferencingGlobalTemplate(templateId)
@@ -101,6 +112,7 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasPermission(#templateId, 'GlobalFieldTemplate', 'ACCESS')")
     public GlobalFieldTemplateView get(UUID templateId) {
         return viewMapper.toView(require(templateId));
     }
@@ -108,7 +120,9 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
     @Override
     @Transactional(readOnly = true)
     public List<GlobalFieldTemplateView> list(TemplateKind kind) {
-        List<GlobalFieldTemplate> result = kind == null ? templates.findAll() : templates.findByKind(kind);
+        UUID ownerId = currentUser.currentAccountId();
+        List<GlobalFieldTemplate> result =
+                kind == null ? templates.findAllByOwnerId(ownerId) : templates.findByOwnerIdAndKind(ownerId, kind);
         return result.stream().map(viewMapper::toView).toList();
     }
 
@@ -126,7 +140,8 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
             throw new ValidationException("Assign a game system before promoting this template");
         }
         GlobalFieldTemplate global = GlobalFieldTemplate.create(ids.newId(), source.getName(),
-                source.getKind(), source.getSystemId(), source.getSections(), clock.instant());
+                source.getKind(), source.getSystemId(), source.getSections(), currentUser.currentAccountId(),
+                clock.instant());
         GlobalFieldTemplate saved = templates.save(global);
 
         characterSheetRefs.repointWorldTemplateToGlobal(templateId, saved.getId());
@@ -147,8 +162,17 @@ public class GlobalFieldTemplateService implements CreateGlobalFieldTemplateUseC
             return viewMapper.toView(existing.get());
         }
         GlobalFieldTemplate created = GlobalFieldTemplate.reconstitute(view.id(), view.name(), view.kind(),
-                view.systemId(), view.sections(), view.createdAt(), view.updatedAt());
+                view.systemId(), view.sections(), currentUser.currentAccountId(), view.createdAt(),
+                view.updatedAt());
         return viewMapper.toView(templates.save(created));
+    }
+
+    // --- published ownership port (ADR-0109) ---
+
+    @Override
+    @Transactional
+    public void assignUnownedTo(UUID ownerId) {
+        templates.assignUnownedTo(ownerId);
     }
 
     private GlobalFieldTemplate require(UUID templateId) {

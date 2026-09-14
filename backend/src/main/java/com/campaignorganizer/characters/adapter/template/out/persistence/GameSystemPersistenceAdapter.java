@@ -20,8 +20,8 @@ public class GameSystemPersistenceAdapter implements GameSystemRepositoryPort {
     }
 
     @Override
-    public List<GameSystem> findAll() {
-        return repository.findAllByOrderByNameAsc().stream().map(mapper::toDomain).toList();
+    public List<GameSystem> findAllByOwnerId(UUID ownerId) {
+        return repository.findAllByOwnerIdOrderByNameAsc(ownerId).stream().map(mapper::toDomain).toList();
     }
 
     @Override
@@ -30,8 +30,8 @@ public class GameSystemPersistenceAdapter implements GameSystemRepositoryPort {
     }
 
     @Override
-    public Optional<GameSystem> findByNameIgnoreCase(String name) {
-        return repository.findByNameIgnoreCase(name).map(mapper::toDomain);
+    public Optional<GameSystem> findByOwnerIdAndNameIgnoreCase(UUID ownerId, String name) {
+        return repository.findByOwnerIdAndNameIgnoreCase(ownerId, name).map(mapper::toDomain);
     }
 
     @Override
@@ -42,5 +42,10 @@ public class GameSystemPersistenceAdapter implements GameSystemRepositoryPort {
     @Override
     public void delete(GameSystem system) {
         repository.deleteById(system.getId());
+    }
+
+    @Override
+    public void assignUnownedTo(UUID ownerId) {
+        repository.assignUnownedTo(ownerId);
     }
 }

@@ -27,6 +27,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,6 +67,8 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
 
     @Override
     @Transactional
+    @PreAuthorize("#command.globalTemplateId() == null "
+            + "or hasPermission(#command.globalTemplateId(), 'GlobalFieldTemplate', 'ACCESS')")
     public CharacterSheetView create(CreateCharacterSheetCommand command) {
         requireWorld(command.worldId());
         validateLinks(command.worldId(), command.worldTemplateId(), command.globalTemplateId(),
@@ -79,6 +82,8 @@ public class CharacterSheetService implements CreateCharacterSheetUseCase, Updat
 
     @Override
     @Transactional
+    @PreAuthorize("#command.globalTemplateId() == null "
+            + "or hasPermission(#command.globalTemplateId(), 'GlobalFieldTemplate', 'ACCESS')")
     public CharacterSheetView update(UpdateCharacterSheetCommand command) {
         CharacterSheet sheet = require(command.worldId(), command.sheetId());
         validateLinks(command.worldId(), command.worldTemplateId(), command.globalTemplateId(),

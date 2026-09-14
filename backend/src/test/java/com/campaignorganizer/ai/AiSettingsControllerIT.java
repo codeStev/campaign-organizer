@@ -26,21 +26,22 @@ class AiSettingsControllerIT extends AbstractIntegrationTest {
 
     @Test
     void afterResetToDefaults_listsKnownProvidersUnconfigured() throws Exception {
-        // Settings are global state persisted in the shared test database, so
-        // the test resets to defaults itself instead of assuming a fresh table.
+        // Settings are per-account (ADR-0109); explicitly write null models for this
+        // account rather than assuming a fresh table, then read the same account back.
         String body = """
                 {"providers":[
                   {"providerId":"groq","model":null},
                   {"providerId":"openrouter","model":null}
                 ]}
                 """;
+        String auth = authHeader();
         mockMvc.perform(put("/api/ai/settings")
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/ai/settings").header(HttpHeaders.AUTHORIZATION, authHeader()))
+        mockMvc.perform(get("/api/ai/settings").header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", Matchers.hasSize(2)))
                 .andExpect(jsonPath("$[0].providerId").value("groq"))
@@ -59,16 +60,17 @@ class AiSettingsControllerIT extends AbstractIntegrationTest {
                   {"providerId":"groq","model":null}
                 ]}
                 """;
+        String auth = authHeader();
         mockMvc.perform(put("/api/ai/settings")
-                        .header(HttpHeaders.AUTHORIZATION, authHeader())
+                        .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].providerId").value("openrouter"))
                 .andExpect(jsonPath("$[0].priority").value(0));
 
-        // A second GET reads it back from the database, proving persistence.
-        mockMvc.perform(get("/api/ai/settings").header(HttpHeaders.AUTHORIZATION, authHeader()))
+        // A second GET (same account) reads it back from the database, proving persistence.
+        mockMvc.perform(get("/api/ai/settings").header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].providerId").value("openrouter"))
                 .andExpect(jsonPath("$[0].model").value("deepseek/deepseek-r1:free"));

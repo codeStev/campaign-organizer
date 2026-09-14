@@ -1,7 +1,14 @@
 app:
-  password: test-password
   jwt:
     secret: integration-test-secret-that-is-32-bytes-minimum
     expiration-hours: 1
   media:
     dir: /tmp/co-media-test
+  rate-limit:
+    # The whole integration suite shares one Spring context and (from the
+    # rate limiter's point of view) one "IP" — MockMvc requests all appear to
+    # come from the same local address — so every test's authHeader() call
+    # counts against the same window. Effectively unlimited here so the
+    # limiter's production behavior isn't what's under test in every
+    # unrelated IT that happens to log in.
+    max-requests-per-minute: 1000000

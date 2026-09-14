@@ -12,6 +12,7 @@ public record GlobalStatblockView(
         String name,
         Map<String, Object> stats,
         String notes,
+        UUID ownerId,
         Instant createdAt,
         Instant updatedAt) {
 }

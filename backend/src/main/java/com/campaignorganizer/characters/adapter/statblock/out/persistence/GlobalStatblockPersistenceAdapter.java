@@ -20,8 +20,8 @@ public class GlobalStatblockPersistenceAdapter implements GlobalStatblockReposit
     }
 
     @Override
-    public List<GlobalStatblock> findAll() {
-        return repository.findAllByOrderByCreatedAtDesc().stream().map(mapper::toDomain).toList();
+    public List<GlobalStatblock> findAllByOwnerId(UUID ownerId) {
+        return repository.findAllByOwnerIdOrderByCreatedAtDesc(ownerId).stream().map(mapper::toDomain).toList();
     }
 
     @Override
@@ -52,5 +52,10 @@ public class GlobalStatblockPersistenceAdapter implements GlobalStatblockReposit
     @Override
     public void delete(GlobalStatblock statblock) {
         repository.deleteById(statblock.getId());
+    }
+
+    @Override
+    public void assignUnownedTo(UUID ownerId) {
+        repository.assignUnownedTo(ownerId);
     }
 }

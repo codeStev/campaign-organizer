@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 /** Persistence model for one provider's settings (maps the {@code ai_provider_settings} table). */
 @Entity
@@ -12,6 +13,12 @@ import java.time.Instant;
 public class AiProviderSettingsJpaEntity {
 
     @Id
+    private UUID id;
+
+    /** Per-account (ADR-0109) — nullable only for rows predating accounts entirely. */
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
     @Column(name = "provider", length = 50)
     private String providerId;
 
@@ -26,6 +33,22 @@ public class AiProviderSettingsJpaEntity {
 
     protected AiProviderSettingsJpaEntity() {
         // for JPA
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
     }
 
     public String getProviderId() {

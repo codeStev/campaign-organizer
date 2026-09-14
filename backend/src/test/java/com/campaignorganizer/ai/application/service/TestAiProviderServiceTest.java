@@ -15,8 +15,10 @@ import com.campaignorganizer.ai.application.port.out.TextGenerationFailedExcepti
 import com.campaignorganizer.ai.application.port.out.TextGenerationPort;
 import com.campaignorganizer.ai.domain.DraftResult;
 import com.campaignorganizer.ai.domain.ProviderSetting;
+import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +35,10 @@ class TestAiProviderServiceTest {
     private TextGenerationPort openRouter;
     @Mock
     private AiProviderSettingsRepositoryPort settingsRepository;
+    @Mock
+    private CurrentUserPort currentUser;
+
+    private final UUID ownerId = UUID.randomUUID();
 
     private TestAiProviderService service;
 
@@ -42,11 +48,12 @@ class TestAiProviderServiceTest {
         lenient().when(groq.defaultModel()).thenReturn("groq-default");
         lenient().when(openRouter.providerId()).thenReturn("openrouter");
         lenient().when(openRouter.defaultModel()).thenReturn("openrouter-default");
+        lenient().when(currentUser.currentAccountId()).thenReturn(ownerId);
         // Saved settings: openrouter first with a custom model.
-        lenient().when(settingsRepository.findAllOrderedByPriority()).thenReturn(List.of(
+        lenient().when(settingsRepository.findAllOrderedByPriority(ownerId)).thenReturn(List.of(
                 new ProviderSetting("openrouter", "custom-model", 0),
                 new ProviderSetting("groq", null, 1)));
-        service = new TestAiProviderService(List.of(groq, openRouter), settingsRepository);
+        service = new TestAiProviderService(List.of(groq, openRouter), settingsRepository, currentUser);
     }
 
     @Test

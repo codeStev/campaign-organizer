@@ -48,7 +48,7 @@ class WorldControllerIT extends AbstractIntegrationTest {
 
     @Test
     void supportsFullWorldLifecycle() throws Exception {
-        String auth = "Bearer " + obtainToken();
+        String auth = authHeader();
 
         // Create
         String created = mockMvc.perform(post("/api/worlds")
@@ -92,21 +92,12 @@ class WorldControllerIT extends AbstractIntegrationTest {
 
     @Test
     void rejectsInvalidWorld() throws Exception {
-        String auth = "Bearer " + obtainToken();
+        String auth = authHeader();
 
         mockMvc.perform(post("/api/worlds")
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\":\"no name\"}"))
                 .andExpect(status().isBadRequest());
-    }
-
-    private String obtainToken() throws Exception {
-        String body = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"password\":\"test-password\"}"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        return JsonPath.read(body, "$.token");
     }
 }

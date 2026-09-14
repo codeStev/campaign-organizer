@@ -1,11 +1,15 @@
 package com.campaignorganizer.security;
 
+import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
+import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.security.JwtService.ParsedToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,18 +19,29 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Reads the {@code Authorization: Bearer <jwt>} header and, if valid,
- * populates the security context with the single owner principal.
+ * Reads the {@code Authorization: Bearer <jwt>} header and, if the token is
+ * well-formed and the account it names is still valid, populates the
+ * security context with that account's id and role.
+ *
+ * "Still valid" is checked against the database on every request, not just
+ * the token's own signature/expiry: an account that's been disabled, had its
+ * role changed, or had its password reset/token version bumped has its
+ * existing tokens invalidated immediately rather than waiting out the
+ * token's natural expiry (ADR-0110) — a deliberate, small move away from
+ * pure statelessness in exchange for actual revocability.
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String ROLE_PREFIX = "ROLE_";
 
     private final JwtService jwtService;
+    private final AccountQueryPort accounts;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, AccountQueryPort accounts) {
         this.jwtService = jwtService;
+        this.accounts = accounts;
     }
 
     /**
@@ -46,15 +61,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header != null && header.startsWith(BEARER_PREFIX)) {
+        if (header != null && header.startsWith(BEARER_PREFIX)
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = header.substring(BEARER_PREFIX.length());
-            if (jwtService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        "owner", null, List.of(new SimpleGrantedAuthority("ROLE_OWNER")));
+            jwtService.parse(token).flatMap(this::toAuthentication).ifPresent(authentication -> {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
+            });
         }
         filterChain.doFilter(request, response);
+    }
+
+    private Optional<UsernamePasswordAuthenticationToken> toAuthentication(ParsedToken parsed) {
+        return accounts.findById(parsed.accountId())
+                .filter(AccountView::enabled)
+                .filter(account -> account.tokenVersion() == parsed.tokenVersion())
+                .map(account -> new UsernamePasswordAuthenticationToken(
+                        account.id(), null, List.of(new SimpleGrantedAuthority(ROLE_PREFIX + account.role()))));
     }
 }

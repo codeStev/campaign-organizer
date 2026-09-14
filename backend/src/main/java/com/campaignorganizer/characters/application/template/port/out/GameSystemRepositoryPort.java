@@ -7,13 +7,16 @@ import java.util.UUID;
 
 public interface GameSystemRepositoryPort {
 
-    List<GameSystem> findAll();
+    List<GameSystem> findAllByOwnerId(UUID ownerId);
 
     Optional<GameSystem> findById(UUID systemId);
 
-    Optional<GameSystem> findByNameIgnoreCase(String name);
+    Optional<GameSystem> findByOwnerIdAndNameIgnoreCase(UUID ownerId, String name);
 
     GameSystem save(GameSystem system);
 
     void delete(GameSystem system);
+
+    /** One-time backfill only (ADR-0109). */
+    void assignUnownedTo(UUID ownerId);
 }

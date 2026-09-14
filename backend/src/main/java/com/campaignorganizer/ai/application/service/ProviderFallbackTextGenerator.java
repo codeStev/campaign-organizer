@@ -6,6 +6,7 @@ import com.campaignorganizer.ai.application.port.out.TextGenerationPort;
 import com.campaignorganizer.ai.domain.AiUnavailableException;
 import com.campaignorganizer.ai.domain.DraftResult;
 import com.campaignorganizer.ai.domain.ProviderSetting;
+import com.campaignorganizer.security.CurrentUserPort;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +28,18 @@ class ProviderFallbackTextGenerator {
 
     private final List<TextGenerationPort> providers;
     private final AiProviderSettingsRepositoryPort settings;
+    private final CurrentUserPort currentUser;
 
-    ProviderFallbackTextGenerator(List<TextGenerationPort> providers, AiProviderSettingsRepositoryPort settings) {
+    ProviderFallbackTextGenerator(List<TextGenerationPort> providers, AiProviderSettingsRepositoryPort settings,
+                                  CurrentUserPort currentUser) {
         this.providers = providers;
         this.settings = settings;
+        this.currentUser = currentUser;
     }
 
     DraftResult generate(String systemPrompt, String userPrompt) {
-        List<ProviderSetting> order = DefaultProviderSettings.orDefaults(settings.findAllOrderedByPriority());
+        List<ProviderSetting> order =
+                DefaultProviderSettings.orDefaults(settings.findAllOrderedByPriority(currentUser.currentAccountId()));
         for (ProviderSetting setting : order) {
             TextGenerationPort provider = byId(setting.providerId());
             if (provider == null) {

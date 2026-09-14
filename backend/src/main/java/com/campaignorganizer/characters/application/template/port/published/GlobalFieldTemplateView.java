@@ -13,6 +13,7 @@ public record GlobalFieldTemplateView(
         TemplateKind kind,
         UUID systemId,
         List<TemplateSection> sections,
+        UUID ownerId,
         Instant createdAt,
         Instant updatedAt) {
 }

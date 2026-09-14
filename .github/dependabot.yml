@@ -1,0 +1,19 @@
+# Weekly dependency-vulnerability checks, added alongside the multi-account
+# rework (ADR-0109/ADR-0110) — none of this existed before. Three ecosystems
+# match this repo's actual dependency surfaces (ADR-0056: Gradle wrapper at
+# the repo root; the frontend's own package-lock.json; the workflows
+# themselves).
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

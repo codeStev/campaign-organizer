@@ -13,6 +13,6 @@ public interface GlobalStatblockPersistenceMapper {
             return null;
         }
         return GlobalStatblock.reconstitute(e.getId(), e.getSystemId(), e.getGlobalTemplateId(), e.getName(),
-                e.getStats(), e.getNotes(), e.getCreatedAt(), e.getUpdatedAt());
+                e.getStats(), e.getNotes(), e.getOwnerId(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

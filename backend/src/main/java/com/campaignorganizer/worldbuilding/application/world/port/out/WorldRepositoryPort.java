@@ -9,6 +9,8 @@ public interface WorldRepositoryPort {
 
     List<World> findAllOrderByCreatedAtDesc();
 
+    List<World> findAllByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
+
     Optional<World> findById(UUID worldId);
 
     boolean existsById(UUID worldId);
@@ -16,4 +18,7 @@ public interface WorldRepositoryPort {
     World save(World world);
 
     void delete(World world);
+
+    /** One-time backfill only (ADR-0109). */
+    void assignUnownedTo(UUID ownerId);
 }
