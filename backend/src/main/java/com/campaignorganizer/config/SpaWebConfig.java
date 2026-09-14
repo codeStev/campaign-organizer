@@ -35,7 +35,15 @@ public class SpaWebConfig implements WebMvcConfigurer {
         @Override
         protected Resource getResource(String resourcePath, Resource location) throws IOException {
             Resource resource = super.getResource(resourcePath, location);
-            return resource != null ? resource : new ClassPathResource("static/index.html");
+            if (resource != null) {
+                return resource;
+            }
+            // On the API-only image static/index.html isn't on the classpath at all: a
+            // ClassPathResource for a nonexistent entry is still non-null, and passing it on
+            // makes ResourceHttpRequestHandler call getURL() for its Last-Modified header,
+            // which throws FileNotFoundException (500) instead of falling through to 404.
+            Resource fallback = new ClassPathResource("static/index.html");
+            return fallback.exists() ? fallback : null;
         }
     }
 }
