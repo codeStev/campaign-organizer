@@ -25,7 +25,13 @@ export function LoginPage({ onLoginResult, onRegister, onForgotPassword }: Props
       const result = await login(email, password);
       onLoginResult(result);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? 'Invalid email or password' : 'Login failed');
+      if (err instanceof ApiError && err.status === 401) {
+        setError('Invalid email or password');
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError('Too many attempts. Please wait a moment and try again.');
+      } else {
+        setError('Login failed');
+      }
     } finally {
       setBusy(false);
     }

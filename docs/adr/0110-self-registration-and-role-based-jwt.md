@@ -66,11 +66,13 @@ ports instead of containing the domain logic themselves.
   - Basic brute-force throttling: `failed_attempts`/`locked_until` columns
     back a short per-account lockout after repeated bad logins (locked-out
     attempts get the same generic 401, not a distinguishing message), plus
-    a per-IP rate limiter in front of the two unauthenticated endpoints
-    (`/auth/login`, `/accounts/register`) — the per-account lockout alone
-    doesn't stop someone sweeping many emails or forcing repeated BCrypt
-    hashing as a CPU-cost denial-of-service vector now that this is
-    internet-reachable.
+    a per-IP rate limiter in front of the unauthenticated endpoints that do
+    password-hash-cost work on guessable-secret input (`/auth/login`,
+    `/accounts/register`, and — added later, closing an oversight relative
+    to this same rationale — `/auth/recover-password`) — the per-account
+    lockout alone doesn't stop someone sweeping many emails or forcing
+    repeated BCrypt hashing as a CPU-cost denial-of-service vector now that
+    this is internet-reachable.
 - **JWT revocation via `token_version`.** A pure stateless JWT has no way
   to invalidate a token early; with the default 30-day expiry this app
   shipped with (fine for one trusted owner, not for public multi-account
