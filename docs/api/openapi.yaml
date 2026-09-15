@@ -4883,6 +4883,28 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /overview:
+    get:
+      tags: [worlds]
+      summary: Global landing page stats
+      description: >
+        The account-wide landing page (issue #68): every dated upcoming
+        session across every world/campaign the account owns, soonest
+        first, plus campaigns that need attention — a PLANNED or ACTIVE
+        campaign (issue #64) with nothing scheduled. Pure read composition,
+        no new persisted state (mirrors the per-world/per-campaign
+        overviews).
+      operationId: getGlobalOverview
+      responses:
+        '200':
+          description: The account's global overview stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalOverviewStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /worlds/{worldId}/overview:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -8330,6 +8352,66 @@ components:
         date:
           type: string
           format: date
+
+    UpcomingSessionSummary:
+      type: object
+      required: [sessionId, worldId, worldName, campaignId, campaignName, title, date]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        worldId:
+          type: string
+          format: uuid
+        worldName:
+          type: string
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        campaignColor:
+          type: [string, "null"]
+          description: The campaign's raw persisted color (ADR-0107) — null if unset; the frontend resolves a fallback.
+        title:
+          type: string
+        sessionNumber:
+          type: [integer, "null"]
+        date:
+          type: string
+          format: date
+
+    CampaignNeedingAttention:
+      type: object
+      required: [worldId, worldName, campaignId, campaignName, status]
+      properties:
+        worldId:
+          type: string
+          format: uuid
+        worldName:
+          type: string
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+
+    GlobalOverviewStats:
+      type: object
+      required: [upcomingSessions, campaignsNeedingAttention]
+      properties:
+        upcomingSessions:
+          type: array
+          description: Every dated session across every world/campaign the account owns, soonest-first.
+          items:
+            $ref: '#/components/schemas/UpcomingSessionSummary'
+        campaignsNeedingAttention:
+          type: array
+          description: PLANNED or ACTIVE campaigns with no upcoming session scheduled.
+          items:
+            $ref: '#/components/schemas/CampaignNeedingAttention'
 
     ArticleRevision:
       type: object
