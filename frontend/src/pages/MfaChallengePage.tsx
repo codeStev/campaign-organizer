@@ -1,5 +1,5 @@
-import { FormEvent, useState } from 'react';
-import { MfaMethod, verifyRecoveryCode, verifyTotpChallenge } from '../api/client';
+import { FormEvent, useEffect, useState } from 'react';
+import { MfaMethod, challengeWebauthn, verifyRecoveryCode, verifyTotpChallenge } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
@@ -18,6 +18,27 @@ export function MfaChallengePage({ pendingToken, method, onAuthenticated, onNeed
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [webauthnPrompting, setWebauthnPrompting] = useState(false);
+
+  async function attemptWebauthn() {
+    setWebauthnPrompting(true);
+    setError(null);
+    try {
+      const result = await challengeWebauthn(pendingToken);
+      onAuthenticated(result.token);
+    } catch {
+      setError("Couldn't verify your passkey — the prompt may have been cancelled. Try again.");
+    } finally {
+      setWebauthnPrompting(false);
+    }
+  }
+
+  useEffect(() => {
+    if (method === 'WEBAUTHN' && !recoveryMode) {
+      attemptWebauthn();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, recoveryMode]);
 
   async function handleVerifyCode(event: FormEvent) {
     event.preventDefault();
@@ -47,10 +68,30 @@ export function MfaChallengePage({ pendingToken, method, onAuthenticated, onNeed
     }
   }
 
-  if (method !== 'TOTP') {
+  if (method === 'WEBAUTHN' && !recoveryMode) {
     return (
       <div className="card login">
-        <p>This authentication method isn't supported yet.</p>
+        <h2>Verify your passkey</h2>
+        {webauthnPrompting ? (
+          <p className="muted">Follow your browser's prompt…</p>
+        ) : (
+          <>
+            {error && <p className="error">{error}</p>}
+            <Button type="button" onClick={attemptWebauthn}>
+              Try again
+            </Button>
+          </>
+        )}
+        <Button
+          type="button"
+          variant="link"
+          onClick={() => {
+            setRecoveryMode(true);
+            setError(null);
+          }}
+        >
+          Use a recovery code instead
+        </Button>
       </div>
     );
   }

@@ -1,5 +1,8 @@
 package com.campaignorganizer.config;
 
+import com.campaignorganizer.accounts.adapter.account.out.mfa.WebAuthnAuthenticationSuccessHandler;
+import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnCreationOptionsRepositoryAdapter;
+import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnRequestOptionsRepositoryAdapter;
 import com.campaignorganizer.security.JwtAuthFilter;
 import com.campaignorganizer.security.JwtService;
 import com.campaignorganizer.security.ProblemDetailAccessDeniedHandler;
@@ -7,6 +10,7 @@ import com.campaignorganizer.security.RateLimitFilter;
 import com.campaignorganizer.security.WorldAccessAuthorizationManager;
 import com.campaignorganizer.security.WorldPermissionEvaluator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.Filter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +23,6 @@ import org.springframework.security.authorization.AuthorizationManagerFactory;
 import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
@@ -29,9 +32,14 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.webauthn.authentication.PublicKeyCredentialRequestOptionsFilter;
+import org.springframework.security.web.webauthn.authentication.WebAuthnAuthenticationFilter;
 
 /**
  * Stateless security. The only public endpoints are login, registration, the
@@ -53,6 +61,11 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * /api/** is left open at this layer too — on the combined image (ADR-0059)
  * that's the static SPA shell, which must load before the user can log in;
  * on the API-only image there's nothing there to serve, so this is a no-op.
+ * The MFA factor can be completed either via this app's own TOTP endpoints
+ * under {@code /api/auth/mfa/**}, or via Spring Security's own {@code
+ * .webAuthn()} DSL, wired up below at {@code /webauthn/**} and {@code
+ * /login/webauthn} — CSRF protection is scoped to just those paths, since
+ * the rest of this API is a pure bearer-token service with no cookies.
  * See docs/adr/0110-self-registration-and-role-based-jwt.md and
  * docs/adr/0111-mandatory-mfa.md.
  */
@@ -74,7 +87,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter,
                                            RateLimitFilter rateLimitFilter,
-                                           WorldAccessAuthorizationManager worldAccessAuthorizationManager)
+                                           WorldAccessAuthorizationManager worldAccessAuthorizationManager,
+                                           AppProperties properties,
+                                           WebAuthnCreationOptionsRepositoryAdapter webAuthnCreationOptionsRepository,
+                                           WebAuthnRequestOptionsRepositoryAdapter webAuthnRequestOptionsRepository,
+                                           WebAuthnAuthenticationSuccessHandler webAuthnAuthenticationSuccessHandler)
             throws Exception {
         // @EnableMethodSecurity's session/redirect-oriented multi-factor annotation
         // (@EnableMultiFactorAuthentication) isn't used here — it assumes chained
@@ -119,12 +136,23 @@ public class SecurityConfig {
         AccessDeniedHandler mfaRequiredHandler = new ProblemDetailAccessDeniedHandler(
                 HttpStatus.FORBIDDEN, "MFA required",
                 "Complete multi-factor authentication via /api/auth/mfa/** before retrying.", objectMapper);
+        // CsrfFilter runs ahead of JwtAuthFilter in the chain, so a CSRF failure on /webauthn/**
+        // reaches this same accessDeniedHandler with SecurityContextHolder still empty — without
+        // this branch it fell through to the ownership-mismatch 404 below, which is a misleading
+        // response for "you forgot the X-XSRF-TOKEN header" (caught by WebAuthnCeremonyWiringIT).
+        AccessDeniedHandler invalidCsrfTokenHandler = new ProblemDetailAccessDeniedHandler(
+                HttpStatus.FORBIDDEN, "Invalid CSRF token",
+                "Missing or invalid X-XSRF-TOKEN header for this request.", objectMapper);
         // NOT Spring's own .defaultAccessDeniedHandlerFor(...) + .accessDeniedHandler(...) pair:
         // those don't compose the way their names suggest — an explicit .accessDeniedHandler(...)
         // is returned unconditionally and Spring never consults the per-matcher mapping at all, so
         // every denial silently got the "default" handler regardless of path. Routing by hand here
         // instead, verified against a live run (curl against a real ADMIN-only endpoint as a USER).
         AccessDeniedHandler routedByPath = (request, response, ex) -> {
+            if (ex instanceof CsrfException) {
+                invalidCsrfTokenHandler.handle(request, response, ex);
+                return;
+            }
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             boolean missingMfaFactor = authentication != null && authentication.getAuthorities().stream()
                     .noneMatch(authority -> JwtService.MFA_AUTHORITY.equals(authority.getAuthority()));
@@ -136,10 +164,41 @@ public class SecurityConfig {
                 notFoundOnOwnershipMismatch.handle(request, response, ex);
             }
         };
+        // Spring's WebAuthn endpoints (/webauthn/**, /login/webauthn) expect a CSRF token —
+        // this app otherwise disables CSRF entirely, since it's a pure bearer-token API with no
+        // cookies anywhere else. requireCsrfProtectionMatcher scopes *enforcement* to just those
+        // paths; every other request is completely unaffected (CsrfFilter still runs but never
+        // requires a token). withHttpOnlyFalse(): the SPA's own JS needs to read this cookie to
+        // echo it back as a header (the standard double-submit pattern), not an admission that
+        // anything else about this token is sensitive.
+        RequestMatcher webAuthnPaths = new OrRequestMatcher(
+                PathPatternRequestMatcher.pathPattern("/webauthn/**"),
+                PathPatternRequestMatcher.pathPattern("/login/webauthn"));
         http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .requireCsrfProtectionMatcher(webAuthnPaths)
+                        // Without this, CookieCsrfTokenRepository's token is only generated (and
+                        // its cookie only written to the response) once something resolves the
+                        // deferred CsrfToken — the SPA would have no way to get its first cookie
+                        // before making its first protected WebAuthn request. .spa() swaps in a
+                        // request handler that resolves it eagerly on every request instead.
+                        .spa())
                 .cors(cors -> {})
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // rpName defaults to rpId if blank, matching WebAuthnConfigurer's own fallback.
+                // disableDefaultRegistrationPage: this app has its own React frontend — Spring's
+                // auto-generated HTML registration/login pages (and their supporting filters)
+                // would otherwise be registered for no reason. creationOptionsRepository is the
+                // *only* DSL hook WebAuthnConfigurer exposes for a stateless deployment — the
+                // authentication-side equivalent has none (confirmed by reading its source), so
+                // that one is wired by hand below, after http.build().
+                .webAuthn(webAuthn -> webAuthn
+                        .rpId(properties.webauthn().relyingPartyId())
+                        .rpName(properties.webauthn().relyingPartyName())
+                        .allowedOrigins(properties.webauthn().allowedOrigins())
+                        .disableDefaultRegistrationPage(true)
+                        .creationOptionsRepository(webAuthnCreationOptionsRepository))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_API_PATHS).permitAll()
                         // Public image serving, addressed by unguessable id (ADR-0016).
@@ -148,7 +207,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/calendar/*.ics").permitAll()
                         // Only the PASSWORD factor is required here — completing MFA is exactly what
                         // these endpoints are for, so requiring the MFA factor already would be circular.
+                        // Same reasoning for Spring's own WebAuthn ceremony endpoints below — though
+                        // note this rule only actually reaches the credential-writing /webauthn/register
+                        // (WebAuthnRegistrationFilter is wired addFilterAfter(AuthorizationFilter): this
+                        // rule is what protects it). /webauthn/register/options, /webauthn/authenticate/
+                        // options, and /login/webauthn each self-terminate the chain before reaching
+                        // AuthorizationFilter (confirmed by reading their source), so this line is
+                        // vacuous for those three — register/options has its own internal "any
+                        // authenticated principal" check instead, and authenticate/options + login are
+                        // deliberately reachable pre-auth (a resident-key/passkey login can't know who's
+                        // signing in before a credential is picked). CSRF (below) is what actually gates
+                        // all four paths uniformly.
                         .requestMatchers("/api/auth/mfa/**").authenticated()
+                        .requestMatchers("/webauthn/**", "/login/webauthn").authenticated()
                         // Named {worldId} template variable, not a plain wildcard: WorldAccessAuthorizationManager
                         // reads it back out of RequestAuthorizationContext.getVariables(). Both forms are needed —
                         // "/**" alone doesn't reliably match the bare "/api/worlds/{worldId}" resource itself.
@@ -161,7 +232,23 @@ public class SecurityConfig {
                         .accessDeniedHandler(routedByPath))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(rateLimitFilter, JwtAuthFilter.class);
-        return http.build();
+        SecurityFilterChain chain = http.build();
+        // WebAuthnConfigurer exposes no DSL hook for the authentication (login-challenge) side's
+        // PublicKeyCredentialRequestOptionsRepository, or for WebAuthnAuthenticationFilter's
+        // success handler / session-backed SecurityContextRepository — confirmed by reading its
+        // actual source rather than assuming a hook exists. Both filter instances are still
+        // ordinary objects with public setters once the chain is built, so this is a direct,
+        // supported way to finish configuring them — not a workaround.
+        for (Filter filter : chain.getFilters()) {
+            if (filter instanceof WebAuthnAuthenticationFilter webAuthnAuthFilter) {
+                webAuthnAuthFilter.setRequestOptionsRepository(webAuthnRequestOptionsRepository);
+                webAuthnAuthFilter.setSecurityContextRepository(new RequestAttributeSecurityContextRepository());
+                webAuthnAuthFilter.setAuthenticationSuccessHandler(webAuthnAuthenticationSuccessHandler);
+            } else if (filter instanceof PublicKeyCredentialRequestOptionsFilter requestOptionsFilter) {
+                requestOptionsFilter.setRequestOptionsRepository(webAuthnRequestOptionsRepository);
+            }
+        }
+        return chain;
     }
 
     /**

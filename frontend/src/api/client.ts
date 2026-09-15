@@ -164,6 +164,159 @@ export function recoverPassword(email: string, recoveryCode: string, newPassword
   });
 }
 
+// ---- WebAuthn/passkeys (ADR-0111 follow-up): Spring Security's own ceremony endpoints ----
+//
+// Unlike everything else in this file, /webauthn/** and /login/webauthn are Spring Security's
+// own endpoints, not this app's — they live at the root, not under /api, and (since this app is
+// otherwise a pure bearer-token API with no cookies) are the one place a CSRF cookie is actually
+// enforced. The cookie itself is set automatically by SecurityConfig's `.spa()` CSRF mode on
+// every response, so by the time a user reaches MFA setup/challenge (always after /auth/login)
+// it's already there.
+
+function base64UrlToBuffer(value: string): ArrayBuffer {
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function bufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function getCsrfCookie(): string | null {
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** Calls one of Spring Security's own WebAuthn endpoints directly — not under /api. */
+async function webauthnRequest<T>(path: string, pendingToken: string, body?: unknown): Promise<T> {
+  const headers = new Headers({ Authorization: `Bearer ${pendingToken}` });
+  if (body !== undefined) {
+    headers.set('Content-Type', 'application/json');
+  }
+  const csrf = getCsrfCookie();
+  if (csrf) {
+    headers.set('X-XSRF-TOKEN', csrf);
+  }
+  const response = await fetch(path, {
+    method: 'POST',
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeProblemDetail(response));
+  }
+  return (await response.json()) as T;
+}
+
+interface WebauthnCreationOptionsJson {
+  rp: { name: string; id: string };
+  user: { name: string; id: string; displayName: string };
+  challenge: string;
+  pubKeyCredParams: PublicKeyCredentialParameters[];
+  timeout?: number;
+  excludeCredentials?: Array<{ id: string; type: 'public-key'; transports?: AuthenticatorTransport[] }>;
+  authenticatorSelection?: AuthenticatorSelectionCriteria;
+  attestation?: AttestationConveyancePreference;
+  extensions?: Record<string, unknown>;
+}
+
+interface WebauthnRequestOptionsJson {
+  challenge: string;
+  timeout?: number;
+  rpId?: string;
+  allowCredentials?: Array<{ id: string; type: 'public-key'; transports?: AuthenticatorTransport[] }>;
+  userVerification?: UserVerificationRequirement;
+  extensions?: Record<string, unknown>;
+}
+
+async function fetchCreationOptions(pendingToken: string): Promise<CredentialCreationOptions> {
+  const json = await webauthnRequest<WebauthnCreationOptionsJson>('/webauthn/register/options', pendingToken);
+  return {
+    publicKey: {
+      ...json,
+      challenge: base64UrlToBuffer(json.challenge),
+      user: { ...json.user, id: base64UrlToBuffer(json.user.id) },
+      excludeCredentials: json.excludeCredentials?.map((c) => ({ ...c, id: base64UrlToBuffer(c.id) })),
+    },
+  };
+}
+
+async function fetchRequestOptions(pendingToken: string): Promise<CredentialRequestOptions> {
+  const json = await webauthnRequest<WebauthnRequestOptionsJson>('/webauthn/authenticate/options', pendingToken);
+  return {
+    publicKey: {
+      ...json,
+      challenge: base64UrlToBuffer(json.challenge),
+      allowCredentials: json.allowCredentials?.map((c) => ({ ...c, id: base64UrlToBuffer(c.id) })),
+    },
+  };
+}
+
+/**
+ * Runs the full passkey enrollment ceremony (navigator.credentials.create() against Spring's
+ * options/register endpoints), then confirms it with this app's own endpoint to activate WebAuthn
+ * as the account's MFA method and issue the fresh recovery-code batch — the WebAuthn counterpart
+ * to confirmTotpSetup, just with no code parameter since the ceremony itself is the proof.
+ */
+export async function enrollWebauthn(pendingToken: string): Promise<MfaEnrollmentResult> {
+  const options = await fetchCreationOptions(pendingToken);
+  const credential = (await navigator.credentials.create(options)) as PublicKeyCredential | null;
+  if (!credential) {
+    throw new Error('The browser did not return a passkey credential.');
+  }
+  const response = credential.response as AuthenticatorAttestationResponse;
+  await webauthnRequest<{ success: boolean }>('/webauthn/register', pendingToken, {
+    publicKey: {
+      credential: {
+        id: credential.id,
+        rawId: bufferToBase64Url(credential.rawId),
+        type: credential.type,
+        response: {
+          attestationObject: bufferToBase64Url(response.attestationObject),
+          clientDataJSON: bufferToBase64Url(response.clientDataJSON),
+          transports: response.getTransports ? response.getTransports() : [],
+        },
+        clientExtensionResults: credential.getClientExtensionResults(),
+        authenticatorAttachment: credential.authenticatorAttachment ?? undefined,
+      },
+      label: 'Passkey',
+    },
+  });
+  return request<MfaEnrollmentResult>('/auth/mfa/setup/webauthn/confirm', { method: 'POST' }, pendingToken);
+}
+
+/** Runs the passkey login-challenge ceremony and returns a fully authenticated token on success. */
+export async function challengeWebauthn(pendingToken: string): Promise<TokenResponse> {
+  const options = await fetchRequestOptions(pendingToken);
+  const credential = (await navigator.credentials.get(options)) as PublicKeyCredential | null;
+  if (!credential) {
+    throw new Error('The browser did not return a passkey credential.');
+  }
+  const response = credential.response as AuthenticatorAssertionResponse;
+  return webauthnRequest<TokenResponse>('/login/webauthn', pendingToken, {
+    id: credential.id,
+    rawId: bufferToBase64Url(credential.rawId),
+    response: {
+      authenticatorData: bufferToBase64Url(response.authenticatorData),
+      clientDataJSON: bufferToBase64Url(response.clientDataJSON),
+      signature: bufferToBase64Url(response.signature),
+      userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : undefined,
+    },
+    clientExtensionResults: credential.getClientExtensionResults(),
+    authenticatorAttachment: credential.authenticatorAttachment ?? undefined,
+  });
+}
+
 // ---- Accounts (ADR-0109/ADR-0110): self-registration, roles, roster management ----
 
 export type Role = 'ADMIN' | 'USER';

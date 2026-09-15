@@ -65,6 +65,25 @@ class AccountTest {
     }
 
     @Test
+    void completeWebauthnEnrollmentActivatesWebauthnAsMfaMethod() {
+        Account account = create();
+
+        account.completeWebauthnEnrollment(T1);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.WEBAUTHN);
+        assertThat(account.getUpdatedAt()).isEqualTo(T1);
+    }
+
+    @Test
+    void completeWebauthnEnrollmentFailsWhenAMethodIsAlreadyActive() {
+        Account account = create();
+        account.beginTotpEnrollment("encrypted-secret", T0);
+        account.completeTotpEnrollment(T0);
+
+        assertThatThrownBy(() -> account.completeWebauthnEnrollment(T1)).isInstanceOf(ValidationException.class);
+    }
+
+    @Test
     void resetMfaForRecoveryClearsMethodAndSecretsAndBumpsTokenVersion() {
         Account account = create();
         account.beginTotpEnrollment("encrypted-secret", T0);

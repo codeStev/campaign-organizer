@@ -122,23 +122,83 @@ through enrollment the next time they log in.
   infrastructure beyond the `factors` claim and the one authorization rule
   — everything else reuses what ADR-0110 already built (revocation via
   `token_version`, the routed `AccessDeniedHandler`, `CurrentUserPort`).
-- **WebAuthn is a deliberate fast-follow, not deferred indefinitely like
-  ADR-0110 originally treated it.** Spring Security's own `.webAuthn()` DSL
-  is REST/JSON-friendly (fixed `/webauthn/register/options`,
+- **WebAuthn shipped as a fast-follow to this same ADR** (not a separate
+  ADR — this is what was actually built, correcting the forward-looking
+  plan this bullet originally described). Spring Security's own
+  `.webAuthn()` DSL is REST/JSON-friendly (fixed `/webauthn/register/options`,
   `/webauthn/register`, `/webauthn/authenticate/options`, `/login/webauthn`
   endpoints speaking the exact JSON shapes `navigator.credentials` needs)
-  and supports a stateless deployment since Spring Security 6.5 via a
-  pluggable `PublicKeyCredentialCreationOptionsRepository` instead of the
-  session-backed default — the plan is to use that directly rather than
-  calling `webauthn4j-core` by hand, since Spring's implementation already
-  wraps it and doing the COSE-key/signature/origin verification in
-  application code would be new, security-critical code this app doesn't
-  need to own. The one real wrinkle: Spring's WebAuthn endpoints expect a
-  CSRF token, and this app disables CSRF globally as a pure bearer-token
-  API — the plan is a `CookieCsrfTokenRepository` (stateless double-submit
-  cookie) scoped narrowly to just `/webauthn/**` and `/login/webauthn`, not
-  the rest of the API. Not built in this pass; tracked as the immediate
-  next slice of this same initiative, not a separate future ADR.
+  and supports a stateless deployment via a pluggable
+  `PublicKeyCredentialCreationOptionsRepository`/
+  `PublicKeyCredentialRequestOptionsRepository` pair instead of the
+  session-backed default — used directly rather than calling
+  `webauthn4j-core` by hand, since Spring's implementation already wraps it
+  and doing the COSE-key/signature/origin verification in application code
+  would be new, security-critical code this app doesn't need to own.
+  - **Correction to this ADR's original text**: "WebAuthn needs no new
+    dependency" was wrong. `spring-security-webauthn` is a separate Maven
+    artifact from `spring-security-web` (confirmed by direct jar
+    inspection — `spring-security-web-7.1.0.jar` has no
+    `org.springframework.security.web.webauthn.*` package at all), added
+    alongside its own `com.webauthn4j:webauthn4j-core` companion dependency
+    (left unversioned so the Spring Security BOM's own transitive version
+    wins — an earlier draft explicitly pinned `0.29.1.RELEASE` from a stale
+    Maven Central search-index result, which would have silently downgraded
+    below the `0.31.9.RELEASE` `spring-security-webauthn:7.1.1` itself
+    depends on).
+  - **Dependency trust review**: `com.webauthn4j:webauthn4j-spring-security`
+    (a third-party Spring Security integration around the same underlying
+    `webauthn4j-core`) was considered and rejected — it has a real, more
+    directly damaging historical CVE (CVE-2023-45669, CWE-287: didn't
+    correctly persist an authenticator's signature counter, silently
+    disabling clone-authenticator detection). Spring's own module has had
+    one CVE of its own, CVE-2026-47841 (CVSS 7.4): a `==` vs `.equals()`
+    slip comparing a deserialized `UserVerificationRequirement` across a
+    distributed HTTP session store, fixed in 7.1.1. This project bumped
+    Spring Boot `4.1.0` → `4.1.1` (which manages the patched Spring
+    Security `7.1.1`) as routine hygiene even though the exploit path
+    itself doesn't apply here (this app is fully stateless, no Spring
+    Session, no distributed store).
+  - **CSRF**: Spring's WebAuthn endpoints expect a CSRF token, and this app
+    otherwise disables CSRF entirely as a pure bearer-token API — fixed with
+    a `CookieCsrfTokenRepository.withHttpOnlyFalse()` scoped narrowly to
+    `/webauthn/**` and `/login/webauthn` via
+    `CsrfConfigurer.requireCsrfProtectionMatcher(...)`, plus `.spa()` (new
+    in Spring Security 7.1) so the JS-readable `XSRF-TOKEN` cookie is
+    actually written on every response rather than only once something
+    resolves the deferred token — otherwise the SPA would have no way to
+    get its first cookie before its first protected WebAuthn request.
+  - **Filter-ordering finding, and a real bug it surfaced.** Reading
+    `WebAuthnConfigurer`'s actual source (not just its Javadoc) showed that
+    only `WebAuthnRegistrationFilter` — the filter that actually persists a
+    new credential, via `POST /webauthn/register` — is wired
+    `addFilterAfter(AuthorizationFilter.class)`; `PublicKeyCredentialCreationOptionsFilter`,
+    `PublicKeyCredentialRequestOptionsFilter`, and `WebAuthnAuthenticationFilter`
+    are all wired *before* `AuthorizationFilter` and self-terminate the
+    chain on a match, so this app's own
+    `.requestMatchers("/webauthn/**", "/login/webauthn").authenticated()`
+    rule never actually reaches three of the four endpoints — confirmed by
+    `WebAuthnCeremonyWiringIT`. `/webauthn/register/options` has its own
+    internal "any authenticated principal" check; `/login/webauthn` is
+    correctly reachable pre-auth (it's the login endpoint itself); but
+    `/webauthn/authenticate/options` has *no* check of its own at all (by
+    the spec's own "usernameless" resident-key model — the server can't
+    know who's signing in before a credential is picked). This app's own
+    login flow always presents a PASSWORD-factor pending token before
+    reaching that step regardless (mirroring TOTP's challenge step), and
+    `WebAuthnRequestOptionsRepositoryAdapter` originally assumed that
+    unconditionally — calling `CurrentUserPort.currentAccountId()`, whose
+    contract explicitly assumes an already-authenticated caller, meant an
+    anonymous request crashed it with a raw `ClassCastException` (String
+    "anonymousUser" principal cast to `UUID`) instead of a clean 401. Fixed
+    by checking the security context itself in that adapter and throwing
+    `InsufficientAuthenticationException` (routed by Spring's own
+    `ExceptionTranslationFilter` to the configured 401 entry point) before
+    ever reaching `CurrentUserPort`. Also routed CSRF failures on
+    `/webauthn/**` correctly: `CsrfFilter` runs ahead of `JwtAuthFilter`,
+    so a CSRF rejection previously fell into this app's ownership-mismatch
+    404 handler (designed for a completely different, already-authenticated
+    case) instead of a real "invalid CSRF token" 403.
 - **First-mover enrollment race, and its mitigation.** Enrollment
   (`/auth/mfa/setup/totp/start` + `/confirm`) requires nothing beyond a
   `PASSWORD`-factor token — i.e. nothing beyond the current password. For an

@@ -5,6 +5,7 @@ import com.campaignorganizer.accounts.adapter.account.in.web.MfaWebDtos.MfaEnrol
 import com.campaignorganizer.accounts.adapter.account.in.web.MfaWebDtos.RecoveryCodeRequest;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmTotpSetupUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmWebauthnSetupUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.MfaEnrollmentOutcome;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSetupStart;
 import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpSetupUseCase;
@@ -35,6 +36,7 @@ public class MfaController {
 
     private final StartTotpSetupUseCase startTotpSetupUseCase;
     private final ConfirmTotpSetupUseCase confirmTotpSetupUseCase;
+    private final ConfirmWebauthnSetupUseCase confirmWebauthnSetupUseCase;
     private final VerifyTotpChallengeUseCase verifyTotpChallengeUseCase;
     private final VerifyRecoveryCodeUseCase verifyRecoveryCodeUseCase;
     private final CurrentUserPort currentUser;
@@ -42,11 +44,13 @@ public class MfaController {
 
     public MfaController(StartTotpSetupUseCase startTotpSetupUseCase,
                          ConfirmTotpSetupUseCase confirmTotpSetupUseCase,
+                         ConfirmWebauthnSetupUseCase confirmWebauthnSetupUseCase,
                          VerifyTotpChallengeUseCase verifyTotpChallengeUseCase,
                          VerifyRecoveryCodeUseCase verifyRecoveryCodeUseCase, CurrentUserPort currentUser,
                          JwtService jwtService) {
         this.startTotpSetupUseCase = startTotpSetupUseCase;
         this.confirmTotpSetupUseCase = confirmTotpSetupUseCase;
+        this.confirmWebauthnSetupUseCase = confirmWebauthnSetupUseCase;
         this.verifyTotpChallengeUseCase = verifyTotpChallengeUseCase;
         this.verifyRecoveryCodeUseCase = verifyRecoveryCodeUseCase;
         this.currentUser = currentUser;
@@ -62,6 +66,13 @@ public class MfaController {
     public MfaEnrollmentResult confirmTotpSetup(@Valid @RequestBody MfaCodeRequest request) {
         MfaEnrollmentOutcome outcome =
                 confirmTotpSetupUseCase.confirmTotpSetup(currentUser.currentAccountId(), request.code());
+        JwtService.IssuedToken issued = issueFullToken(outcome.account());
+        return new MfaEnrollmentResult(issued.token(), "Bearer", issued.expiresAt(), outcome.recoveryCodes());
+    }
+
+    @PostMapping("/setup/webauthn/confirm")
+    public MfaEnrollmentResult confirmWebauthnSetup() {
+        MfaEnrollmentOutcome outcome = confirmWebauthnSetupUseCase.confirmWebauthnSetup(currentUser.currentAccountId());
         JwtService.IssuedToken issued = issueFullToken(outcome.account());
         return new MfaEnrollmentResult(issued.token(), "Bearer", issued.expiresAt(), outcome.recoveryCodes());
     }

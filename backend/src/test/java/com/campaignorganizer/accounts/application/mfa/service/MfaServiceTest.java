@@ -16,6 +16,7 @@ import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.MfaEnro
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSetupStart;
 import com.campaignorganizer.accounts.application.mfa.port.out.RecoveryCodePort;
 import com.campaignorganizer.accounts.application.mfa.port.out.RecoveryCodeRepositoryPort;
+import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialRepositoryPort;
 import com.campaignorganizer.accounts.domain.account.Account;
 import com.campaignorganizer.accounts.domain.account.MfaMethod;
 import com.campaignorganizer.accounts.domain.account.Role;
@@ -57,6 +58,8 @@ class MfaServiceTest {
     private RecoveryCodePort recoveryCodeGenerator;
     @Mock
     private IdGenerator ids;
+    @Mock
+    private WebAuthnCredentialRepositoryPort webAuthnCredentials;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final TextEncryptor textEncryptor = Encryptors.delux("unit-test-key", "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4");
@@ -68,7 +71,7 @@ class MfaServiceTest {
     @BeforeEach
     void setUp() {
         service = new MfaService(accounts, recoveryCodeRepository, totp, recoveryCodeGenerator, passwordEncoder,
-                textEncryptor, ids, clock);
+                textEncryptor, webAuthnCredentials, ids, clock);
     }
 
     @Test
@@ -139,6 +142,33 @@ class MfaServiceTest {
 
         assertThatThrownBy(() -> service.confirmTotpSetup(accountId, "111111"))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void confirmWebauthnSetupActivatesMethodAndIssuesRecoveryCodesWhenCredentialExists() {
+        Account account = freshAccount();
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(webAuthnCredentials.existsByAccountId(accountId)).thenReturn(true);
+        when(recoveryCodeGenerator.generateCodes(10)).thenReturn(List.of("code-1", "code-2"));
+        when(ids.newId()).thenReturn(UUID.randomUUID(), UUID.randomUUID());
+
+        MfaEnrollmentOutcome outcome = service.confirmWebauthnSetup(accountId);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.WEBAUTHN);
+        assertThat(outcome.account().mfaMethod()).isEqualTo(MfaMethod.WEBAUTHN);
+        assertThat(outcome.recoveryCodes()).containsExactly("code-1", "code-2");
+        verify(recoveryCodeRepository).saveAll(any());
+    }
+
+    @Test
+    void confirmWebauthnSetupFailsWithoutAStoredCredential() {
+        Account account = freshAccount();
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(webAuthnCredentials.existsByAccountId(accountId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.confirmWebauthnSetup(accountId)).isInstanceOf(ValidationException.class);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.NONE);
     }
 
     @Test
@@ -229,7 +259,7 @@ class MfaServiceTest {
 
     /** Admin recovery path (ADR-0111) for an enrollment the legitimate owner can't clear themselves. */
     @Test
-    void resetMfaClearsMethodAndSecretAndDeletesOutstandingRecoveryCodes() {
+    void resetMfaClearsMethodAndSecretAndDeletesOutstandingRecoveryCodesAndWebauthnCredential() {
         Account account = enrolledAccount("SECRET123");
         int versionBefore = account.getTokenVersion();
         when(accounts.findById(accountId)).thenReturn(Optional.of(account));
@@ -241,6 +271,7 @@ class MfaServiceTest {
         assertThat(account.getTotpSecretEncrypted()).isNull();
         assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
         verify(recoveryCodeRepository).deleteAllByAccountId(accountId);
+        verify(webAuthnCredentials).deleteByAccountId(accountId);
     }
 
     private Account freshAccount() {
