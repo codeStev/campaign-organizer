@@ -1797,6 +1797,25 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
 /* Uppercase, letter-spaced micro-label for card/section headers, matching
    the mockup's "WORLD OVERVIEW" / "MAINTENANCE" typography. Colors stay
    theme-neutral (muted-foreground) per the "match layout, not palette"
