@@ -1,6 +1,7 @@
 package com.campaignorganizer.accounts;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -104,6 +105,47 @@ class WebAuthnCeremonyWiringIT extends AbstractIntegrationTest {
                         .cookie(new Cookie("XSRF-TOKEN", csrf)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.challenge").isNotEmpty());
+    }
+
+    /**
+     * The gap that let a real bug ship (see {@code WebAuthnCreationOptionsRepositoryAdapter}'s
+     * Javadoc): every other test here only asserts on the raw HTTP options response, never that
+     * the credential-write step can actually load back what {@code /webauthn/register/options}
+     * just saved. A garbage attestation body can't complete a real ceremony (that needs a
+     * cryptographically-simulated authenticator this suite doesn't have — see the class Javadoc),
+     * so failing here is expected — the point is *where* it fails. If the stored challenge itself
+     * couldn't be read back, the failure surfaces as {@code WebAuthnCreationOptionsRepositoryAdapter}'s
+     * own {@code IllegalStateException("Failed to deserialize WebAuthn creation options")} before
+     * Spring's filter ever reaches credential verification — exactly the production incident this
+     * test exists to catch. Getting past that into a *different* failure (Spring's own assertion on
+     * the garbage/empty public key bytes this test deliberately sends) proves the load succeeded.
+     */
+    @Test
+    void registerCredentialEndpointDoesNotFailToReloadItsOwnJustSavedChallenge() throws Exception {
+        MvcResult loginResult = doLogin(register());
+        String pendingToken = JsonPath.read(loginResult.getResponse().getContentAsString(), "$.token");
+        String csrf = csrfTokenFrom(loginResult.getResponse());
+
+        mockMvc.perform(post("/webauthn/register/options")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + pendingToken)
+                        .header("X-XSRF-TOKEN", csrf)
+                        .cookie(new Cookie("XSRF-TOKEN", csrf)))
+                .andExpect(status().isOk());
+
+        String garbageAttestation = "{\"id\":\"AAAA\",\"rawId\":\"AAAA\",\"type\":\"public-key\","
+                + "\"response\":{\"clientDataJSON\":\"AAAA\",\"attestationObject\":\"AAAA\"},"
+                + "\"clientExtensionResults\":{}}";
+        assertThatThrownBy(() -> mockMvc.perform(post("/webauthn/register")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + pendingToken)
+                        .header("X-XSRF-TOKEN", csrf)
+                        .cookie(new Cookie("XSRF-TOKEN", csrf))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(garbageAttestation)))
+                // Real, expected failure well past the loading step — this exact garbage payload
+                // decodes to an empty/invalid COSE public key, which Spring's own filter rejects
+                // via a plain assertion rather than a graceful 400. Not what this test is
+                // guarding against; see the Javadoc above for what would be.
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("publicKey");
     }
 
     @Test
