@@ -530,6 +530,53 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /accounts/me/sessions:
+    get:
+      tags: [accounts]
+      summary: List the current account's active sessions/devices
+      description: >-
+        Self-service session/device tracking (ADR-0112) — a second,
+        finer-grained revocation layer alongside logout-all/token version.
+        Only active (not revoked, not expired) sessions are returned,
+        oldest first. One row exists per full (PASSWORD+MFA) token ever
+        issued; a password-only pending-MFA token never gets one.
+      operationId: listAccountSessions
+      responses:
+        '200':
+          description: The account's active sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountSessionSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/sessions/{sessionId}:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [accounts]
+      summary: Revoke one of the current account's sessions/devices
+      description: >-
+        Works on the caller's own current session too — a legitimate
+        "log out this device," which simply means the very next request
+        with that same token is rejected.
+      operationId: revokeAccountSession
+      responses:
+        '204':
+          description: Session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /accounts/{accountId}:
     parameters:
       - $ref: '#/components/parameters/AccountId'
@@ -7749,6 +7796,30 @@ components:
         remaining:
           type: integer
           description: How many of the account's 10 recovery codes are still unused.
+
+    AccountSessionSummary:
+      type: object
+      required: [id, createdAt, expiresAt, current]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The backing token's own jti.
+        createdAt:
+          type: string
+          format: date-time
+        userAgent:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+          description: Whether this is the session of the token used to make this request.
 
     RegisterRequest:
       type: object

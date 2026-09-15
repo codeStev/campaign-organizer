@@ -16,6 +16,11 @@ public class SecurityContextCurrentUserAdapter implements CurrentUserPort {
     }
 
     @Override
+    public UUID currentSessionId() {
+        return (UUID) authentication().getDetails();
+    }
+
+    @Override
     public Role currentRole() {
         return authentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)

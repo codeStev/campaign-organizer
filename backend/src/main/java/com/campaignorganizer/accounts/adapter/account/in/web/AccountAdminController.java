@@ -24,9 +24,15 @@ import com.campaignorganizer.accounts.application.mfa.port.in.ResetMfaUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpReEnrollmentUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialSummary;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.accounts.application.session.port.in.AccountSessionSummary;
+import com.campaignorganizer.accounts.application.session.port.in.ListAccountSessionsUseCase;
+import com.campaignorganizer.accounts.application.session.port.in.RecordAccountSessionUseCase;
+import com.campaignorganizer.accounts.application.session.port.in.RevokeAccountSessionUseCase;
 import com.campaignorganizer.auth.TokenResponse;
+import com.campaignorganizer.security.ClientAddress;
 import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.security.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -66,6 +72,9 @@ public class AccountAdminController {
     private final RegenerateRecoveryCodesUseCase regenerateRecoveryCodesUseCase;
     private final StartTotpReEnrollmentUseCase startTotpReEnrollmentUseCase;
     private final ConfirmTotpReEnrollmentUseCase confirmTotpReEnrollmentUseCase;
+    private final ListAccountSessionsUseCase listAccountSessionsUseCase;
+    private final RevokeAccountSessionUseCase revokeAccountSessionUseCase;
+    private final RecordAccountSessionUseCase recordAccountSessionUseCase;
     private final CurrentUserPort currentUser;
     private final AccountWebMapper mapper;
     private final JwtService jwtService;
@@ -82,6 +91,9 @@ public class AccountAdminController {
                                   RegenerateRecoveryCodesUseCase regenerateRecoveryCodesUseCase,
                                   StartTotpReEnrollmentUseCase startTotpReEnrollmentUseCase,
                                   ConfirmTotpReEnrollmentUseCase confirmTotpReEnrollmentUseCase,
+                                  ListAccountSessionsUseCase listAccountSessionsUseCase,
+                                  RevokeAccountSessionUseCase revokeAccountSessionUseCase,
+                                  RecordAccountSessionUseCase recordAccountSessionUseCase,
                                   CurrentUserPort currentUser, AccountWebMapper mapper, JwtService jwtService) {
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
@@ -98,6 +110,9 @@ public class AccountAdminController {
         this.regenerateRecoveryCodesUseCase = regenerateRecoveryCodesUseCase;
         this.startTotpReEnrollmentUseCase = startTotpReEnrollmentUseCase;
         this.confirmTotpReEnrollmentUseCase = confirmTotpReEnrollmentUseCase;
+        this.listAccountSessionsUseCase = listAccountSessionsUseCase;
+        this.revokeAccountSessionUseCase = revokeAccountSessionUseCase;
+        this.recordAccountSessionUseCase = recordAccountSessionUseCase;
         this.currentUser = currentUser;
         this.mapper = mapper;
         this.jwtService = jwtService;
@@ -172,11 +187,26 @@ public class AccountAdminController {
      * session needs a new one to keep working past this call.
      */
     @PostMapping("/me/totp/confirm")
-    public TokenResponse confirmTotpReEnrollment(@Valid @RequestBody MfaCodeRequest request) {
+    public TokenResponse confirmTotpReEnrollment(@Valid @RequestBody MfaCodeRequest request,
+                                                  HttpServletRequest httpRequest) {
         AccountView account =
                 confirmTotpReEnrollmentUseCase.confirmTotpReEnrollment(currentUser.currentAccountId(), request.code());
         JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        recordAccountSessionUseCase.recordSession(account.id(), issued.jti(), issued.expiresAt(),
+                httpRequest.getHeader("User-Agent"), ClientAddress.of(httpRequest));
         return TokenResponse.bearer(issued.token(), issued.expiresAt());
+    }
+
+    /** Self-service session/device tracking (ADR-0112) — a second, finer-grained layer alongside {@code logout-all}. */
+    @GetMapping("/me/sessions")
+    public List<AccountSessionSummary> listSessions() {
+        return listAccountSessionsUseCase.listSessions(currentUser.currentAccountId(), currentUser.currentSessionId());
+    }
+
+    @DeleteMapping("/me/sessions/{sessionId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeSession(@PathVariable UUID sessionId) {
+        revokeAccountSessionUseCase.revokeSession(currentUser.currentAccountId(), sessionId);
     }
 
     @PatchMapping("/{accountId}/role")

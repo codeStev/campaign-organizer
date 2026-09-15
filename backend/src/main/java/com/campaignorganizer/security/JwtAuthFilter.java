@@ -2,6 +2,7 @@ package com.campaignorganizer.security;
 
 import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.accounts.application.session.port.published.AccountSessionQueryPort;
 import com.campaignorganizer.security.JwtService.ParsedToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,7 +19,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -41,6 +41,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * {@code multiFactor()} authorization rule in
  * {@code com.campaignorganizer.config.SecurityConfig} only cares that the
  * authority is present, not how it got there (ADR-0111).
+ *
+ * A full (PASSWORD+MFA) token additionally needs an active {@code account_sessions} row for its
+ * own {@code jti} (ADR-0112) — a second, finer-grained revocation layer alongside
+ * {@code tokenVersion}, letting a user revoke one device without logging out everywhere. A
+ * PASSWORD-only pending-MFA token carries no such row and skips this check entirely.
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -50,10 +55,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final AccountQueryPort accounts;
+    private final AccountSessionQueryPort sessions;
 
-    public JwtAuthFilter(JwtService jwtService, AccountQueryPort accounts) {
+    public JwtAuthFilter(JwtService jwtService, AccountQueryPort accounts, AccountSessionQueryPort sessions) {
         this.jwtService = jwtService;
         this.accounts = accounts;
+        this.sessions = sessions;
     }
 
     /**
@@ -76,10 +83,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(BEARER_PREFIX)
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = header.substring(BEARER_PREFIX.length());
-            jwtService.parse(token).flatMap(this::toAuthentication).ifPresent(authentication -> {
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            });
+            jwtService.parse(token).flatMap(this::toAuthentication)
+                    .ifPresent(authentication -> SecurityContextHolder.getContext().setAuthentication(authentication));
         }
         filterChain.doFilter(request, response);
     }
@@ -88,8 +93,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         return accounts.findById(parsed.accountId())
                 .filter(AccountView::enabled)
                 .filter(account -> account.tokenVersion() == parsed.tokenVersion())
-                .map(account -> new UsernamePasswordAuthenticationToken(
-                        account.id(), null, authorities(account, parsed)));
+                .filter(account -> !parsed.factors().contains(JwtService.MFA_FACTOR) || sessions.isActive(parsed.jti()))
+                .map(account -> {
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            account.id(), null, authorities(account, parsed));
+                    authentication.setDetails(parsed.jti());
+                    return authentication;
+                });
     }
 
     private List<GrantedAuthority> authorities(AccountView account, ParsedToken parsed) {

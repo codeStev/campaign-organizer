@@ -33,9 +33,20 @@ class JwtServiceTest {
 
         assertThat(issued.token()).isNotBlank();
         assertThat(issued.expiresAt()).isAfter(Instant.now());
+        assertThat(issued.jti()).isNotNull();
         assertThat(service.parse(issued.token())).contains(
-                new JwtService.ParsedToken(ACCOUNT_ID, Role.USER, 0,
+                new JwtService.ParsedToken(issued.jti(), ACCOUNT_ID, Role.USER, 0,
                         Set.of(JwtService.PASSWORD_FACTOR, JwtService.MFA_FACTOR)));
+    }
+
+    @Test
+    void eachIssuedTokenGetsADistinctJti() {
+        JwtService service = jwtServiceWithExpiryHours(1);
+
+        JwtService.IssuedToken first = service.issue(ACCOUNT_ID, Role.USER, 0);
+        JwtService.IssuedToken second = service.issue(ACCOUNT_ID, Role.USER, 0);
+
+        assertThat(first.jti()).isNotEqualTo(second.jti());
     }
 
     @Test
@@ -45,7 +56,7 @@ class JwtServiceTest {
         JwtService.IssuedToken issued = service.issue(ACCOUNT_ID, Role.USER, 0, Set.of(JwtService.PASSWORD_FACTOR));
 
         assertThat(service.parse(issued.token())).contains(
-                new JwtService.ParsedToken(ACCOUNT_ID, Role.USER, 0, Set.of(JwtService.PASSWORD_FACTOR)));
+                new JwtService.ParsedToken(issued.jti(), ACCOUNT_ID, Role.USER, 0, Set.of(JwtService.PASSWORD_FACTOR)));
     }
 
     @Test

@@ -15,4 +15,7 @@ public interface CurrentUserPort {
     UUID currentAccountId();
 
     Role currentRole();
+
+    /** The current request's own token's session id ({@code jti}) — see {@code JwtAuthFilter}, ADR-0112. */
+    UUID currentSessionId();
 }
