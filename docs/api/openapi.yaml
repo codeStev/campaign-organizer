@@ -435,6 +435,101 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /accounts/me/recovery-codes:
+    get:
+      tags: [accounts]
+      summary: How many unused recovery codes the current account has
+      description: >-
+        Self-service visibility (ADR-0111 follow-up) — works regardless of
+        which MFA method is active.
+      operationId: getRecoveryCodeStatus
+      responses:
+        '200':
+          description: Current recovery-code count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryCodeStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/recovery-codes/regenerate:
+    post:
+      tags: [accounts]
+      summary: Invalidate every outstanding recovery code and issue a fresh batch
+      description: >-
+        Self-service (ADR-0111 follow-up) — no password re-confirmation
+        required beyond the full PASSWORD+MFA session already needed to
+        reach this endpoint. Shown only in this response — save them now.
+      operationId: regenerateRecoveryCodes
+      responses:
+        '200':
+          description: The new recovery codes, in plaintext, shown only here.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/totp/start:
+    post:
+      tags: [accounts]
+      summary: Begin replacing the current account's active TOTP secret
+      description: >-
+        Self-service TOTP re-enrollment (ADR-0111 follow-up) — e.g. a new
+        phone. Requires TOTP to already be this account's active MFA
+        method; unlike POST /auth/mfa/setup/totp/start (first-time
+        enrollment, PASSWORD-only), this needs the MFA factor already
+        proven, so a leaked-password-only attacker can't replace an
+        already-active secret.
+      operationId: startTotpReEnrollment
+      responses:
+        '200':
+          description: New pending TOTP secret.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpSetupStart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/totp/confirm:
+    post:
+      tags: [accounts]
+      summary: Confirm the pending TOTP secret replacement
+      description: >-
+        Verifies a code against the pending secret from
+        /accounts/me/totp/start and promotes it to active. No recovery-code
+        reissuance — the standing recovery-code batch is unaffected. This
+        *does* bump the account's token version and return a fresh bearer
+        token: every other outstanding token (e.g. a lost/stolen device's
+        still-live session — the whole point of this flow) stops working
+        immediately, so the caller's own session needs a new one to keep
+        working past this call.
+      operationId: confirmTotpReEnrollment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+      responses:
+        '200':
+          description: TOTP secret replaced; a fresh bearer token for the caller's own session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /accounts/{accountId}:
     parameters:
       - $ref: '#/components/parameters/AccountId'
@@ -7646,6 +7741,14 @@ components:
           items:
             type: string
           description: e.g. "internal", "hybrid", "usb".
+
+    RecoveryCodeStatus:
+      type: object
+      required: [remaining]
+      properties:
+        remaining:
+          type: integer
+          description: How many of the account's 10 recovery codes are still unused.
 
     RegisterRequest:
       type: object

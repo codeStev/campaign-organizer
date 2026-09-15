@@ -10,6 +10,8 @@ public interface AccountRecoveryCodeJpaRepository extends JpaRepository<AccountR
 
     List<AccountRecoveryCodeJpaEntity> findByAccountIdAndUsedAtIsNull(UUID accountId);
 
+    int countByAccountIdAndUsedAtIsNull(UUID accountId);
+
     @Modifying
     @Query("delete from AccountRecoveryCodeJpaEntity c where c.accountId = :accountId")
     void deleteAllByAccountId(UUID accountId);

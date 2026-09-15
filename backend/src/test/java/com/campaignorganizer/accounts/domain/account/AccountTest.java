@@ -39,12 +39,14 @@ class AccountTest {
     void completeTotpEnrollmentPromotesPendingSecretToActive() {
         Account account = create();
         account.beginTotpEnrollment("encrypted-secret", T0);
+        int versionBefore = account.getTokenVersion();
 
         account.completeTotpEnrollment(T1);
 
         assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
         assertThat(account.getTotpSecretEncrypted()).isEqualTo("encrypted-secret");
         assertThat(account.getTotpSecretPendingEncrypted()).isNull();
+        assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
     }
 
     @Test
@@ -61,6 +63,55 @@ class AccountTest {
         account.completeTotpEnrollment(T0);
 
         assertThatThrownBy(() -> account.beginTotpEnrollment("another-secret", T1))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void beginTotpReEnrollmentStoresPendingSecretWhileKeepingTotpActive() {
+        Account account = create();
+        account.beginTotpEnrollment("encrypted-secret", T0);
+        account.completeTotpEnrollment(T0);
+
+        account.beginTotpReEnrollment("replacement-secret", T1);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
+        assertThat(account.getTotpSecretPendingEncrypted()).isEqualTo("replacement-secret");
+        assertThat(account.getTotpSecretEncrypted()).isEqualTo("encrypted-secret");
+        assertThat(account.getUpdatedAt()).isEqualTo(T1);
+    }
+
+    @Test
+    void completeTotpEnrollmentAfterReEnrollmentSwapsTheActiveSecretAndBumpsTokenVersion() {
+        Account account = create();
+        account.beginTotpEnrollment("encrypted-secret", T0);
+        account.completeTotpEnrollment(T0);
+        account.beginTotpReEnrollment("replacement-secret", T0);
+        int versionBefore = account.getTokenVersion();
+
+        account.completeTotpEnrollment(T1);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
+        assertThat(account.getTotpSecretEncrypted()).isEqualTo("replacement-secret");
+        assertThat(account.getTotpSecretPendingEncrypted()).isNull();
+        // The whole point of re-enrollment is replacing a lost/stolen device's secret — its
+        // already-issued token must stop working immediately, not just future logins.
+        assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
+    }
+
+    @Test
+    void beginTotpReEnrollmentFailsWhenNoMfaMethodIsActiveYet() {
+        Account account = create();
+
+        assertThatThrownBy(() -> account.beginTotpReEnrollment("secret", T1))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void beginTotpReEnrollmentFailsWhenTheActiveMethodIsWebauthnNotTotp() {
+        Account account = create();
+        account.completeWebauthnEnrollment(T0);
+
+        assertThatThrownBy(() -> account.beginTotpReEnrollment("secret", T1))
                 .isInstanceOf(ValidationException.class);
     }
 

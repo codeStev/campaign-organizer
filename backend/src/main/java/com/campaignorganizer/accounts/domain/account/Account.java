@@ -94,8 +94,10 @@ public final class Account {
     /**
      * Stores a new in-progress TOTP secret pending confirmation. Doesn't touch the active
      * method/secret — calling this again before confirming just replaces the pending attempt.
-     * Only valid while no MFA method is active yet; replacing an already-active method goes
-     * through {@link #resetMfaForRecovery} instead (ADR-0111).
+     * Only valid while no MFA method is active yet — first-time enrollment. Self-service
+     * *replacement* of an already-active TOTP secret goes through {@link
+     * #beginTotpReEnrollment} instead (ADR-0111 follow-up); an admin-triggered full reset
+     * still goes through {@link #resetMfaForRecovery}.
      */
     public void beginTotpEnrollment(String pendingSecretEncrypted, Instant now) {
         if (mfaMethod != MfaMethod.NONE) {
@@ -108,7 +110,37 @@ public final class Account {
         this.updatedAt = now;
     }
 
-    /** Promotes the pending TOTP secret to active once its code has been verified by the caller. */
+    /**
+     * Stores a new in-progress TOTP secret pending confirmation, same as {@link
+     * #beginTotpEnrollment} but for an account whose active method is *already* TOTP — e.g.
+     * replacing a lost/retired authenticator without an admin reset (ADR-0111 follow-up).
+     * Deliberately the opposite precondition from {@link #beginTotpEnrollment}: this method
+     * exists so the two can be gated by different routes/authorization requirements at the
+     * application layer (first enrollment needs only the PASSWORD factor; this needs the MFA
+     * factor already proven) without either accidentally accepting the other's starting state.
+     */
+    public void beginTotpReEnrollment(String pendingSecretEncrypted, Instant now) {
+        if (mfaMethod != MfaMethod.TOTP) {
+            throw new ValidationException("TOTP is not this account's active MFA method");
+        }
+        if (pendingSecretEncrypted == null || pendingSecretEncrypted.isBlank()) {
+            throw new ValidationException("Pending TOTP secret must not be blank");
+        }
+        this.totpSecretPendingEncrypted = pendingSecretEncrypted;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Promotes the pending TOTP secret to active once its code has been verified by the caller.
+     * Bumps the token version — found missing during this feature's own {@code security-review}
+     * pass for the re-enrollment case specifically: without it, replacing a lost/stolen device's
+     * TOTP secret (the whole point of {@link #beginTotpReEnrollment}) left that device's
+     * already-issued token fully valid until its natural expiry, exactly the scenario a user
+     * reaching for this flow is trying to shut out. Harmless for first-time enrollment too — the
+     * caller there already gets a brand-new token immediately after, the same as every other
+     * token-invalidating mutator on this aggregate ({@link #changePasswordHash}, {@link
+     * #disable}, {@link #resetMfaForRecovery}).
+     */
     public void completeTotpEnrollment(Instant now) {
         if (totpSecretPendingEncrypted == null) {
             throw new ValidationException("No pending TOTP enrollment to confirm");
@@ -116,6 +148,7 @@ public final class Account {
         this.mfaMethod = MfaMethod.TOTP;
         this.totpSecretEncrypted = totpSecretPendingEncrypted;
         this.totpSecretPendingEncrypted = null;
+        this.tokenVersion++;
         this.updatedAt = now;
     }
 

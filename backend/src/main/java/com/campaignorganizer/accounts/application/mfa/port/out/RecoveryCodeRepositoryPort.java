@@ -12,6 +12,9 @@ public interface RecoveryCodeRepositoryPort {
 
     List<RecoveryCode> findUnusedByAccountId(UUID accountId);
 
+    /** Cheaper than {@code findUnusedByAccountId(id).size()} for the self-service status check. */
+    int countUnusedByAccountId(UUID accountId);
+
     /** Discards any leftover codes before a fresh set is issued (a re-enrollment after recovery). */
     void deleteAllByAccountId(UUID accountId);
 }

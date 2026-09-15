@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { confirmTotpSetup, enrollWebauthn, startTotpSetup } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { RecoveryCodesList } from '../components/RecoveryCodesList';
 
 interface Props {
   /** PASSWORD-only token from login/register, not a real session token. */
@@ -23,7 +24,6 @@ export function MfaSetupPage({ pendingToken, onAuthenticated }: Props) {
   const [code, setCode] = useState('');
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(false);
 
   function chooseTotp() {
     setStage({ kind: 'totp-loading' });
@@ -104,29 +104,7 @@ export function MfaSetupPage({ pendingToken, onAuthenticated }: Props) {
     return (
       <div className="card login">
         <h2>Save your recovery codes</h2>
-        <p className="muted hint">
-          Each code works once, to sign in if you lose your authenticator or to reset a forgotten
-          password. Store them somewhere safe — they won't be shown again.
-        </p>
-        <ul className="recovery-codes">
-          {stage.recoveryCodes.map((recoveryCode) => (
-            <li key={recoveryCode}>
-              <code>{recoveryCode}</code>
-            </li>
-          ))}
-        </ul>
-        <label htmlFor="ack-recovery-codes" className="checkbox-label">
-          <input
-            id="ack-recovery-codes"
-            type="checkbox"
-            checked={acknowledged}
-            onChange={(e) => setAcknowledged(e.target.checked)}
-          />
-          I've saved these recovery codes
-        </label>
-        <Button type="button" disabled={!acknowledged} onClick={() => onAuthenticated(stage.token)}>
-          Continue
-        </Button>
+        <RecoveryCodesList codes={stage.recoveryCodes} onContinue={() => onAuthenticated(stage.token)} />
       </div>
     );
   }

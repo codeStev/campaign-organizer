@@ -13,6 +13,7 @@ import com.campaignorganizer.accounts.application.account.port.out.AccountReposi
 import com.campaignorganizer.accounts.application.account.port.out.TotpPort;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.MfaEnrollmentOutcome;
+import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.RecoveryCodeStatus;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSetupStart;
 import com.campaignorganizer.accounts.application.mfa.port.out.RecoveryCodePort;
 import com.campaignorganizer.accounts.application.mfa.port.out.RecoveryCodeRepositoryPort;
@@ -23,6 +24,7 @@ import com.campaignorganizer.accounts.domain.account.Role;
 import com.campaignorganizer.accounts.domain.recoverycode.RecoveryCode;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.AuthenticationFailedException;
+import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Clock;
 import java.time.Instant;
@@ -272,6 +274,102 @@ class MfaServiceTest {
         assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
         verify(recoveryCodeRepository).deleteAllByAccountId(accountId);
         verify(webAuthnCredentials).deleteByAccountId(accountId);
+    }
+
+    @Test
+    void getRecoveryCodeStatusReturnsTheUnusedCount() {
+        when(recoveryCodeRepository.countUnusedByAccountId(accountId)).thenReturn(7);
+
+        RecoveryCodeStatus status = service.getRecoveryCodeStatus(accountId);
+
+        assertThat(status.remaining()).isEqualTo(7);
+    }
+
+    @Test
+    void regenerateRecoveryCodesIssuesAFreshBatch() {
+        Account account = enrolledAccount("SECRET123");
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(recoveryCodeGenerator.generateCodes(10)).thenReturn(List.of("new-1", "new-2"));
+        when(ids.newId()).thenReturn(UUID.randomUUID(), UUID.randomUUID());
+
+        List<String> codes = service.regenerateRecoveryCodes(accountId);
+
+        assertThat(codes).containsExactly("new-1", "new-2");
+        verify(recoveryCodeRepository).deleteAllByAccountId(accountId);
+        verify(recoveryCodeRepository).saveAll(any());
+    }
+
+    @Test
+    void regenerateRecoveryCodesFailsForAnUnknownAccount() {
+        when(accounts.findById(accountId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.regenerateRecoveryCodes(accountId)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void startTotpReEnrollmentStoresEncryptedPendingSecretForAnAlreadyTotpAccount() {
+        Account account = enrolledAccount("OLD-SECRET");
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(totp.generateSecret()).thenReturn("NEW-SECRET");
+        when(totp.provisioningUri("NEW-SECRET", account.getEmail())).thenReturn("otpauth://totp/uri");
+        when(totp.qrCodeDataUri("NEW-SECRET", account.getEmail())).thenReturn("data:image/png;base64,abc");
+
+        TotpSetupStart result = service.startTotpReEnrollment(accountId);
+
+        assertThat(result.secret()).isEqualTo("NEW-SECRET");
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
+        assertThat(textEncryptor.decrypt(account.getTotpSecretPendingEncrypted())).isEqualTo("NEW-SECRET");
+        verify(accounts).save(account);
+    }
+
+    @Test
+    void startTotpReEnrollmentFailsWhenNoTotpMethodIsActiveYet() {
+        Account account = freshAccount();
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(totp.generateSecret()).thenReturn("NEW-SECRET");
+
+        assertThatThrownBy(() -> service.startTotpReEnrollment(accountId)).isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void confirmTotpReEnrollmentWithCorrectCodeSwapsTheActiveSecretBumpsTokenVersionWithoutReissuingRecoveryCodes() {
+        Account account = enrolledAccount("OLD-SECRET");
+        account.beginTotpReEnrollment(textEncryptor.encrypt("NEW-SECRET"), clock.instant());
+        int versionBefore = account.getTokenVersion();
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(totp.verifyCode("NEW-SECRET", "222222")).thenReturn(true);
+
+        AccountView result = service.confirmTotpReEnrollment(accountId, "222222");
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
+        assertThat(textEncryptor.decrypt(account.getTotpSecretEncrypted())).isEqualTo("NEW-SECRET");
+        assertThat(account.getTotpSecretPendingEncrypted()).isNull();
+        // The whole point is invalidating a lost/stolen device's still-live token.
+        assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
+        assertThat(result.tokenVersion()).isEqualTo(versionBefore + 1);
+        verify(recoveryCodeRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void confirmTotpReEnrollmentWithWrongCodeFailsAndLeavesTheOldSecretActive() {
+        Account account = enrolledAccount("OLD-SECRET");
+        account.beginTotpReEnrollment(textEncryptor.encrypt("NEW-SECRET"), clock.instant());
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+        when(totp.verifyCode("NEW-SECRET", "000000")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.confirmTotpReEnrollment(accountId, "000000"))
+                .isInstanceOf(ValidationException.class);
+
+        assertThat(textEncryptor.decrypt(account.getTotpSecretEncrypted())).isEqualTo("OLD-SECRET");
+    }
+
+    @Test
+    void confirmTotpReEnrollmentFailsWithoutAPendingReEnrollment() {
+        Account account = enrolledAccount("OLD-SECRET");
+        when(accounts.findById(accountId)).thenReturn(Optional.of(account));
+
+        assertThatThrownBy(() -> service.confirmTotpReEnrollment(accountId, "111111"))
+                .isInstanceOf(ValidationException.class);
     }
 
     private Account freshAccount() {
