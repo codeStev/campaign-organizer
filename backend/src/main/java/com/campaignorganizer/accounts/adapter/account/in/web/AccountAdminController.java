@@ -12,7 +12,10 @@ import com.campaignorganizer.accounts.application.account.port.in.LogoutAllUseCa
 import com.campaignorganizer.accounts.application.account.port.in.ResetPasswordUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.SetEnabledUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.UpdateRoleUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.ListWebauthnCredentialsUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.RemoveWebauthnCredentialUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.ResetMfaUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialSummary;
 import com.campaignorganizer.security.CurrentUserPort;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -47,6 +50,8 @@ public class AccountAdminController {
     private final LogoutAllUseCase logoutAllUseCase;
     private final DeleteAccountUseCase deleteUseCase;
     private final ResetMfaUseCase resetMfaUseCase;
+    private final ListWebauthnCredentialsUseCase listWebauthnCredentialsUseCase;
+    private final RemoveWebauthnCredentialUseCase removeWebauthnCredentialUseCase;
     private final CurrentUserPort currentUser;
     private final AccountWebMapper mapper;
 
@@ -55,8 +60,10 @@ public class AccountAdminController {
                                   ResetPasswordUseCase resetPasswordUseCase,
                                   ChangeOwnPasswordUseCase changeOwnPasswordUseCase,
                                   LogoutAllUseCase logoutAllUseCase, DeleteAccountUseCase deleteUseCase,
-                                  ResetMfaUseCase resetMfaUseCase, CurrentUserPort currentUser,
-                                  AccountWebMapper mapper) {
+                                  ResetMfaUseCase resetMfaUseCase,
+                                  ListWebauthnCredentialsUseCase listWebauthnCredentialsUseCase,
+                                  RemoveWebauthnCredentialUseCase removeWebauthnCredentialUseCase,
+                                  CurrentUserPort currentUser, AccountWebMapper mapper) {
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
         this.updateRoleUseCase = updateRoleUseCase;
@@ -66,6 +73,8 @@ public class AccountAdminController {
         this.logoutAllUseCase = logoutAllUseCase;
         this.deleteUseCase = deleteUseCase;
         this.resetMfaUseCase = resetMfaUseCase;
+        this.listWebauthnCredentialsUseCase = listWebauthnCredentialsUseCase;
+        this.removeWebauthnCredentialUseCase = removeWebauthnCredentialUseCase;
         this.currentUser = currentUser;
         this.mapper = mapper;
     }
@@ -92,6 +101,23 @@ public class AccountAdminController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logoutAll() {
         logoutAllUseCase.logoutAll(currentUser.currentAccountId());
+    }
+
+    /**
+     * Self-service passkey management (ADR-0111 follow-up). Adding a passkey has no endpoint
+     * here at all — that's Spring Security's own {@code POST /webauthn/register} ceremony,
+     * gated by {@code WebAuthnCredentialRepositoryAdapter} to require the caller already hold
+     * the MFA factor before adding a second credential to an account.
+     */
+    @GetMapping("/me/webauthn-credentials")
+    public List<WebAuthnCredentialSummary> listWebauthnCredentials() {
+        return listWebauthnCredentialsUseCase.listWebauthnCredentials(currentUser.currentAccountId());
+    }
+
+    @DeleteMapping("/me/webauthn-credentials/{credentialId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeWebauthnCredential(@PathVariable UUID credentialId) {
+        removeWebauthnCredentialUseCase.removeWebauthnCredential(currentUser.currentAccountId(), credentialId);
     }
 
     @PatchMapping("/{accountId}/role")

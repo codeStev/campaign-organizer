@@ -262,20 +262,15 @@ async function fetchRequestOptions(pendingToken: string): Promise<CredentialRequ
   };
 }
 
-/**
- * Runs the full passkey enrollment ceremony (navigator.credentials.create() against Spring's
- * options/register endpoints), then confirms it with this app's own endpoint to activate WebAuthn
- * as the account's MFA method and issue the fresh recovery-code batch — the WebAuthn counterpart
- * to confirmTotpSetup, just with no code parameter since the ceremony itself is the proof.
- */
-export async function enrollWebauthn(pendingToken: string): Promise<MfaEnrollmentResult> {
-  const options = await fetchCreationOptions(pendingToken);
+/** Shared by both enrollment and self-service "add a backup passkey" — see callers below. */
+async function registerCredential(token: string, label: string): Promise<void> {
+  const options = await fetchCreationOptions(token);
   const credential = (await navigator.credentials.create(options)) as PublicKeyCredential | null;
   if (!credential) {
     throw new Error('The browser did not return a passkey credential.');
   }
   const response = credential.response as AuthenticatorAttestationResponse;
-  await webauthnRequest<{ success: boolean }>('/webauthn/register', pendingToken, {
+  await webauthnRequest<{ success: boolean }>('/webauthn/register', token, {
     publicKey: {
       credential: {
         id: credential.id,
@@ -289,10 +284,35 @@ export async function enrollWebauthn(pendingToken: string): Promise<MfaEnrollmen
         clientExtensionResults: credential.getClientExtensionResults(),
         authenticatorAttachment: credential.authenticatorAttachment ?? undefined,
       },
-      label: 'Passkey',
+      label,
     },
   });
+}
+
+/**
+ * Runs the full passkey enrollment ceremony (navigator.credentials.create() against Spring's
+ * options/register endpoints), then confirms it with this app's own endpoint to activate WebAuthn
+ * as the account's MFA method and issue the fresh recovery-code batch — the WebAuthn counterpart
+ * to confirmTotpSetup, just with no code parameter since the ceremony itself is the proof.
+ */
+export async function enrollWebauthn(pendingToken: string): Promise<MfaEnrollmentResult> {
+  await registerCredential(pendingToken, 'Passkey');
   return request<MfaEnrollmentResult>('/auth/mfa/setup/webauthn/confirm', { method: 'POST' }, pendingToken);
+}
+
+/**
+ * Self-service "add a backup passkey" (ADR-0111 follow-up) — same ceremony as enrollment, but
+ * driven by the ambient session token instead of a pending one, and with no confirm call
+ * afterward: mfaMethod is already WEBAUTHN, so there's nothing left to activate.
+ * WebAuthnCredentialRepositoryAdapter on the backend requires this session to already carry the
+ * MFA factor before it'll actually persist a second credential.
+ */
+export async function addWebauthnCredential(label = 'Passkey'): Promise<void> {
+  const token = getToken();
+  if (!token) {
+    throw new ApiError(401, 'Not authenticated');
+  }
+  await registerCredential(token, label);
 }
 
 /** Runs the passkey login-challenge ceremony and returns a fully authenticated token on success. */
@@ -362,6 +382,20 @@ export function changeOwnPassword(currentPassword: string, newPassword: string):
 export function logoutAllSessions(): Promise<void> {
   return request<void>('/accounts/me/logout-all', { method: 'POST' });
 }
+
+export interface WebAuthnCredentialSummary {
+  id: string;
+  label?: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  transports: string[];
+}
+
+/** Self-service passkey management (ADR-0111 follow-up) — adding one is `addWebauthnCredential` above. */
+export const webauthnCredentialsApi = {
+  list: () => request<WebAuthnCredentialSummary[]>('/accounts/me/webauthn-credentials'),
+  remove: (id: string) => request<void>(`/accounts/me/webauthn-credentials/${id}`, { method: 'DELETE' }),
+};
 
 /** Admin-only account roster management. */
 export const accountsApi = {
