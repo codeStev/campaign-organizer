@@ -124,6 +124,12 @@ public class WorldService implements CreateWorldUseCase, UpdateWorldUseCase, Del
         return worlds.findById(worldId).map(viewMapper::toView);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<WorldView> findByOwner(UUID ownerId) {
+        return worlds.findAllByOwnerIdOrderByCreatedAtDesc(ownerId).stream().map(viewMapper::toView).toList();
+    }
+
     // --- published ownership port (ADR-0109) ---
 
     @Override
