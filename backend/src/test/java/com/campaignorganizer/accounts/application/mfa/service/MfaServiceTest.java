@@ -373,7 +373,7 @@ class MfaServiceTest {
     }
 
     private Account freshAccount() {
-        return Account.reconstitute(accountId, "gm@example.com", "hash", Role.USER, true, 0, 0, null,
+        return Account.reconstitute(accountId, "gm@example.com", "hash", null, null, Role.USER, true, 0, 0, null,
                 MfaMethod.NONE, null, null, clock.instant(), clock.instant());
     }
 

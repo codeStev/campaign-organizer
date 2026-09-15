@@ -18,6 +18,8 @@ public final class Account {
     private final UUID id;
     private String email;
     private String passwordHash;
+    private String authProvider;
+    private String externalSubject;
     private Role role;
     private boolean enabled;
     private int tokenVersion;
@@ -29,9 +31,10 @@ public final class Account {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Account(UUID id, String email, String passwordHash, Role role, boolean enabled, int tokenVersion,
-                    int failedAttempts, Instant lockedUntil, MfaMethod mfaMethod, String totpSecretEncrypted,
-                    String totpSecretPendingEncrypted, Instant createdAt, Instant updatedAt) {
+    private Account(UUID id, String email, String passwordHash, String authProvider, String externalSubject,
+                    Role role, boolean enabled, int tokenVersion, int failedAttempts, Instant lockedUntil,
+                    MfaMethod mfaMethod, String totpSecretEncrypted, String totpSecretPendingEncrypted,
+                    Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -43,25 +46,46 @@ public final class Account {
         this.totpSecretEncrypted = totpSecretEncrypted;
         this.totpSecretPendingEncrypted = totpSecretPendingEncrypted;
         applyEmail(email);
-        applyPasswordHash(passwordHash);
+        applyIdentity(passwordHash, authProvider, externalSubject);
         this.role = requireRole(role);
     }
 
     public static Account create(UUID id, String email, String passwordHash, Role role, Instant now) {
-        return new Account(id, email, passwordHash, role, true, 0, 0, null, MfaMethod.NONE, null, null, now, now);
+        return new Account(id, email, passwordHash, null, null, role, true, 0, 0, null, MfaMethod.NONE, null, null,
+                now, now);
     }
 
-    public static Account reconstitute(UUID id, String email, String passwordHash, Role role, boolean enabled,
-                                       int tokenVersion, int failedAttempts, Instant lockedUntil, MfaMethod mfaMethod,
+    /**
+     * A password-less account authenticated via an external OIDC provider (ADR-0113) — Google
+     * only for now. {@code authProvider}/{@code externalSubject} together are this account's
+     * only identity; {@link #applyIdentity} enforces that exactly one of a password or an
+     * external identity is ever present, never both, never neither.
+     */
+    public static Account createViaOidc(UUID id, String email, String authProvider, String externalSubject,
+                                        Role role, Instant now) {
+        return new Account(id, email, null, authProvider, externalSubject, role, true, 0, 0, null, MfaMethod.NONE,
+                null, null, now, now);
+    }
+
+    public static Account reconstitute(UUID id, String email, String passwordHash, String authProvider,
+                                       String externalSubject, Role role, boolean enabled, int tokenVersion,
+                                       int failedAttempts, Instant lockedUntil, MfaMethod mfaMethod,
                                        String totpSecretEncrypted, String totpSecretPendingEncrypted,
                                        Instant createdAt, Instant updatedAt) {
-        return new Account(id, email, passwordHash, role, enabled, tokenVersion, failedAttempts, lockedUntil,
-                mfaMethod, totpSecretEncrypted, totpSecretPendingEncrypted, createdAt, updatedAt);
+        return new Account(id, email, passwordHash, authProvider, externalSubject, role, enabled, tokenVersion,
+                failedAttempts, lockedUntil, mfaMethod, totpSecretEncrypted, totpSecretPendingEncrypted, createdAt,
+                updatedAt);
     }
 
-    /** Password change bumps the token version: every previously-issued token stops working. */
+    /**
+     * Password change bumps the token version: every previously-issued token stops working.
+     * Not valid for a password-less OIDC account (ADR-0113) — it has nothing to change.
+     */
     public void changePasswordHash(String newPasswordHash, Instant now) {
-        applyPasswordHash(newPasswordHash);
+        if (authProvider != null) {
+            throw new ValidationException("This account signs in via " + authProvider + ", not a password");
+        }
+        applyIdentity(newPasswordHash, null, null);
         this.tokenVersion++;
         this.updatedAt = now;
     }
@@ -205,11 +229,23 @@ public final class Account {
         this.email = email;
     }
 
-    private void applyPasswordHash(String passwordHash) {
-        if (passwordHash == null || passwordHash.isBlank()) {
-            throw new ValidationException("Account password hash must not be blank");
+    /**
+     * Enforces exactly one identity: a local password, or an external (provider, subject) pair
+     * — never both, never neither. A blank/null field on one side and a present field on the
+     * other is fine (that's the normal shape for each kind of account); it's the XOR itself that
+     * matters, checked at the DB layer too via {@code chk_accounts_identity} (ADR-0113).
+     */
+    private void applyIdentity(String passwordHash, String authProvider, String externalSubject) {
+        boolean hasPassword = passwordHash != null && !passwordHash.isBlank();
+        boolean hasExternalIdentity = authProvider != null && !authProvider.isBlank()
+                && externalSubject != null && !externalSubject.isBlank();
+        if (hasPassword == hasExternalIdentity) {
+            throw new ValidationException(
+                    "Account must have exactly one identity: a password hash, or an external auth provider and subject");
         }
         this.passwordHash = passwordHash;
+        this.authProvider = authProvider;
+        this.externalSubject = externalSubject;
     }
 
     private static Role requireRole(Role role) {
@@ -229,6 +265,14 @@ public final class Account {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getAuthProvider() {
+        return authProvider;
+    }
+
+    public String getExternalSubject() {
+        return externalSubject;
     }
 
     public Role getRole() {

@@ -39,6 +39,11 @@ public class AccountRepositoryAdapter implements AccountRepositoryPort {
     }
 
     @Override
+    public Optional<Account> findByProviderAndSubject(String authProvider, String externalSubject) {
+        return repository.findByAuthProviderAndExternalSubject(authProvider, externalSubject).map(mapper::toDomain);
+    }
+
+    @Override
     public long count() {
         return repository.count();
     }
