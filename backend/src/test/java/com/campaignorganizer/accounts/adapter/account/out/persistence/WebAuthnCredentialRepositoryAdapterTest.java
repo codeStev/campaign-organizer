@@ -12,15 +12,22 @@ import com.campaignorganizer.accounts.application.account.port.published.Account
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.domain.account.MfaMethod;
 import com.campaignorganizer.accounts.domain.account.Role;
+import com.campaignorganizer.security.JwtService;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.webauthn.api.Bytes;
 import org.springframework.security.web.webauthn.api.CredentialRecord;
 import org.springframework.security.web.webauthn.api.ImmutableCredentialRecord;
@@ -28,10 +35,14 @@ import org.springframework.security.web.webauthn.api.ImmutablePublicKeyCose;
 import org.springframework.security.web.webauthn.api.PublicKeyCredentialType;
 
 /**
- * Unit coverage for the enrollment-race guard added during this feature's own security-review
- * pass (see the class Javadoc on {@link WebAuthnCredentialRepositoryAdapter}): a brand-new
- * credential can only be planted for an account with no active MFA method yet, but an *update*
- * to an existing credential (the normal signature-count bump on every login) is unaffected.
+ * Unit coverage for the enrollment-race guard added during PR #87's own security-review pass,
+ * and loosened (not removed) when self-service credential management was added (see the class
+ * Javadoc on {@link WebAuthnCredentialRepositoryAdapter}): a brand-new credential can be
+ * planted for an account with no active MFA method yet (first enrollment), or for an
+ * already-WEBAUTHN account only when the current request already carries the MFA factor
+ * (adding a backup credential) — never for a PASSWORD-only caller against an already-enrolled
+ * account. An *update* to an existing credential (the normal signature-count bump on every
+ * login) is unaffected either way.
  */
 @ExtendWith(MockitoExtension.class)
 class WebAuthnCredentialRepositoryAdapterTest {
@@ -43,6 +54,11 @@ class WebAuthnCredentialRepositoryAdapterTest {
 
     private final UUID accountId = UUID.randomUUID();
     private final byte[] credentialId = "a-credential-id".getBytes();
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void savesANewCredentialForAnAccountWithNoActiveMfaMethod() {
@@ -67,6 +83,41 @@ class WebAuthnCredentialRepositoryAdapterTest {
     }
 
     @Test
+    void savesAnAdditionalCredentialWhenTheCurrentRequestAlreadyHasTheMfaFactor() {
+        WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
+        when(repository.findByCredentialId(credentialId)).thenReturn(Optional.empty());
+        when(accounts.findById(accountId)).thenReturn(Optional.of(accountView(MfaMethod.WEBAUTHN)));
+        authenticateWithAuthorities(JwtService.MFA_AUTHORITY);
+
+        adapter.save(credentialRecord());
+
+        verify(repository).save(any());
+    }
+
+    @Test
+    void refusesAnAdditionalCredentialWhenTheCurrentRequestOnlyHasThePasswordFactor() {
+        WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
+        when(repository.findByCredentialId(credentialId)).thenReturn(Optional.empty());
+        when(accounts.findById(accountId)).thenReturn(Optional.of(accountView(MfaMethod.WEBAUTHN)));
+        authenticateWithAuthorities("FACTOR_PASSWORD");
+
+        assertThatThrownBy(() -> adapter.save(credentialRecord())).isInstanceOf(AccessDeniedException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void refusesAnAdditionalCredentialWhenThereIsNoAuthenticationAtAll() {
+        WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
+        when(repository.findByCredentialId(credentialId)).thenReturn(Optional.empty());
+        when(accounts.findById(accountId)).thenReturn(Optional.of(accountView(MfaMethod.WEBAUTHN)));
+
+        assertThatThrownBy(() -> adapter.save(credentialRecord())).isInstanceOf(AccessDeniedException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void updatingAnExistingCredentialSkipsTheMfaMethodCheck() {
         WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
         WebAuthnCredentialJpaEntity existing = new WebAuthnCredentialJpaEntity();
@@ -80,6 +131,54 @@ class WebAuthnCredentialRepositoryAdapterTest {
 
         verify(repository).save(existing);
         assertThat(existing.getAccountId()).isEqualTo(accountId);
+    }
+
+    @Test
+    void findByAccountIdMapsToSummariesExcludingSensitiveFields() {
+        WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
+        WebAuthnCredentialJpaEntity entity = new WebAuthnCredentialJpaEntity();
+        UUID rowId = UUID.randomUUID();
+        Instant createdAt = Instant.parse("2026-01-01T00:00:00Z");
+        Instant lastUsedAt = Instant.parse("2026-02-01T00:00:00Z");
+        entity.setId(rowId);
+        entity.setAccountId(accountId);
+        entity.setLabel("YubiKey");
+        entity.setTransports("usb,nfc");
+        entity.setCreatedAt(createdAt);
+        entity.setLastUsedAt(lastUsedAt);
+        when(repository.findByAccountIdOrderByCreatedAtAsc(accountId)).thenReturn(List.of(entity));
+
+        var summaries = adapter.findByAccountId(accountId);
+
+        assertThat(summaries).hasSize(1);
+        var summary = summaries.get(0);
+        assertThat(summary.id()).isEqualTo(rowId);
+        assertThat(summary.label()).isEqualTo("YubiKey");
+        assertThat(summary.createdAt()).isEqualTo(createdAt);
+        assertThat(summary.lastUsedAt()).isEqualTo(lastUsedAt);
+        assertThat(summary.transports()).containsExactlyInAnyOrder("usb", "nfc");
+    }
+
+    @Test
+    void deleteByIdForAccountDelegatesScopedByBothIdAndAccount() {
+        WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
+        UUID rowId = UUID.randomUUID();
+        when(repository.deleteByIdAndAccountId(rowId, accountId)).thenReturn(1);
+
+        boolean deleted = adapter.deleteByIdForAccount(accountId, rowId);
+
+        assertThat(deleted).isTrue();
+    }
+
+    @Test
+    void deleteByIdForAccountReturnsFalseWhenNothingMatched() {
+        WebAuthnCredentialRepositoryAdapter adapter = new WebAuthnCredentialRepositoryAdapter(repository, accounts);
+        UUID rowId = UUID.randomUUID();
+        when(repository.deleteByIdAndAccountId(rowId, accountId)).thenReturn(0);
+
+        boolean deleted = adapter.deleteByIdForAccount(accountId, rowId);
+
+        assertThat(deleted).isFalse();
     }
 
     private CredentialRecord credentialRecord() {
@@ -104,5 +203,10 @@ class WebAuthnCredentialRepositoryAdapterTest {
 
     private AccountView accountView(MfaMethod mfaMethod) {
         return new AccountView(accountId, "gm@example.com", Role.USER, true, 0, mfaMethod, Instant.now());
+    }
+
+    private void authenticateWithAuthorities(String... authorities) {
+        List<SimpleGrantedAuthority> granted = Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(accountId, null, granted));
     }
 }

@@ -13,6 +13,8 @@ public interface WebAuthnCredentialJpaRepository extends JpaRepository<WebAuthnC
 
     List<WebAuthnCredentialJpaEntity> findByAccountId(UUID accountId);
 
+    List<WebAuthnCredentialJpaEntity> findByAccountIdOrderByCreatedAtAsc(UUID accountId);
+
     boolean existsByAccountId(UUID accountId);
 
     @Modifying
@@ -22,4 +24,9 @@ public interface WebAuthnCredentialJpaRepository extends JpaRepository<WebAuthnC
     @Modifying
     @Query("delete from WebAuthnCredentialJpaEntity c where c.credentialId = :credentialId")
     void deleteByCredentialId(byte[] credentialId);
+
+    /** Scoped by account so a credential row id from one account can never delete another's. */
+    @Modifying
+    @Query("delete from WebAuthnCredentialJpaEntity c where c.id = :id and c.accountId = :accountId")
+    int deleteByIdAndAccountId(UUID id, UUID accountId);
 }
