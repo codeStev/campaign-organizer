@@ -397,6 +397,31 @@ export const webauthnCredentialsApi = {
   remove: (id: string) => request<void>(`/accounts/me/webauthn-credentials/${id}`, { method: 'DELETE' }),
 };
 
+export interface RecoveryCodeStatus {
+  remaining: number;
+}
+
+/** Self-service recovery-code visibility/regeneration (ADR-0111 follow-up) — works for either MFA method. */
+export const recoveryCodesApi = {
+  status: () => request<RecoveryCodeStatus>('/accounts/me/recovery-codes'),
+  /** Shown only in this response — the caller must display them once and move on. */
+  regenerate: () => request<string[]>('/accounts/me/recovery-codes/regenerate', { method: 'POST' }),
+};
+
+/**
+ * Self-service TOTP secret replacement for an account already on TOTP (ADR-0111 follow-up,
+ * e.g. a new phone) — mirrors startTotpSetup/confirmTotpSetup's shape but uses the ambient
+ * session token (not a pending one) and returns no token/recovery codes on confirm, since the
+ * caller is already fully authenticated and the standing recovery-code batch is unaffected.
+ */
+export function startTotpReEnrollment(): Promise<TotpSetupStart> {
+  return request<TotpSetupStart>('/accounts/me/totp/start', { method: 'POST' });
+}
+
+export function confirmTotpReEnrollment(code: string): Promise<void> {
+  return request<void>('/accounts/me/totp/confirm', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
 /** Admin-only account roster management. */
 export const accountsApi = {
   list: () => request<Account[]>('/accounts'),

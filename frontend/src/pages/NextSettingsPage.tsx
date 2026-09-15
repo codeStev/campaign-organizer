@@ -1,6 +1,6 @@
 import { ChangeEvent, useRef, useState } from 'react';
 import { AiSettingsPanel } from './AiSettingsPanel';
-import { WebauthnCredentialsPanel } from './WebauthnCredentialsPanel';
+import { SecuritySettingsPanel } from './SecuritySettingsPanel';
 import { Button } from '../components/ui/button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { downloadBackup, importBackup, ApiError } from '../api/client';
@@ -76,7 +76,7 @@ export function NextSettingsPage({ onAuthExpired }: Props) {
 
       <section className="card">
         <p className="eyebrow">Security</p>
-        <WebauthnCredentialsPanel onAuthExpired={onAuthExpired} />
+        <SecuritySettingsPanel onAuthExpired={onAuthExpired} />
       </section>
 
       <section className="card">
