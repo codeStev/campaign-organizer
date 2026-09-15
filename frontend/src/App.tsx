@@ -23,6 +23,7 @@ import { NextGlobalTemplatesPanel } from './pages/NextGlobalTemplatesPanel';
 import { NextGlobalStatblocksPanel } from './pages/NextGlobalStatblocksPanel';
 import { GameSystemsPage } from './pages/GameSystemsPage';
 import { WorldsNextPage } from './pages/WorldsNextPage';
+import { NextHomePage } from './pages/NextHomePage';
 import { NextSettingsPage } from './pages/NextSettingsPage';
 import { AccountsPage } from './pages/AccountsPage';
 import { WorldViewNext } from './pages/WorldViewNext';
@@ -199,6 +200,8 @@ function AppShellNext({ onAuthExpired, role }: { onAuthExpired: () => void; role
         <AppSidebarNext role={role} />
         <SidebarInset className="next-shell-content" style={{ alignSelf: 'stretch', height: 'auto' }}>
           <Routes>
+            <Route index element={<Navigate to="home" replace />} />
+            <Route path="home" element={<NextHomePage onAuthExpired={onAuthExpired} />} />
             <Route path="worlds" element={<WorldsNextPage onAuthExpired={onAuthExpired} />} />
             <Route path="templates/*" element={<NextTemplatesPageRoute onAuthExpired={onAuthExpired} />} />
             <Route path="game-systems" element={<GameSystemsPage onAuthExpired={onAuthExpired} />} />
@@ -206,7 +209,7 @@ function AppShellNext({ onAuthExpired, role }: { onAuthExpired: () => void; role
             {role === 'ADMIN' && (
               <Route path="accounts" element={<AccountsPage onAuthExpired={onAuthExpired} />} />
             )}
-            <Route path="*" element={<Navigate to="/next/worlds" replace />} />
+            <Route path="*" element={<Navigate to="/next/home" replace />} />
           </Routes>
         </SidebarInset>
       </SidebarProvider>

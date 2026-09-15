@@ -1262,6 +1262,39 @@ export function worldOverviewApi(worldId: string) {
   };
 }
 
+// ---- Global landing page (issue #68) ----
+
+export interface UpcomingSessionSummary {
+  sessionId: string;
+  worldId: string;
+  worldName: string;
+  campaignId: string;
+  campaignName: string;
+  campaignColor?: string | null;
+  title: string;
+  sessionNumber?: number | null;
+  date: string;
+}
+
+export interface CampaignNeedingAttention {
+  worldId: string;
+  worldName: string;
+  campaignId: string;
+  campaignName: string;
+  status: CampaignStatus;
+}
+
+export interface GlobalOverviewStats {
+  upcomingSessions: UpcomingSessionSummary[];
+  campaignsNeedingAttention: CampaignNeedingAttention[];
+}
+
+export function globalOverviewApi() {
+  return {
+    get: () => request<GlobalOverviewStats>('/overview'),
+  };
+}
+
 // ---- Campaign roster (FR-53): whole-set replace, players flagged regular/guest ----
 
 export interface RosterEntry {

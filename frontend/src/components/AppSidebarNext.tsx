@@ -22,7 +22,10 @@ import { Role } from '../api/client';
  * GameSystemsPage unchanged; Templates/Statblocks route to
  * NextGlobalTemplatesPanel/NextGlobalStatblocksPanel (ADR-0106).
  */
-const TOP_ITEMS = [{ to: '/next/worlds', label: 'Worlds', icon: '🌍' }];
+const TOP_ITEMS = [
+  { to: '/next/home', label: 'Home', icon: '🏠' },
+  { to: '/next/worlds', label: 'Worlds', icon: '🌍' },
+];
 
 const LIBRARY_ITEMS = [
   { to: '/next/templates/global', label: 'Templates', icon: '🧩' },
