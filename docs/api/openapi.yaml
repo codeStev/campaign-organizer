@@ -127,6 +127,55 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /auth/oidc/status:
+    get:
+      tags: [auth]
+      summary: Whether Google sign-in is configured
+      description: >-
+        Lets the frontend hide the "Sign in with Google" link entirely on a
+        deployment with no Google credentials configured (ADR-0113), rather
+        than linking to /oauth2/authorization/google and 404ing.
+      operationId: getOidcStatus
+      security: []
+      responses:
+        '200':
+          description: Google sign-in configuration status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcStatus'
+
+  /auth/oidc/exchange:
+    post:
+      tags: [auth]
+      summary: Redeem a one-time Google sign-in redirect code
+      description: >-
+        After a completed Google sign-in, the backend redirects the browser
+        to "/?code=..." — it can only respond with a redirect, not JSON, so
+        the actual LoginResponse is staged behind this single-use code
+        instead of ever appearing in the redirect URL itself (ADR-0113).
+        Same response shape /auth/login returns; local MFA (ADR-0111) still
+        applies identically.
+      operationId: exchangeOidcCode
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OidcExchangeRequest'
+      responses:
+        '200':
+          description: >-
+            The staged LoginResponse. `status` tells the client whether the
+            account still needs to complete MFA setup or clear a challenge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /auth/mfa/setup/totp/start:
     post:
       tags: [auth]
@@ -7670,6 +7719,23 @@ components:
       type: string
       enum: [NONE, TOTP, WEBAUTHN]
       description: An account's active second factor, or NONE if not yet enrolled (ADR-0111).
+
+    OidcStatus:
+      type: object
+      required: [googleEnabled]
+      properties:
+        googleEnabled:
+          type: boolean
+          description: Whether Google sign-in is configured on this deployment (ADR-0113).
+
+    OidcExchangeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          format: uuid
+          description: The one-time code from the "/?code=..." redirect after a completed Google sign-in.
 
     TotpSetupStart:
       type: object
