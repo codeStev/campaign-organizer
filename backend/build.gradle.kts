@@ -46,6 +46,9 @@ dependencies {
     // based on a stale Maven Central search-index result) would silently downgrade below
     // what Spring actually built and tested against.
     implementation("com.webauthn4j:webauthn4j-core")
+    // Google sign-in (ADR-0113) — no explicit version, Boot's BOM manages it alongside
+    // spring-boot-starter-security/spring-security-webauthn.
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 

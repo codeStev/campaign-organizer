@@ -68,6 +68,18 @@ app:
     relying-party-id: ${APP_WEBAUTHN_RP_ID:localhost}
     relying-party-name: ${APP_WEBAUTHN_RP_NAME:Campaign Organizer}
     allowed-origins: ${APP_WEBAUTHN_ALLOWED_ORIGINS:http://localhost:3001}
+  # Google sign-in (see docs/adr/0113-sso-oidc-login.md). Blank (the default): SecurityConfig
+  # never registers the .oauth2Login() DSL, and its clientRegistrationRepository bean is empty —
+  # no /oauth2/authorization/google, no dependency on real credentials to start the app.
+  # Deliberately NOT spring.security.oauth2.client.registration.*: Spring Boot's own
+  # OAuth2ClientProperties validates every registered client eagerly at bean-creation time
+  # (throws "Client id ... must not be empty" even when nothing ever calls .oauth2Login()), which
+  # would break every other request in this app whenever Google isn't configured. Building the
+  # ClientRegistration by hand in SecurityConfig, only when actually enabled, avoids that
+  # entirely — see SecurityConfig.clientRegistrationRepository.
+  oidc:
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
   media:
     # Local-volume media storage (see docs/adr/0007-local-media-storage.md).
     dir: ${APP_MEDIA_DIR:./data/media}

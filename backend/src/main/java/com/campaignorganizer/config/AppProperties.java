@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Strongly-typed access to {@code app.*} configuration.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webauthn) {
+public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webauthn, Oidc oidc) {
 
     public record Jwt(String secret, long expirationHours) {
     }
@@ -54,5 +54,22 @@ public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webau
             String openRouterApiKey,
             String groqBaseUrl,
             String openRouterBaseUrl) {
+    }
+
+    /**
+     * Google sign-in (ADR-0113) — {@code SecurityConfig} builds the {@code ClientRegistration}
+     * from these by hand rather than via Spring Boot's own {@code
+     * spring.security.oauth2.client.registration.*} autoconfiguration, which validates eagerly
+     * at bean-creation time and would break the whole app whenever Google isn't configured (see
+     * {@code SecurityConfig.clientRegistrationRepository}'s Javadoc). Blank/unset (the default):
+     * Google sign-in is entirely absent — no {@code /oauth2/authorization/google}, no unwired
+     * filter, no startup dependency on real credentials — same "optional, silently skipped"
+     * shape as the AI provider keys.
+     */
+    public record Oidc(String googleClientId, String googleClientSecret) {
+
+        public boolean googleEnabled() {
+            return googleClientId != null && !googleClientId.isBlank();
+        }
     }
 }
