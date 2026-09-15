@@ -12,4 +12,6 @@ public interface AccountJpaRepository extends JpaRepository<AccountJpaEntity, UU
     Optional<AccountJpaEntity> findByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    Optional<AccountJpaEntity> findByAuthProviderAndExternalSubject(String authProvider, String externalSubject);
 }

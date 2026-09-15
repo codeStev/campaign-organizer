@@ -15,6 +15,9 @@ public interface AccountRepositoryPort {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    /** ADR-0113: looks up an OIDC-authenticated account by its external identity, never by email. */
+    Optional<Account> findByProviderAndSubject(String authProvider, String externalSubject);
+
     long count();
 
     Account save(Account account);

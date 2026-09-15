@@ -18,8 +18,14 @@ public class AccountJpaEntity {
     @Column(nullable = false, length = 320)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
+
+    @Column(name = "auth_provider", length = 20)
+    private String authProvider;
+
+    @Column(name = "external_subject", length = 255)
+    private String externalSubject;
 
     @Column(nullable = false, length = 20)
     private String role;
@@ -76,6 +82,22 @@ public class AccountJpaEntity {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(String authProvider) {
+        this.authProvider = authProvider;
+    }
+
+    public String getExternalSubject() {
+        return externalSubject;
+    }
+
+    public void setExternalSubject(String externalSubject) {
+        this.externalSubject = externalSubject;
     }
 
     public String getRole() {

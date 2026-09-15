@@ -16,7 +16,7 @@ class ProviderAdaptersTest {
 
     private static AppProperties props(String groqKey, String openRouterKey) {
         return new AppProperties(null, null,
-                new AppProperties.Ai(groqKey, openRouterKey, null, null), null, null);
+                new AppProperties.Ai(groqKey, openRouterKey, null, null), null, null, null);
     }
 
     @Test

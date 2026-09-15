@@ -14,9 +14,9 @@ public interface AccountPersistenceMapper {
         if (e == null) {
             return null;
         }
-        return Account.reconstitute(e.getId(), e.getEmail(), e.getPasswordHash(), Role.valueOf(e.getRole()),
-                e.isEnabled(), e.getTokenVersion(), e.getFailedAttempts(), e.getLockedUntil(),
-                MfaMethod.valueOf(e.getMfaMethod()), e.getTotpSecretEncrypted(), e.getTotpSecretPendingEncrypted(),
-                e.getCreatedAt(), e.getUpdatedAt());
+        return Account.reconstitute(e.getId(), e.getEmail(), e.getPasswordHash(), e.getAuthProvider(),
+                e.getExternalSubject(), Role.valueOf(e.getRole()), e.isEnabled(), e.getTokenVersion(),
+                e.getFailedAttempts(), e.getLockedUntil(), MfaMethod.valueOf(e.getMfaMethod()),
+                e.getTotpSecretEncrypted(), e.getTotpSecretPendingEncrypted(), e.getCreatedAt(), e.getUpdatedAt());
     }
 }

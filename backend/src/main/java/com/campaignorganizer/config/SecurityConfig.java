@@ -1,6 +1,9 @@
 package com.campaignorganizer.config;
 
 import com.campaignorganizer.accounts.adapter.account.out.mfa.WebAuthnAuthenticationSuccessHandler;
+import com.campaignorganizer.accounts.adapter.account.out.oidc.OidcAuthenticationFailureHandler;
+import com.campaignorganizer.accounts.adapter.account.out.oidc.OidcAuthenticationSuccessHandler;
+import com.campaignorganizer.accounts.adapter.account.out.persistence.OidcAuthorizationRequestRepositoryAdapter;
 import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnCreationOptionsRepositoryAdapter;
 import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnRequestOptionsRepositoryAdapter;
 import com.campaignorganizer.security.JwtAuthFilter;
@@ -27,6 +30,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
@@ -66,8 +74,12 @@ import org.springframework.security.web.webauthn.authentication.WebAuthnAuthenti
  * .webAuthn()} DSL, wired up below at {@code /webauthn/**} and {@code
  * /login/webauthn} — CSRF protection is scoped to just those paths, since
  * the rest of this API is a pure bearer-token service with no cookies.
- * See docs/adr/0110-self-registration-and-role-based-jwt.md and
- * docs/adr/0111-mandatory-mfa.md.
+ * Google sign-in (ADR-0113) is a third, independent way to reach the
+ * PASSWORD factor (not a bypass of the MFA factor above) — registered via
+ * {@code .oauth2Login()} only when actually configured; see {@link
+ * AppProperties.Oidc}.
+ * See docs/adr/0110-self-registration-and-role-based-jwt.md,
+ * docs/adr/0111-mandatory-mfa.md, and docs/adr/0113-sso-oidc-login.md.
  */
 @Configuration
 @EnableConfigurationProperties(AppProperties.class)
@@ -77,11 +89,25 @@ public class SecurityConfig {
     private static final String[] PUBLIC_API_PATHS = {
             "/api/auth/login",
             "/api/auth/recover-password",
+            "/api/auth/oidc/status",
+            "/api/auth/oidc/exchange",
             "/api/accounts/register",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/actuator/health"
+    };
+
+    /**
+     * Google's own login-initiation/callback endpoints (ADR-0113) — plain GET browser
+     * navigations, always public (there's no account/token yet at this point in the flow). No
+     * CSRF matcher entry needed, unlike {@code /webauthn/**}: {@code CsrfFilter} only protects
+     * unsafe methods by default, and the OAuth {@code state} parameter is what protects the
+     * callback instead.
+     */
+    private static final String[] OIDC_PATHS = {
+            "/oauth2/**",
+            "/login/oauth2/**"
     };
 
     @Bean
@@ -91,7 +117,10 @@ public class SecurityConfig {
                                            AppProperties properties,
                                            WebAuthnCreationOptionsRepositoryAdapter webAuthnCreationOptionsRepository,
                                            WebAuthnRequestOptionsRepositoryAdapter webAuthnRequestOptionsRepository,
-                                           WebAuthnAuthenticationSuccessHandler webAuthnAuthenticationSuccessHandler)
+                                           WebAuthnAuthenticationSuccessHandler webAuthnAuthenticationSuccessHandler,
+                                           OidcAuthorizationRequestRepositoryAdapter oidcAuthorizationRequestRepository,
+                                           OidcAuthenticationSuccessHandler oidcAuthenticationSuccessHandler,
+                                           OidcAuthenticationFailureHandler oidcAuthenticationFailureHandler)
             throws Exception {
         // @EnableMethodSecurity's session/redirect-oriented multi-factor annotation
         // (@EnableMultiFactorAuthentication) isn't used here — it assumes chained
@@ -198,9 +227,26 @@ public class SecurityConfig {
                         .rpName(properties.webauthn().relyingPartyName())
                         .allowedOrigins(properties.webauthn().allowedOrigins())
                         .disableDefaultRegistrationPage(true)
-                        .creationOptionsRepository(webAuthnCreationOptionsRepository))
+                        .creationOptionsRepository(webAuthnCreationOptionsRepository));
+        // Google sign-in (ADR-0113) — registered only when actually configured, so a deployment
+        // with no Google credentials never gets /oauth2/authorization/google at all rather than
+        // an unusable, half-wired endpoint. Unlike WebAuthn's login side, oauth2Login()'s DSL
+        // does expose a direct hook for swapping in a stateless AuthorizationRequestRepository —
+        // no post-http.build() filter-searching needed here. The ClientRegistration is built by
+        // hand and passed directly (not read from a Spring-managed ClientRegistrationRepository
+        // bean) — see googleClientRegistrationRepository's Javadoc for why.
+        if (properties.oidc().googleEnabled()) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .clientRegistrationRepository(googleClientRegistrationRepository(properties.oidc()))
+                    .authorizationEndpoint(endpoint -> endpoint
+                            .authorizationRequestRepository(oidcAuthorizationRequestRepository))
+                    .successHandler(oidcAuthenticationSuccessHandler)
+                    .failureHandler(oidcAuthenticationFailureHandler));
+        }
+        http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_API_PATHS).permitAll()
+                        .requestMatchers(OIDC_PATHS).permitAll()
                         // Public image serving, addressed by unguessable id (ADR-0016).
                         .requestMatchers(HttpMethod.GET, "/api/media/*/content").permitAll()
                         // Public .ics subscription feed, addressed by unguessable token (ADR-0108).
@@ -249,6 +295,40 @@ public class SecurityConfig {
             }
         }
         return chain;
+    }
+
+    /**
+     * Builds Google's {@link ClientRegistration} by hand rather than relying on Spring Boot's
+     * own {@code spring.security.oauth2.client.registration.*} autoconfiguration (ADR-0113).
+     * That autoconfiguration validates every configured registration <b>eagerly, at
+     * bean-creation time</b> — {@code OAuth2ClientPropertiesMapper} throws {@code
+     * IllegalStateException("Client id of registration 'google' must not be empty")} the moment
+     * any properties exist under that prefix with a blank client id, which would break
+     * <i>every</i> request in this app (a failed bean fails the whole context) on any deployment
+     * that hasn't configured Google — not the "optional, silently skipped" behavior every other
+     * external credential in this app has (AI provider keys, and now this). Only called when
+     * {@link AppProperties.Oidc#googleEnabled()} is already true, so {@code clientId}/{@code
+     * clientSecret} here are real. Google's endpoints are stable, publicly documented, and
+     * unlikely to change — hardcoding them avoids an extra live discovery HTTP call
+     * ({@code ClientRegistrations.fromIssuerLocation(...)}) at every app startup.
+     */
+    private ClientRegistrationRepository googleClientRegistrationRepository(AppProperties.Oidc oidc) {
+        ClientRegistration google = ClientRegistration.withRegistrationId("google")
+                .clientId(oidc.googleClientId())
+                .clientSecret(oidc.googleClientSecret())
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .scope("openid", "profile", "email")
+                .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
+                .tokenUri("https://www.googleapis.com/oauth2/v4/token")
+                .userInfoUri("https://www.googleapis.com/oauth2/v3/userinfo")
+                .userNameAttributeName("sub")
+                .jwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
+                .issuerUri("https://accounts.google.com")
+                .clientName("Google")
+                .build();
+        return new InMemoryClientRegistrationRepository(google);
     }
 
     /**

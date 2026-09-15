@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   getToken,
   setToken,
   clearToken,
   getCurrentAccount,
+  exchangeOidcCode,
   worldsApi,
   World,
   Role,
@@ -43,7 +45,8 @@ type AuthStage =
   | { kind: 'recover-password' }
   | { kind: 'mfa-setup'; pendingToken: string }
   | { kind: 'mfa-challenge'; pendingToken: string; method: MfaMethod }
-  | { kind: 'authenticated' };
+  | { kind: 'authenticated' }
+  | { kind: 'oidc-exchanging' };
 
 export function App() {
   const [stage, setStage] = useState<AuthStage>(() =>
@@ -61,6 +64,36 @@ export function App() {
       .catch(() => handleLogout());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
+
+  // Google sign-in (ADR-0113) redirects back to "/" carrying a one-time exchange code (or an
+  // error reason) as a query param — the backend can only respond with a browser redirect, not
+  // JSON, so this is the client-side half of that handoff. Runs once on mount; a stored token
+  // (an existing session) always wins over a stray code from a stale/duplicated redirect.
+  useEffect(() => {
+    if (getToken() !== null) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const oidcError = params.get('oidcError');
+    if (code) {
+      setStage({ kind: 'oidc-exchanging' });
+      exchangeOidcCode(code)
+        .then((result) => {
+          window.history.replaceState(null, '', window.location.pathname);
+          handleLoginResult(result);
+        })
+        .catch(() => {
+          window.history.replaceState(null, '', window.location.pathname);
+          toast.error('Google sign-in failed. Please try again.');
+          setStage({ kind: 'anonymous' });
+        });
+    } else if (oidcError) {
+      window.history.replaceState(null, '', window.location.pathname);
+      toast.error('Google sign-in failed. Please try again.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleLogout() {
     clearToken();
@@ -99,6 +132,7 @@ export function App() {
           </div>
         </header>
         <div className="app-body">
+          {stage.kind === 'oidc-exchanging' && <p className="muted">Signing in…</p>}
           {stage.kind === 'anonymous' && (
             <LoginPage
               onLoginResult={handleLoginResult}

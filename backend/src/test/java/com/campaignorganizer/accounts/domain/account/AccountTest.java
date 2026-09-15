@@ -149,6 +149,37 @@ class AccountTest {
         assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
     }
 
+    @Test
+    void createdViaOidcHasNoPasswordAndCarriesTheExternalIdentity() {
+        Account account = Account.createViaOidc(UUID.randomUUID(), "gm@example.com", "GOOGLE", "subject-123",
+                Role.USER, T0);
+
+        assertThat(account.getPasswordHash()).isNull();
+        assertThat(account.getAuthProvider()).isEqualTo("GOOGLE");
+        assertThat(account.getExternalSubject()).isEqualTo("subject-123");
+    }
+
+    @Test
+    void reconstitutingWithBothAPasswordAndAnExternalIdentityFails() {
+        assertThatThrownBy(() -> Account.reconstitute(UUID.randomUUID(), "gm@example.com", "hash", "GOOGLE",
+                "subject-123", Role.USER, true, 0, 0, null, MfaMethod.NONE, null, null, T0, T0))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void reconstitutingWithNeitherAPasswordNorAnExternalIdentityFails() {
+        assertThatThrownBy(() -> Account.reconstitute(UUID.randomUUID(), "gm@example.com", null, null, null,
+                Role.USER, true, 0, 0, null, MfaMethod.NONE, null, null, T0, T0))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void reconstitutingWithOnlyAPartialExternalIdentityFails() {
+        assertThatThrownBy(() -> Account.reconstitute(UUID.randomUUID(), "gm@example.com", null, "GOOGLE", null,
+                Role.USER, true, 0, 0, null, MfaMethod.NONE, null, null, T0, T0))
+                .isInstanceOf(ValidationException.class);
+    }
+
     private static Account create() {
         return Account.create(UUID.randomUUID(), "gm@example.com", "hash", Role.USER, T0);
     }

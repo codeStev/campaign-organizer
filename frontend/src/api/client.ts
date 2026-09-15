@@ -113,6 +113,28 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   });
 }
 
+/**
+ * Google sign-in (ADR-0113) — "Sign in with Google" is a plain `<a href="/oauth2/authorization/google">`
+ * link (a full-page browser navigation, outside this file entirely), not a fetch call. This
+ * status check lets the caller hide that link on a deployment with no Google credentials
+ * configured, so it never links to a 404 instead of failing loudly and confusingly at click time.
+ */
+export function getOidcStatus(): Promise<{ googleEnabled: boolean }> {
+  return request<{ googleEnabled: boolean }>('/auth/oidc/status');
+}
+
+/**
+ * Redeems the single-use code the backend redirected the browser back with, after a completed
+ * Google sign-in — same {@link LoginResponse} shape `login()` returns, feed it into the same
+ * MFA setup/challenge routing.
+ */
+export function exchangeOidcCode(code: string): Promise<LoginResponse> {
+  return request<LoginResponse>('/auth/oidc/exchange', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
 export interface TotpSetupStart {
   secret: string;
   provisioningUri: string;
