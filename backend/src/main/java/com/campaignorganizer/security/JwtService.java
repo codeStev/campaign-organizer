@@ -66,7 +66,9 @@ public class JwtService {
     public IssuedToken issue(UUID accountId, Role role, int tokenVersion, Set<String> factors) {
         Instant now = Instant.now();
         Instant expiresAt = now.plus(factors.contains(MFA_FACTOR) ? expiration : PENDING_MFA_EXPIRATION);
+        UUID jti = UUID.randomUUID();
         String token = Jwts.builder()
+                .id(jti.toString())
                 .subject(accountId.toString())
                 .claim(ROLE_CLAIM, role.name())
                 .claim(VERSION_CLAIM, tokenVersion)
@@ -75,7 +77,7 @@ public class JwtService {
                 .expiration(java.util.Date.from(expiresAt))
                 .signWith(key)
                 .compact();
-        return new IssuedToken(token, expiresAt);
+        return new IssuedToken(token, expiresAt, jti);
     }
 
     /** Parses and verifies the token's signature/expiry; empty if invalid, expired, or malformed. */
@@ -83,19 +85,21 @@ public class JwtService {
     public Optional<ParsedToken> parse(String token) {
         try {
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            UUID jti = UUID.fromString(claims.getId());
             UUID accountId = UUID.fromString(claims.getSubject());
             Role role = Role.valueOf(claims.get(ROLE_CLAIM, String.class));
             int tokenVersion = claims.get(VERSION_CLAIM, Integer.class);
             Set<String> factors = Set.copyOf(claims.get(FACTORS_CLAIM, List.class));
-            return Optional.of(new ParsedToken(accountId, role, tokenVersion, factors));
+            return Optional.of(new ParsedToken(jti, accountId, role, tokenVersion, factors));
         } catch (JwtException | IllegalArgumentException | NullPointerException ex) {
             return Optional.empty();
         }
     }
 
-    public record IssuedToken(String token, Instant expiresAt) {
+    /** {@code jti} is this token's own id, used as the primary key of a full token's {@code account_sessions} row. */
+    public record IssuedToken(String token, Instant expiresAt, UUID jti) {
     }
 
-    public record ParsedToken(UUID accountId, Role role, int tokenVersion, Set<String> factors) {
+    public record ParsedToken(UUID jti, UUID accountId, Role role, int tokenVersion, Set<String> factors) {
     }
 }
