@@ -94,12 +94,34 @@ public final class Account {
     /**
      * Stores a new in-progress TOTP secret pending confirmation. Doesn't touch the active
      * method/secret — calling this again before confirming just replaces the pending attempt.
-     * Only valid while no MFA method is active yet; replacing an already-active method goes
-     * through {@link #resetMfaForRecovery} instead (ADR-0111).
+     * Only valid while no MFA method is active yet — first-time enrollment. Self-service
+     * *replacement* of an already-active TOTP secret goes through {@link
+     * #beginTotpReEnrollment} instead (ADR-0111 follow-up); an admin-triggered full reset
+     * still goes through {@link #resetMfaForRecovery}.
      */
     public void beginTotpEnrollment(String pendingSecretEncrypted, Instant now) {
         if (mfaMethod != MfaMethod.NONE) {
             throw new ValidationException("Account already has an active MFA method");
+        }
+        if (pendingSecretEncrypted == null || pendingSecretEncrypted.isBlank()) {
+            throw new ValidationException("Pending TOTP secret must not be blank");
+        }
+        this.totpSecretPendingEncrypted = pendingSecretEncrypted;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Stores a new in-progress TOTP secret pending confirmation, same as {@link
+     * #beginTotpEnrollment} but for an account whose active method is *already* TOTP — e.g.
+     * replacing a lost/retired authenticator without an admin reset (ADR-0111 follow-up).
+     * Deliberately the opposite precondition from {@link #beginTotpEnrollment}: this method
+     * exists so the two can be gated by different routes/authorization requirements at the
+     * application layer (first enrollment needs only the PASSWORD factor; this needs the MFA
+     * factor already proven) without either accidentally accepting the other's starting state.
+     */
+    public void beginTotpReEnrollment(String pendingSecretEncrypted, Instant now) {
+        if (mfaMethod != MfaMethod.TOTP) {
+            throw new ValidationException("TOTP is not this account's active MFA method");
         }
         if (pendingSecretEncrypted == null || pendingSecretEncrypted.isBlank()) {
             throw new ValidationException("Pending TOTP secret must not be blank");

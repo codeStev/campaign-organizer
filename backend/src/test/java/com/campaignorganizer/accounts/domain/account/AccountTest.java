@@ -65,6 +65,51 @@ class AccountTest {
     }
 
     @Test
+    void beginTotpReEnrollmentStoresPendingSecretWhileKeepingTotpActive() {
+        Account account = create();
+        account.beginTotpEnrollment("encrypted-secret", T0);
+        account.completeTotpEnrollment(T0);
+
+        account.beginTotpReEnrollment("replacement-secret", T1);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
+        assertThat(account.getTotpSecretPendingEncrypted()).isEqualTo("replacement-secret");
+        assertThat(account.getTotpSecretEncrypted()).isEqualTo("encrypted-secret");
+        assertThat(account.getUpdatedAt()).isEqualTo(T1);
+    }
+
+    @Test
+    void completeTotpEnrollmentAfterReEnrollmentSwapsTheActiveSecret() {
+        Account account = create();
+        account.beginTotpEnrollment("encrypted-secret", T0);
+        account.completeTotpEnrollment(T0);
+        account.beginTotpReEnrollment("replacement-secret", T0);
+
+        account.completeTotpEnrollment(T1);
+
+        assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
+        assertThat(account.getTotpSecretEncrypted()).isEqualTo("replacement-secret");
+        assertThat(account.getTotpSecretPendingEncrypted()).isNull();
+    }
+
+    @Test
+    void beginTotpReEnrollmentFailsWhenNoMfaMethodIsActiveYet() {
+        Account account = create();
+
+        assertThatThrownBy(() -> account.beginTotpReEnrollment("secret", T1))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void beginTotpReEnrollmentFailsWhenTheActiveMethodIsWebauthnNotTotp() {
+        Account account = create();
+        account.completeWebauthnEnrollment(T0);
+
+        assertThatThrownBy(() -> account.beginTotpReEnrollment("secret", T1))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
     void completeWebauthnEnrollmentActivatesWebauthnAsMfaMethod() {
         Account account = create();
 
