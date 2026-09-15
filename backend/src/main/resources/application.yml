@@ -26,6 +26,14 @@ spring:
 
 server:
   port: 8080
+  # nginx always sits in front of this app (root/combined docker-compose) and
+  # forwards X-Forwarded-Proto/Host, but the backend<->nginx hop itself is
+  # plain HTTP — without this, Spring builds absolute URLs (notably OAuth2's
+  # {baseUrl} redirect-uri expansion) from that internal http:// connection
+  # instead of the public https:// origin, which Google's OAuth client then
+  # rejects as a redirect_uri_mismatch since it never matches what's
+  # registered in the Google Cloud Console.
+  forward-headers-strategy: framework
   error:
     include-message: always
 
