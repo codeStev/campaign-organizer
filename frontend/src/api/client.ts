@@ -1262,6 +1262,54 @@ export function worldOverviewApi(worldId: string) {
   };
 }
 
+// ---- Campaign overview dashboard (issue #67) ----
+
+export interface CampaignNextSessionSummary {
+  sessionId: string;
+  title: string;
+  date: string;
+  sessionNumber?: number | null;
+}
+
+export interface ClockPrepHint {
+  clockId: string;
+  title: string;
+  filledSegments: number;
+  totalSegments: number;
+  nextUnfilledSegmentTitle?: string | null;
+}
+
+export interface CampaignLooseThreadSummary {
+  threadId: string;
+  text: string;
+}
+
+export interface OpenBeatSummary {
+  beatId: string;
+  arcId: string;
+  arcTitle: string;
+  beatTitle: string;
+}
+
+export interface CampaignTodoSummary {
+  todoId: string;
+  text: string;
+}
+
+export interface CampaignOverviewStats {
+  nextSession?: CampaignNextSessionSummary | null;
+  openClocksNearFilling: ClockPrepHint[];
+  openLooseThreads: CampaignLooseThreadSummary[];
+  openBeatsInActiveArcs: OpenBeatSummary[];
+  nextSessionTodos: CampaignTodoSummary[];
+}
+
+export function campaignOverviewApi(worldId: string, campaignId: string) {
+  return {
+    get: () => request<CampaignOverviewStats>(`/worlds/${worldId}/campaigns/${campaignId}/overview`),
+  };
+}
+
 // ---- Global landing page (issue #68) ----
 
 export interface UpcomingSessionSummary {

@@ -4,13 +4,13 @@ import {
   campaignsApi,
   gameSystemsApi,
   sessionsApi,
-  arcsApi,
+  campaignOverviewApi,
   Campaign,
   CampaignStatus,
   CAMPAIGN_STATUSES,
   GameSystem,
   Session,
-  Arc,
+  CampaignOverviewStats,
   ApiError,
 } from '../api/client';
 import { ClockBoard } from './ClockBoard';
@@ -34,15 +34,30 @@ interface Props {
   onAuthExpired: () => void;
 }
 
+function daysUntil(dateIso: string): number {
+  const target = new Date(dateIso + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+function countdownLabel(dateIso: string): string {
+  const days = daysUntil(dateIso);
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  return `in ${days} days`;
+}
+
 /**
  * Campaigns dashboard (docs/ui-overhaul-plan.md Phase 5, trimmed per
- * ADR-0105 follow-up): Clocks, Roster, and campaign-standing Todos live
- * here — the things that are genuinely campaign-level, not session- or
- * arc-specific. Sessions and Story Arcs moved to their own screens
- * (NextSessionsPage/NextArcsPage) with their own per-entity detail view;
- * this page only shows a compact, read-only, dashboard-style summary of
- * each (title + a link), matching the mockup's "at a glance" framing
- * rather than the old SessionLog/ArcBoard's full inline management UI.
+ * ADR-0105 follow-up, "what's next" widgets added for issue #67): Clocks,
+ * Roster, and campaign-standing Todos live here — the things that are
+ * genuinely campaign-level, not session- or arc-specific. Sessions and
+ * Story Arcs have their own full-management screens
+ * (NextSessionsPage/NextArcsPage); this page shows a compact, read-only
+ * summary of each, plus the campaignOverviewApi-composed "what do I need to
+ * prep" widgets (next session + countdown, loose threads, clocks close to
+ * filling, open beats in active arcs, next session's todos).
  */
 export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
   const navigate = useNavigate();
@@ -53,7 +68,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [systems, setSystems] = useState<GameSystem[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [arcs, setArcs] = useState<Arc[]>([]);
+  const [overview, setOverview] = useState<CampaignOverviewStats | null>(null);
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [colorDraft, setColorDraft] = useState('#888888');
@@ -95,11 +110,11 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
   useEffect(() => {
     if (!selected) {
       setSessions([]);
-      setArcs([]);
+      setOverview(null);
       return;
     }
     sessionsApi(worldId, selected.id).list().then(setSessions).catch(handleError);
-    arcsApi(worldId, selected.id).list().then(setArcs).catch(handleError);
+    campaignOverviewApi(worldId, selected.id).get().then(setOverview).catch(handleError);
   }, [worldId, selected, handleError]);
 
   // The URL is the source of truth for which campaign is open (ADR-0053).
@@ -322,6 +337,82 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
             <div className="campaign-workspace">
               <div className="campaign-workspace-main">
                 <section className="card">
+                  <h3 className="eyebrow">Next session</h3>
+                  {overview?.nextSession ? (
+                    <>
+                      <div className="next-overview-stat">
+                        <span className="next-overview-stat-value">
+                          {countdownLabel(overview.nextSession.date)}
+                        </span>
+                        <span className="muted">
+                          {overview.nextSession.sessionNumber != null
+                            ? `#${overview.nextSession.sessionNumber} `
+                            : ''}
+                          {overview.nextSession.title}
+                        </span>
+                      </div>
+                      {overview.nextSessionTodos.length > 0 && (
+                        <ul className="next-overview-list">
+                          {overview.nextSessionTodos.map((t) => (
+                            <li key={t.todoId} className="muted">
+                              {t.text}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <p className="muted">No session scheduled.</p>
+                  )}
+                </section>
+
+                <section className="card">
+                  <h3 className="eyebrow">Loose threads</h3>
+                  {overview && overview.openLooseThreads.length > 0 ? (
+                    <ul className="next-overview-list">
+                      {overview.openLooseThreads.map((t) => (
+                        <li key={t.threadId} className="next-overview-clock">
+                          <div className="next-overview-clock-head">
+                            <span>{t.text}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted">Nothing open.</p>
+                  )}
+                </section>
+
+                <section className="card">
+                  <h3 className="eyebrow">Clocks — close to filling</h3>
+                  {overview && overview.openClocksNearFilling.length > 0 ? (
+                    <ul className="next-overview-list">
+                      {overview.openClocksNearFilling.map((c) => (
+                        <li key={c.clockId} className="next-overview-clock">
+                          <div className="next-overview-clock-head">
+                            <span>{c.title}</span>
+                            <span className="muted">
+                              {c.filledSegments}/{c.totalSegments}
+                            </span>
+                          </div>
+                          <div className="next-overview-progress">
+                            <div
+                              className="next-overview-progress-fill"
+                              style={{ width: `${(100 * c.filledSegments) / c.totalSegments}%` }}
+                            />
+                          </div>
+                          {c.nextUnfilledSegmentTitle && (
+                            <span className="muted">Next: {c.nextUnfilledSegmentTitle}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted">No clocks in progress.</p>
+                  )}
+                </section>
+
+                <section className="card">
                   <div className="form-actions">
                     <h3 style={{ margin: 0 }}>Sessions</h3>
                     <span className="print-toolbar-spacer" />
@@ -370,7 +461,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
 
                 <section className="card">
                   <div className="form-actions">
-                    <h3 style={{ margin: 0 }}>Story arcs</h3>
+                    <h3 style={{ margin: 0 }}>Open beats</h3>
                     <span className="print-toolbar-spacer" />
                     <Button
                       variant="link"
@@ -381,18 +472,19 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
                     </Button>
                   </div>
                   <ul className="next-overview-list">
-                    {arcs.slice(0, 5).map((a) => (
-                      <li key={a.id}>
+                    {(overview?.openBeatsInActiveArcs ?? []).map((b) => (
+                      <li key={b.beatId}>
                         <Button
                           variant="link"
-                          onClick={() => navigate(`/next/worlds/${worldId}/arcs/${selected.id}/${a.id}`)}
+                          onClick={() => navigate(`/next/worlds/${worldId}/arcs/${selected.id}/${b.arcId}`)}
                         >
-                          <span className={`arc-status arc-${a.status.toLowerCase()}`}>{a.status.toLowerCase()}</span>{' '}
-                          {a.title}
+                          <span className="muted">{b.arcTitle}:</span> {b.beatTitle}
                         </Button>
                       </li>
                     ))}
-                    {arcs.length === 0 && <li className="muted">No arcs yet.</li>}
+                    {overview && overview.openBeatsInActiveArcs.length === 0 && (
+                      <li className="muted">No open beats in active arcs.</li>
+                    )}
                   </ul>
                 </section>
 

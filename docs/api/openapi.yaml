@@ -2427,6 +2427,33 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/overview:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      summary: Per-campaign dashboard stats
+      description: >
+        Aggregate "what's next, what do I need to prep" stats for the
+        campaign dashboard (issue #67): the next scheduled session, clocks
+        close to filling with a prep hint, open loose threads, open beats
+        in active-status arcs, and the next session's open todos. Pure read
+        composition, no new persisted state (mirrors the world overview,
+        ADR-0102/ADR-0103).
+      operationId: getCampaignOverview
+      responses:
+        '200':
+          description: The campaign's overview stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignOverviewStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/todos:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -8412,6 +8439,103 @@ components:
           description: PLANNED or ACTIVE campaigns with no upcoming session scheduled.
           items:
             $ref: '#/components/schemas/CampaignNeedingAttention'
+
+    CampaignOverviewStats:
+      type: object
+      required: [openClocksNearFilling, openLooseThreads, openBeatsInActiveArcs, nextSessionTodos]
+      properties:
+        nextSession:
+          allOf:
+            - $ref: '#/components/schemas/CampaignNextSessionSummary'
+          nullable: true
+          description: The nearest session dated strictly after today, or absent if none is scheduled.
+        openClocksNearFilling:
+          type: array
+          description: Not-yet-full clocks, most-filled-first, capped at 5, each with a prep hint.
+          items:
+            $ref: '#/components/schemas/ClockPrepHint'
+        openLooseThreads:
+          type: array
+          description: Open (unresolved) loose threads, newest-first, capped at 8.
+          items:
+            $ref: '#/components/schemas/CampaignLooseThreadSummary'
+        openBeatsInActiveArcs:
+          type: array
+          description: Not-done beats belonging to ACTIVE-status arcs only, capped at 10.
+          items:
+            $ref: '#/components/schemas/OpenBeatSummary'
+        nextSessionTodos:
+          type: array
+          description: The next session's not-done todos. Empty when there's no next session.
+          items:
+            $ref: '#/components/schemas/CampaignTodoSummary'
+
+    CampaignNextSessionSummary:
+      type: object
+      required: [sessionId, title, date]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+        sessionNumber:
+          type: [integer, "null"]
+
+    ClockPrepHint:
+      type: object
+      required: [clockId, title, filledSegments, totalSegments]
+      properties:
+        clockId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        filledSegments:
+          type: integer
+        totalSegments:
+          type: integer
+        nextUnfilledSegmentTitle:
+          type: [string, "null"]
+          description: The title of the first not-yet-filled segment, for use as a prep hint.
+
+    CampaignLooseThreadSummary:
+      type: object
+      required: [threadId, text]
+      properties:
+        threadId:
+          type: string
+          format: uuid
+        text:
+          type: string
+
+    OpenBeatSummary:
+      type: object
+      required: [beatId, arcId, arcTitle, beatTitle]
+      properties:
+        beatId:
+          type: string
+          format: uuid
+        arcId:
+          type: string
+          format: uuid
+        arcTitle:
+          type: string
+        beatTitle:
+          type: string
+
+    CampaignTodoSummary:
+      type: object
+      required: [todoId, text]
+      properties:
+        todoId:
+          type: string
+          format: uuid
+        text:
+          type: string
 
     ArticleRevision:
       type: object
