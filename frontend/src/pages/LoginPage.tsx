@@ -1,5 +1,5 @@
-import { FormEvent, useState } from 'react';
-import { login, ApiError, LoginResponse } from '../api/client';
+import { FormEvent, useEffect, useState } from 'react';
+import { login, getOidcStatus, ApiError, LoginResponse } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
@@ -16,6 +16,15 @@ export function LoginPage({ onLoginResult, onRegister, onForgotPassword }: Props
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Hidden by default until confirmed: on a deployment with no Google credentials configured
+  // (ADR-0113), /oauth2/authorization/google doesn't exist — never show a link that 404s.
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    getOidcStatus()
+      .then((status) => setGoogleEnabled(status.googleEnabled))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -71,6 +80,11 @@ export function LoginPage({ onLoginResult, onRegister, onForgotPassword }: Props
       <Button type="button" variant="link" onClick={onForgotPassword}>
         Forgot password?
       </Button>
+      {googleEnabled && (
+        <Button type="button" variant="outline" asChild>
+          <a href="/oauth2/authorization/google">Sign in with Google</a>
+        </Button>
+      )}
     </form>
   );
 }
