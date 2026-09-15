@@ -411,15 +411,18 @@ export const recoveryCodesApi = {
 /**
  * Self-service TOTP secret replacement for an account already on TOTP (ADR-0111 follow-up,
  * e.g. a new phone) — mirrors startTotpSetup/confirmTotpSetup's shape but uses the ambient
- * session token (not a pending one) and returns no token/recovery codes on confirm, since the
- * caller is already fully authenticated and the standing recovery-code batch is unaffected.
+ * session token (not a pending one). Confirm reissues no recovery codes (the standing batch is
+ * unaffected) but DOES reissue the session token: the swap bumps tokenVersion to invalidate any
+ * other outstanding token for this account (e.g. a lost/stolen device's still-live session — the
+ * whole point of this flow), so the caller must call setToken() with the response to keep their
+ * own in-flight session working past this call.
  */
 export function startTotpReEnrollment(): Promise<TotpSetupStart> {
   return request<TotpSetupStart>('/accounts/me/totp/start', { method: 'POST' });
 }
 
-export function confirmTotpReEnrollment(code: string): Promise<void> {
-  return request<void>('/accounts/me/totp/confirm', { method: 'POST', body: JSON.stringify({ code }) });
+export function confirmTotpReEnrollment(code: string): Promise<TokenResponse> {
+  return request<TokenResponse>('/accounts/me/totp/confirm', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
 /** Admin-only account roster management. */

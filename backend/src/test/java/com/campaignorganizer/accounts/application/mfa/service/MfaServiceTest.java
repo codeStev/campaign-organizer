@@ -332,17 +332,21 @@ class MfaServiceTest {
     }
 
     @Test
-    void confirmTotpReEnrollmentWithCorrectCodeSwapsTheActiveSecretWithoutReissuingRecoveryCodes() {
+    void confirmTotpReEnrollmentWithCorrectCodeSwapsTheActiveSecretBumpsTokenVersionWithoutReissuingRecoveryCodes() {
         Account account = enrolledAccount("OLD-SECRET");
         account.beginTotpReEnrollment(textEncryptor.encrypt("NEW-SECRET"), clock.instant());
+        int versionBefore = account.getTokenVersion();
         when(accounts.findById(accountId)).thenReturn(Optional.of(account));
         when(totp.verifyCode("NEW-SECRET", "222222")).thenReturn(true);
 
-        service.confirmTotpReEnrollment(accountId, "222222");
+        AccountView result = service.confirmTotpReEnrollment(accountId, "222222");
 
         assertThat(account.getMfaMethod()).isEqualTo(MfaMethod.TOTP);
         assertThat(textEncryptor.decrypt(account.getTotpSecretEncrypted())).isEqualTo("NEW-SECRET");
         assertThat(account.getTotpSecretPendingEncrypted()).isNull();
+        // The whole point is invalidating a lost/stolen device's still-live token.
+        assertThat(account.getTokenVersion()).isEqualTo(versionBefore + 1);
+        assertThat(result.tokenVersion()).isEqualTo(versionBefore + 1);
         verify(recoveryCodeRepository, never()).saveAll(any());
     }
 

@@ -114,11 +114,24 @@ class SelfServiceMfaRecoveryControllerIT extends AbstractIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         String newSecret = JsonPath.read(startBody, "$.secret");
 
-        mockMvc.perform(post("/api/accounts/me/totp/confirm")
+        String confirmBody = mockMvc.perform(post("/api/accounts/me/totp/confirm")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + fullToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"code\":\"" + currentCode(newSecret) + "\"}"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String reissuedToken = JsonPath.read(confirmBody, "$.token");
+
+        // The pre-confirm token is now stale — tokenVersion was bumped to shut out a
+        // lost/stolen device's still-live session, the whole point of this flow...
+        mockMvc.perform(get("/api/accounts/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + fullToken))
+                .andExpect(status().isUnauthorized());
+
+        // ...but the freshly-reissued one keeps the caller's own request working past the bump.
+        mockMvc.perform(get("/api/accounts/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + reissuedToken))
+                .andExpect(status().isOk());
 
         // The old secret's codes no longer challenge successfully...
         String oldSecretChallengeToken = login(enrolled.email()).token();

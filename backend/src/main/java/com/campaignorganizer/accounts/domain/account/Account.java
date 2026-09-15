@@ -130,7 +130,17 @@ public final class Account {
         this.updatedAt = now;
     }
 
-    /** Promotes the pending TOTP secret to active once its code has been verified by the caller. */
+    /**
+     * Promotes the pending TOTP secret to active once its code has been verified by the caller.
+     * Bumps the token version — found missing during this feature's own {@code security-review}
+     * pass for the re-enrollment case specifically: without it, replacing a lost/stolen device's
+     * TOTP secret (the whole point of {@link #beginTotpReEnrollment}) left that device's
+     * already-issued token fully valid until its natural expiry, exactly the scenario a user
+     * reaching for this flow is trying to shut out. Harmless for first-time enrollment too — the
+     * caller there already gets a brand-new token immediately after, the same as every other
+     * token-invalidating mutator on this aggregate ({@link #changePasswordHash}, {@link
+     * #disable}, {@link #resetMfaForRecovery}).
+     */
     public void completeTotpEnrollment(Instant now) {
         if (totpSecretPendingEncrypted == null) {
             throw new ValidationException("No pending TOTP enrollment to confirm");
@@ -138,6 +148,7 @@ public final class Account {
         this.mfaMethod = MfaMethod.TOTP;
         this.totpSecretEncrypted = totpSecretPendingEncrypted;
         this.totpSecretPendingEncrypted = null;
+        this.tokenVersion++;
         this.updatedAt = now;
     }
 

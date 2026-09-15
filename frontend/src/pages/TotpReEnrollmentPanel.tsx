@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { toast } from 'sonner';
-import { confirmTotpReEnrollment, startTotpReEnrollment, ApiError } from '../api/client';
+import { confirmTotpReEnrollment, startTotpReEnrollment, setToken, ApiError } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
@@ -33,7 +33,10 @@ export function TotpReEnrollmentPanel() {
     setBusy(true);
     setConfirmError(null);
     try {
-      await confirmTotpReEnrollment(code);
+      const result = await confirmTotpReEnrollment(code);
+      // The swap bumps tokenVersion server-side to invalidate any other outstanding token for
+      // this account — must adopt the freshly-issued one or our own session goes stale next call.
+      setToken(result.token);
       toast.success('Authenticator app replaced');
       setStage({ kind: 'idle' });
       setCode('');

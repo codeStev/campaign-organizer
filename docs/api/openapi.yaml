@@ -504,9 +504,13 @@ paths:
       summary: Confirm the pending TOTP secret replacement
       description: >-
         Verifies a code against the pending secret from
-        /accounts/me/totp/start and promotes it to active. No token or
-        recovery-code reissuance — the caller is already fully
-        authenticated, and the standing recovery-code batch is unaffected.
+        /accounts/me/totp/start and promotes it to active. No recovery-code
+        reissuance — the standing recovery-code batch is unaffected. This
+        *does* bump the account's token version and return a fresh bearer
+        token: every other outstanding token (e.g. a lost/stolen device's
+        still-live session — the whole point of this flow) stops working
+        immediately, so the caller's own session needs a new one to keep
+        working past this call.
       operationId: confirmTotpReEnrollment
       requestBody:
         required: true
@@ -515,8 +519,12 @@ paths:
             schema:
               $ref: '#/components/schemas/MfaCodeRequest'
       responses:
-        '204':
-          description: TOTP secret replaced.
+        '200':
+          description: TOTP secret replaced; a fresh bearer token for the caller's own session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

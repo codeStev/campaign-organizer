@@ -23,7 +23,10 @@ import com.campaignorganizer.accounts.application.mfa.port.in.RemoveWebauthnCred
 import com.campaignorganizer.accounts.application.mfa.port.in.ResetMfaUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpReEnrollmentUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialSummary;
+import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.auth.TokenResponse;
 import com.campaignorganizer.security.CurrentUserPort;
+import com.campaignorganizer.security.JwtService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -65,6 +68,7 @@ public class AccountAdminController {
     private final ConfirmTotpReEnrollmentUseCase confirmTotpReEnrollmentUseCase;
     private final CurrentUserPort currentUser;
     private final AccountWebMapper mapper;
+    private final JwtService jwtService;
 
     public AccountAdminController(ListAccountsUseCase listUseCase, GetAccountUseCase getUseCase,
                                   UpdateRoleUseCase updateRoleUseCase, SetEnabledUseCase setEnabledUseCase,
@@ -78,7 +82,7 @@ public class AccountAdminController {
                                   RegenerateRecoveryCodesUseCase regenerateRecoveryCodesUseCase,
                                   StartTotpReEnrollmentUseCase startTotpReEnrollmentUseCase,
                                   ConfirmTotpReEnrollmentUseCase confirmTotpReEnrollmentUseCase,
-                                  CurrentUserPort currentUser, AccountWebMapper mapper) {
+                                  CurrentUserPort currentUser, AccountWebMapper mapper, JwtService jwtService) {
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
         this.updateRoleUseCase = updateRoleUseCase;
@@ -96,6 +100,7 @@ public class AccountAdminController {
         this.confirmTotpReEnrollmentUseCase = confirmTotpReEnrollmentUseCase;
         this.currentUser = currentUser;
         this.mapper = mapper;
+        this.jwtService = jwtService;
     }
 
     @GetMapping
@@ -160,10 +165,18 @@ public class AccountAdminController {
         return startTotpReEnrollmentUseCase.startTotpReEnrollment(currentUser.currentAccountId());
     }
 
+    /**
+     * Returns a fresh bearer token: confirming re-enrollment bumps the account's token version
+     * (every other outstanding token — e.g. a lost/stolen device's still-live session, the
+     * whole point of this flow — stops working immediately), so the caller's own in-flight
+     * session needs a new one to keep working past this call.
+     */
     @PostMapping("/me/totp/confirm")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void confirmTotpReEnrollment(@Valid @RequestBody MfaCodeRequest request) {
-        confirmTotpReEnrollmentUseCase.confirmTotpReEnrollment(currentUser.currentAccountId(), request.code());
+    public TokenResponse confirmTotpReEnrollment(@Valid @RequestBody MfaCodeRequest request) {
+        AccountView account =
+                confirmTotpReEnrollmentUseCase.confirmTotpReEnrollment(currentUser.currentAccountId(), request.code());
+        JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        return TokenResponse.bearer(issued.token(), issued.expiresAt());
     }
 
     @PatchMapping("/{accountId}/role")

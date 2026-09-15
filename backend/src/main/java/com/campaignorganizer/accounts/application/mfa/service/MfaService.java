@@ -229,7 +229,7 @@ public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCas
 
     @Override
     @Transactional
-    public void confirmTotpReEnrollment(UUID accountId, String code) {
+    public AccountView confirmTotpReEnrollment(UUID accountId, String code) {
         Account account = require(accountId);
         String pendingEncrypted = account.getTotpSecretPendingEncrypted();
         if (pendingEncrypted == null) {
@@ -244,8 +244,12 @@ public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCas
         if (!totp.verifyCode(totpSecretEncryptor.decrypt(pendingEncrypted), code)) {
             throw new ValidationException("Invalid TOTP code");
         }
+        // Bumps tokenVersion (see completeTotpEnrollment's own Javadoc) — the caller's own
+        // in-flight request needs a fresh token to keep working past this call, which is why
+        // this returns the post-bump AccountView for the controller to issue one from.
         account.completeTotpEnrollment(clock.instant());
         accounts.save(account);
+        return toView(account);
     }
 
     private List<String> issueRecoveryCodes(UUID accountId) {
