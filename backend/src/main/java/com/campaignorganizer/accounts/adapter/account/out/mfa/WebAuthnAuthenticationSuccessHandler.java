@@ -2,8 +2,10 @@ package com.campaignorganizer.accounts.adapter.account.out.mfa;
 
 import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.accounts.application.session.port.in.RecordAccountSessionUseCase;
 import com.campaignorganizer.accounts.domain.account.MfaMethod;
 import com.campaignorganizer.auth.TokenResponse;
+import com.campaignorganizer.security.ClientAddress;
 import com.campaignorganizer.security.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -49,11 +51,14 @@ public class WebAuthnAuthenticationSuccessHandler implements AuthenticationSucce
 
     private final JwtService jwtService;
     private final AccountQueryPort accounts;
+    private final RecordAccountSessionUseCase recordAccountSessionUseCase;
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    public WebAuthnAuthenticationSuccessHandler(JwtService jwtService, AccountQueryPort accounts) {
+    public WebAuthnAuthenticationSuccessHandler(JwtService jwtService, AccountQueryPort accounts,
+                                                RecordAccountSessionUseCase recordAccountSessionUseCase) {
         this.jwtService = jwtService;
         this.accounts = accounts;
+        this.recordAccountSessionUseCase = recordAccountSessionUseCase;
     }
 
     @Override
@@ -67,6 +72,8 @@ public class WebAuthnAuthenticationSuccessHandler implements AuthenticationSucce
             throw new AccessDeniedException("WebAuthn is not this account's active MFA method");
         }
         JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        recordAccountSessionUseCase.recordSession(account.id(), issued.jti(), issued.expiresAt(),
+                request.getHeader("User-Agent"), ClientAddress.of(request));
         response.setStatus(HttpStatus.OK.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getWriter(), TokenResponse.bearer(issued.token(), issued.expiresAt()));

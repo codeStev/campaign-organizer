@@ -11,10 +11,13 @@ import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSet
 import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpSetupUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.VerifyRecoveryCodeUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.VerifyTotpChallengeUseCase;
+import com.campaignorganizer.accounts.application.session.port.in.RecordAccountSessionUseCase;
 import com.campaignorganizer.auth.LoginResponse;
 import com.campaignorganizer.auth.TokenResponse;
+import com.campaignorganizer.security.ClientAddress;
 import com.campaignorganizer.security.CurrentUserPort;
 import com.campaignorganizer.security.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Set;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +42,7 @@ public class MfaController {
     private final ConfirmWebauthnSetupUseCase confirmWebauthnSetupUseCase;
     private final VerifyTotpChallengeUseCase verifyTotpChallengeUseCase;
     private final VerifyRecoveryCodeUseCase verifyRecoveryCodeUseCase;
+    private final RecordAccountSessionUseCase recordAccountSessionUseCase;
     private final CurrentUserPort currentUser;
     private final JwtService jwtService;
 
@@ -46,13 +50,15 @@ public class MfaController {
                          ConfirmTotpSetupUseCase confirmTotpSetupUseCase,
                          ConfirmWebauthnSetupUseCase confirmWebauthnSetupUseCase,
                          VerifyTotpChallengeUseCase verifyTotpChallengeUseCase,
-                         VerifyRecoveryCodeUseCase verifyRecoveryCodeUseCase, CurrentUserPort currentUser,
+                         VerifyRecoveryCodeUseCase verifyRecoveryCodeUseCase,
+                         RecordAccountSessionUseCase recordAccountSessionUseCase, CurrentUserPort currentUser,
                          JwtService jwtService) {
         this.startTotpSetupUseCase = startTotpSetupUseCase;
         this.confirmTotpSetupUseCase = confirmTotpSetupUseCase;
         this.confirmWebauthnSetupUseCase = confirmWebauthnSetupUseCase;
         this.verifyTotpChallengeUseCase = verifyTotpChallengeUseCase;
         this.verifyRecoveryCodeUseCase = verifyRecoveryCodeUseCase;
+        this.recordAccountSessionUseCase = recordAccountSessionUseCase;
         this.currentUser = currentUser;
         this.jwtService = jwtService;
     }
@@ -63,25 +69,26 @@ public class MfaController {
     }
 
     @PostMapping("/setup/totp/confirm")
-    public MfaEnrollmentResult confirmTotpSetup(@Valid @RequestBody MfaCodeRequest request) {
+    public MfaEnrollmentResult confirmTotpSetup(@Valid @RequestBody MfaCodeRequest request,
+                                                 HttpServletRequest httpRequest) {
         MfaEnrollmentOutcome outcome =
                 confirmTotpSetupUseCase.confirmTotpSetup(currentUser.currentAccountId(), request.code());
-        JwtService.IssuedToken issued = issueFullToken(outcome.account());
+        JwtService.IssuedToken issued = issueFullToken(outcome.account(), httpRequest);
         return new MfaEnrollmentResult(issued.token(), "Bearer", issued.expiresAt(), outcome.recoveryCodes());
     }
 
     @PostMapping("/setup/webauthn/confirm")
-    public MfaEnrollmentResult confirmWebauthnSetup() {
+    public MfaEnrollmentResult confirmWebauthnSetup(HttpServletRequest httpRequest) {
         MfaEnrollmentOutcome outcome = confirmWebauthnSetupUseCase.confirmWebauthnSetup(currentUser.currentAccountId());
-        JwtService.IssuedToken issued = issueFullToken(outcome.account());
+        JwtService.IssuedToken issued = issueFullToken(outcome.account(), httpRequest);
         return new MfaEnrollmentResult(issued.token(), "Bearer", issued.expiresAt(), outcome.recoveryCodes());
     }
 
     @PostMapping("/verify")
-    public TokenResponse verifyTotpChallenge(@Valid @RequestBody MfaCodeRequest request) {
+    public TokenResponse verifyTotpChallenge(@Valid @RequestBody MfaCodeRequest request, HttpServletRequest httpRequest) {
         AccountView account = verifyTotpChallengeUseCase.verifyTotpChallenge(currentUser.currentAccountId(),
                 request.code());
-        JwtService.IssuedToken issued = issueFullToken(account);
+        JwtService.IssuedToken issued = issueFullToken(account, httpRequest);
         return TokenResponse.bearer(issued.token(), issued.expiresAt());
     }
 
@@ -90,12 +97,16 @@ public class MfaController {
         AccountView account = verifyRecoveryCodeUseCase.verifyRecoveryCode(currentUser.currentAccountId(),
                 request.recoveryCode());
         // Always MFA_SETUP_REQUIRED: resetMfaForRecovery already cleared the account's method.
+        // No session row recorded — a PASSWORD-only token isn't a "device logged in" yet (ADR-0112).
         JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion(),
                 Set.of(JwtService.PASSWORD_FACTOR));
         return LoginResponse.setupRequired(issued.token(), issued.expiresAt());
     }
 
-    private JwtService.IssuedToken issueFullToken(AccountView account) {
-        return jwtService.issue(account.id(), account.role(), account.tokenVersion());
+    private JwtService.IssuedToken issueFullToken(AccountView account, HttpServletRequest request) {
+        JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        recordAccountSessionUseCase.recordSession(account.id(), issued.jti(), issued.expiresAt(),
+                request.getHeader("User-Agent"), ClientAddress.of(request));
+        return issued;
     }
 }

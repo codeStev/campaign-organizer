@@ -2,10 +2,12 @@ package com.campaignorganizer.accounts.adapter.account.out.mfa;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.accounts.application.session.port.in.RecordAccountSessionUseCase;
 import com.campaignorganizer.accounts.domain.account.MfaMethod;
 import com.campaignorganizer.accounts.domain.account.Role;
 import com.campaignorganizer.security.JwtService;
@@ -36,27 +38,33 @@ class WebAuthnAuthenticationSuccessHandlerTest {
     private JwtService jwtService;
     @Mock
     private AccountQueryPort accounts;
+    @Mock
+    private RecordAccountSessionUseCase recordAccountSessionUseCase;
 
     private final UUID accountId = UUID.randomUUID();
 
     @Test
     void issuesFullTokenWhenWebauthnIsTheAccountsActiveMfaMethod() throws Exception {
-        WebAuthnAuthenticationSuccessHandler handler = new WebAuthnAuthenticationSuccessHandler(jwtService, accounts);
+        WebAuthnAuthenticationSuccessHandler handler =
+                new WebAuthnAuthenticationSuccessHandler(jwtService, accounts, recordAccountSessionUseCase);
         when(accounts.findById(accountId)).thenReturn(Optional.of(accountView(MfaMethod.WEBAUTHN)));
+        UUID jti = UUID.randomUUID();
+        Instant expiresAt = Instant.now().plusSeconds(3600);
         when(jwtService.issue(accountId, Role.USER, 0))
-                .thenReturn(new JwtService.IssuedToken("token-value", Instant.now().plusSeconds(3600)));
+                .thenReturn(new JwtService.IssuedToken("token-value", expiresAt, jti));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(new MockHttpServletRequest(), response, webAuthnAuthentication());
 
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getContentAsString()).contains("token-value");
+        verify(recordAccountSessionUseCase).recordSession(accountId, jti, expiresAt, null, "127.0.0.1");
     }
 
     @Test
     void rejectsAnAccountWhoseActiveMfaMethodIsNotWebauthn() {
         WebAuthnAuthenticationSuccessHandler handler =
-                new WebAuthnAuthenticationSuccessHandler(jwtService, accounts);
+                new WebAuthnAuthenticationSuccessHandler(jwtService, accounts, recordAccountSessionUseCase);
         when(accounts.findById(accountId)).thenReturn(Optional.of(accountView(MfaMethod.TOTP)));
 
         assertThatThrownBy(() -> handler.onAuthenticationSuccess(
@@ -67,7 +75,7 @@ class WebAuthnAuthenticationSuccessHandlerTest {
     @Test
     void rejectsAnAccountWithNoMfaMethodActiveAtAll() {
         WebAuthnAuthenticationSuccessHandler handler =
-                new WebAuthnAuthenticationSuccessHandler(jwtService, accounts);
+                new WebAuthnAuthenticationSuccessHandler(jwtService, accounts, recordAccountSessionUseCase);
         when(accounts.findById(accountId)).thenReturn(Optional.of(accountView(MfaMethod.NONE)));
 
         assertThatThrownBy(() -> handler.onAuthenticationSuccess(

@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.account.port.published.AuthenticateAccountPort;
+import com.campaignorganizer.accounts.application.session.port.in.RecordAccountSessionUseCase;
 import com.campaignorganizer.security.JwtService;
 import com.jayway.jsonpath.JsonPath;
 import org.springframework.mock.web.MockMultipartFile;
@@ -60,6 +61,9 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private RecordAccountSessionUseCase recordAccountSessionUseCase;
+
     /**
      * Registers a fresh, unique account and returns a ready, fully-authenticated
      * {@code Bearer <jwt>} header value — bypassing the real MFA enrollment ceremony
@@ -71,6 +75,10 @@ public abstract class AbstractIntegrationTest {
      * every caller in this suite uses the header within a single test method, never expecting
      * a *specific* identity across calls, and each account's data is private to it
      * (ADR-0109), so reusing one shared login across tests would only entangle them.
+     *
+     * <p>Also records a session row (ADR-0112) — a full-factor token now needs one, exactly
+     * like every real full-token-issuance call site, or {@code JwtAuthFilter}'s active-session
+     * check rejects even this test shortcut's own token.
      */
     protected String authHeader() throws Exception {
         String email = "it-" + java.util.UUID.randomUUID() + "@test.local";
@@ -80,6 +88,8 @@ public abstract class AbstractIntegrationTest {
                 .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"));
         AccountView account = authenticateAccountPort.authenticate(email, password).orElseThrow();
         JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        recordAccountSessionUseCase.recordSession(account.id(), issued.jti(), issued.expiresAt(),
+                "integration-test", "127.0.0.1");
         return "Bearer " + issued.token();
     }
 

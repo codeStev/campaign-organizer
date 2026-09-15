@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.campaignorganizer.AbstractIntegrationTest;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.account.port.published.AuthenticateAccountPort;
+import com.campaignorganizer.accounts.application.session.port.in.RecordAccountSessionUseCase;
 import com.campaignorganizer.security.JwtService;
 import com.jayway.jsonpath.JsonPath;
 import dev.samstevens.totp.code.CodeGenerator;
@@ -39,6 +40,8 @@ class SelfServiceMfaRecoveryControllerIT extends AbstractIntegrationTest {
     private AuthenticateAccountPort authenticateAccountPort;
     @Autowired
     private JwtService jwtService;
+    @Autowired
+    private RecordAccountSessionUseCase recordAccountSessionUseCase;
 
     @Test
     void allFourEndpointsRequireTheMfaFactorNotJustPassword() throws Exception {
@@ -174,7 +177,12 @@ class SelfServiceMfaRecoveryControllerIT extends AbstractIntegrationTest {
     void totpReEnrollmentFailsWhenNoMfaMethodIsActiveYet() throws Exception {
         String email = register();
         AccountView account = authenticateAccountPort.authenticate(email, PASSWORD).orElseThrow();
-        String fullToken = jwtService.issue(account.id(), account.role(), account.tokenVersion()).token();
+        // Synthetic: a real NONE-mfaMethod account can never actually hold a full token via any
+        // real endpoint — minted directly here, so it needs its own session row (ADR-0112) just
+        // like AbstractIntegrationTest.authHeader()'s equivalent shortcut.
+        JwtService.IssuedToken issued = jwtService.issue(account.id(), account.role(), account.tokenVersion());
+        recordAccountSessionUseCase.recordSession(account.id(), issued.jti(), issued.expiresAt(), "test", "127.0.0.1");
+        String fullToken = issued.token();
 
         mockMvc.perform(post("/api/accounts/me/totp/start")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + fullToken))
