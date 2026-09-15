@@ -4,6 +4,7 @@ import com.campaignorganizer.accounts.adapter.account.in.web.AccountWebDtos.Acco
 import com.campaignorganizer.accounts.adapter.account.in.web.AccountWebDtos.ChangePasswordRequest;
 import com.campaignorganizer.accounts.adapter.account.in.web.AccountWebDtos.ResetPasswordRequest;
 import com.campaignorganizer.accounts.adapter.account.in.web.AccountWebDtos.UpdateRoleRequest;
+import com.campaignorganizer.accounts.adapter.account.in.web.MfaWebDtos.MfaCodeRequest;
 import com.campaignorganizer.accounts.application.account.port.in.ChangeOwnPasswordUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.DeleteAccountUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.GetAccountUseCase;
@@ -12,9 +13,15 @@ import com.campaignorganizer.accounts.application.account.port.in.LogoutAllUseCa
 import com.campaignorganizer.accounts.application.account.port.in.ResetPasswordUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.SetEnabledUseCase;
 import com.campaignorganizer.accounts.application.account.port.in.UpdateRoleUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmTotpReEnrollmentUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.GetRecoveryCodeStatusUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.ListWebauthnCredentialsUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.RecoveryCodeStatus;
+import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSetupStart;
+import com.campaignorganizer.accounts.application.mfa.port.in.RegenerateRecoveryCodesUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.RemoveWebauthnCredentialUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.ResetMfaUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpReEnrollmentUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.out.WebAuthnCredentialSummary;
 import com.campaignorganizer.security.CurrentUserPort;
 import jakarta.validation.Valid;
@@ -52,6 +59,10 @@ public class AccountAdminController {
     private final ResetMfaUseCase resetMfaUseCase;
     private final ListWebauthnCredentialsUseCase listWebauthnCredentialsUseCase;
     private final RemoveWebauthnCredentialUseCase removeWebauthnCredentialUseCase;
+    private final GetRecoveryCodeStatusUseCase getRecoveryCodeStatusUseCase;
+    private final RegenerateRecoveryCodesUseCase regenerateRecoveryCodesUseCase;
+    private final StartTotpReEnrollmentUseCase startTotpReEnrollmentUseCase;
+    private final ConfirmTotpReEnrollmentUseCase confirmTotpReEnrollmentUseCase;
     private final CurrentUserPort currentUser;
     private final AccountWebMapper mapper;
 
@@ -63,6 +74,10 @@ public class AccountAdminController {
                                   ResetMfaUseCase resetMfaUseCase,
                                   ListWebauthnCredentialsUseCase listWebauthnCredentialsUseCase,
                                   RemoveWebauthnCredentialUseCase removeWebauthnCredentialUseCase,
+                                  GetRecoveryCodeStatusUseCase getRecoveryCodeStatusUseCase,
+                                  RegenerateRecoveryCodesUseCase regenerateRecoveryCodesUseCase,
+                                  StartTotpReEnrollmentUseCase startTotpReEnrollmentUseCase,
+                                  ConfirmTotpReEnrollmentUseCase confirmTotpReEnrollmentUseCase,
                                   CurrentUserPort currentUser, AccountWebMapper mapper) {
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
@@ -75,6 +90,10 @@ public class AccountAdminController {
         this.resetMfaUseCase = resetMfaUseCase;
         this.listWebauthnCredentialsUseCase = listWebauthnCredentialsUseCase;
         this.removeWebauthnCredentialUseCase = removeWebauthnCredentialUseCase;
+        this.getRecoveryCodeStatusUseCase = getRecoveryCodeStatusUseCase;
+        this.regenerateRecoveryCodesUseCase = regenerateRecoveryCodesUseCase;
+        this.startTotpReEnrollmentUseCase = startTotpReEnrollmentUseCase;
+        this.confirmTotpReEnrollmentUseCase = confirmTotpReEnrollmentUseCase;
         this.currentUser = currentUser;
         this.mapper = mapper;
     }
@@ -118,6 +137,33 @@ public class AccountAdminController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeWebauthnCredential(@PathVariable UUID credentialId) {
         removeWebauthnCredentialUseCase.removeWebauthnCredential(currentUser.currentAccountId(), credentialId);
+    }
+
+    /** Self-service recovery-code visibility/regeneration (ADR-0111 follow-up) — works for either MFA method. */
+    @GetMapping("/me/recovery-codes")
+    public RecoveryCodeStatus recoveryCodeStatus() {
+        return getRecoveryCodeStatusUseCase.getRecoveryCodeStatus(currentUser.currentAccountId());
+    }
+
+    @PostMapping("/me/recovery-codes/regenerate")
+    public List<String> regenerateRecoveryCodes() {
+        return regenerateRecoveryCodesUseCase.regenerateRecoveryCodes(currentUser.currentAccountId());
+    }
+
+    /**
+     * Self-service TOTP secret replacement for an account already on TOTP (ADR-0111 follow-up,
+     * e.g. a new phone) — deliberately a different route from {@code /api/auth/mfa/setup/totp/**}
+     * (PASSWORD-only) so it inherits this controller's default full-MFA-factor gate instead.
+     */
+    @PostMapping("/me/totp/start")
+    public TotpSetupStart startTotpReEnrollment() {
+        return startTotpReEnrollmentUseCase.startTotpReEnrollment(currentUser.currentAccountId());
+    }
+
+    @PostMapping("/me/totp/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void confirmTotpReEnrollment(@Valid @RequestBody MfaCodeRequest request) {
+        confirmTotpReEnrollmentUseCase.confirmTotpReEnrollment(currentUser.currentAccountId(), request.code());
     }
 
     @PatchMapping("/{accountId}/role")
