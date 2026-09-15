@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { RecoveryCodesList } from '../components/RecoveryCodesList';
 import { WebauthnCredentialsPanel } from './WebauthnCredentialsPanel';
 import { TotpReEnrollmentPanel } from './TotpReEnrollmentPanel';
+import { SessionsPanel } from './SessionsPanel';
 
 interface Props {
   onAuthExpired: () => void;
@@ -95,6 +96,9 @@ export function SecuritySettingsPanel({ onAuthExpired }: Props) {
 
       {account?.mfaMethod === 'WEBAUTHN' && <WebauthnCredentialsPanel onAuthExpired={onAuthExpired} />}
       {account?.mfaMethod === 'TOTP' && <TotpReEnrollmentPanel />}
+
+      <h3>Sessions</h3>
+      <SessionsPanel onAuthExpired={onAuthExpired} />
 
       <ConfirmDialog
         open={confirmRegenerateOpen}

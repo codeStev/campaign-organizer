@@ -425,6 +425,21 @@ export function confirmTotpReEnrollment(code: string): Promise<TokenResponse> {
   return request<TokenResponse>('/accounts/me/totp/confirm', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
+export interface AccountSessionSummary {
+  id: string;
+  createdAt: string;
+  userAgent?: string | null;
+  ipAddress?: string | null;
+  expiresAt: string;
+  current: boolean;
+}
+
+/** Self-service session/device tracking (ADR-0112) — a second, finer-grained layer alongside logout-all. */
+export const accountSessionsApi = {
+  list: () => request<AccountSessionSummary[]>('/accounts/me/sessions'),
+  revoke: (id: string) => request<void>(`/accounts/me/sessions/${id}`, { method: 'DELETE' }),
+};
+
 /** Admin-only account roster management. */
 export const accountsApi = {
   list: () => request<Account[]>('/accounts'),
