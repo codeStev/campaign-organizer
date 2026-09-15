@@ -34,6 +34,11 @@ public class RecoveryCodeRepositoryAdapter implements RecoveryCodeRepositoryPort
     }
 
     @Override
+    public int countUnusedByAccountId(UUID accountId) {
+        return repository.countByAccountIdAndUsedAtIsNull(accountId);
+    }
+
+    @Override
     public void deleteAllByAccountId(UUID accountId) {
         repository.deleteAllByAccountId(accountId);
     }

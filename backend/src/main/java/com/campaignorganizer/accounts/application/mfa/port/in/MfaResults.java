@@ -18,4 +18,8 @@ public final class MfaResults {
      */
     public record MfaEnrollmentOutcome(AccountView account, List<String> recoveryCodes) {
     }
+
+    /** How many unused recovery codes an account currently has (ADR-0111 follow-up). */
+    public record RecoveryCodeStatus(int remaining) {
+    }
 }

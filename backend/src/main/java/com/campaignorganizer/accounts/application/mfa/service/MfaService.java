@@ -2,12 +2,17 @@ package com.campaignorganizer.accounts.application.mfa.service;
 
 import com.campaignorganizer.accounts.application.account.port.out.AccountRepositoryPort;
 import com.campaignorganizer.accounts.application.account.port.published.AccountView;
+import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmTotpReEnrollmentUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmTotpSetupUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.ConfirmWebauthnSetupUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.GetRecoveryCodeStatusUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.MfaEnrollmentOutcome;
+import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.RecoveryCodeStatus;
 import com.campaignorganizer.accounts.application.mfa.port.in.MfaResults.TotpSetupStart;
 import com.campaignorganizer.accounts.application.mfa.port.in.RecoverPasswordUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.RegenerateRecoveryCodesUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.ResetMfaUseCase;
+import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpReEnrollmentUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.StartTotpSetupUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.VerifyRecoveryCodeUseCase;
 import com.campaignorganizer.accounts.application.mfa.port.in.VerifyTotpChallengeUseCase;
@@ -37,10 +42,19 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code AccountService} to keep that class from growing further, same reasoning as the
  * query-service split elsewhere in this codebase. WebAuthn enrollment/challenge is handled
  * separately, by Spring Security's own {@code .webAuthn()} support, not this service.
+ *
+ * <p>Also backs the self-service settings-page actions (ADR-0111 follow-up): recovery-code
+ * status/regeneration (method-agnostic, works for either MFA method), and TOTP secret
+ * replacement for an account already on TOTP — {@link #startTotpReEnrollment}/{@link
+ * #confirmTotpReEnrollment} deliberately reuse {@code Account}'s enrollment machinery but are
+ * exposed via a differently-gated route (see {@code AccountAdminController}) than first-time
+ * setup, so a PASSWORD-only token can never reach them.
  */
 @Service
 public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCase, VerifyTotpChallengeUseCase,
-        ConfirmWebauthnSetupUseCase, VerifyRecoveryCodeUseCase, RecoverPasswordUseCase, ResetMfaUseCase {
+        ConfirmWebauthnSetupUseCase, VerifyRecoveryCodeUseCase, RecoverPasswordUseCase, ResetMfaUseCase,
+        GetRecoveryCodeStatusUseCase, RegenerateRecoveryCodesUseCase, StartTotpReEnrollmentUseCase,
+        ConfirmTotpReEnrollmentUseCase {
 
     private static final int RECOVERY_CODE_COUNT = 10;
 
@@ -187,6 +201,51 @@ public class MfaService implements StartTotpSetupUseCase, ConfirmTotpSetupUseCas
         // let it still authenticate a challenge even after mfaMethod no longer says WEBAUTHN.
         webAuthnCredentials.deleteByAccountId(accountId);
         return toView(account);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecoveryCodeStatus getRecoveryCodeStatus(UUID accountId) {
+        return new RecoveryCodeStatus(recoveryCodeRepository.countUnusedByAccountId(accountId));
+    }
+
+    @Override
+    @Transactional
+    public List<String> regenerateRecoveryCodes(UUID accountId) {
+        require(accountId);
+        return issueRecoveryCodes(accountId);
+    }
+
+    @Override
+    @Transactional
+    public TotpSetupStart startTotpReEnrollment(UUID accountId) {
+        Account account = require(accountId);
+        String secret = totp.generateSecret();
+        account.beginTotpReEnrollment(totpSecretEncryptor.encrypt(secret), clock.instant());
+        accounts.save(account);
+        return new TotpSetupStart(secret, totp.provisioningUri(secret, account.getEmail()),
+                totp.qrCodeDataUri(secret, account.getEmail()));
+    }
+
+    @Override
+    @Transactional
+    public void confirmTotpReEnrollment(UUID accountId, String code) {
+        Account account = require(accountId);
+        String pendingEncrypted = account.getTotpSecretPendingEncrypted();
+        if (pendingEncrypted == null) {
+            throw new ValidationException("No pending TOTP re-enrollment to confirm — call totp/start first");
+        }
+        // ValidationException (400), not AuthenticationFailedException (401), unlike
+        // confirmTotpSetup/verifyTotpChallenge: the caller here already holds a full,
+        // already-authenticated session — a wrong code is a bad *input*, not a failed
+        // *login*. Matters beyond taxonomy: the frontend's shared request() helper clears
+        // the stored session token on any 401, which would otherwise force a mistyped code
+        // to silently log the user out of an already-valid session.
+        if (!totp.verifyCode(totpSecretEncryptor.decrypt(pendingEncrypted), code)) {
+            throw new ValidationException("Invalid TOTP code");
+        }
+        account.completeTotpEnrollment(clock.instant());
+        accounts.save(account);
     }
 
     private List<String> issueRecoveryCodes(UUID accountId) {
