@@ -1,17 +1,24 @@
 package com.campaignorganizer.auth;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.campaignorganizer.AbstractIntegrationTest;
+import com.campaignorganizer.accounts.application.oidc.port.out.OidcLoginExchangePort;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 class AuthControllerIT extends AbstractIntegrationTest {
 
     private static final String PASSWORD = "integration-test-password";
+
+    @Autowired
+    private OidcLoginExchangePort oidcLoginExchangePort;
 
     /**
      * A fresh account has no MFA method yet (ADR-0111) — login succeeds at the password
@@ -104,6 +111,52 @@ class AuthControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * The test profile has no Google credentials configured (see application-test.yml, which
+     * doesn't set GOOGLE_CLIENT_ID) — confirms the app degrades cleanly rather than exposing a
+     * half-wired OIDC flow (ADR-0113).
+     */
+    @Test
+    void oidcStatusReportsDisabledWithNoGoogleCredentialsConfigured() throws Exception {
+        mockMvc.perform(get("/api/auth/oidc/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.googleEnabled").value(false));
+    }
+
+    @Test
+    void googleAuthorizationEndpointDoesNotExistWhenOidcIsDisabled() throws Exception {
+        mockMvc.perform(get("/oauth2/authorization/google"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void exchangingAStagedCodeReturnsTheLoginResponseExactlyOnce() throws Exception {
+        String loginResponseJson = "{\"status\":\"MFA_SETUP_REQUIRED\",\"token\":\"t\",\"tokenType\":\"Bearer\","
+                + "\"expiresAt\":\"2026-01-01T00:00:00Z\",\"method\":null}";
+        UUID code = oidcLoginExchangePort.stage(loginResponseJson, Instant.now().plusSeconds(60));
+
+        mockMvc.perform(post("/api/auth/oidc/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"" + code + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("MFA_SETUP_REQUIRED"))
+                .andExpect(jsonPath("$.token").value("t"));
+
+        // Single-use — the same code can't be redeemed twice.
+        mockMvc.perform(post("/api/auth/oidc/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"" + code + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void exchangingAnUnknownCodeFails() throws Exception {
+        mockMvc.perform(post("/api/auth/oidc/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isBadRequest());
     }
 
