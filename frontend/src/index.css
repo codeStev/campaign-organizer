@@ -1732,12 +1732,19 @@ button:disabled {
 
 .rel-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.rel-row-label {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .system-color-dot {

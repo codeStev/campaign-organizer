@@ -107,7 +107,7 @@ export function AccountsPage({ onAuthExpired }: Props) {
       <ul className="article-list">
         {accounts.map((a) => (
           <li key={a.id} className="rel-row">
-            <span>
+            <span className="rel-row-label">
               <strong>{a.email}</strong>{' '}
               <small className="muted">
                 — {a.role}
