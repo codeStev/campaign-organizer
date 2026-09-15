@@ -16,19 +16,23 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Per-IP throttle on the two unauthenticated, publicly-reachable endpoints
- * (login, registration) — the per-account lockout in {@code AccountService}
- * stops someone hammering *one* account, but not someone sweeping many
- * emails, or forcing repeated BCrypt hashing (a real CPU-cost DoS vector
- * once this is reachable from the open internet). Deliberately dependency-
- * free (a fixed-window counter, not a proper token bucket) rather than
- * pulling in a rate-limiting library for two endpoints; revisit if more
- * endpoints need this.
+ * Per-IP throttle on the three unauthenticated, publicly-reachable endpoints
+ * (login, registration, password recovery) — the per-account lockout in
+ * {@code AccountService} stops someone hammering *one* account, but not
+ * someone sweeping many emails, or forcing repeated BCrypt hashing (a real
+ * CPU-cost DoS vector once this is reachable from the open internet).
+ * {@code /auth/recover-password} belongs here for the same reason as the
+ * other two — it's unauthenticated and does password-hash-cost work on a
+ * guessable-secret input (a recovery code) — it was simply missing until
+ * now. Deliberately dependency-free (a fixed-window counter, not a proper
+ * token bucket) rather than pulling in a rate-limiting library for three
+ * endpoints; revisit if more endpoints need this.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final Set<String> THROTTLED_PATHS = Set.of("/api/auth/login", "/api/accounts/register");
+    private static final Set<String> THROTTLED_PATHS =
+            Set.of("/api/auth/login", "/api/accounts/register", "/api/auth/recover-password");
     private static final Duration WINDOW = Duration.ofMinutes(1);
     /** Not in {@link HttpServletResponse} — 429 predates the constants it defines. */
     private static final int SC_TOO_MANY_REQUESTS = 429;
