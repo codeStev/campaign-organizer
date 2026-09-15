@@ -1741,6 +1741,12 @@ button:disabled {
   border-radius: 6px;
 }
 
+.rel-row-label {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .system-color-dot {
   display: inline-block;
   width: 8px;
