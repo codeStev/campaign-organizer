@@ -16,14 +16,9 @@ import com.campaignorganizer.accounts.application.account.port.published.Account
 import com.campaignorganizer.accounts.application.account.port.published.AuthenticateAccountPort;
 import com.campaignorganizer.accounts.domain.account.Account;
 import com.campaignorganizer.accounts.domain.account.Role;
-import com.campaignorganizer.ai.application.port.published.AiSettingsOwnershipPort;
-import com.campaignorganizer.characters.application.statblock.port.published.GlobalStatblockOwnershipPort;
-import com.campaignorganizer.characters.application.template.port.published.GameSystemOwnershipPort;
-import com.campaignorganizer.characters.application.template.port.published.GlobalFieldTemplateOwnershipPort;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
-import com.campaignorganizer.worldbuilding.application.world.port.published.WorldOwnershipPort;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -57,26 +52,15 @@ public class AccountService implements RegisterAccountUseCase, ListAccountsUseCa
     private final PasswordEncoder passwordEncoder;
     private final IdGenerator ids;
     private final Clock clock;
-    private final WorldOwnershipPort worldOwnership;
-    private final AiSettingsOwnershipPort aiSettingsOwnership;
-    private final GameSystemOwnershipPort gameSystemOwnership;
-    private final GlobalFieldTemplateOwnershipPort globalFieldTemplateOwnership;
-    private final GlobalStatblockOwnershipPort globalStatblockOwnership;
+    private final FirstAccountOwnershipBootstrapper ownershipBootstrapper;
 
     public AccountService(AccountRepositoryPort accounts, PasswordEncoder passwordEncoder, IdGenerator ids,
-                          Clock clock, WorldOwnershipPort worldOwnership,
-                          AiSettingsOwnershipPort aiSettingsOwnership, GameSystemOwnershipPort gameSystemOwnership,
-                          GlobalFieldTemplateOwnershipPort globalFieldTemplateOwnership,
-                          GlobalStatblockOwnershipPort globalStatblockOwnership) {
+                          Clock clock, FirstAccountOwnershipBootstrapper ownershipBootstrapper) {
         this.accounts = accounts;
         this.passwordEncoder = passwordEncoder;
         this.ids = ids;
         this.clock = clock;
-        this.worldOwnership = worldOwnership;
-        this.aiSettingsOwnership = aiSettingsOwnership;
-        this.gameSystemOwnership = gameSystemOwnership;
-        this.globalFieldTemplateOwnership = globalFieldTemplateOwnership;
-        this.globalStatblockOwnership = globalStatblockOwnership;
+        this.ownershipBootstrapper = ownershipBootstrapper;
     }
 
     @Override
@@ -94,11 +78,7 @@ public class AccountService implements RegisterAccountUseCase, ListAccountsUseCa
         Account account = Account.create(ids.newId(), command.email(), hash, role, clock.instant());
         accounts.save(account);
         if (firstAccount) {
-            worldOwnership.assignUnownedTo(account.getId());
-            aiSettingsOwnership.assignUnownedTo(account.getId());
-            gameSystemOwnership.assignUnownedTo(account.getId());
-            globalFieldTemplateOwnership.assignUnownedTo(account.getId());
-            globalStatblockOwnership.assignUnownedTo(account.getId());
+            ownershipBootstrapper.assignInitialOwnership(account.getId());
         }
     }
 
