@@ -174,21 +174,35 @@ RLS policy at all.
 One legitimate codepath *does* need to see across every account:
 `FirstAccountOwnershipBootstrapper` (introduced alongside the OIDC work),
 which scans for unowned worlds/catalog rows to assign to the very first
-account ever registered — and runs during *registration*, before any
-authenticated principal exists, so it has no account id to key a GUC off
-even in principle. Rather than special-case the policy predicate itself
-(e.g. `OR current_setting(...) IS NULL`, which would also silently open the
-door for any code path that simply forgets to set the GUC), or introduce a
-third Postgres role/credential, this one component gets a small dedicated
-`JdbcTemplate` built from the same admin (`app`) credentials Flyway already
-uses, and runs its five ownership-assignment `UPDATE`s as raw SQL through
-that instead of through the RLS-subject JPA repositories every other
-service uses. A superuser connection naturally bypasses RLS — no new
-Postgres-side mechanism (no `SECURITY DEFINER` function, no extra role) —
-and the actual assignment logic stays in Java, matching this codebase's
-hexagonal-architecture convention of keeping behavior in ports/adapters
-rather than the database. Every other part of the app, including every
-other admin action, keeps using `app_runtime`.
+account ever registered. Its five `*OwnershipPort.assignUnownedTo` calls
+(`update ... set owner_id = :ownerId where owner_id is null`, one per
+Tier-1 table) run inside the *same* transaction as that account's own
+`INSERT`, deliberately: a code comment on each repository method spells out
+why (`flushAutomatically = true`, so the not-yet-committed account row is
+visible to the bulk `UPDATE`'s foreign-key check without needing a second
+transaction). Any fix that routes this flow through a *different*
+connection — an admin `JdbcTemplate`, a second `EntityManagerFactory` —
+breaks that same-transaction guarantee, turning one atomic step into two
+and reopening a (rare, one-time-only, but real) partial-failure window that
+doesn't exist today.
+
+Rather than special-case the policy predicate itself (e.g.
+`OR current_setting(...) IS NULL`, which would also silently open the door
+for any code path that simply forgets to set the GUC — a real, if narrow,
+exposure for exactly as long as any row could legitimately sit
+`owner_id IS NULL` after this one bootstrap event, which should be never
+again in practice but isn't worth relying on), the fix stays inside the
+*same* connection and transaction: a `NOLOGIN` role, `app_rls_bypass`, with
+`BYPASSRLS`, granted (membership only, not automatically active —
+`app_runtime` is created `NOINHERIT` specifically so this grant doesn't
+silently apply everywhere) to `app_runtime`. `assignInitialOwnership`
+issues `SET LOCAL ROLE app_rls_bypass` as its first statement — on the
+connection it already has, inside the transaction its caller already
+opened — before making the same five JPA calls exactly as they exist
+today, no query changes anywhere. `SET LOCAL` reverts automatically at
+transaction end, same guarantee the account-id GUC already relies on.
+Every other part of the app, including every other admin action, never
+issues this `SET ROLE` and stays subject to RLS as `app_runtime` normally.
 
 ## Consequences
 - A second Postgres role/credential to manage (`RUNTIME_DB_PASSWORD`,
@@ -209,10 +223,11 @@ other admin action, keeps using `app_runtime`.
   *open* at the database layer, same as today — caught by the new
   `pg_tables`/`pg_policies` fitness-function test instead of silently
   shipping, but that test only fires in CI, not at runtime.
-- `FirstAccountOwnershipBootstrapper`'s admin `JdbcTemplate` is a real, if
-  narrow, exception to the "RLS is now enforced everywhere" claim — worth
-  remembering and re-auditing if that bootstrap logic ever grows beyond its
-  current one-time, first-registrant scope.
+- `FirstAccountOwnershipBootstrapper`'s `SET LOCAL ROLE app_rls_bypass` is
+  a real, if narrow and transaction-scoped, exception to the "RLS is now
+  enforced everywhere" claim — worth remembering and re-auditing if that
+  bootstrap logic ever grows beyond its current one-time, first-registrant
+  scope.
 - Native/raw SQL debugging (psql, ad-hoc queries) against `app_runtime` now
   returns nothing for owned tables unless `app.current_account_id` is set
   by hand first — a minor operational friction, acceptable for a
@@ -236,10 +251,9 @@ other admin action, keeps using `app_runtime`.
   any code path that forgets to set the GUC still works) — rejected; that
   would silently defeat the entire feature for exactly the failure mode
   (a codepath that forgot to do the right thing) RLS is meant to catch. The
-  one legitimate all-accounts codepath gets an explicit, separately-secured
-  path instead (the admin `JdbcTemplate` above), so the exception is
-  visible and auditable rather than baked into every policy's `USING`
-  clause.
+  one legitimate all-accounts codepath gets an explicit, transaction-scoped
+  `SET LOCAL ROLE` instead (above), so the exception is visible and
+  auditable rather than baked into every policy's `USING` clause.
 - **A `@Aspect` on `@Transactional` methods to set the GUC** — rejected:
   correctness would depend on getting its `@Order` right relative to
   Spring's own `TransactionInterceptor` from memory, in a codebase with no
@@ -248,9 +262,13 @@ other admin action, keeps using `app_runtime`.
   `Connection`-proxy approach removes the ordering question entirely by
   hooking the one JDBC event (`setAutoCommit(false)`) that unambiguously
   marks a physical transaction's start.
-- **A second `BYPASSRLS` Postgres role for the bootstrap codepath** (the
-  original plan) — superseded once the migrations-only/runtime-only
-  role split was already needed for the base feature to work at all;
-  reusing the existing admin (`app`) credentials for the one bootstrap
-  component avoids a third credential and a third connection pool for a
-  single, rarely-invoked, already-narrow use.
+- **A second, separately-connected Postgres role for the bootstrap
+  codepath** (via its own credential, or by reusing the admin/Flyway
+  credentials through a dedicated `JdbcTemplate`) — rejected: either one
+  requires the ownership-assignment `UPDATE`s to run on a *different*
+  physical connection than the new account's own `INSERT`, which breaks
+  the existing same-transaction/flush guarantee those queries depend on
+  (see "No admin bypass..." above) and turns one atomic bootstrap step into
+  two. `SET LOCAL ROLE` on the connection/transaction the flow already has
+  gets the same bypass property without a second connection or a changed
+  transaction boundary.
