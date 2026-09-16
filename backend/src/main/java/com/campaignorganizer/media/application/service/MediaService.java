@@ -13,6 +13,7 @@ import com.campaignorganizer.media.application.port.published.MediaLookupPort;
 import com.campaignorganizer.media.domain.MediaAsset;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -31,15 +32,17 @@ public class MediaService implements UploadMediaUseCase, ListMediaUseCase, Delet
     private final MediaViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
+    private final EntityManager entityManager;
 
     public MediaService(MediaRepositoryPort media, MediaStoragePort storage, WorldExistsPort worlds,
-                        MediaViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                        MediaViewMapper viewMapper, IdGenerator ids, Clock clock, EntityManager entityManager) {
         this.media = media;
         this.storage = storage;
         this.worlds = worlds;
         this.viewMapper = viewMapper;
         this.ids = ids;
         this.clock = clock;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -74,6 +77,10 @@ public class MediaService implements UploadMediaUseCase, ListMediaUseCase, Delet
     @Override
     @Transactional(readOnly = true)
     public MediaContent load(UUID mediaId) {
+        // Backs the public, unauthenticated GET /api/media/{id}/content (ADR-0016):
+        // an unguessable UUID is the authorization proof here, same as ADR-0114's
+        // first-account bootstrap — see FirstAccountOwnershipBootstrapper.
+        entityManager.createNativeQuery("SET LOCAL ROLE app_rls_bypass").executeUpdate();
         MediaAsset asset = media.findById(mediaId)
                 .orElseThrow(() -> new NotFoundException("Media not found"));
         byte[] bytes = storage.load(asset.getStorageKey())

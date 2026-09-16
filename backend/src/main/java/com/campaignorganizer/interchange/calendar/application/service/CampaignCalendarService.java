@@ -11,6 +11,7 @@ import com.campaignorganizer.interchange.calendar.application.port.out.CalendarF
 import com.campaignorganizer.interchange.calendar.domain.CalendarFeed;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -28,14 +29,17 @@ public class CampaignCalendarService implements GetOrCreateCalendarFeedUseCase, 
     private final SessionQueryPort sessions;
     private final IdGenerator ids;
     private final Clock clock;
+    private final EntityManager entityManager;
 
     public CampaignCalendarService(CalendarFeedRepositoryPort feeds, CampaignQueryPort campaigns,
-                                   SessionQueryPort sessions, IdGenerator ids, Clock clock) {
+                                   SessionQueryPort sessions, IdGenerator ids, Clock clock,
+                                   EntityManager entityManager) {
         this.feeds = feeds;
         this.campaigns = campaigns;
         this.sessions = sessions;
         this.ids = ids;
         this.clock = clock;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -69,6 +73,11 @@ public class CampaignCalendarService implements GetOrCreateCalendarFeedUseCase, 
     @Override
     @Transactional(readOnly = true)
     public IcsCalendar exportByToken(UUID token) {
+        // Backs the public, unauthenticated GET /api/calendar/{token}.ics (ADR-0108):
+        // an unguessable token is the authorization proof here, same as ADR-0114's
+        // first-account bootstrap — see FirstAccountOwnershipBootstrapper. Covers every
+        // table this method (and buildCalendar below) touches, campaigns and sessions alike.
+        entityManager.createNativeQuery("SET LOCAL ROLE app_rls_bypass").executeUpdate();
         CalendarFeed feed = feeds.findByToken(token)
                 .orElseThrow(() -> new NotFoundException("Calendar feed not found"));
         CampaignView campaign = campaigns.findById(feed.getCampaignId())
