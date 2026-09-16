@@ -73,39 +73,68 @@ automatically without this callback needing to change.
 
 ### A session GUC carries the current account into Postgres
 Every policy needs to know "who is asking" inside the database itself, not
-just in application code. A Postgres session/transaction variable,
-`app.current_account_id`, is set via `SET LOCAL` as the first statement of
-every authenticated transaction, sourced from the same
-`CurrentUserPort.currentAccountId()` every other ownership check already
-uses. `SET LOCAL` is transaction-scoped (reverts automatically on
-commit/rollback), which matters because connections are pooled and reused
-across unrelated accounts' requests — a session-scoped `SET` would leak the
-previous request's account id into the next one that reuses the same
-physical connection.
+just in application code. A Postgres session variable,
+`app.current_account_id`, is set via `SET` immediately before **every**
+`Statement`/`PreparedStatement`/`CallableStatement` is created on a
+connection, sourced from the same security context every other ownership
+check already reads.
 
 **Not a `@Transactional`-wrapping `@Aspect`.** This codebase has no AOP
 today (`spring-boot-starter-aop` isn't a dependency, zero `@Aspect`
-classes), and whether such an aspect's `SET LOCAL` would land inside the
-same physical transaction as the method's subsequent queries depends on its
+classes), and whether such an aspect's GUC-set would land inside the same
+physical transaction as the method's subsequent queries depends on its
 `@Order` relative to Spring's own `TransactionInterceptor` — get that
 backwards and the GUC silently applies to a different connection than the
-queries that follow, so RLS enforces nothing while looking correct. That
-failure mode is exactly what this ADR exists to prevent, so it's avoided by
-construction instead: a thin JDBC `Connection` proxy wrapping the pooled
+queries that follow, so RLS enforces nothing while looking correct. Avoided
+by construction instead: a thin JDBC `Connection` proxy wrapping the pooled
 `DataSource` (`java.lang.reflect.Proxy` over the `Connection` interface,
-delegating every method except one), intercepting `setAutoCommit(false)` —
-the one deterministic moment a physical transaction actually begins,
-regardless of whether it was opened by `@Transactional`, Hibernate, or
-anything else — to issue `SET LOCAL app.current_account_id` right there,
-reading `CurrentUserPort` synchronously (Spring Security's context is
-already populated by `JwtAuthFilter` long before any repository call
-reaches connection acquisition). Anonymous/pre-auth requests (registration,
-login, health) have no account in context, so no GUC gets set — fine, since
-those flows never query owned content tables and RLS simply returns no rows
-for `app_runtime` on any table it does touch by mistake. Proven, not just
-argued: a Testcontainers IT connects directly as `app_runtime`, sets the
-GUC by hand for one account, and asserts a second account's row is
-genuinely absent — independent of the application's own authorization code.
+delegating every method except the statement-factory ones), reading
+`CurrentUserPort` synchronously (Spring Security's context is already
+populated by `JwtAuthFilter` long before any repository call reaches
+connection acquisition) and running `SET app.current_account_id` right
+there. Anonymous/pre-auth requests (registration, login, health) have no
+account in context, so the GUC is set to a fixed nil-UUID sentinel instead
+of a real account id — RLS then finds no matching row (a real,
+randomly-generated account id can never equal the nil UUID), same effect as
+"no GUC" without relying on Postgres's null-handling for a GUC that was
+never referenced.
+
+**Two designs that looked simpler were tried first and ruled out
+empirically** (not merely reasoned about — both were caught by a live
+integration test failing, `AiControllerIT`, not by inspection):
+- **Hooking `setAutoCommit(false)`** (matching "a transaction begins",
+  using transaction-scoped `SET LOCAL`) was this class's first design.
+  Confirmed live against Postgres: a custom/placeholder GUC does **not**
+  revert to SQL `NULL` once any `SET LOCAL` on that name has ever happened
+  in a session — `current_setting(name, true)` instead returns an empty
+  string for a later transaction that doesn't set it again, and
+  `''::uuid` throws outright rather than just failing an equality
+  check. Worse, `setAutoCommit(false)` turned out not to reliably fire
+  before every logical transaction on a *pooled, reused* connection at
+  all — Hibernate doesn't always re-toggle it before a later transaction
+  demarcated via `commit()` on an already-non-autocommit connection, and
+  statement *preparation* isn't guaranteed to happen after autocommit
+  reaches its final state for that query either. There's no single
+  connection-level event that reliably brackets "about to run one query."
+- **Keeping transaction-scoped `SET LOCAL`** but moving the hook to fire
+  before every statement (the fix's first iteration) was still wrong for a
+  different reason: on a connection in autocommit mode, each statement is
+  its own implicit one-statement transaction, so a `SET LOCAL` issued as
+  one JDBC call and a query issued as the next can never share a
+  transaction scope no matter how close together they're issued.
+
+Session-scoped `SET`, reapplied before literally every statement, avoids
+both: it takes effect immediately regardless of transaction/autocommit
+state, and there's no staleness window to exploit because the value is
+never read without having just been freshly written by that same
+connection's very next statement — the "leaks into the next pooled use"
+concern a session-scoped `SET` would otherwise have doesn't apply, because
+there is no gap in which a stale value could ever actually be *read*.
+
+Proven, not just argued: a Testcontainers IT connects directly as
+`app_runtime`, sets the GUC by hand for one account, and asserts a second
+account's row is genuinely absent — independent of the application's own
+authorization code.
 
 ### Staged table-by-table, in three tiers
 Rather than one big migration, RLS is enabled table-by-table, ordered by how
@@ -210,10 +239,11 @@ issues this `SET ROLE` and stays subject to RLS as `app_runtime` normally.
   more deployment surface than the ADR originally scoped, but necessary:
   without it, every policy below is inert for the actual running app (see
   "Two Postgres roles" above).
-- One extra `SET LOCAL` per authenticated transaction, plus the connection
-  proxy's `setAutoCommit` interception on every checkout — negligible cost,
+- One extra `SET` per statement (not per transaction) — negligible cost,
   same category of tradeoff ADR-0110/ADR-0112 already accepted for the
-  `tokenVersion`/`account_sessions` checks.
+  `tokenVersion`/`account_sessions` checks, though a higher per-statement
+  count than originally scoped given the per-transaction hook it replaced
+  didn't hold up empirically (see "A session GUC..." above).
 - Staging by tier means the defense-in-depth guarantee is incomplete until
   all three tiers ship — Tier 1/2 close off the highest-blast-radius gap
   (leaking a whole world or catalog entry) first; Tier 3's narrower gap
@@ -258,10 +288,17 @@ issues this `SET ROLE` and stays subject to RLS as `app_runtime` normally.
   correctness would depend on getting its `@Order` right relative to
   Spring's own `TransactionInterceptor` from memory, in a codebase with no
   existing AOP to anchor that against, for a mistake (GUC lands on the
-  wrong connection) that fails silently rather than loudly. The
-  `Connection`-proxy approach removes the ordering question entirely by
-  hooking the one JDBC event (`setAutoCommit(false)`) that unambiguously
-  marks a physical transaction's start.
+  wrong connection) that fails silently rather than loudly.
+- **Hooking `setAutoCommit(false)`, using transaction-scoped `SET LOCAL`**
+  (this class's first design, meant to remove the `@Aspect` ordering
+  question by tying the GUC to "a transaction begins" instead of to
+  Spring's transaction machinery) — ruled out empirically, not by
+  inspection: a live integration test failure showed `setAutoCommit(false)`
+  doesn't reliably fire before every logical transaction on a *reused*
+  connection, and that a custom GUC left over from an earlier `SET LOCAL`
+  reads back as an empty string (not `NULL`) once its transaction ends,
+  which fails `::uuid` casts outright. See "A session GUC..." above for the
+  full empirical trail and the per-statement `SET` design that replaced it.
 - **A second, separately-connected Postgres role for the bootstrap
   codepath** (via its own credential, or by reusing the admin/Flyway
   credentials through a dedicated `JdbcTemplate`) — rejected: either one
