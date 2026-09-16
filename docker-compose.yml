@@ -23,8 +23,14 @@ services:
       dockerfile: backend/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/campaign_organizer
-      SPRING_DATASOURCE_USERNAME: app
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      # ADR-0114: app_runtime is the app's own ordinary (non-superuser) role;
+      # Flyway below still uses the db service's real superuser (app) to run
+      # migrations and provision app_runtime in the first place.
+      SPRING_DATASOURCE_USERNAME: app_runtime
+      SPRING_DATASOURCE_PASSWORD: ${RUNTIME_DB_PASSWORD:-changeme-runtime}
+      SPRING_FLYWAY_URL: jdbc:postgresql://db:5432/campaign_organizer
+      SPRING_FLYWAY_USER: app
+      SPRING_FLYWAY_PASSWORD: ${DB_PASSWORD:-changeme}
       APP_JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-please-32-bytes-minimum}
       APP_MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-dev-mfa-key-change-me-in-production}
       APP_MFA_ENCRYPTION_SALT: ${MFA_ENCRYPTION_SALT:-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4}

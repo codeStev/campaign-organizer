@@ -2,9 +2,12 @@ spring:
   application:
     name: campaign-organizer
   datasource:
+    # ADR-0114: this is app_runtime (ordinary, non-superuser) — never the
+    # migrations-only superuser below. Getting these two swapped means every
+    # RLS policy silently does nothing.
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/campaign_organizer}
-    username: ${SPRING_DATASOURCE_USERNAME:app}
-    password: ${SPRING_DATASOURCE_PASSWORD:changeme}
+    username: ${SPRING_DATASOURCE_USERNAME:app_runtime}
+    password: ${SPRING_DATASOURCE_PASSWORD:changeme-runtime}
   mvc:
     problemdetails:
       enabled: true
@@ -23,6 +26,12 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    # Deliberately separate from spring.datasource.* (ADR-0114): Flyway needs
+    # the migrations-only superuser (app) to create tables/roles/policies —
+    # app_runtime, above, owns nothing and couldn't run these migrations.
+    url: ${SPRING_FLYWAY_URL:jdbc:postgresql://localhost:5432/campaign_organizer}
+    user: ${SPRING_FLYWAY_USER:app}
+    password: ${SPRING_FLYWAY_PASSWORD:changeme}
 
 server:
   port: 8080
