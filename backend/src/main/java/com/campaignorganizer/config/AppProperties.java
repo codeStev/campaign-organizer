@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Strongly-typed access to {@code app.*} configuration.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webauthn, Oidc oidc) {
+public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webauthn, Oidc oidc, Foundry foundry) {
 
     public record Jwt(String secret, long expirationHours) {
     }
@@ -71,5 +71,17 @@ public record AppProperties(Jwt jwt, Media media, Ai ai, Mfa mfa, Webauthn webau
         public boolean googleEnabled() {
             return googleClientId != null && !googleClientId.isBlank();
         }
+    }
+
+    /**
+     * Key material for encrypting Foundry relay API keys at rest (ADR-0115) — same
+     * shape and reasoning as {@link Mfa}'s key/salt, but its own dedicated pair; never
+     * reused across secret types. This holds ONLY the encryption key/salt — there is
+     * no relay URL, clientId, or API key here or anywhere else at the config/env
+     * level. Every world's actual Foundry connection (relay URL, own API key,
+     * clientId) is entirely user-supplied and stored per-world; there is no
+     * shared/default/bundled relay of any kind.
+     */
+    public record Foundry(String encryptionKey, String encryptionSalt) {
     }
 }

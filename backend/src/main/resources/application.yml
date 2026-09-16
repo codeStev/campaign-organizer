@@ -76,6 +76,15 @@ app:
   mfa:
     encryption-key: ${APP_MFA_ENCRYPTION_KEY:dev-mfa-key-change-me-in-production}
     encryption-salt: ${APP_MFA_ENCRYPTION_SALT:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4}
+  # Foundry VTT push integration (see docs/adr/0115-push-to-foundry-vtt.md). This is
+  # ONLY the key/salt for encrypting whatever relay API key a user enters for their
+  # own world — there is no relay URL, clientId, or API key configured here or
+  # anywhere at the env/deploy level. Every world's Foundry connection is entirely
+  # user-supplied (bring-your-own, self-hosted relay); nothing here implies a
+  # shared or default relay.
+  foundry:
+    encryption-key: ${APP_FOUNDRY_ENCRYPTION_KEY:dev-foundry-key-change-me-in-production}
+    encryption-salt: ${APP_FOUNDRY_ENCRYPTION_SALT:b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5}
   # WebAuthn/passkeys (see docs/adr/0111-mandatory-mfa.md). relying-party-id must be a
   # registrable domain suffix of the browser's actual hostname (bare host, no scheme/port);
   # allowed-origins must match the browser's origin *exactly* (scheme + host + port). Both
