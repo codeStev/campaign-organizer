@@ -38,18 +38,28 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
-    static final PostgreSQLContainer<?> POSTGRES;
+    protected static final PostgreSQLContainer<?> POSTGRES;
 
     static {
         POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
         POSTGRES.start();
     }
 
+    /** app_runtime's password in every IT — RuntimeRoleProvisioningCallback sets it to this on every startup. */
+    protected static final String RUNTIME_DB_PASSWORD = "it-runtime-password";
+
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {
+        // ADR-0114: Flyway gets the container's own superuser (mirrors app in
+        // real deployments); spring.datasource.* — what the app actually
+        // runs queries through — is app_runtime, provisioned by
+        // RuntimeRoleProvisioningCallback during Flyway's afterMigrate.
+        registry.add("spring.flyway.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.flyway.user", POSTGRES::getUsername);
+        registry.add("spring.flyway.password", POSTGRES::getPassword);
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.username", () -> "app_runtime");
+        registry.add("spring.datasource.password", () -> RUNTIME_DB_PASSWORD);
     }
 
     @Autowired
