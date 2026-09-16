@@ -75,7 +75,7 @@ dependencies {
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
 
-    implementation("org.apache.pdfbox:pdfbox:3.0.3")
+    implementation("org.apache.pdfbox:pdfbox:3.0.8")
 
     // Article body Markdown -> HTML rendering (ADR-0054).
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
