@@ -28,7 +28,7 @@ repositories {
 
 val mapstructVersion = "1.6.3"
 val archunitVersion = "1.5.0"
-val jjwtVersion = "0.12.6"
+val jjwtVersion = "0.13.0"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
