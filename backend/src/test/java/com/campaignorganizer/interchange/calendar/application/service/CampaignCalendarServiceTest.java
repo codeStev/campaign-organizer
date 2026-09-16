@@ -3,6 +3,8 @@ package com.campaignorganizer.interchange.calendar.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignQueryPort;
@@ -15,6 +17,8 @@ import com.campaignorganizer.interchange.calendar.application.port.out.CalendarF
 import com.campaignorganizer.interchange.calendar.domain.CalendarFeed;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -43,12 +47,19 @@ class CampaignCalendarServiceTest {
     private SessionQueryPort sessions;
     @Mock
     private IdGenerator ids;
+    @Mock
+    private EntityManager entityManager;
+    @Mock
+    private Query query;
 
     private CampaignCalendarService service;
 
     @BeforeEach
     void setUp() {
-        service = new CampaignCalendarService(feeds, campaigns, sessions, ids, clock);
+        // Only exportByToken() issues the RLS-bypass SET LOCAL ROLE (ADR-0114); lenient since
+        // most tests below never call it and would otherwise trip Mockito's strict stubbing.
+        lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        service = new CampaignCalendarService(feeds, campaigns, sessions, ids, clock, entityManager);
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.campaignorganizer.media.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +19,8 @@ import com.campaignorganizer.media.domain.MediaAsset;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.shared.domain.ValidationException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -40,6 +44,10 @@ class MediaServiceTest {
     private WorldExistsPort worlds;
     @Mock
     private IdGenerator ids;
+    @Mock
+    private EntityManager entityManager;
+    @Mock
+    private Query query;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T00:00:00Z"), ZoneOffset.UTC);
     private final MediaViewMapper viewMapper = new MediaViewMapperImpl();
@@ -48,7 +56,10 @@ class MediaServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MediaService(media, storage, worlds, viewMapper, ids, clock);
+        // Only load() issues the RLS-bypass SET LOCAL ROLE (ADR-0114); lenient since most
+        // tests below never call load() and would otherwise trip Mockito's strict stubbing.
+        lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        service = new MediaService(media, storage, worlds, viewMapper, ids, clock, entityManager);
     }
 
     @Test
