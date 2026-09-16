@@ -35,6 +35,7 @@ import { CampaignNavTree } from '../components/CampaignNavTree';
 import { NextMapsView } from './NextMapsView';
 import { NextWikiPage } from './NextWikiPage';
 import { NextPrintShopPage } from './NextPrintShopPage';
+import { NextFoundrySettingsPage } from './NextFoundrySettingsPage';
 
 type Tab =
   | 'overview'
@@ -44,6 +45,7 @@ type Tab =
   | 'relations'
   | 'tags'
   | 'consistency'
+  | 'foundry'
   | 'campaigns'
   | 'players'
   | 'sheets'
@@ -68,6 +70,7 @@ const TABS: { key: Tab; label: string; group: TabGroup }[] = [
   { key: 'relations', label: 'Relations', group: 'World' },
   { key: 'tags', label: 'Tags', group: 'World' },
   { key: 'consistency', label: 'Consistency', group: 'World' },
+  { key: 'foundry', label: 'Foundry', group: 'World' },
   { key: 'campaigns', label: 'Campaigns', group: 'Play' },
   { key: 'players', label: 'Players', group: 'Play' },
   { key: 'sheets', label: 'Sheets', group: 'Play' },
@@ -209,6 +212,10 @@ export function WorldViewNext({ worldId, worldName, onAuthExpired }: Props) {
                   onAuthExpired={onAuthExpired}
                 />
               }
+            />
+            <Route
+              path="foundry"
+              element={<NextFoundrySettingsPage worldId={worldId} onAuthExpired={onAuthExpired} />}
             />
             <Route
               path="campaigns"

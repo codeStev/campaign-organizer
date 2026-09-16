@@ -803,6 +803,36 @@ export function layerStylesApi(worldId: string) {
   };
 }
 
+export interface FoundryConnection {
+  relayBaseUrl: string;
+  clientId: string;
+  configured: boolean;
+}
+
+export interface FoundryConnectionRequest {
+  relayBaseUrl: string;
+  clientId: string;
+  /** Blank keeps the currently stored key — never re-send a key you didn't just type. */
+  apiKey: string;
+}
+
+export interface FoundryConnectionTestResult {
+  ok: boolean;
+  connectedClientIds: string[];
+  error: string | null;
+}
+
+/** Per-world Foundry relay connection — always user-supplied, never a shared default. */
+export function foundryApi(worldId: string) {
+  const base = `/worlds/${worldId}/foundry-connection`;
+  return {
+    get: () => request<FoundryConnection>(base),
+    put: (body: FoundryConnectionRequest) =>
+      request<FoundryConnection>(base, { method: 'PUT', body: JSON.stringify(body) }),
+    test: () => request<FoundryConnectionTestResult>(`${base}/test`, { method: 'POST' }),
+  };
+}
+
 export function pinsApi(worldId: string, mapId: string) {
   const base = `/worlds/${worldId}/maps/${mapId}/pins`;
   return {
