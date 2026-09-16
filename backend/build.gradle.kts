@@ -80,7 +80,7 @@ dependencies {
     // Article body Markdown -> HTML rendering (ADR-0054).
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
 
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
