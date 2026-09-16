@@ -13,6 +13,23 @@ updates:
     directory: "/frontend"
     schedule:
       interval: weekly
+    groups:
+      # react and react-dom (plus their @types/*) must bump in lockstep - a
+      # split PR for just one side fails npm ci with an ERESOLVE peer
+      # conflict against the other, still-pinned side, and can never pass on
+      # its own. Bundling them into one PR is the only way either can land.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # Same problem across the whole @tiptap/* family: every package peer-
+      # depends on a matching @tiptap/core version, so bumping one alone
+      # breaks against its still-pinned siblings.
+      tiptap:
+        patterns:
+          - "@tiptap/*"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
