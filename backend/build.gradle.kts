@@ -66,8 +66,8 @@ dependencies {
     implementation("dev.samstevens.totp:totp:1.7.1")
     // Server-rendered TOTP enrollment QR code (data:image/png;base64,... — no client-side
     // QR-rendering library needed).
-    implementation("com.google.zxing:core:3.5.3")
-    implementation("com.google.zxing:javase:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
+    implementation("com.google.zxing:javase:3.5.4")
 
     implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20260313.1")
 
