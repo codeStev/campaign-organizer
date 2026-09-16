@@ -11,7 +11,7 @@ import java.util.UUID;
  */
 public final class MediaAsset {
 
-    public static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
+    public static final long MAX_SIZE_BYTES = 50L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml");
 
@@ -53,7 +53,7 @@ public final class MediaAsset {
             throw new ValidationException("Empty file");
         }
         if (sizeBytes > MAX_SIZE_BYTES) {
-            throw new ValidationException("File exceeds 10MB limit");
+            throw new ValidationException("File exceeds 50MB limit");
         }
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
             throw new ValidationException("Only image uploads are allowed");
