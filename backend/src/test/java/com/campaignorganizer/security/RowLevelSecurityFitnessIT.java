@@ -31,8 +31,16 @@ class RowLevelSecurityFitnessIT extends AbstractIntegrationTest {
             "maps", "media", "players", "relationships", "roll_tables", "sheet_categories", "statblocks",
             "table_deck_categories", "timelines", "whiteboards");
 
-    private static final List<String> RLS_PROTECTED_TABLES =
-            Stream.concat(TIER_1_TABLES.stream(), TIER_2_TABLES.stream()).toList();
+    private static final List<String> TIER_3_TABLES = List.of(
+            "arcs", "campaign_calendar_feeds", "campaign_players", "clocks", "encounters", "loose_threads",
+            "sessions", "todos", "cheat_sheets", "session_attendance", "arc_beats", "beat_articles",
+            "beat_card_decks", "beat_encounters", "beat_roll_tables", "beat_statblocks", "encounter_entries",
+            "map_pins", "article_revisions", "calendar_months", "timeline_events");
+
+    private static final List<String> RLS_PROTECTED_TABLES = Stream
+            .of(TIER_1_TABLES, TIER_2_TABLES, TIER_3_TABLES)
+            .flatMap(List::stream)
+            .toList();
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
