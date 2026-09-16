@@ -1420,6 +1420,12 @@ button:disabled {
 .leaflet-container {
   background: #0f0d15;
   font-family: inherit;
+  /* Leaflet's own panes/controls use z-index up to 1000 (leaflet.css). Without
+     a stacking context here, those values compare directly against the rest of
+     the page instead of staying inside this box — which put the map above
+     portalled dialogs like "Delete map"/"Delete pin" (z-50), since nothing
+     between .leaflet-container and <body> creates a stacking context either. */
+  isolation: isolate;
 }
 
 .map-bar {
