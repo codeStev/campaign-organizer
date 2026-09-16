@@ -72,6 +72,98 @@ class RowLevelSecurityIsolationIT extends AbstractIntegrationTest {
         }
     }
 
+    @Test
+    void anotherAccountsSessionIsInvisibleWithoutItsOwnerIdSetAsTheGuc() throws Exception {
+        String authA = authHeader();
+        UUID accountAId = currentAccountId(authA);
+        String worldId = createWorld(authA);
+        String campaignId = createCampaign(authA, worldId);
+        String sessionId = createSession(authA, worldId, campaignId);
+
+        try (Connection connection = openAppRuntimeConnection()) {
+            connection.setAutoCommit(false);
+
+            setGuc(connection, UUID.randomUUID());
+            assertThat(rowVisible(connection, "sessions", sessionId))
+                    .as("Tier 3 (sessions, delegates to campaigns): invisible under an unrelated account's GUC")
+                    .isFalse();
+            connection.rollback();
+
+            connection.setAutoCommit(false);
+            setGuc(connection, accountAId);
+            assertThat(rowVisible(connection, "sessions", sessionId))
+                    .as("Tier 3 (sessions, delegates to campaigns): visible under its own owner's GUC")
+                    .isTrue();
+            connection.rollback();
+        }
+    }
+
+    @Test
+    void anotherAccountsArcBeatIsInvisibleThroughTheFullDelegationChain() throws Exception {
+        String authA = authHeader();
+        UUID accountAId = currentAccountId(authA);
+        String worldId = createWorld(authA);
+        String campaignId = createCampaign(authA, worldId);
+        String arcId = createArc(authA, worldId, campaignId);
+        String beatId = createBeat(authA, worldId, campaignId, arcId);
+
+        try (Connection connection = openAppRuntimeConnection()) {
+            connection.setAutoCommit(false);
+
+            setGuc(connection, UUID.randomUUID());
+            assertThat(rowVisible(connection, "arc_beats", beatId))
+                    .as("Tier 3 (arc_beats -> arcs -> campaigns -> worlds, 3-hop delegation): "
+                            + "invisible under an unrelated account's GUC")
+                    .isFalse();
+            connection.rollback();
+
+            connection.setAutoCommit(false);
+            setGuc(connection, accountAId);
+            assertThat(rowVisible(connection, "arc_beats", beatId))
+                    .as("Tier 3 (arc_beats -> arcs -> campaigns -> worlds, 3-hop delegation): "
+                            + "visible under its own owner's GUC")
+                    .isTrue();
+            connection.rollback();
+        }
+    }
+
+    private String createCampaign(String auth, String worldId) throws Exception {
+        String response = mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test Campaign\"}"))
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.id");
+    }
+
+    private String createSession(String auth, String worldId, String campaignId) throws Exception {
+        String response = mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/sessions", worldId, campaignId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Test Session\"}"))
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.id");
+    }
+
+    private String createArc(String auth, String worldId, String campaignId) throws Exception {
+        String response = mockMvc.perform(post("/api/worlds/{w}/campaigns/{c}/arcs", worldId, campaignId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Test Arc\"}"))
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.id");
+    }
+
+    private String createBeat(String auth, String worldId, String campaignId, String arcId) throws Exception {
+        String response = mockMvc.perform(
+                        post("/api/worlds/{w}/campaigns/{c}/arcs/{a}/beats", worldId, campaignId, arcId)
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"title\":\"Test Beat\"}"))
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.id");
+    }
+
     private String createArticle(String auth, String worldId) throws Exception {
         String response = mockMvc.perform(post("/api/worlds/{w}/articles", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
