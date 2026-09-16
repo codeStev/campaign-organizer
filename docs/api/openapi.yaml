@@ -89,6 +89,13 @@ tags:
     description: >-
       Freeform, world-scoped folksonomy tags on articles and statblocks
       (ADR-0083).
+  - name: foundry
+    description: >-
+      Per-world, bring-your-own connection to a self-hosted Foundry VTT
+      relay, and pushing articles/handouts into it as Foundry documents
+      (ADR-0115). There is no shared or default relay - every world's
+      relay URL, API key, and client id are supplied by that world's own
+      user.
 
 paths:
   /auth/login:
@@ -952,6 +959,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LayerStyleMap'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/foundry-connection:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [foundry]
+      summary: Get this world's Foundry relay connection (ADR-0115)
+      description: >-
+        Never returns the API key, plaintext or encrypted - only the relay
+        URL, client id, and whether a key is stored. 404 when nothing has
+        been saved for this world yet, a normal state for a world that
+        hasn't connected Foundry.
+      operationId: getFoundryConnection
+      responses:
+        '200':
+          description: The stored connection (API key omitted).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryConnection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [foundry]
+      summary: Save this world's Foundry relay connection (ADR-0115)
+      description: >-
+        Bring-your-own, always - relayBaseUrl/clientId/apiKey are entered by
+        this world's own user, pointing at a relay they self-host. A blank
+        apiKey keeps whatever key is already stored, so the field never has
+        to be re-entered just to change the URL.
+      operationId: putFoundryConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoundryConnectionRequest'
+      responses:
+        '200':
+          description: The saved connection (API key omitted).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryConnection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/foundry-connection/test:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    post:
+      tags: [foundry]
+      summary: Test this world's Foundry relay connection (ADR-0115)
+      description: >-
+        Asks the relay which Foundry sessions are currently connected and
+        checks whether the stored client id is among them. A failed test
+        (relay unreachable, wrong key, session not connected) is a normal
+        outcome, reported as data - not a server error.
+      operationId: testFoundryConnection
+      responses:
+        '200':
+          description: The test outcome.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryConnectionTestResult'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -8041,6 +8124,50 @@ components:
       description: Per-layer styling keyed by layer name.
       additionalProperties:
         $ref: '#/components/schemas/LayerStyle'
+
+    FoundryConnection:
+      type: object
+      required: [relayBaseUrl, clientId, configured]
+      properties:
+        relayBaseUrl:
+          type: string
+          description: The user's own self-hosted relay base URL.
+        clientId:
+          type: string
+          description: Which connected Foundry session on that relay to target.
+        configured:
+          type: boolean
+          description: Whether an API key is currently stored for this world.
+
+    FoundryConnectionRequest:
+      type: object
+      required: [relayBaseUrl, clientId, apiKey]
+      properties:
+        relayBaseUrl:
+          type: string
+          minLength: 1
+        clientId:
+          type: string
+          minLength: 1
+        apiKey:
+          type: string
+          description: Blank keeps the currently stored key.
+
+    FoundryConnectionTestResult:
+      type: object
+      required: [ok, connectedClientIds]
+      properties:
+        ok:
+          type: boolean
+          description: Whether the stored clientId is among the relay's connected sessions.
+        connectedClientIds:
+          type: array
+          items:
+            type: string
+        error:
+          type: string
+          nullable: true
+          description: Why the test failed; null when ok is true.
 
     CategoryRequest:
       type: object
