@@ -35,14 +35,17 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
 
     @Override
     public void upsertJournalEntry(Credentials credentials, String documentId, String name, String markdownBody,
-                                   String folderId) {
+                                   String htmlBody, String folderId) {
         call(credentials, client -> {
             Map<String, Object> page = new LinkedHashMap<>();
             page.put("name", name);
             page.put("type", "text");
-            // format 2 = Markdown (Foundry's JournalEntryPage text format) — every body this
-            // feature pushes is already Markdown, ADR-0115.
-            page.put("text", Map.of("format", 2, "markdown", markdownBody));
+            // format 2 = Markdown (Foundry's JournalEntryPage text format) — but "content" is
+            // what Foundry's journal viewer actually renders; "markdown" only feeds Foundry's
+            // own Markdown editing sheet when a page is opened for editing there. Sending
+            // markdown alone (this feature's original design) left every pushed page
+            // rendering empty — confirmed against a real relay+Foundry instance, ADR-0115.
+            page.put("text", Map.of("format", 2, "markdown", markdownBody, "content", htmlBody));
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("_id", documentId);
             data.put("name", name);

@@ -45,10 +45,14 @@ public interface FoundryRelayPort {
      * JournalEntry (or, in later phases, RollTable/Cards) documents of one kind. */
     void upsertFolder(Credentials credentials, String folderId, String name);
 
-    /** Idempotent upsert of a single-page Markdown JournalEntry document, placed in
-     * {@code folderId}. */
+    /** Idempotent upsert of a single-page JournalEntry document, placed in {@code folderId}.
+     * Both {@code markdownBody} and {@code htmlBody} must describe the same content —
+     * {@code htmlBody} is what Foundry's journal viewer actually displays ({@code
+     * text.content}); {@code markdownBody} only feeds Foundry's own Markdown editing sheet
+     * ({@code text.markdown}) when a page is opened for editing there (ADR-0115
+     * correction: pushing markdown alone left every page rendering empty). */
     void upsertJournalEntry(Credentials credentials, String documentId, String name, String markdownBody,
-                            String folderId);
+                            String htmlBody, String folderId);
 
     /** Uploads {@code bytes} into Foundry's own {@code Data/} storage at
      * {@code targetDir}/{@code filename} (overwriting any existing file at that exact path,

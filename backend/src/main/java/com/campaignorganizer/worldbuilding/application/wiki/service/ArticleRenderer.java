@@ -55,6 +55,14 @@ public class ArticleRenderer implements ArticleRenderPort {
         return WikiLinker.linkTargets(body);
     }
 
+    @Override
+    public String markdownToHtml(String markdown) {
+        if (markdown == null) {
+            return null;
+        }
+        return sanitizer.sanitize(markdownRenderer.render(markdown));
+    }
+
     private Map<String, LinkRef> index(UUID worldId) {
         return ArticleRefIndex.build(articles.findRefsByWorld(worldId));
     }

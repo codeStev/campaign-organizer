@@ -116,6 +116,7 @@ class FoundryPushServiceTest {
         when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
         when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
         when(articleRenderer.renderBodyAsMarkdown(worldId, "Hello [[world]]")).thenReturn("Hello **World**");
+        when(articleRenderer.markdownToHtml("Hello **World**")).thenReturn("<p>Hello <strong>World</strong></p>");
         when(pushRecords.findByEntity(worldId, FoundryEntityType.ARTICLE, articleId)).thenReturn(Optional.empty());
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -128,9 +129,9 @@ class FoundryPushServiceTest {
 
         verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Articles"));
         verify(relay).upsertJournalEntry(eq(expectedCredentials()), eq(result.foundryDocumentId()),
-                eq("An Article"), eq("Hello **World**"), anyString());
+                eq("An Article"), eq("Hello **World**"), eq("<p>Hello <strong>World</strong></p>"), anyString());
         verify(pushRecords).save(any(FoundryPushRecord.class));
-        // The article render port is called exactly once, for the article body — never
+        // The wiki-link render port is called exactly once, for the article body — never
         // re-invoked mid-push (e.g. by anything embedded-media related).
         verify(articleRenderer, times(1)).renderBodyAsMarkdown(any(), any());
     }
@@ -177,6 +178,7 @@ class FoundryPushServiceTest {
         when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
         when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
         when(articleRenderer.renderBodyAsMarkdown(worldId, body)).thenReturn(body);
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
         when(pushRecords.findByEntity(worldId, FoundryEntityType.ARTICLE, articleId)).thenReturn(Optional.empty());
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -191,7 +193,7 @@ class FoundryPushServiceTest {
         verify(relay).uploadFile(eq(expectedCredentials()), eq("campaign-organizer/" + worldId), anyString(),
                 eq("image/png"), eq(new byte[]{1, 2, 3}));
         verify(relay).upsertJournalEntry(any(), anyString(), anyString(),
-                eq("![img](campaign-organizer/" + worldId + "/uploaded.png)"), anyString());
+                eq("![img](campaign-organizer/" + worldId + "/uploaded.png)"), any(), anyString());
     }
 
     @Test
@@ -202,6 +204,7 @@ class FoundryPushServiceTest {
         when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
         when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
         when(articleRenderer.renderBodyAsMarkdown(worldId, body)).thenReturn(body);
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
         when(pushRecords.findByEntity(worldId, FoundryEntityType.ARTICLE, articleId)).thenReturn(Optional.empty());
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -215,7 +218,7 @@ class FoundryPushServiceTest {
         assertThat(result.warnings().get(0)).contains("big.png");
         verify(relay, never()).uploadFile(any(), any(), any(), any(), any());
         // Body is left with the original (now-unresolved) reference, not blanked out.
-        verify(relay).upsertJournalEntry(any(), anyString(), anyString(), eq(body), anyString());
+        verify(relay).upsertJournalEntry(any(), anyString(), anyString(), eq(body), any(), anyString());
     }
 
     @Test
@@ -243,6 +246,7 @@ class FoundryPushServiceTest {
                 .thenReturn(Optional.of(handout("Raw [[not-a-link]] body")));
         when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
         when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
         when(pushRecords.findByEntity(worldId, FoundryEntityType.HANDOUT, handoutId)).thenReturn(Optional.empty());
         when(ids.newId()).thenReturn(UUID.randomUUID());
         when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -253,12 +257,15 @@ class FoundryPushServiceTest {
         assertThat(result.warnings()).isEmpty();
 
         verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Handouts"));
-        // The whole point of this phase: the body reaches the relay completely unrendered —
-        // a handout has no wiki-link resolution step, unlike an article.
+        // The whole point of this phase: the markdown body reaches the relay completely
+        // unrendered for wiki-links — a handout has no wiki-link resolution step, unlike an
+        // article. It still goes through plain markdown->HTML conversion (every JournalEntry
+        // push needs that, ADR-0115), which is not wiki-link handling.
         verify(relay).upsertJournalEntry(eq(expectedCredentials()), eq(result.foundryDocumentId()),
-                eq("A Handout"), eq("Raw [[not-a-link]] body"), anyString());
+                eq("A Handout"), eq("Raw [[not-a-link]] body"), any(), anyString());
         verify(pushRecords).save(any(FoundryPushRecord.class));
-        verifyNoInteractions(articleRenderer);
+        verify(articleRenderer, never()).renderBodyAsMarkdown(any(), any());
+        verify(articleRenderer, never()).renderBody(any(), any());
     }
 
     @Test

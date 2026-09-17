@@ -17,4 +17,14 @@ public interface ArticleRenderPort {
 
     /** Lowercased {@code [[target]]} names referenced in a body (for backlink detection). */
     Set<String> linkTargets(String body);
+
+    /** Converts already wiki-link-resolved Markdown to sanitized HTML, with no wiki-link
+     * handling of its own (ADR-0115 correction) — for external consumers (Foundry
+     * JournalEntry pages) whose display actually reads a page's {@code content} field, not
+     * its {@code markdown} source; {@code markdown} only feeds Foundry's own Markdown
+     * *editor* when a page is opened for editing there, so pushing markdown alone left
+     * every pushed page rendering empty. Call this on the same Markdown string already
+     * built via {@link #renderBodyAsMarkdown}, after any further rewriting (e.g. embedded
+     * media paths), so both fields describe the exact same content. */
+    String markdownToHtml(String markdown);
 }

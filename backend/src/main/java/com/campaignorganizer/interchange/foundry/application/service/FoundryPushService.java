@@ -287,7 +287,8 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         String rewrittenBody = uploadEmbeddedMedia(worldId, markdownBody, credentials, warnings);
 
         String documentId = StableFoundryId.from(documentKey(worldId, type, entityId));
-        relay.upsertJournalEntry(credentials, documentId, title, rewrittenBody, folderId);
+        String htmlBody = articleRenderer.markdownToHtml(rewrittenBody);
+        relay.upsertJournalEntry(credentials, documentId, title, rewrittenBody, htmlBody, folderId);
         recordPush(worldId, type, entityId, documentId);
 
         return new FoundryPushResult(documentId, clock.instant(), warnings);
