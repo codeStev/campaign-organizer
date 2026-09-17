@@ -129,8 +129,9 @@ jobs:
           registry: ${{ vars.REGISTRY_HOST }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-      # latest/sha tags on every master push; vX.Y.Z/vX.Y/vX only on a
-      # matching release tag push (is_default_branch is false for tag refs).
+      # latest/sha/<shortsha>-snapshot on every master push; vX.Y.Z/vX.Y/vX
+      # and <version>-release only on a matching release tag push
+      # (is_default_branch gates the master-only tags).
       - name: Backend image tags
         id: meta-backend
         uses: docker/metadata-action@v6
@@ -139,9 +140,11 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,enable={{is_default_branch}}
+            type=sha,format=short,prefix=,suffix=-snapshot,enable={{is_default_branch}}
             type=semver,pattern=v{{version}}
             type=semver,pattern=v{{major}}.{{minor}}
             type=semver,pattern=v{{major}}
+            type=semver,pattern={{version}},suffix=-release
       - name: Build and push backend image
         uses: docker/build-push-action@v7
         with:
@@ -158,9 +161,11 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,enable={{is_default_branch}}
+            type=sha,format=short,prefix=,suffix=-snapshot,enable={{is_default_branch}}
             type=semver,pattern=v{{version}}
             type=semver,pattern=v{{major}}.{{minor}}
             type=semver,pattern=v{{major}}
+            type=semver,pattern={{version}},suffix=-release
       - name: Build and push frontend image
         uses: docker/build-push-action@v7
         with:
@@ -178,9 +183,11 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,enable={{is_default_branch}}
+            type=sha,format=short,prefix=,suffix=-snapshot,enable={{is_default_branch}}
             type=semver,pattern=v{{version}}
             type=semver,pattern=v{{major}}.{{minor}}
             type=semver,pattern=v{{major}}
+            type=semver,pattern={{version}},suffix=-release
       - name: Build and push combined image
         uses: docker/build-push-action@v7
         with:
