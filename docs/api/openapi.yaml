@@ -1323,6 +1323,167 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
 
+  /worlds/{worldId}/foundry/campaigns/{campaignId}/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [foundry]
+      summary: Push every session in a campaign to Foundry in one go (ADR-0115)
+      description: >-
+        Bulk-runs the per-session push (articles, handouts, roll tables, card
+        decks, session guide) across every session in the campaign - the same
+        content as pushing each session individually, just batched. Campaigns
+        don't own wiki content directly in this app's model, so there's no
+        folder/single-document choice here.
+      operationId: pushCampaignToFoundry
+      responses:
+        '200':
+          description: The aggregated push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryCampaignPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The campaign, or this world's Foundry connection, was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/categories/{categoryId}/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: mode
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/FoundryCategoryPushMode'
+    post:
+      tags: [foundry]
+      summary: Push a whole wiki category (and its subcategories) to Foundry (ADR-0115)
+      description: >-
+        Idempotent - re-pushing the same category updates the same Foundry
+        document(s) in place. Includes every article in subcategories of the
+        pushed category too; see FoundryCategoryPushMode for the folder vs.
+        single-document choice.
+      operationId: pushCategoryToFoundry
+      responses:
+        '200':
+          description: The push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryCategoryPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The category, or this world's Foundry connection, was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/categories/{categoryId}/push-status:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [foundry]
+      summary: Whether, and when, this category was last pushed to Foundry (ADR-0115)
+      operationId: getCategoryFoundryPushStatus
+      responses:
+        '200':
+          description: The push status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /worlds/{worldId}/foundry/wiki/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    post:
+      tags: [foundry]
+      summary: Push the entire world's wiki to Foundry in one go (ADR-0115)
+      description: >-
+        The world-scoped analogue of the category push above - every category
+        and article in the world, including uncategorised articles. Always
+        laid out as nested Foundry folders (one JournalEntry per article) -
+        unlike a single category's push, there is no single-document option
+        at world scope.
+      operationId: pushWorldWikiToFoundry
+      responses:
+        '200':
+          description: The push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryCategoryPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: This world's Foundry connection was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/wiki/push-status:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [foundry]
+      summary: Whether, and when, this world's whole wiki was last pushed to Foundry (ADR-0115)
+      operationId: getWorldWikiFoundryPushStatus
+      responses:
+        '200':
+          description: The push status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /worlds/{worldId}/foundry-connection/test:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -8544,6 +8705,64 @@ components:
           description: >-
             Every warning collected across all the individual pushes this ran
             (e.g. an oversized embedded image skipped on one of the articles).
+
+    FoundryCategoryPushMode:
+      type: string
+      enum: [FOLDER, SINGLE_DOCUMENT]
+      description: >-
+        FOLDER pushes each article as its own separate JournalEntry inside a
+        matching Foundry folder tree. SINGLE_DOCUMENT bundles every article
+        into one JournalEntry, one page each.
+
+    FoundryCategoryPushResult:
+      type: object
+      required: [pushedAt, articlesPushed, warnings]
+      properties:
+        foundryDocumentId:
+          type: string
+          nullable: true
+          description: >-
+            The single JournalEntry created in SINGLE_DOCUMENT mode, or the
+            category's own Foundry folder id in FOLDER mode.
+        pushedAt:
+          type: string
+          format: date-time
+        articlesPushed:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+
+    FoundryCampaignPushResult:
+      type: object
+      required:
+        [
+          sessionsPushed,
+          articlesPushed,
+          handoutsPushed,
+          rollTablesPushed,
+          cardDecksPushed,
+          sessionGuidesCreated,
+          warnings,
+        ]
+      properties:
+        sessionsPushed:
+          type: integer
+        articlesPushed:
+          type: integer
+        handoutsPushed:
+          type: integer
+        rollTablesPushed:
+          type: integer
+        cardDecksPushed:
+          type: integer
+        sessionGuidesCreated:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
 
     CategoryRequest:
       type: object

@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -18,6 +21,8 @@ import com.campaignorganizer.campaign.application.session.port.published.Session
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase.FoundryPushResult;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushCampaignToFoundryUseCase.FoundryCampaignPushResult;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushCategoryToFoundryUseCase.FoundryCategoryPushResult;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushSessionToFoundryUseCase.FoundrySessionPushResult;
 import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
@@ -31,7 +36,9 @@ import com.campaignorganizer.interchange.foundry.application.port.out.FoundryCon
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.CardData;
+import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.JournalPageData;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.TableResultData;
+import com.campaignorganizer.interchange.foundry.domain.FoundryCategoryPushMode;
 import com.campaignorganizer.interchange.foundry.domain.FoundryConnection;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
 import com.campaignorganizer.interchange.foundry.domain.FoundryPushLimits;
@@ -49,6 +56,8 @@ import com.campaignorganizer.tables.application.rolltable.port.published.RollTab
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryView;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -88,6 +97,8 @@ class FoundryPushServiceTest {
     @Mock
     private ArticleRenderPort articleRenderer;
     @Mock
+    private CategoryQueryPort categories;
+    @Mock
     private HandoutQueryPort handouts;
     @Mock
     private RollTableQueryPort rollTables;
@@ -110,8 +121,9 @@ class FoundryPushServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, handouts,
-                rollTables, cardDecks, media, apiKeyEncryptor, ids, clock, sessionPacket, sessions, arcBeats, null);
+        service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, categories,
+                handouts, rollTables, cardDecks, media, apiKeyEncryptor, ids, clock, sessionPacket, sessions,
+                arcBeats, null);
         // Outside Spring there's no proxy to inject; pushSession's delegated calls go through
         // this plain instance directly, which is fine for a unit test with no @Transactional
         // semantics to worry about (see the field's own comment on why this exists at all).
@@ -159,7 +171,7 @@ class FoundryPushServiceTest {
         assertThat(result.pushedAt()).isEqualTo(clock.instant());
         assertThat(result.warnings()).isEmpty();
 
-        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Articles"));
+        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Articles"), any());
         verify(relay).upsertJournalEntry(eq(expectedCredentials()), eq(result.foundryDocumentId()),
                 eq("An Article"), eq("Hello **World**"), eq("<p>Hello <strong>World</strong></p>"), anyString());
         verify(pushRecords).save(any(FoundryPushRecord.class));
@@ -288,7 +300,7 @@ class FoundryPushServiceTest {
         assertThat(result.foundryDocumentId()).matches("^[A-Za-z0-9]{16}$");
         assertThat(result.warnings()).isEmpty();
 
-        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Handouts"));
+        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Handouts"), any());
         // The whole point of this phase: the markdown body reaches the relay completely
         // unrendered for wiki-links — a handout has no wiki-link resolution step, unlike an
         // article. It still goes through plain markdown->HTML conversion (every JournalEntry
@@ -311,8 +323,8 @@ class FoundryPushServiceTest {
 
         service.pushHandout(worldId, handoutId);
 
-        verify(relay, never()).upsertFolder(any(), anyString(), eq("Articles"));
-        verify(relay).upsertFolder(any(), anyString(), eq("Handouts"));
+        verify(relay, never()).upsertFolder(any(), anyString(), eq("Articles"), any());
+        verify(relay).upsertFolder(any(), anyString(), eq("Handouts"), any());
     }
 
     @Test
@@ -354,7 +366,7 @@ class FoundryPushServiceTest {
 
         assertThat(result.foundryDocumentId()).matches("^[A-Za-z0-9]{16}$");
         assertThat(result.warnings()).isEmpty();
-        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Roll Tables"));
+        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Roll Tables"), any());
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<TableResultData>> resultsCaptor = ArgumentCaptor.forClass(List.class);
@@ -509,7 +521,7 @@ class FoundryPushServiceTest {
 
         assertThat(result.foundryDocumentId()).matches("^[A-Za-z0-9]{16}$");
         assertThat(result.warnings()).isEmpty();
-        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Card Decks"));
+        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Card Decks"), any());
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<CardData>> cardsCaptor = ArgumentCaptor.forClass(List.class);
@@ -736,6 +748,155 @@ class FoundryPushServiceTest {
         assertThat(result.articlesPushed()).isEqualTo(1);
         assertThat(result.warnings()).hasSize(1);
         assertThat(result.warnings().get(0)).contains("big.png");
+    }
+
+    @Test
+    void pushCategory_categoryNotFound_throwsNotFound() {
+        UUID categoryId = UUID.randomUUID();
+        when(categories.existsInWorld(categoryId, worldId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.pushCategory(worldId, categoryId, FoundryCategoryPushMode.FOLDER))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Category");
+    }
+
+    @Test
+    void pushCategory_folderMode_nestsSubcategoryFolderUnderRootAndRootUnderArticlesRegardlessOfRealParent() {
+        UUID rootCategoryId = UUID.randomUUID();
+        UUID subCategoryId = UUID.randomUUID();
+        UUID subArticleId = UUID.randomUUID();
+        // Root's real parent ("History") is deliberately absent from categories.findByWorld's
+        // result -- proves the folder chain never dereferences it, since a single-category push
+        // always treats the pushed category as a virtual root (see FoundryPushService's
+        // upsertCategoryFolderChain javadoc).
+        UUID historyCategoryId = UUID.randomUUID();
+        CategoryView root = category(rootCategoryId, historyCategoryId, "Politics");
+        CategoryView sub = category(subCategoryId, rootCategoryId, "Factions");
+        when(categories.existsInWorld(rootCategoryId, worldId)).thenReturn(true);
+        when(categories.findByWorld(worldId)).thenReturn(List.of(root, sub));
+        when(articles.findByWorld(worldId)).thenReturn(
+                List.of(articleIn(articleId, rootCategoryId, "The Senate"),
+                        articleIn(subArticleId, subCategoryId, "The Red Hand")));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(articleRenderer.renderBodyAsMarkdown(eq(worldId), any())).thenAnswer(inv -> inv.getArgument(1));
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pushRecords.findByEntity(any(), any(), any())).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundryCategoryPushResult result = service.pushCategory(worldId, rootCategoryId,
+                FoundryCategoryPushMode.FOLDER);
+
+        assertThat(result.articlesPushed()).isEqualTo(2);
+        ArgumentCaptor<String> folderIdCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> parentCaptor = ArgumentCaptor.forClass(String.class);
+        // "Articles" (the flat top-level folder, parent=null) + "Politics" + "Factions".
+        verify(relay, times(3)).upsertFolder(eq(expectedCredentials()), folderIdCaptor.capture(),
+                nameCaptor.capture(), parentCaptor.capture());
+        String articlesFolderId = folderIdCaptor.getAllValues().get(nameCaptor.getAllValues().indexOf("Articles"));
+        String politicsFolderId = folderIdCaptor.getAllValues().get(nameCaptor.getAllValues().indexOf("Politics"));
+        String politicsParent = parentCaptor.getAllValues().get(nameCaptor.getAllValues().indexOf("Politics"));
+        String factionsParent = parentCaptor.getAllValues().get(nameCaptor.getAllValues().indexOf("Factions"));
+        assertThat(politicsParent).isEqualTo(articlesFolderId);
+        assertThat(factionsParent).isEqualTo(politicsFolderId);
+        verify(relay, times(2)).upsertJournalEntry(eq(expectedCredentials()), anyString(), anyString(), anyString(),
+                anyString(), anyString());
+    }
+
+    @Test
+    void pushCategory_singleDocumentMode_onePageAtRootLevelAndOnePrefixedForTheSubcategory() {
+        UUID rootCategoryId = UUID.randomUUID();
+        UUID subCategoryId = UUID.randomUUID();
+        UUID subArticleId = UUID.randomUUID();
+        CategoryView root = category(rootCategoryId, null, "Politics");
+        CategoryView sub = category(subCategoryId, rootCategoryId, "Factions");
+        when(categories.existsInWorld(rootCategoryId, worldId)).thenReturn(true);
+        when(categories.findByWorld(worldId)).thenReturn(List.of(root, sub));
+        when(articles.findByWorld(worldId)).thenReturn(
+                List.of(articleIn(articleId, rootCategoryId, "The Senate"),
+                        articleIn(subArticleId, subCategoryId, "The Red Hand")));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(articleRenderer.renderBodyAsMarkdown(eq(worldId), any())).thenAnswer(inv -> inv.getArgument(1));
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pushRecords.findByEntity(any(), any(), any())).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundryCategoryPushResult result = service.pushCategory(worldId, rootCategoryId,
+                FoundryCategoryPushMode.SINGLE_DOCUMENT);
+
+        assertThat(result.articlesPushed()).isEqualTo(2);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<JournalPageData>> pagesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(relay).upsertJournalEntryWithPages(eq(expectedCredentials()), eq(result.foundryDocumentId()),
+                eq("Politics"), pagesCaptor.capture(), anyString());
+        assertThat(pagesCaptor.getValue().stream().map(JournalPageData::name).toList())
+                .containsExactly("The Senate", "Factions / The Red Hand");
+        // Never falls back to the one-JournalEntry-per-article path in this mode.
+        verify(relay, never()).upsertJournalEntry(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void pushWorldWiki_uncategorizedArticleLandsInTheFlatArticlesFolder() {
+        UUID categoryId = UUID.randomUUID();
+        UUID uncategorizedArticleId = UUID.randomUUID();
+        when(categories.findByWorld(worldId)).thenReturn(List.of(category(categoryId, null, "Lore")));
+        when(articles.findByWorld(worldId)).thenReturn(
+                List.of(articleIn(articleId, categoryId, "Origins"),
+                        articleIn(uncategorizedArticleId, null, "Random Notes")));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(articleRenderer.renderBodyAsMarkdown(eq(worldId), any())).thenAnswer(inv -> inv.getArgument(1));
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pushRecords.findByEntity(any(), any(), any())).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundryCategoryPushResult result = service.pushWorldWiki(worldId);
+
+        assertThat(result.articlesPushed()).isEqualTo(2);
+        ArgumentCaptor<String> topFolderIdCaptor = ArgumentCaptor.forClass(String.class);
+        verify(relay).upsertFolder(eq(expectedCredentials()), topFolderIdCaptor.capture(), eq("Articles"), isNull());
+        verify(relay).upsertJournalEntry(eq(expectedCredentials()), anyString(), eq("Random Notes"), any(), any(),
+                eq(topFolderIdCaptor.getValue()));
+        // The single-document bundle is a category-scoped choice only -- a world push never
+        // offers or falls into it, regardless of how many categories/articles exist.
+        verify(relay, never()).upsertJournalEntryWithPages(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void pushCampaign_bulkRunsPushSessionAcrossEveryCampaignSessionAndAggregatesCounts() {
+        FoundryPushService spyService = spy(service);
+        spyService.self = spyService;
+        UUID sessionId2 = UUID.randomUUID();
+        when(sessions.findOrdered(campaignId)).thenReturn(List.of(
+                new SessionView(sessionId, campaignId, "S1", 1, null, null, null, Instant.EPOCH, Instant.EPOCH),
+                new SessionView(sessionId2, campaignId, "S2", 2, null, null, null, Instant.EPOCH, Instant.EPOCH)));
+        doReturn(new FoundrySessionPushResult(2, 1, 0, 0, "doc1", 1, List.of("warn1")))
+                .when(spyService).pushSession(worldId, campaignId, sessionId);
+        doReturn(new FoundrySessionPushResult(1, 0, 1, 0, "doc2", 0, List.of()))
+                .when(spyService).pushSession(worldId, campaignId, sessionId2);
+
+        FoundryCampaignPushResult result = spyService.pushCampaign(worldId, campaignId);
+
+        assertThat(result.sessionsPushed()).isEqualTo(2);
+        assertThat(result.articlesPushed()).isEqualTo(3);
+        assertThat(result.handoutsPushed()).isEqualTo(1);
+        assertThat(result.rollTablesPushed()).isEqualTo(1);
+        assertThat(result.sessionGuidesCreated()).isEqualTo(2);
+        assertThat(result.warnings()).containsExactly("warn1");
+    }
+
+    private CategoryView category(UUID id, UUID parentId, String name) {
+        return new CategoryView(id, worldId, parentId, name, Instant.EPOCH, Instant.EPOCH);
+    }
+
+    private ArticleView articleIn(UUID id, UUID categoryId, String title) {
+        return new ArticleView(id, worldId, categoryId, null, title, title.toLowerCase(java.util.Locale.ROOT), "default",
+                "body of " + title, Instant.EPOCH, Instant.EPOCH);
     }
 
     private RollTableView rollTable(List<RollTableEntryView> entries) {

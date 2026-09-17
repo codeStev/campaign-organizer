@@ -18,4 +18,13 @@ public final class FoundryPushWebDtos {
                                              int cardDecksPushed, String sessionGuideDocumentId, int beatsIncluded,
                                              List<String> warnings) {
     }
+
+    public record FoundryCategoryPushResponse(String foundryDocumentId, Instant pushedAt, int articlesPushed,
+                                              List<String> warnings) {
+    }
+
+    public record FoundryCampaignPushResponse(int sessionsPushed, int articlesPushed, int handoutsPushed,
+                                              int rollTablesPushed, int cardDecksPushed, int sessionGuidesCreated,
+                                              List<String> warnings) {
+    }
 }

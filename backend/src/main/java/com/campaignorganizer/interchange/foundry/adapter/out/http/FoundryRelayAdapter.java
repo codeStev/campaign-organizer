@@ -21,7 +21,7 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
     }
 
     @Override
-    public void upsertFolder(Credentials credentials, String folderId, String name) {
+    public void upsertFolder(Credentials credentials, String folderId, String name, String parentFolderId) {
         call(credentials, client -> {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("_id", folderId);
@@ -29,7 +29,7 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
             // Foundry Folders are typed by the kind of document they hold — every Folder
             // this feature creates today holds JournalEntry documents.
             data.put("type", "JournalEntry");
-            client.create("Folder", data, null);
+            client.create("Folder", data, parentFolderId);
             return null;
         });
     }
@@ -41,24 +41,46 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("_id", documentId);
             data.put("name", name);
-            data.put("pages", List.of(buildPage(documentId, name, markdownBody, htmlBody)));
+            // A JournalEntryPage is itself an embedded document keyed by its own _id, distinct
+            // from the parent JournalEntry's _id. Foundry's embedded-collection update semantics
+            // upsert an incoming "pages" array by that id; without one, every push sent a page
+            // with no stable identity, so each re-push was treated as a brand-new page to ADD
+            // rather than the existing one to replace — confirmed live: repeatedly pushing the
+            // same article accumulated a duplicate page per push instead of updating one in
+            // place. Deriving it from documentId (itself already a stable hash) keeps it
+            // deterministic without needing a separate semantic key here.
+            String pageId = StableFoundryId.from(documentId + ":page");
+            data.put("pages", List.of(buildPage(pageId, name, markdownBody, htmlBody)));
             client.create("JournalEntry", data, folderId);
             return null;
         });
     }
 
-    /** Package-visible for {@code FoundryRelayAdapterTest} — pure map-building, no HTTP. */
-    static Map<String, Object> buildPage(String documentId, String name, String markdownBody, String htmlBody) {
+    @Override
+    public void upsertJournalEntryWithPages(Credentials credentials, String documentId, String name,
+                                            List<JournalPageData> pages, String folderId) {
+        call(credentials, client -> {
+            List<Map<String, Object>> pageMaps = new ArrayList<>();
+            for (JournalPageData page : pages) {
+                pageMaps.add(buildPage(page.id(), page.name(), page.markdownBody(), page.htmlBody()));
+            }
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("_id", documentId);
+            data.put("name", name);
+            data.put("pages", pageMaps);
+            client.create("JournalEntry", data, folderId);
+            return null;
+        });
+    }
+
+    /** Package-visible for {@code FoundryRelayAdapterTest} — pure map-building, no HTTP.
+     * {@code id} is the page's already-computed final stable Foundry id (the caller derives
+     * it — {@link #upsertJournalEntry} from {@code documentId + ":page"}, {@link
+     * #upsertJournalEntryWithPages} per-article — so this method itself never hashes anything,
+     * just assembles the page map). */
+    static Map<String, Object> buildPage(String id, String name, String markdownBody, String htmlBody) {
         Map<String, Object> page = new LinkedHashMap<>();
-        // A JournalEntryPage is itself an embedded document keyed by its own _id, distinct
-        // from the parent JournalEntry's _id. Foundry's embedded-collection update semantics
-        // upsert an incoming "pages" array by that id; without one, every push sent a page
-        // with no stable identity, so each re-push was treated as a brand-new page to ADD
-        // rather than the existing one to replace — confirmed live: repeatedly pushing the
-        // same article accumulated a duplicate page per push instead of updating one in
-        // place. Deriving it from documentId (itself already a stable hash) keeps it
-        // deterministic without needing the original semantic key here.
-        page.put("_id", StableFoundryId.from(documentId + ":page"));
+        page.put("_id", id);
         page.put("name", name);
         page.put("type", "text");
         // format 2 = Markdown (Foundry's JournalEntryPage text format) — but "content" is

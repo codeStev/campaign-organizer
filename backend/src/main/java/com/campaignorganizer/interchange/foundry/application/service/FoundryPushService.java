@@ -2,10 +2,13 @@ package com.campaignorganizer.interchange.foundry.application.service;
 
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushCampaignToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushCategoryToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushCardDeckToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushSessionToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushWorldWikiToFoundryUseCase;
 import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
 import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.SessionPacketResponse;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
@@ -15,6 +18,7 @@ import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRel
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.Credentials;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.CardData;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.TableResultData;
+import com.campaignorganizer.interchange.foundry.domain.FoundryCategoryPushMode;
 import com.campaignorganizer.interchange.foundry.domain.FoundryConnection;
 import com.campaignorganizer.interchange.foundry.domain.FoundryDocumentLinkRewriter;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
@@ -22,6 +26,7 @@ import com.campaignorganizer.interchange.foundry.domain.FoundryPushLimits;
 import com.campaignorganizer.interchange.foundry.domain.FoundryPushRecord;
 import com.campaignorganizer.interchange.foundry.domain.MediaEmbedRewriter;
 import com.campaignorganizer.interchange.foundry.domain.StableFoundryId;
+import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.JournalPageData;
 import com.campaignorganizer.media.application.port.published.MediaContentQueryPort;
 import com.campaignorganizer.media.application.port.published.MediaContentQueryPort.MediaContentView;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
@@ -40,6 +45,8 @@ import com.campaignorganizer.tables.application.rolltable.port.published.RollTab
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryQueryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.CategoryView;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -52,6 +59,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
@@ -68,6 +76,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FoundryPushService implements PushArticleToFoundryUseCase, PushHandoutToFoundryUseCase,
         PushRollTableToFoundryUseCase, PushCardDeckToFoundryUseCase, PushSessionToFoundryUseCase,
+        PushCategoryToFoundryUseCase, PushWorldWikiToFoundryUseCase, PushCampaignToFoundryUseCase,
         GetFoundryPushStatusUseCase {
 
     /** Best-effort {@code TableResult.type} values (ADR-0115) — Foundry's official class docs
@@ -81,6 +90,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     private final FoundryRelayPort relay;
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
+    private final CategoryQueryPort categories;
     private final HandoutQueryPort handouts;
     private final RollTableQueryPort rollTables;
     private final CardDeckQueryPort cardDecks;
@@ -100,7 +110,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     public FoundryPushService(FoundryConnectionRepositoryPort connections,
                               FoundryPushRecordRepositoryPort pushRecords, FoundryRelayPort relay,
                               ArticleQueryPort articles, ArticleRenderPort articleRenderer,
-                              HandoutQueryPort handouts, RollTableQueryPort rollTables,
+                              CategoryQueryPort categories, HandoutQueryPort handouts, RollTableQueryPort rollTables,
                               CardDeckQueryPort cardDecks, MediaContentQueryPort media,
                               @Qualifier("foundryApiKeyEncryptor") TextEncryptor apiKeyEncryptor, IdGenerator ids,
                               Clock clock, BuildSessionPacketUseCase sessionPacket, SessionQueryPort sessions,
@@ -110,6 +120,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         this.relay = relay;
         this.articles = articles;
         this.articleRenderer = articleRenderer;
+        this.categories = categories;
         this.handouts = handouts;
         this.rollTables = rollTables;
         this.cardDecks = cardDecks;
@@ -138,7 +149,8 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
                 .orElseThrow(() -> new NotFoundException("Article not found"));
         Credentials credentials = credentialsFor(requireConnection(worldId));
         String markdownBody = articleRenderer.renderBodyAsMarkdown(worldId, article.body());
-        return pushDocument(worldId, FoundryEntityType.ARTICLE, articleId, article.title(), markdownBody,
+        String folderId = upsertFolderFor(worldId, FoundryEntityType.ARTICLE, credentials);
+        return pushDocument(worldId, FoundryEntityType.ARTICLE, articleId, article.title(), markdownBody, folderId,
                 credentials);
     }
 
@@ -148,7 +160,8 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         HandoutView handout = handouts.findByIdInWorld(handoutId, worldId)
                 .orElseThrow(() -> new NotFoundException("Handout not found"));
         Credentials credentials = credentialsFor(requireConnection(worldId));
-        return pushDocument(worldId, FoundryEntityType.HANDOUT, handoutId, handout.title(), handout.body(),
+        String folderId = upsertFolderFor(worldId, FoundryEntityType.HANDOUT, credentials);
+        return pushDocument(worldId, FoundryEntityType.HANDOUT, handoutId, handout.title(), handout.body(), folderId,
                 credentials);
     }
 
@@ -423,6 +436,221 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         return refs.isEmpty() ? null : "**References:** " + String.join(", ", refs);
     }
 
+    /** Bulk-runs {@link #pushSession} across every session in the campaign (ADR-0115 addendum).
+     * Deliberately no {@code @Transactional} here for the same reason as {@link #pushSession}
+     * itself: this method does no persistence of its own, only delegates through {@link #self}
+     * so each session's own push keeps its own short transaction rather than one holding the
+     * whole batch open. */
+    @Override
+    public FoundryCampaignPushResult pushCampaign(UUID worldId, UUID campaignId) {
+        List<SessionView> campaignSessions = sessions.findOrdered(campaignId);
+        List<String> warnings = new ArrayList<>();
+        int articlesPushed = 0;
+        int handoutsPushed = 0;
+        int rollTablesPushed = 0;
+        int cardDecksPushed = 0;
+        int sessionGuidesCreated = 0;
+        for (SessionView session : campaignSessions) {
+            FoundrySessionPushResult result = self.pushSession(worldId, campaignId, session.id());
+            articlesPushed += result.articlesPushed();
+            handoutsPushed += result.handoutsPushed();
+            rollTablesPushed += result.rollTablesPushed();
+            cardDecksPushed += result.cardDecksPushed();
+            if (result.sessionGuideDocumentId() != null) {
+                sessionGuidesCreated++;
+            }
+            warnings.addAll(result.warnings());
+        }
+        return new FoundryCampaignPushResult(campaignSessions.size(), articlesPushed, handoutsPushed,
+                rollTablesPushed, cardDecksPushed, sessionGuidesCreated, warnings);
+    }
+
+    @Override
+    @Transactional
+    public FoundryCategoryPushResult pushCategory(UUID worldId, UUID categoryId, FoundryCategoryPushMode mode) {
+        if (!categories.existsInWorld(categoryId, worldId)) {
+            throw new NotFoundException("Category not found");
+        }
+        Credentials credentials = credentialsFor(requireConnection(worldId));
+        Map<UUID, CategoryView> byId = categoryMapFor(worldId);
+        CategoryView rootCategory = byId.get(categoryId);
+        Map<UUID, List<ArticleView>> articlesByCategory = articlesByCategoryFor(worldId);
+
+        return mode == FoundryCategoryPushMode.FOLDER
+                ? pushCategoryTreeAsFolders(worldId, List.of(rootCategory), categoryId, byId, articlesByCategory,
+                        List.of(), credentials, FoundryEntityType.CATEGORY, categoryId)
+                : pushCategoryTreeAsSingleDocument(worldId, rootCategory.name(), List.of(rootCategory), categoryId,
+                        byId, articlesByCategory, List.of(), credentials, FoundryEntityType.CATEGORY, categoryId);
+    }
+
+    @Override
+    @Transactional
+    public FoundryCategoryPushResult pushWorldWiki(UUID worldId) {
+        Credentials credentials = credentialsFor(requireConnection(worldId));
+        Map<UUID, CategoryView> byId = categoryMapFor(worldId);
+        List<CategoryView> topLevelCategories = byId.values().stream()
+                .filter(c -> c.parentId() == null)
+                .sorted(Comparator.comparing(CategoryView::name, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        Map<UUID, List<ArticleView>> articlesByCategory = articlesByCategoryFor(worldId);
+        List<ArticleView> uncategorized = articles.findByWorld(worldId).stream()
+                .filter(a -> a.categoryId() == null)
+                .sorted(Comparator.comparing(ArticleView::title, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+
+        // Always FOLDER — the single-document bundle is a category-scoped choice only (the user
+        // explicitly didn't want a whole-wiki-as-one-document option).
+        return pushCategoryTreeAsFolders(worldId, topLevelCategories, null, byId, articlesByCategory, uncategorized,
+                credentials, FoundryEntityType.WIKI, worldId);
+    }
+
+    private Map<UUID, CategoryView> categoryMapFor(UUID worldId) {
+        return categories.findByWorld(worldId).stream().collect(Collectors.toMap(CategoryView::id, c -> c));
+    }
+
+    private Map<UUID, List<ArticleView>> articlesByCategoryFor(UUID worldId) {
+        return articles.findByWorld(worldId).stream()
+                .filter(a -> a.categoryId() != null)
+                .collect(Collectors.groupingBy(ArticleView::categoryId));
+    }
+
+    /** {@code roots} and all their descendants, each subtree emitted parent-first with children
+     * alphabetised — the order both push modes below lay categories out in. */
+    private static List<CategoryView> categoryTreeOrder(List<CategoryView> roots, Map<UUID, CategoryView> byId) {
+        Map<UUID, List<CategoryView>> childrenByParent = byId.values().stream()
+                .filter(c -> c.parentId() != null)
+                .collect(Collectors.groupingBy(CategoryView::parentId));
+        List<CategoryView> ordered = new ArrayList<>();
+        for (CategoryView root : roots) {
+            appendCategorySubtree(root, childrenByParent, ordered);
+        }
+        return ordered;
+    }
+
+    private static void appendCategorySubtree(CategoryView category, Map<UUID, List<CategoryView>> childrenByParent,
+                                              List<CategoryView> out) {
+        out.add(category);
+        childrenByParent.getOrDefault(category.id(), List.of()).stream()
+                .sorted(Comparator.comparing(CategoryView::name, String.CASE_INSENSITIVE_ORDER))
+                .forEach(child -> appendCategorySubtree(child, childrenByParent, out));
+    }
+
+    /** Pushes {@code roots} (and everything under them) as nested Foundry folders, each
+     * article as its own separate JournalEntry inside the matching subfolder — the FOLDER
+     * mode of the category/world push addendum (ADR-0115). {@code virtualRootId} is the single
+     * category the caller actually asked to push (its folder always nests directly under the
+     * flat "Articles" folder, never under its real parent category, since that parent wasn't
+     * part of the request) — {@code null} for a world push, where every top-level category
+     * already has no parent and nests under "Articles" naturally. */
+    private FoundryCategoryPushResult pushCategoryTreeAsFolders(UUID worldId, List<CategoryView> roots,
+                                                                UUID virtualRootId, Map<UUID, CategoryView> byId,
+                                                                Map<UUID, List<ArticleView>> articlesByCategory,
+                                                                List<ArticleView> uncategorized,
+                                                                Credentials credentials, FoundryEntityType trackingType,
+                                                                UUID trackingId) {
+        String topFolderId = upsertFolderFor(worldId, FoundryEntityType.ARTICLE, credentials);
+        Map<UUID, String> folderIdByCategory = new HashMap<>();
+        List<String> warnings = new ArrayList<>();
+        int articlesPushed = 0;
+
+        for (CategoryView category : categoryTreeOrder(roots, byId)) {
+            String folderId = upsertCategoryFolderChain(worldId, category.id(), virtualRootId, byId,
+                    folderIdByCategory, topFolderId, credentials);
+            for (ArticleView article : articlesByCategory.getOrDefault(category.id(), List.of())) {
+                String markdownBody = articleRenderer.renderBodyAsMarkdown(worldId, article.body());
+                FoundryPushResult result = pushDocument(worldId, FoundryEntityType.ARTICLE, article.id(),
+                        article.title(), markdownBody, folderId, credentials);
+                warnings.addAll(result.warnings());
+                articlesPushed++;
+            }
+        }
+        for (ArticleView article : uncategorized) {
+            String markdownBody = articleRenderer.renderBodyAsMarkdown(worldId, article.body());
+            FoundryPushResult result = pushDocument(worldId, FoundryEntityType.ARTICLE, article.id(),
+                    article.title(), markdownBody, topFolderId, credentials);
+            warnings.addAll(result.warnings());
+            articlesPushed++;
+        }
+
+        String trackedFolderId = trackingType == FoundryEntityType.CATEGORY
+                ? folderIdByCategory.get(trackingId)
+                : topFolderId;
+        recordPush(worldId, trackingType, trackingId, trackedFolderId);
+        return new FoundryCategoryPushResult(trackedFolderId, clock.instant(), articlesPushed, warnings);
+    }
+
+    /** Idempotent upsert of the Foundry folder for one category, nesting it under its parent
+     * category's own folder — except {@code categoryId == virtualRootId}, which always nests
+     * directly under {@code topFolderId} instead of its real parent (see
+     * {@link #pushCategoryTreeAsFolders}'s javadoc for why). Memoized in {@code cache} since
+     * the same category can be an ancestor of many articles processed in the same push. */
+    private String upsertCategoryFolderChain(UUID worldId, UUID categoryId, UUID virtualRootId,
+                                             Map<UUID, CategoryView> byId, Map<UUID, String> cache,
+                                             String topFolderId, Credentials credentials) {
+        String cached = cache.get(categoryId);
+        if (cached != null) {
+            return cached;
+        }
+        CategoryView category = byId.get(categoryId);
+        String parentFolderId = categoryId.equals(virtualRootId) || category.parentId() == null
+                ? topFolderId
+                : upsertCategoryFolderChain(worldId, category.parentId(), virtualRootId, byId, cache, topFolderId,
+                        credentials);
+        String folderId = StableFoundryId.from("campaign-organizer:" + worldId + ":folder:category:" + categoryId);
+        relay.upsertFolder(credentials, folderId, category.name(), parentFolderId);
+        cache.put(categoryId, folderId);
+        return folderId;
+    }
+
+    /** Pushes {@code roots} (and everything under them) as one JournalEntry document named
+     * {@code documentTitle}, one page per article — the SINGLE_DOCUMENT mode of the
+     * category/world push addendum (ADR-0115). An article directly in a root category (i.e.
+     * one of {@code roots} itself, not a descendant subcategory) keeps its plain title as the
+     * page name; every other article's page name is prefixed with its own category's name so
+     * the subcategory grouping stays visible in Foundry's flat page list. */
+    private FoundryCategoryPushResult pushCategoryTreeAsSingleDocument(UUID worldId, String documentTitle,
+                                                                       List<CategoryView> roots, UUID trackingId,
+                                                                       Map<UUID, CategoryView> byId,
+                                                                       Map<UUID, List<ArticleView>> articlesByCategory,
+                                                                       List<ArticleView> uncategorized,
+                                                                       Credentials credentials,
+                                                                       FoundryEntityType trackingType,
+                                                                       UUID recordEntityId) {
+        Set<UUID> rootIds = roots.stream().map(CategoryView::id).collect(Collectors.toSet());
+        List<String> warnings = new ArrayList<>();
+        List<JournalPageData> pages = new ArrayList<>();
+        String documentId = StableFoundryId.from(documentKey(worldId, trackingType, recordEntityId));
+
+        for (CategoryView category : categoryTreeOrder(roots, byId)) {
+            boolean isRoot = rootIds.contains(category.id());
+            List<ArticleView> categoryArticles = articlesByCategory.getOrDefault(category.id(), List.of()).stream()
+                    .sorted(Comparator.comparing(ArticleView::title, String.CASE_INSENSITIVE_ORDER))
+                    .toList();
+            for (ArticleView article : categoryArticles) {
+                String pageName = isRoot ? article.title() : category.name() + " / " + article.title();
+                pages.add(pageFor(worldId, documentId, article, pageName, credentials, warnings));
+            }
+        }
+        for (ArticleView article : uncategorized) {
+            pages.add(pageFor(worldId, documentId, article, article.title(), credentials, warnings));
+        }
+
+        String folderId = upsertFolderFor(worldId, FoundryEntityType.ARTICLE, credentials);
+        relay.upsertJournalEntryWithPages(credentials, documentId, documentTitle, pages, folderId);
+        recordPush(worldId, trackingType, recordEntityId, documentId);
+
+        return new FoundryCategoryPushResult(documentId, clock.instant(), pages.size(), warnings);
+    }
+
+    private JournalPageData pageFor(UUID worldId, String documentId, ArticleView article, String pageName,
+                                    Credentials credentials, List<String> warnings) {
+        String markdownBody = articleRenderer.renderBodyAsMarkdown(worldId, article.body());
+        String rewrittenBody = uploadEmbeddedMedia(worldId, markdownBody, credentials, warnings);
+        String htmlBody = articleRenderer.markdownToHtml(rewrittenBody);
+        String pageId = StableFoundryId.from(documentId + ":page:" + article.id());
+        return new JournalPageData(pageId, pageName, rewrittenBody, htmlBody);
+    }
+
     private void recordPush(UUID worldId, FoundryEntityType type, UUID entityId, String documentId) {
         Instant now = clock.instant();
         FoundryPushRecord record = pushRecords.findByEntity(worldId, type, entityId)
@@ -441,13 +669,14 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
                 .map(r -> new FoundryPushStatusView(r.getFoundryDocumentId(), r.getPushedAt()));
     }
 
-    /** Folder-upsert, embedded-media upload, journal-upsert, push-record upsert — the part of a
-     * push that's identical for every entity type. Callers obtain the title/Markdown body their
-     * own way (an article renders wiki-links first; a handout has no rendering step at all). */
+    /** Embedded-media upload, journal-upsert, push-record upsert — the part of a push that's
+     * identical for every entity type. Callers obtain the title/Markdown body their own way (an
+     * article renders wiki-links first; a handout has no rendering step at all) and the
+     * destination {@code folderId} their own way too (a lone article/handout push uses its
+     * type's flat top-level folder; a category/world push places it in a per-category
+     * subfolder instead — ADR-0115 addendum). */
     private FoundryPushResult pushDocument(UUID worldId, FoundryEntityType type, UUID entityId, String title,
-                                           String markdownBody, Credentials credentials) {
-        String folderId = upsertFolderFor(worldId, type, credentials);
-
+                                           String markdownBody, String folderId, Credentials credentials) {
         List<String> warnings = new ArrayList<>();
         String rewrittenBody = uploadEmbeddedMedia(worldId, markdownBody, credentials, warnings);
 
@@ -461,7 +690,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
 
     private String upsertFolderFor(UUID worldId, FoundryEntityType type, Credentials credentials) {
         String folderId = StableFoundryId.from("campaign-organizer:" + worldId + ":folder:" + folderKey(type));
-        relay.upsertFolder(credentials, folderId, folderName(type));
+        relay.upsertFolder(credentials, folderId, folderName(type), null);
         return folderId;
     }
 
@@ -497,6 +726,9 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         return "campaign-organizer:" + worldId + ":" + type.name().toLowerCase(Locale.ROOT) + ":" + entityId;
     }
 
+    /** CATEGORY/WIKI never reach {@link #upsertFolderFor} — a category/world push builds its
+     * own bespoke per-category folder chain instead ({@link #upsertCategoryFolderChain}), so
+     * those two constants have no flat top-level folder of their own to look up here. */
     private static String folderKey(FoundryEntityType type) {
         return switch (type) {
             case ARTICLE -> "articles";
@@ -504,6 +736,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
             case ROLL_TABLE -> "rolltables";
             case CARD_DECK -> "carddecks";
             case SESSION_GUIDE -> "sessionguides";
+            case CATEGORY, WIKI -> throw new IllegalArgumentException(type + " has no flat top-level folder");
         };
     }
 
@@ -514,6 +747,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
             case ROLL_TABLE -> "Roll Tables";
             case CARD_DECK -> "Card Decks";
             case SESSION_GUIDE -> "Session Guides";
+            case CATEGORY, WIKI -> throw new IllegalArgumentException(type + " has no flat top-level folder");
         };
     }
 
