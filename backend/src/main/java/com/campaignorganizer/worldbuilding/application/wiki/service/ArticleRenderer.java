@@ -42,6 +42,15 @@ public class ArticleRenderer implements ArticleRenderPort {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public String renderBodyAsMarkdown(UUID worldId, String body) {
+        if (body == null) {
+            return null;
+        }
+        return body.contains("[[") ? WikiLinker.renderMarkdown(body, index(worldId)) : body;
+    }
+
+    @Override
     public Set<String> linkTargets(String body) {
         return WikiLinker.linkTargets(body);
     }

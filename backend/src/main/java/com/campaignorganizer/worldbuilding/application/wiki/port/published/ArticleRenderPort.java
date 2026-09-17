@@ -9,6 +9,12 @@ public interface ArticleRenderPort {
     /** Render {@code body}, resolving {@code [[links]]} against the world's articles. */
     String renderBody(UUID worldId, String body);
 
+    /** Render {@code body} for an external, non-HTML consumer (ADR-0115): resolve
+     * {@code [[links]]} against the world's articles into plain Markdown emphasis
+     * instead of HTML anchors, and skip Markdown-to-HTML rendering and sanitization
+     * entirely — the result stays valid Markdown end to end. */
+    String renderBodyAsMarkdown(UUID worldId, String body);
+
     /** Lowercased {@code [[target]]} names referenced in a body (for backlink detection). */
     Set<String> linkTargets(String body);
 }

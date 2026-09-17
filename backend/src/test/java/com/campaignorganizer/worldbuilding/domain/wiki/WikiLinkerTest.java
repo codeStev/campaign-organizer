@@ -39,4 +39,35 @@ class WikiLinkerTest {
                 Map.of("waterdeep", new LinkRef(id, "Waterdeep")));
         assertThat(out).contains(">the city</a>");
     }
+
+    @Test
+    void renderMarkdown_resolvesKnownLinkToBoldPlainText() {
+        UUID id = UUID.randomUUID();
+        String out = WikiLinker.renderMarkdown("See [[Goblin]].",
+                Map.of("goblin", new LinkRef(id, "Goblin")));
+
+        assertThat(out).isEqualTo("See **Goblin**.");
+    }
+
+    @Test
+    void renderMarkdown_resolvesUnknownLinkToItalicPlainText() {
+        String out = WikiLinker.renderMarkdown("See [[Nowhere]].", Map.of());
+        assertThat(out).isEqualTo("See *Nowhere*.");
+    }
+
+    @Test
+    void renderMarkdown_usesExplicitLabelWhenProvided() {
+        UUID id = UUID.randomUUID();
+        String out = WikiLinker.renderMarkdown("Visit [[Waterdeep|the city]].",
+                Map.of("waterdeep", new LinkRef(id, "Waterdeep")));
+        assertThat(out).isEqualTo("Visit **the city**.");
+    }
+
+    @Test
+    void renderMarkdown_neverHtmlEscapesUnlikeRender() {
+        UUID id = UUID.randomUUID();
+        String out = WikiLinker.renderMarkdown("See [[Goblin|A & B]].",
+                Map.of("goblin", new LinkRef(id, "Goblin")));
+        assertThat(out).isEqualTo("See **A & B**.");
+    }
 }
