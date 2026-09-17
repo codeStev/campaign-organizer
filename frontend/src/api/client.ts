@@ -853,6 +853,10 @@ export function foundryPushApi(worldId: string) {
       request<FoundryPushResult>(`${base}/articles/${articleId}/push`, { method: 'POST' }),
     articlePushStatus: (articleId: string) =>
       request<FoundryPushStatus>(`${base}/articles/${articleId}/push-status`),
+    pushHandout: (handoutId: string) =>
+      request<FoundryPushResult>(`${base}/handouts/${handoutId}/push`, { method: 'POST' }),
+    handoutPushStatus: (handoutId: string) =>
+      request<FoundryPushStatus>(`${base}/handouts/${handoutId}/push-status`),
   };
 }
 

@@ -1079,6 +1079,70 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /worlds/{worldId}/foundry/handouts/{handoutId}/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: handoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [foundry]
+      summary: Push a handout to Foundry as a JournalEntry (ADR-0115)
+      description: >-
+        Idempotent - re-pushing the same handout updates the same Foundry
+        document in place rather than creating a duplicate. Unlike an
+        article, a handout's body has no wiki-link rendering step and is
+        pushed verbatim; embedded images are still uploaded to the relay
+        and the body rewritten to point at them.
+      operationId: pushHandoutToFoundry
+      responses:
+        '200':
+          description: The push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The handout, or this world's Foundry connection, was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/handouts/{handoutId}/push-status:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: handoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [foundry]
+      summary: Whether, and when, this handout was last pushed to Foundry (ADR-0115)
+      operationId: getHandoutFoundryPushStatus
+      responses:
+        '200':
+          description: The push status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /worlds/{worldId}/foundry-connection/test:
     parameters:
       - $ref: '#/components/parameters/WorldId'

@@ -7,9 +7,11 @@ import {
   mediaApi,
   campaignsApi,
   sessionsApi,
+  foundryPushApi,
   Handout,
   HandoutCategory,
   HandoutPreset,
+  FoundryPushStatus,
 } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
@@ -67,10 +69,13 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
   const api = useMemo(() => handoutsApi(worldId), [worldId]);
   const categoriesApi = useMemo(() => handoutCategoriesApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
+  const foundryPush = useMemo(() => foundryPushApi(worldId), [worldId]);
   const [list, setList] = useState<Handout[]>([]);
   const [categories, setCategories] = useState<HandoutCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const [foundryStatus, setFoundryStatus] = useState<FoundryPushStatus | null>(null);
+  const [pushingToFoundry, setPushingToFoundry] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionOptions, setSessionOptions] = useState<SessionOption[]>([]);
@@ -205,12 +210,38 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
       revealed: h.revealed,
     });
     setMode('read');
+    setFoundryStatus(null);
+    foundryPush
+      .handoutPushStatus(h.id)
+      .then(setFoundryStatus)
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) onAuthExpired();
+      });
+  }
+
+  async function pushToFoundry() {
+    if (!draft.id) return;
+    setPushingToFoundry(true);
+    try {
+      const result = await foundryPush.pushHandout(draft.id);
+      setFoundryStatus({ pushed: true, foundryDocumentId: result.foundryDocumentId, pushedAt: result.pushedAt });
+      if (result.warnings.length > 0) {
+        toast.error(result.warnings.join('; '));
+      } else {
+        toast.success('Pushed to Foundry');
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setPushingToFoundry(false);
+    }
   }
 
   // Load the draft behind the URL-selected handout.
   useEffect(() => {
     if (!urlHandoutId) {
       setDraft(EMPTY_DRAFT);
+      setFoundryStatus(null);
       return;
     }
     api.get(urlHandoutId).then(loadDraft).catch(handleError);
@@ -495,6 +526,11 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
                   </Button>
                 )}
                 {editingExisting && (
+                  <Button type="button" variant="link" onClick={() => void pushToFoundry()} disabled={pushingToFoundry}>
+                    {pushingToFoundry ? 'Pushing…' : 'Push to Foundry'}
+                  </Button>
+                )}
+                {editingExisting && (
                   <ConfirmDeleteDialog
                     trigger={
                       <Button type="button" variant="link" className="text-destructive hover:text-destructive">
@@ -507,6 +543,9 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
                   />
                 )}
               </div>
+              {foundryStatus?.pushed && (
+                <p className="muted hint">Pushed to Foundry {new Date(foundryStatus.pushedAt!).toLocaleString()}</p>
+              )}
             </form>
 
             {/* Live preview in the chosen style */}
@@ -529,8 +568,14 @@ export function NextHandoutsView({ worldId, onAuthExpired }: Props) {
                 <Button type="button" variant="outline" onClick={() => setPrinting(true)}>
                   🖨 Print
                 </Button>
+                <Button type="button" variant="link" onClick={() => void pushToFoundry()} disabled={pushingToFoundry}>
+                  {pushingToFoundry ? 'Pushing…' : 'Push to Foundry'}
+                </Button>
               </div>
             </div>
+            {foundryStatus?.pushed && (
+              <p className="muted hint">Pushed to Foundry {new Date(foundryStatus.pushedAt!).toLocaleString()}</p>
+            )}
             <p className="muted">
               {PRESETS.find((p) => p.value === draft.preset)?.label ?? draft.preset}
               {draft.sessionId && ' · ' + (sessionOptions.find((s) => s.id === draft.sessionId)?.label ?? '')}
