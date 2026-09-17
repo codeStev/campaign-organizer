@@ -2,6 +2,7 @@ package com.campaignorganizer.interchange.foundry.application.service;
 
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
@@ -14,6 +15,8 @@ import com.campaignorganizer.interchange.foundry.domain.MediaEmbedRewriter;
 import com.campaignorganizer.interchange.foundry.domain.StableFoundryId;
 import com.campaignorganizer.media.application.port.published.MediaContentQueryPort;
 import com.campaignorganizer.media.application.port.published.MediaContentQueryPort.MediaContentView;
+import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
@@ -37,17 +40,19 @@ import org.springframework.transaction.annotation.Transactional;
  * Push use cases for Foundry (ADR-0115) — pure composition over {@code worldbuilding}'s
  * published ports plus this context's own connection/push-tracking storage, mirroring
  * {@code CampaignCalendarService}'s style. {@link #pushDocument} is the entity-agnostic
- * core every entity-specific push (article now; handout/roll table/card deck in later
+ * core every entity-specific push (article and handout now; roll table/card deck in later
  * phases) calls through, so a future bulk "push everything" use case is additive.
  */
 @Service
-public class FoundryPushService implements PushArticleToFoundryUseCase, GetFoundryPushStatusUseCase {
+public class FoundryPushService implements PushArticleToFoundryUseCase, PushHandoutToFoundryUseCase,
+        GetFoundryPushStatusUseCase {
 
     private final FoundryConnectionRepositoryPort connections;
     private final FoundryPushRecordRepositoryPort pushRecords;
     private final FoundryRelayPort relay;
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
+    private final HandoutQueryPort handouts;
     private final MediaContentQueryPort media;
     private final TextEncryptor apiKeyEncryptor;
     private final IdGenerator ids;
@@ -56,7 +61,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, GetFound
     public FoundryPushService(FoundryConnectionRepositoryPort connections,
                               FoundryPushRecordRepositoryPort pushRecords, FoundryRelayPort relay,
                               ArticleQueryPort articles, ArticleRenderPort articleRenderer,
-                              MediaContentQueryPort media,
+                              HandoutQueryPort handouts, MediaContentQueryPort media,
                               @Qualifier("foundryApiKeyEncryptor") TextEncryptor apiKeyEncryptor, IdGenerator ids,
                               Clock clock) {
         this.connections = connections;
@@ -64,6 +69,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, GetFound
         this.relay = relay;
         this.articles = articles;
         this.articleRenderer = articleRenderer;
+        this.handouts = handouts;
         this.media = media;
         this.apiKeyEncryptor = apiKeyEncryptor;
         this.ids = ids;
@@ -78,6 +84,16 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, GetFound
         Credentials credentials = credentialsFor(requireConnection(worldId));
         String markdownBody = articleRenderer.renderBodyAsMarkdown(worldId, article.body());
         return pushDocument(worldId, FoundryEntityType.ARTICLE, articleId, article.title(), markdownBody,
+                credentials);
+    }
+
+    @Override
+    @Transactional
+    public FoundryPushResult pushHandout(UUID worldId, UUID handoutId) {
+        HandoutView handout = handouts.findByIdInWorld(handoutId, worldId)
+                .orElseThrow(() -> new NotFoundException("Handout not found"));
+        Credentials credentials = credentialsFor(requireConnection(worldId));
+        return pushDocument(worldId, FoundryEntityType.HANDOUT, handoutId, handout.title(), handout.body(),
                 credentials);
     }
 

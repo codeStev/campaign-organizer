@@ -8,8 +8,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
+import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase.FoundryPushResult;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
@@ -42,6 +45,7 @@ class FoundryPushServiceTest {
 
     private final UUID worldId = UUID.randomUUID();
     private final UUID articleId = UUID.randomUUID();
+    private final UUID handoutId = UUID.randomUUID();
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC);
 
     @Mock
@@ -55,6 +59,8 @@ class FoundryPushServiceTest {
     @Mock
     private ArticleRenderPort articleRenderer;
     @Mock
+    private HandoutQueryPort handouts;
+    @Mock
     private MediaContentQueryPort media;
     @Mock
     private TextEncryptor apiKeyEncryptor;
@@ -65,8 +71,8 @@ class FoundryPushServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, media,
-                apiKeyEncryptor, ids, clock);
+        service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, handouts,
+                media, apiKeyEncryptor, ids, clock);
     }
 
     @Test
@@ -194,6 +200,69 @@ class FoundryPushServiceTest {
         verify(relay, never()).uploadFile(any(), any(), any(), any(), any());
         // Body is left with the original (now-unresolved) reference, not blanked out.
         verify(relay).upsertJournalEntry(any(), anyString(), anyString(), eq(body), anyString());
+    }
+
+    @Test
+    void pushHandout_handoutNotFound_throwsNotFound() {
+        when(handouts.findByIdInWorld(handoutId, worldId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.pushHandout(worldId, handoutId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Handout");
+    }
+
+    @Test
+    void pushHandout_noConnectionConfigured_throwsNotFound() {
+        when(handouts.findByIdInWorld(handoutId, worldId)).thenReturn(Optional.of(handout("body")));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.pushHandout(worldId, handoutId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Foundry connection");
+    }
+
+    @Test
+    void pushHandout_happyPath_bodyPushedVerbatimWithNoRendering() {
+        when(handouts.findByIdInWorld(handoutId, worldId))
+                .thenReturn(Optional.of(handout("Raw [[not-a-link]] body")));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(pushRecords.findByEntity(worldId, FoundryEntityType.HANDOUT, handoutId)).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundryPushResult result = service.pushHandout(worldId, handoutId);
+
+        assertThat(result.foundryDocumentId()).matches("^[A-Za-z0-9]{16}$");
+        assertThat(result.warnings()).isEmpty();
+
+        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Handouts"));
+        // The whole point of this phase: the body reaches the relay completely unrendered —
+        // a handout has no wiki-link resolution step, unlike an article.
+        verify(relay).upsertJournalEntry(eq(expectedCredentials()), eq(result.foundryDocumentId()),
+                eq("A Handout"), eq("Raw [[not-a-link]] body"), anyString());
+        verify(pushRecords).save(any(FoundryPushRecord.class));
+        verifyNoInteractions(articleRenderer);
+    }
+
+    @Test
+    void pushHandout_articleAndHandoutFoldersAreKeptSeparate() {
+        when(handouts.findByIdInWorld(handoutId, worldId)).thenReturn(Optional.of(handout("body")));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(pushRecords.findByEntity(worldId, FoundryEntityType.HANDOUT, handoutId)).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.pushHandout(worldId, handoutId);
+
+        verify(relay, never()).upsertFolder(any(), anyString(), eq("Articles"));
+        verify(relay).upsertFolder(any(), anyString(), eq("Handouts"));
+    }
+
+    private HandoutView handout(String body) {
+        return new HandoutView(handoutId, worldId, null, "A Handout", "PARCHMENT", body, null, null, false,
+                Instant.EPOCH, Instant.EPOCH);
     }
 
     private FoundryRelayPort.Credentials expectedCredentials() {
