@@ -75,6 +75,9 @@ interface CategoryTreeProps<TEntity, TCategory extends CategoryLike> {
   onDeleteEntity?: (entity: TEntity) => void;
   /** Enables the entity row's right-click "Print" item when provided. */
   onPrintEntity?: (entity: TEntity) => void;
+  /** Enables a category's right-click "Push to Foundry…" item when provided
+   * (Wiki-only today — ADR-0115 category push addendum). */
+  onPushCategoryToFoundry?: (category: TCategory) => void;
   /** "+ New X" actions offered in every category's (and Uncategorised's)
    * menu — omit to leave a screen without in-tree entity creation. */
   newEntityActions?: NewEntityAction[];
@@ -110,6 +113,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   onRenameEntity,
   onDeleteEntity,
   onPrintEntity,
+  onPushCategoryToFoundry,
   newEntityActions = [],
   loading,
   searchPlaceholder = 'Search…',
@@ -309,6 +313,7 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
             onMoveEntity={onMoveEntity}
             onDeleteEntity={onDeleteEntity}
             onPrintEntity={onPrintEntity}
+            onPushCategoryToFoundry={onPushCategoryToFoundry}
             newEntityActions={newEntityActions}
           />
         ))}
@@ -373,6 +378,7 @@ interface CategoryTreeNodeProps<TEntity, TCategory extends CategoryLike> {
   onMoveEntity: (entity: TEntity, categoryId: string | null) => void;
   onDeleteEntity?: (entity: TEntity) => void;
   onPrintEntity?: (entity: TEntity) => void;
+  onPushCategoryToFoundry?: (category: TCategory) => void;
   newEntityActions: NewEntityAction[];
 }
 
@@ -396,6 +402,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
   onMoveEntity,
   onDeleteEntity,
   onPrintEntity,
+  onPushCategoryToFoundry,
   newEntityActions,
 }: CategoryTreeNodeProps<TEntity, TCategory>) {
   const subCategories = childrenByCategory.get(category.id) ?? [];
@@ -467,6 +474,14 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               + {action.label}
             </ContextMenuItem>
           ))}
+          {onPushCategoryToFoundry && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem onSelect={() => onPushCategoryToFoundry(category)}>
+                Push to Foundry…
+              </ContextMenuItem>
+            </>
+          )}
           <ContextMenuSeparator />
           <ConfirmDeleteDialog
             trigger={
@@ -504,6 +519,7 @@ function CategoryTreeNode<TEntity, TCategory extends CategoryLike>({
               onMoveEntity={onMoveEntity}
               onDeleteEntity={onDeleteEntity}
               onPrintEntity={onPrintEntity}
+              onPushCategoryToFoundry={onPushCategoryToFoundry}
               newEntityActions={newEntityActions}
             />
           ))}

@@ -855,6 +855,25 @@ export interface FoundrySessionPushResult {
   warnings: string[];
 }
 
+export type FoundryCategoryPushMode = 'FOLDER' | 'SINGLE_DOCUMENT';
+
+export interface FoundryCategoryPushResult {
+  foundryDocumentId: string | null;
+  pushedAt: string;
+  articlesPushed: number;
+  warnings: string[];
+}
+
+export interface FoundryCampaignPushResult {
+  sessionsPushed: number;
+  articlesPushed: number;
+  handoutsPushed: number;
+  rollTablesPushed: number;
+  cardDecksPushed: number;
+  sessionGuidesCreated: number;
+  warnings: string[];
+}
+
 /** Push Campaign Organizer content into a world's connected Foundry session (ADR-0115). */
 export function foundryPushApi(worldId: string) {
   const base = `/worlds/${worldId}/foundry`;
@@ -879,6 +898,16 @@ export function foundryPushApi(worldId: string) {
       request<FoundrySessionPushResult>(`${base}/campaigns/${campaignId}/sessions/${sessionId}/push`, {
         method: 'POST',
       }),
+    pushCampaign: (campaignId: string) =>
+      request<FoundryCampaignPushResult>(`${base}/campaigns/${campaignId}/push`, { method: 'POST' }),
+    pushCategory: (categoryId: string, mode: FoundryCategoryPushMode) =>
+      request<FoundryCategoryPushResult>(`${base}/categories/${categoryId}/push?mode=${mode}`, {
+        method: 'POST',
+      }),
+    categoryPushStatus: (categoryId: string) =>
+      request<FoundryPushStatus>(`${base}/categories/${categoryId}/push-status`),
+    pushWorldWiki: () => request<FoundryCategoryPushResult>(`${base}/wiki/push`, { method: 'POST' }),
+    worldWikiPushStatus: () => request<FoundryPushStatus>(`${base}/wiki/push-status`),
   };
 }
 
