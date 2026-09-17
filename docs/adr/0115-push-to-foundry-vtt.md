@@ -21,10 +21,21 @@ generic relay the user separately self-hosts for an unrelated project
 from it is reused here beyond the general approach): ThreeHats'
 `foundryvtt-rest-api` module (runs inside Foundry, holds a WebSocket
 connection out) plus a small self-hosted `foundryvtt-rest-api-relay` server
-that exposes a plain HTTP+JSON surface (`/create`, `/delete`, `/search`,
-`/get`, `/execute-js`, `/clients`), keyed by an API key and a `clientId`
-identifying which connected Foundry session to target. This backend only
-ever needs to speak HTTP to that relay — no WebSocket code lives here.
+that exposes a plain HTTP+JSON surface, keyed by an `x-api-key` header and a
+`clientId` identifying which connected Foundry session to target. This
+backend only ever needs to speak HTTP to that relay — no WebSocket code
+lives here. Confirmed against the relay's own published reference
+(foundryrestapi.com/docs/api) rather than assumed: the endpoints this
+feature uses are `POST /create` (upsert a document — `entityType`, `data`,
+a top-level `folder` UUID, `keepId`/`override` flags), `GET /clients`
+(connected sessions), and `POST /upload` (a genuine file-upload endpoint —
+see "Embedded images" below; there is **no** need for the arbitrary-script
+`/execute-js`/`/macro` primitives this feature was originally drafted
+against, which materially simplifies and de-risks the image-upload design).
+Every endpoint is additionally gated by a scope on the API key itself
+(`entity:write`, `file:write`, `clients:read` for what this feature uses) —
+the settings UI/onboarding should tell the user which scopes to grant when
+issuing a key on their relay.
 
 Two integration questions needed resolving before writing any code:
 1. Whether an article's rendered body (`ArticleRenderPort.renderBody`) is
@@ -114,51 +125,55 @@ the key, interpreted as an unsigned 256-bit integer and repeatedly reduced
 mod 62 to emit 16 characters from `[A-Za-z0-9]` (`StableFoundryId`, a pure
 domain utility, no new dependency). Every `/create` call sets `keepId:
 true, override: true`, making re-pushing the same source entity an
-in-place replace rather than a duplicate. One "Articles" and one "Handouts"
-`Folder` document per world get the same treatment, created once and
-referenced via `data.folder` on every JournalEntry pushed into that world.
+in-place replace rather than a duplicate. `folder` is a **top-level**
+field on the `/create` request body (a folder UUID), not nested inside
+`data` — confirmed against the relay's reference, corrected from this
+ADR's original draft. One "Articles" and one "Handouts" `Folder` document
+per world get the same create-with-stable-id treatment, referenced via
+that top-level `folder` field on every JournalEntry pushed into that world.
 
-### Embedded images: upload once, resolve idempotently inside one script
+### Embedded images: a real upload endpoint, not a script-execution workaround
 An article/handout body's `![alt](/api/media/{mediaId}/content)`
 references are extracted, their bytes fetched via `MediaContentQueryPort`,
 and uploaded into Foundry's own `Data/` storage at a fully server-derived
 path (`campaign-organizer/{worldId}/{stableId}.{ext}`) via the relay's
-`/execute-js` primitive — there is no dedicated upload endpoint; this is
-the documented mechanism for GM-privileged file writes. The generated
-script does its own existence check (`FilePicker.browse`) *inside the same
-script*, before uploading, so a re-push of an unchanged image costs one
-relay round trip and zero bytes rather than a second upload landing at an
-auto-renamed path (`FilePicker.upload` has no overwrite flag in vanilla
-Foundry and may rename on an existing-name conflict, which would silently
-break the "same id/path forever" idempotency story if blindly re-uploaded
-every push). The path used in the final Markdown `![alt](...)` reference is
-whatever `FilePicker.upload`/the browse check returns, never reconstructed
-by hand. The script never interpolates user-controlled strings (original
-filenames, alt text) — only the worldId (a UUID), the derived stable id,
-and a content-type-to-extension lookup drawn from `MediaAsset`'s own fixed,
-closed set of allowed types are ever embedded, so no JS-string escaping of
-untrusted input is needed at all, by construction.
+`POST /upload` endpoint — `{clientId, path, source: "data", filename,
+mimeType, overwrite}` as query parameters plus a JSON body
+`{"fileData": "data:<mime>;base64,<...>", "mimeType": "...", "overwrite":
+true}`. This ADR originally assumed no dedicated upload endpoint existed
+and designed around the relay's arbitrary-script `/execute-js` primitive
+plus a hand-rolled `FilePicker.browse`-then-upload existence check for
+idempotency; the relay's actual published reference confirms a first-class
+`/upload` endpoint instead, which is used here — no script generation, no
+JS-string-escaping concerns, and no need to reason about `/execute-js`'s
+eval/return semantics at all, since this feature has no other use for it.
+Idempotency comes directly from the endpoint's own `overwrite: true` flag
+against the same server-derived stable path — a re-push of an unchanged
+image is one upload call to the same path, not a browse-first check.
 
-A separate, lower size cap applies to images pushed through this path than
-this app's own upload limit: base64 inflates the payload roughly a third
-before it's embedded in one JSON POST relayed over a WebSocket and
-evaluated as a JS string literal in a live Foundry client, a meaningfully
-different cost profile than storing on this app's own disk.
-`FoundryPushLimits.MAX_IMAGE_BYTES` gates this — an oversized image is
-skipped (not truncated); the original `/api/media/...` reference is left in
-the pushed body, and the skip is surfaced back to the caller in
-`FoundryPushResult.warnings` so the UI can show it rather than the push
-silently "succeeding" with a missing picture.
+A separate, lower size cap than this app's own 50MB upload limit still
+applies here (`FoundryPushLimits.MAX_IMAGE_BYTES`) — base64 inflates the
+payload roughly a third before it crosses the relay's HTTP+WebSocket hop
+into a live Foundry client (the relay documents a 250MB ceiling on
+base64-encoded data, well above what's practical to push per article
+image regardless). An oversized image is skipped (not truncated); the
+original `/api/media/...` reference is left in the pushed body, and the
+skip is surfaced back to the caller in `FoundryPushResult.warnings` so the
+UI can show it rather than the push silently "succeeding" with a missing
+picture.
 
 ### Not yet verified against a live relay+Foundry instance
-Several assumptions carry real, flagged uncertainty until each phase's
-manual smoke test against the user's actual self-hosted relay:
-- The exact wrapping/eval semantics `/execute-js` uses around a submitted
-  script, and whether a `Data/`-relative path returned by `FilePicker.upload`
-  renders correctly as a Markdown image `src` inside Foundry's own journal
-  renderer without further prefixing.
-- The exact JSON shape of the relay's `GET /clients` response (assumed
-  `{"clients": [...]}` — not yet confirmed against a real relay instance).
+The relay's own published API reference (foundryrestapi.com/docs/api)
+resolved most of this ADR's original open questions — `/create`'s `folder`
+placement, `/upload`'s existence and shape, and `GET /clients`'s real
+response shape (a list of client objects with `clientId` among other
+fields, not a flat id-string list — the original draft's guess here was
+wrong and was fixed in `FoundryRelayClient` before the first push feature
+was built on top of it). What's genuinely still unverified, because the
+reference docs don't cover them and only a live instance can:
+- Whether the specific API key scopes this feature needs
+  (`entity:write`, `file:write`, `clients:read`) are exactly what the
+  user's relay setup grants by default, or need explicit enabling.
 - Foundry's actual `RollTable`/`TableResult` document schema for the
   Foundry version in use (field names have shifted across major Foundry
   versions), and whether its dice-formula syntax accepts this app's
@@ -234,14 +249,15 @@ over or assumed correct.
   inside Foundry.
 - **A WebSocket client in this backend, talking to the relay's real-time
   channel directly** — rejected: the relay's plain HTTP surface already
-  covers everything this feature needs (`/create`, `/execute-js`,
-  `/clients`); adding WebSocket plumbing for no functional gain would be
-  scope creep against an already-confirmed-sufficient integration.
-- **Blindly re-uploading an image on every push instead of a
-  browse-then-upload check** — rejected: risks Foundry auto-renaming on a
-  same-name conflict (no vanilla overwrite flag), which would defeat the
-  "same stable path forever" idempotency guarantee the JournalEntry side
-  otherwise gets for free from `keepId`/`override`.
+  covers everything this feature needs (`/create`, `/upload`, `/clients`);
+  adding WebSocket plumbing for no functional gain would be scope creep
+  against an already-confirmed-sufficient integration.
+- **Uploading images via the relay's `/execute-js` + `FilePicker.upload`**
+  — this ADR's original design, before the relay's actual API reference was
+  available — rejected once a first-class `/upload` endpoint was confirmed
+  to exist: no reason to generate and evaluate arbitrary JavaScript in a
+  live Foundry client for something the relay already does safely and
+  idempotently (`overwrite: true`) as a plain HTTP call.
 - **A shared or environment-configured default relay** — rejected outright,
   not merely deprioritized: this app's core privacy model treats every
   world's content and integrations as strictly private to its owning

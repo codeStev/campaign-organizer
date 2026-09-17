@@ -115,7 +115,9 @@ export function NextFoundrySettingsPage({ worldId, onAuthExpired }: Props) {
           <a href="https://github.com/ThreeHats/foundryvtt-rest-api" target="_blank" rel="noreferrer">
             foundryvtt-rest-api
           </a>{' '}
-          relay below.
+          relay below. When issuing an API key on your relay, grant it the{' '}
+          <code>entity:write</code>, <code>file:write</code>, and <code>clients:read</code> scopes
+          — pushes and the connection test below need all three.
         </p>
         {error && <p className="error">{error}</p>}
         <span className={`type-chip${configured ? ' active' : ''}`}>
