@@ -6,10 +6,17 @@ on:
     tags: ["v*.*.*"]
   pull_request:
   # Manual on-demand run from the GitHub UI ("Run workflow") or `gh workflow
-  # run ci.yml`. Only reaches the build/test jobs below - publish/release stay
-  # gated on `github.event_name == 'push'`, so a manual run never pushes
-  # images or cuts a release.
+  # run ci.yml`. By default this only reaches the build/test jobs below, same
+  # as a PR - the `publish` input is an explicit opt-in for also pushing
+  # images to the registry (and, when run against a vX.Y.Z tag ref via the
+  # "Use workflow from" picker, cutting a release), so a routine "does this
+  # still build" run never accidentally publishes anything.
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish images to the registry (and cut a release, if run against a vX.Y.Z tag)"
+        type: boolean
+        default: false
 
 # Only the latest run per ref matters; cancel superseded ones.
 concurrency:
@@ -86,10 +93,12 @@ jobs:
     needs: [backend, frontend, docker]
     # Every push to master keeps `latest` (+ commit SHA) current; a `vX.Y.Z`
     # release tag additionally publishes immutable semver-tagged images
-    # (ADR-0057). Nothing else (PRs, other branches) reaches this job.
+    # (ADR-0057). A manual dispatch reaches this job only with `publish`
+    # explicitly checked - otherwise it's a build-only run. Nothing else
+    # (PRs, other branches) reaches this job.
     if: |
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish))
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -185,9 +194,14 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [publish]
-    # Only a `vX.Y.Z` tag push cuts a release (ADR-0060); a plain master push
-    # never reaches this job.
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # Only a `vX.Y.Z` tag ref cuts a release (ADR-0060); a plain master push
+    # never reaches this job. A manual dispatch reaches it only when `publish`
+    # is checked and it's run against an existing vX.Y.Z tag - re-running
+    # against a tag that already has a release fails loudly at the `gh
+    # release create` step below rather than silently duplicating one.
+    if: |
+      startsWith(github.ref, 'refs/tags/v') &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish))
     timeout-minutes: 5
     permissions:
       contents: write
