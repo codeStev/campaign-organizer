@@ -1,13 +1,18 @@
 package com.campaignorganizer.interchange.foundry.adapter.out.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestToUriTemplate;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -17,11 +22,13 @@ import org.springframework.web.client.RestClient;
 
 /**
  * Unit tests for the one place the Foundry push feature actually touches the
- * network. The {@code /clients} fixture below is copied verbatim from the
- * relay's own published reference (foundryrestapi.com/docs/api/clients) — a
- * list of client *objects*, not a flat list of id strings, which an earlier
- * version of this client got wrong (assumed {@code List<String>} and would
- * have failed to deserialize against the real relay).
+ * network. Every request/response shape asserted here is confirmed against
+ * the relay's own published reference (foundryrestapi.com/docs/api), not
+ * assumed — the {@code /clients} fixture in particular is copied verbatim
+ * from the docs, since an earlier version of this client got that response
+ * shape wrong (assumed {@code List<String>}, the real shape is a list of
+ * client objects, and would have failed to deserialize against the real
+ * relay).
  */
 class FoundryRelayClientTest {
 
@@ -34,12 +41,12 @@ class FoundryRelayClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new FoundryRelayClient(builder.defaultHeader("x-api-key", "test-key").build());
+        client = new FoundryRelayClient(builder.defaultHeader("x-api-key", "test-key").build(), "test-client");
     }
 
     @Test
     void listClients_parsesClientIdOutOfTheRealResponseShape() {
-        server.expect(requestTo(URI.create(BASE_URL + "/clients")))
+        server.expect(requestToUriTemplate(BASE_URL + "/clients"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("x-api-key", "test-key"))
                 .andRespond(withSuccess(
@@ -76,9 +83,68 @@ class FoundryRelayClientTest {
 
     @Test
     void listClients_emptyListWhenNoneConnected() {
-        server.expect(requestTo(URI.create(BASE_URL + "/clients")))
+        server.expect(requestToUriTemplate(BASE_URL + "/clients"))
                 .andRespond(withSuccess("{\"clients\":[],\"total\":0}", MediaType.APPLICATION_JSON));
 
         assertThat(client.listClients()).isEmpty();
+    }
+
+    @Test
+    void create_sendsClientIdAsQueryParamAndFolderAsTopLevelField() {
+        server.expect(requestTo(startsWith(BASE_URL + "/create")))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("x-api-key", "test-key"))
+                .andExpect(queryParam("clientId", "test-client"))
+                .andExpect(jsonPath("$.entityType").value("JournalEntry"))
+                .andExpect(jsonPath("$.data.name").value("My Article"))
+                .andExpect(jsonPath("$.folder").value("folder123456789a"))
+                .andExpect(jsonPath("$.keepId").value(true))
+                .andExpect(jsonPath("$.override").value(true))
+                // The most important shape assertion here: "folder" must be a top-level
+                // field, not nested inside "data" — the relay's actual API disagrees with
+                // this feature's own first (uncorrected) draft on exactly this point.
+                .andExpect(jsonPath("$.data.folder").doesNotExist())
+                .andRespond(withSuccess("{\"success\":true}", MediaType.APPLICATION_JSON));
+
+        client.create("JournalEntry", Map.of("_id", "doc123456789abc", "name", "My Article"),
+                "folder123456789a");
+
+        server.verify();
+    }
+
+    @Test
+    void create_omitsFolderFieldWhenNull() {
+        server.expect(requestTo(startsWith(BASE_URL + "/create")))
+                .andExpect(jsonPath("$.folder").doesNotExist())
+                .andRespond(withSuccess("{\"success\":true}", MediaType.APPLICATION_JSON));
+
+        client.create("Folder", Map.of("_id", "folder123456789a", "name", "Articles"), null);
+
+        server.verify();
+    }
+
+    @Test
+    void upload_sendsBase64FileDataAndQueryParams() {
+        byte[] bytes = "hello".getBytes(StandardCharsets.UTF_8);
+
+        server.expect(requestTo(startsWith(BASE_URL + "/upload")))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(queryParam("clientId", "test-client"))
+                .andExpect(queryParam("path", "campaign-organizer/world1"))
+                .andExpect(queryParam("source", "data"))
+                .andExpect(queryParam("filename", "img.png"))
+                .andExpect(queryParam("mimeType", "image/png"))
+                .andExpect(queryParam("overwrite", "true"))
+                .andExpect(jsonPath("$.mimeType").value("image/png"))
+                .andExpect(jsonPath("$.overwrite").value(true))
+                .andExpect(jsonPath("$.fileData").value("data:image/png;base64,aGVsbG8="))
+                .andRespond(withSuccess(
+                        "{\"success\":true,\"path\":\"campaign-organizer/world1/img.png\"}",
+                        MediaType.APPLICATION_JSON));
+
+        String path = client.upload("campaign-organizer/world1", "data", "img.png", "image/png", bytes);
+
+        assertThat(path).isEqualTo("campaign-organizer/world1/img.png");
+        server.verify();
     }
 }

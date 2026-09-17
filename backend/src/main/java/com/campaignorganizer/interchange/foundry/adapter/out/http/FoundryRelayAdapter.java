@@ -2,7 +2,10 @@ package com.campaignorganizer.interchange.foundry.adapter.out.http;
 
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
 import com.campaignorganizer.interchange.foundry.domain.FoundryRelayException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -12,8 +15,53 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
 
     @Override
     public List<String> listConnectedClients(Credentials credentials) {
+        return call(credentials, client -> client.listClients());
+    }
+
+    @Override
+    public void upsertFolder(Credentials credentials, String folderId, String name) {
+        call(credentials, client -> {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("_id", folderId);
+            data.put("name", name);
+            // Foundry Folders are typed by the kind of document they hold — every Folder
+            // this feature creates today holds JournalEntry documents.
+            data.put("type", "JournalEntry");
+            client.create("Folder", data, null);
+            return null;
+        });
+    }
+
+    @Override
+    public void upsertJournalEntry(Credentials credentials, String documentId, String name, String markdownBody,
+                                   String folderId) {
+        call(credentials, client -> {
+            Map<String, Object> page = new LinkedHashMap<>();
+            page.put("name", name);
+            page.put("type", "text");
+            // format 2 = Markdown (Foundry's JournalEntryPage text format) — every body this
+            // feature pushes is already Markdown, ADR-0115.
+            page.put("text", Map.of("format", 2, "markdown", markdownBody));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("_id", documentId);
+            data.put("name", name);
+            data.put("pages", List.of(page));
+            client.create("JournalEntry", data, folderId);
+            return null;
+        });
+    }
+
+    @Override
+    public String uploadFile(Credentials credentials, String targetDir, String filename, String contentType,
+                             byte[] bytes) {
+        return call(credentials, client -> client.upload(targetDir, "data", filename, contentType, bytes));
+    }
+
+    private <T> T call(Credentials credentials, Function<FoundryRelayClient, T> call) {
         try {
-            return new FoundryRelayClient(credentials.relayBaseUrl(), credentials.apiKey()).listClients();
+            FoundryRelayClient client = new FoundryRelayClient(credentials.relayBaseUrl(), credentials.apiKey(),
+                    credentials.clientId());
+            return call.apply(client);
         } catch (RestClientException e) {
             // Never interpolate the API key or a raw exception message here — some
             // HTTP client exceptions echo request details. Only the relay's own
