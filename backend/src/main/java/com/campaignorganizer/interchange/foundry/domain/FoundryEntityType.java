@@ -5,5 +5,6 @@ public enum FoundryEntityType {
     ARTICLE,
     HANDOUT,
     ROLL_TABLE,
-    CARD_DECK
+    CARD_DECK,
+    SESSION_GUIDE
 }

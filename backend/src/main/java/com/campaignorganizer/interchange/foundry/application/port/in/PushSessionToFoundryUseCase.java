@@ -5,7 +5,9 @@ import java.util.UUID;
 
 /** Push everything a prepped session needs (ADR-0115) — the same content the existing
  * "print session packet" feature (ADR-0036) already discovers via beats: referenced
- * articles, session handouts, and any roll tables/card decks the beats chain to. Maps
+ * articles, session handouts, and any roll tables/card decks the beats chain to, plus a
+ * "Session Guide" JournalEntry containing the session's own beats in order (so the GM
+ * has the actual run-sheet inside Foundry, not just the referenced content). Maps
  * and statblocks are deliberately excluded (maps: exported from Dungeondraft directly;
  * statblocks: needs the still-deferred per-game-system Actor mapper), permanently — not
  * a temporary gap. */
@@ -16,8 +18,11 @@ public interface PushSessionToFoundryUseCase {
     /** Per-entity-type counts plus every warning collected across all the individual
      * pushes this ran (e.g. an oversized embedded image skipped on one of the
      * articles) — one flat list, since the UI shows them as a single summary rather
-     * than needing to trace a warning back to which specific entity produced it. */
+     * than needing to trace a warning back to which specific entity produced it.
+     * {@code sessionGuideDocumentId} is always non-null — a session always gets a guide
+     * pushed, even with zero beats. */
     record FoundrySessionPushResult(int articlesPushed, int handoutsPushed, int rollTablesPushed,
-                                    int cardDecksPushed, List<String> warnings) {
+                                    int cardDecksPushed, String sessionGuideDocumentId, int beatsIncluded,
+                                    List<String> warnings) {
     }
 }

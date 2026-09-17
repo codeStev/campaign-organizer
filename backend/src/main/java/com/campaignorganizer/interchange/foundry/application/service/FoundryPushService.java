@@ -16,6 +16,7 @@ import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRel
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.CardData;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.TableResultData;
 import com.campaignorganizer.interchange.foundry.domain.FoundryConnection;
+import com.campaignorganizer.interchange.foundry.domain.FoundryDocumentLinkRewriter;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
 import com.campaignorganizer.interchange.foundry.domain.FoundryPushLimits;
 import com.campaignorganizer.interchange.foundry.domain.FoundryPushRecord;
@@ -25,6 +26,9 @@ import com.campaignorganizer.media.application.port.published.MediaContentQueryP
 import com.campaignorganizer.media.application.port.published.MediaContentQueryPort.MediaContentView;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
+import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
@@ -39,6 +43,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.published.Artic
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -85,6 +90,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     private final Clock clock;
     private final BuildSessionPacketUseCase sessionPacket;
     private final SessionQueryPort sessions;
+    private final ArcBeatQueryPort arcBeats;
     // Package-private, not final: Spring always supplies the real proxy via the constructor
     // below in production. Tests in this package construct a plain instance (no Spring
     // context, no proxy) and assign this directly afterward, since the constructor can't
@@ -98,7 +104,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
                               CardDeckQueryPort cardDecks, MediaContentQueryPort media,
                               @Qualifier("foundryApiKeyEncryptor") TextEncryptor apiKeyEncryptor, IdGenerator ids,
                               Clock clock, BuildSessionPacketUseCase sessionPacket, SessionQueryPort sessions,
-                              @Lazy FoundryPushService self) {
+                              ArcBeatQueryPort arcBeats, @Lazy FoundryPushService self) {
         this.connections = connections;
         this.pushRecords = pushRecords;
         this.relay = relay;
@@ -113,6 +119,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         this.clock = clock;
         this.sessionPacket = sessionPacket;
         this.sessions = sessions;
+        this.arcBeats = arcBeats;
         // Self-injected proxy (ADR-0115) so pushSession's delegated calls below go through
         // Spring's real @Transactional interception instead of bypassing it via plain
         // self-invocation (calling `this.push(...)` directly would silently skip that
@@ -294,9 +301,8 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
      * DB transaction open across every relay HTTP call for every entity in the session. */
     @Override
     public FoundrySessionPushResult pushSession(UUID worldId, UUID campaignId, UUID sessionId) {
-        if (!sessions.existsInCampaign(sessionId, campaignId)) {
-            throw new NotFoundException("Session not found in campaign");
-        }
+        SessionView session = sessions.findByIdInCampaign(sessionId, campaignId)
+                .orElseThrow(() -> new NotFoundException("Session not found in campaign"));
         SessionPacketResponse packet = sessionPacket.packet(worldId, campaignId, sessionId);
         List<String> warnings = new ArrayList<>();
 
@@ -320,8 +326,101 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
             warnings.addAll(self.pushCardDeck(worldId, cardDeck.id()).warnings());
             cardDecksPushed++;
         }
+
+        List<ArcBeatView> beats = new ArrayList<>(arcBeats.findBySession(sessionId));
+        beats.sort(Comparator.comparingInt(ArcBeatView::position));
+        FoundryPushResult guideResult = self.pushSessionGuideDocument(worldId, sessionId, session, beats);
+        warnings.addAll(guideResult.warnings());
+
         return new FoundrySessionPushResult(articlesPushed, handoutsPushed, rollTablesPushed, cardDecksPushed,
-                warnings);
+                guideResult.foundryDocumentId(), beats.size(), warnings);
+    }
+
+    /** Builds and pushes the session's "Session Guide" JournalEntry — the session's own beats
+     * in order, so the GM has the actual run-sheet inside Foundry, not just the referenced
+     * content {@link #pushSession} pushes above. Package-private (not part of any use-case
+     * interface — purely an internal step of {@code pushSession}) but still {@code
+     * @Transactional} and called through {@link #self}, for the same reason every other
+     * entity-specific push in this class is: so this document's own persistence (the push
+     * record) gets a real, short-lived transaction rather than silently running with none. */
+    @Transactional
+    FoundryPushResult pushSessionGuideDocument(UUID worldId, UUID sessionId, SessionView session,
+                                               List<ArcBeatView> beats) {
+        Credentials credentials = credentialsFor(requireConnection(worldId));
+        List<String> warnings = new ArrayList<>();
+
+        StringBuilder markdown = new StringBuilder();
+        markdown.append("# ").append(guideTitle(session)).append("\n\n");
+        if (session.summary() != null && !session.summary().isBlank()) {
+            markdown.append(session.summary()).append("\n\n");
+        }
+        for (ArcBeatView beat : beats) {
+            markdown.append("## ").append(beat.title()).append("\n\n");
+            String body = beat.body();
+            if (body != null && !body.isBlank()) {
+                Set<String> targets = articleRenderer.linkTargets(body);
+                Map<String, UUID> resolved = targets.isEmpty() ? Map.of() : articles.resolveRefs(worldId, targets);
+                // Real clickable Foundry document links here (not the plain bold/italic every
+                // other pushed document uses) — @UUID[...] is Foundry's own content-link
+                // enricher syntax, same reference style already used for TableResult.documentUuid
+                // (Phase 4), not independently confirmed against Foundry's official docs the way
+                // other assumptions in this feature were; flag as unverified until live-tested.
+                String linked = FoundryDocumentLinkRewriter.rewrite(body, resolved::get,
+                        articleId -> StableFoundryId.from(documentKey(worldId, FoundryEntityType.ARTICLE, articleId)));
+                markdown.append(linked).append("\n\n");
+            }
+            String references = referencesLine(worldId, beat);
+            if (references != null) {
+                markdown.append(references).append("\n\n");
+            }
+        }
+
+        String folderId = upsertFolderFor(worldId, FoundryEntityType.SESSION_GUIDE, credentials);
+        String rewrittenBody = uploadEmbeddedMedia(worldId, markdown.toString(), credentials, warnings);
+        String documentId = StableFoundryId.from(documentKey(worldId, FoundryEntityType.SESSION_GUIDE, sessionId));
+        // markdownToHtml's flexmark renderer HTML-entity-encodes bare "@" as part of its
+        // autolink/email-obfuscation behavior (confirmed empirically: "@UUID[...]" comes back
+        // as "&#64;UUID[...]") - harmless for every other pushed document (none of them contain
+        // a literal "@"), but it would silently break every Foundry content-link in this guide,
+        // since Foundry's @UUID[...] enricher matches the literal "@" character in the HTML
+        // source, not its entity-encoded form. Reversing this one specific, self-generated
+        // sequence is safe: nothing else in this feature ever emits "&#64;UUID[".
+        String htmlBody = articleRenderer.markdownToHtml(rewrittenBody).replace("&#64;UUID[", "@UUID[");
+        relay.upsertJournalEntry(credentials, documentId, guideTitle(session), rewrittenBody, htmlBody, folderId);
+        recordPush(worldId, FoundryEntityType.SESSION_GUIDE, sessionId, documentId);
+
+        return new FoundryPushResult(documentId, clock.instant(), warnings);
+    }
+
+    private static String guideTitle(SessionView session) {
+        return session.sessionNumber() != null
+                ? "Session " + session.sessionNumber() + ": " + session.title()
+                : session.title();
+    }
+
+    /** A beat's own tagged article/table/deck references (distinct from any {@code [[wiki-link]]}
+     * mentioned inline in its body) as a "**References:**" line of real Foundry document links —
+     * statblock/encounter ids are deliberately never consulted here, permanently out of scope for
+     * this feature. Omits a reference silently (rather than failing the whole push) if the tagged
+     * entity no longer exists. Returns {@code null} (no line at all) when a beat tags nothing. */
+    private String referencesLine(UUID worldId, ArcBeatView beat) {
+        List<String> refs = new ArrayList<>();
+        for (UUID articleId : beat.articleIds()) {
+            articles.findByIdInWorld(articleId, worldId).ifPresent(a -> refs.add("@UUID[JournalEntry."
+                    + StableFoundryId.from(documentKey(worldId, FoundryEntityType.ARTICLE, articleId)) + "]{"
+                    + a.title() + "}"));
+        }
+        for (UUID tableId : beat.tableIds()) {
+            rollTables.findByIdInWorld(tableId, worldId).ifPresent(t -> refs.add("@UUID[RollTable."
+                    + StableFoundryId.from(documentKey(worldId, FoundryEntityType.ROLL_TABLE, tableId)) + "]{"
+                    + t.title() + "}"));
+        }
+        for (UUID deckId : beat.deckIds()) {
+            cardDecks.findByIdInWorld(deckId, worldId).ifPresent(d -> refs.add("@UUID[Cards."
+                    + StableFoundryId.from(documentKey(worldId, FoundryEntityType.CARD_DECK, deckId)) + "]{"
+                    + d.title() + "}"));
+        }
+        return refs.isEmpty() ? null : "**References:** " + String.join(", ", refs);
     }
 
     private void recordPush(UUID worldId, FoundryEntityType type, UUID entityId, String documentId) {
@@ -404,6 +503,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
             case HANDOUT -> "handouts";
             case ROLL_TABLE -> "rolltables";
             case CARD_DECK -> "carddecks";
+            case SESSION_GUIDE -> "sessionguides";
         };
     }
 
@@ -413,6 +513,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
             case HANDOUT -> "Handouts";
             case ROLL_TABLE -> "Roll Tables";
             case CARD_DECK -> "Card Decks";
+            case SESSION_GUIDE -> "Session Guides";
         };
     }
 

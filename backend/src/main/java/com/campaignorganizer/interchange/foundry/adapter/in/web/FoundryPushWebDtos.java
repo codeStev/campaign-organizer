@@ -15,6 +15,7 @@ public final class FoundryPushWebDtos {
     }
 
     public record FoundrySessionPushResponse(int articlesPushed, int handoutsPushed, int rollTablesPushed,
-                                             int cardDecksPushed, List<String> warnings) {
+                                             int cardDecksPushed, String sessionGuideDocumentId, int beatsIncluded,
+                                             List<String> warnings) {
     }
 }

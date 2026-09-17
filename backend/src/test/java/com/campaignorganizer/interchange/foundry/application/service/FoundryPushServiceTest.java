@@ -11,7 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatQueryPort;
+import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase.FoundryPushResult;
@@ -50,7 +53,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,17 +103,24 @@ class FoundryPushServiceTest {
     private BuildSessionPacketUseCase sessionPacket;
     @Mock
     private SessionQueryPort sessions;
+    @Mock
+    private ArcBeatQueryPort arcBeats;
 
     private FoundryPushService service;
 
     @BeforeEach
     void setUp() {
         service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, handouts,
-                rollTables, cardDecks, media, apiKeyEncryptor, ids, clock, sessionPacket, sessions, null);
+                rollTables, cardDecks, media, apiKeyEncryptor, ids, clock, sessionPacket, sessions, arcBeats, null);
         // Outside Spring there's no proxy to inject; pushSession's delegated calls go through
         // this plain instance directly, which is fine for a unit test with no @Transactional
         // semantics to worry about (see the field's own comment on why this exists at all).
         service.self = service;
+    }
+
+    private SessionView session(Integer sessionNumber, String summary) {
+        return new SessionView(sessionId, campaignId, "The Coastal Road", sessionNumber, null, summary, null,
+                Instant.EPOCH, Instant.EPOCH);
     }
 
     @Test
@@ -572,7 +584,7 @@ class FoundryPushServiceTest {
 
     @Test
     void pushSession_sessionNotFoundInCampaign_throwsNotFound() {
-        when(sessions.existsInCampaign(sessionId, campaignId)).thenReturn(false);
+        when(sessions.findByIdInCampaign(sessionId, campaignId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.pushSession(worldId, campaignId, sessionId))
                 .isInstanceOf(NotFoundException.class)
@@ -584,7 +596,8 @@ class FoundryPushServiceTest {
     @Test
     void pushSession_happyPath_delegatesToEachEntityPushAndCounts() {
         UUID nestedEntryId = UUID.randomUUID();
-        when(sessions.existsInCampaign(sessionId, campaignId)).thenReturn(true);
+        when(sessions.findByIdInCampaign(sessionId, campaignId)).thenReturn(Optional.of(session(3, null)));
+        when(arcBeats.findBySession(sessionId)).thenReturn(List.of());
         when(sessionPacket.packet(worldId, campaignId, sessionId)).thenReturn(new SessionPacketResponse(
                 null, null, List.of(), List.of(new PacketArticle(articleId, "An Article", "default", null, null)),
                 List.of(), List.of(),
@@ -620,17 +633,87 @@ class FoundryPushServiceTest {
         assertThat(result.handoutsPushed()).isEqualTo(1);
         assertThat(result.rollTablesPushed()).isEqualTo(1);
         assertThat(result.cardDecksPushed()).isEqualTo(1);
+        assertThat(result.beatsIncluded()).isEqualTo(0);
+        assertThat(result.sessionGuideDocumentId()).matches("^[A-Za-z0-9]{16}$");
         assertThat(result.warnings()).isEmpty();
-        // Article + handout both go through the shared JournalEntry path; roll table and
-        // card deck each get their own document type.
-        verify(relay, times(2)).upsertJournalEntry(any(), any(), any(), any(), any(), any());
+        // Article + handout both go through the shared JournalEntry path, and the session
+        // guide is a third JournalEntry; roll table and card deck each get their own type.
+        verify(relay, times(3)).upsertJournalEntry(any(), any(), any(), any(), any(), any());
         verify(relay).upsertRollTable(any(), any(), any(), any(), any(), any());
         verify(relay).upsertCardDeck(any(), any(), any(), any(), any());
     }
 
     @Test
+    void pushSession_happyPath_alsoPushesSessionGuideWithBeatsAndReferences() {
+        UUID referencedArticleId = UUID.randomUUID();
+        UUID inlineLinkedArticleId = UUID.randomUUID();
+        when(sessions.findByIdInCampaign(sessionId, campaignId)).thenReturn(Optional.of(session(3, "A stormy night.")));
+        when(sessionPacket.packet(worldId, campaignId, sessionId)).thenReturn(new SessionPacketResponse(
+                null, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                null));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        // Real flexmark HTML-entity-encodes a bare "@" (see FoundryLinkPassthroughTest) - simulate
+        // that here rather than echoing the input verbatim, so this test actually exercises
+        // FoundryPushService's "&#64;UUID[" -> "@UUID[" workaround instead of vacuously passing.
+        when(articleRenderer.markdownToHtml(any()))
+                .thenAnswer(inv -> ((String) inv.getArgument(0)).replace("@UUID[", "&#64;UUID["));
+        when(pushRecords.findByEntity(any(), any(), any())).thenReturn(Optional.empty());
+        when(ids.newId()).thenAnswer(inv -> UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ArcBeatView referencingBeat = new ArcBeatView(UUID.randomUUID(), UUID.randomUUID(), "Ambush",
+                "The party meets [[Old Empire]] scouts and a [[Nonexistent Article]].", false, List.of(),
+                List.of(), List.of(), List.of(), List.of(), sessionId, null, 1, Instant.EPOCH, Instant.EPOCH);
+        ArcBeatView taggingBeat = new ArcBeatView(UUID.randomUUID(), UUID.randomUUID(), "Aftermath", null, false,
+                List.of(referencedArticleId), List.of(), List.of(), List.of(), List.of(), sessionId, null, 2,
+                Instant.EPOCH, Instant.EPOCH);
+        when(arcBeats.findBySession(sessionId)).thenReturn(List.of(taggingBeat, referencingBeat));
+
+        when(articleRenderer.linkTargets(referencingBeat.body()))
+                .thenReturn(Set.of("old empire", "nonexistent article"));
+        when(articles.resolveRefs(worldId, Set.of("old empire", "nonexistent article")))
+                .thenReturn(Map.of("old empire", inlineLinkedArticleId));
+        when(articles.findByIdInWorld(referencedArticleId, worldId)).thenReturn(Optional.of(
+                new ArticleView(referencedArticleId, worldId, null, null, "Aftermath article", "aftermath-article",
+                        "default", null, Instant.EPOCH, Instant.EPOCH)));
+
+        FoundrySessionPushResult result = service.pushSession(worldId, campaignId, sessionId);
+
+        assertThat(result.beatsIncluded()).isEqualTo(2);
+        assertThat(result.sessionGuideDocumentId()).matches("^[A-Za-z0-9]{16}$");
+
+        ArgumentCaptor<String> markdownCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> htmlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(relay).upsertJournalEntry(any(), eq(result.sessionGuideDocumentId()), eq("Session 3: The Coastal Road"),
+                markdownCaptor.capture(), htmlCaptor.capture(), any());
+        String guideMarkdown = markdownCaptor.getValue();
+        // The pushed HTML must have real "@UUID[" links, not flexmark's "&#64;UUID[" encoding -
+        // this is what actually gets rendered in Foundry's journal viewer (the markdown field
+        // only feeds Foundry's own Markdown editing sheet), so if this were still mangled, every
+        // content link in the guide would silently fail to become clickable in Foundry.
+        assertThat(htmlCaptor.getValue()).doesNotContain("&#64;UUID[");
+        assertThat(htmlCaptor.getValue()).contains("@UUID[JournalEntry.");
+        // Beats are ordered by position (Ambush=1, Aftermath=2), not list order.
+        assertThat(guideMarkdown.indexOf("## Ambush")).isLessThan(guideMarkdown.indexOf("## Aftermath"));
+        // Resolved inline wiki-link -> a real Foundry content link, not bold/italic.
+        assertThat(guideMarkdown).contains("@UUID[JournalEntry."
+                + com.campaignorganizer.interchange.foundry.domain.StableFoundryId.from(
+                        "campaign-organizer:" + worldId + ":article:" + inlineLinkedArticleId)
+                + "]{Old Empire}");
+        // Broken inline wiki-link -> plain italic fallback, same as everywhere else.
+        assertThat(guideMarkdown).contains("*Nonexistent Article*");
+        // A beat's own tagged article reference -> a "References:" line with a real link.
+        assertThat(guideMarkdown).contains("**References:** @UUID[JournalEntry."
+                + com.campaignorganizer.interchange.foundry.domain.StableFoundryId.from(
+                        "campaign-organizer:" + worldId + ":article:" + referencedArticleId)
+                + "]{Aftermath article}");
+    }
+
+    @Test
     void pushSession_warningFromOneEntityStillSurfacesInAggregatedResult() {
-        when(sessions.existsInCampaign(sessionId, campaignId)).thenReturn(true);
+        when(sessions.findByIdInCampaign(sessionId, campaignId)).thenReturn(Optional.of(session(null, null)));
+        when(arcBeats.findBySession(sessionId)).thenReturn(List.of());
         UUID mediaId = UUID.randomUUID();
         String body = "![img](/api/media/" + mediaId + "/content)";
         when(sessionPacket.packet(worldId, campaignId, sessionId)).thenReturn(new SessionPacketResponse(
