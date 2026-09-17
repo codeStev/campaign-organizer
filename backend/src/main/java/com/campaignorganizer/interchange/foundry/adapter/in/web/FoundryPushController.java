@@ -2,11 +2,13 @@ package com.campaignorganizer.interchange.foundry.adapter.in.web;
 
 import com.campaignorganizer.interchange.foundry.adapter.in.web.FoundryPushWebDtos.FoundryPushResponse;
 import com.campaignorganizer.interchange.foundry.adapter.in.web.FoundryPushWebDtos.FoundryPushStatusResponse;
+import com.campaignorganizer.interchange.foundry.adapter.in.web.FoundryPushWebDtos.FoundrySessionPushResponse;
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushCardDeckToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushSessionToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,7 @@ public class FoundryPushController {
     private final PushHandoutToFoundryUseCase pushHandoutUseCase;
     private final PushRollTableToFoundryUseCase pushRollTableUseCase;
     private final PushCardDeckToFoundryUseCase pushCardDeckUseCase;
+    private final PushSessionToFoundryUseCase pushSessionUseCase;
     private final GetFoundryPushStatusUseCase statusUseCase;
     private final FoundryPushWebMapper mapper;
 
@@ -33,11 +36,13 @@ public class FoundryPushController {
                                  PushHandoutToFoundryUseCase pushHandoutUseCase,
                                  PushRollTableToFoundryUseCase pushRollTableUseCase,
                                  PushCardDeckToFoundryUseCase pushCardDeckUseCase,
+                                 PushSessionToFoundryUseCase pushSessionUseCase,
                                  GetFoundryPushStatusUseCase statusUseCase, FoundryPushWebMapper mapper) {
         this.pushArticleUseCase = pushArticleUseCase;
         this.pushHandoutUseCase = pushHandoutUseCase;
         this.pushRollTableUseCase = pushRollTableUseCase;
         this.pushCardDeckUseCase = pushCardDeckUseCase;
+        this.pushSessionUseCase = pushSessionUseCase;
         this.statusUseCase = statusUseCase;
         this.mapper = mapper;
     }
@@ -86,5 +91,12 @@ public class FoundryPushController {
     public FoundryPushStatusResponse cardDeckPushStatus(@PathVariable UUID worldId,
                                                         @PathVariable UUID cardDeckId) {
         return mapper.toStatusResponse(statusUseCase.statusFor(worldId, FoundryEntityType.CARD_DECK, cardDeckId));
+    }
+
+    @PostMapping("/campaigns/{campaignId}/sessions/{sessionId}/push")
+    @ResponseStatus(HttpStatus.OK)
+    public FoundrySessionPushResponse pushSession(@PathVariable UUID worldId, @PathVariable UUID campaignId,
+                                                  @PathVariable UUID sessionId) {
+        return mapper.toSessionResponse(pushSessionUseCase.pushSession(worldId, campaignId, sessionId));
     }
 }

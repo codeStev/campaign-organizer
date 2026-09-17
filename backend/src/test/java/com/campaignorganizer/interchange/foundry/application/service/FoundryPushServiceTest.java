@@ -11,9 +11,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutQueryPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase.FoundryPushResult;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushSessionToFoundryUseCase.FoundrySessionPushResult;
+import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketArticle;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketCardDeck;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketDeckCard;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketHandout;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketRollTable;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.PacketRollTableEntry;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.SessionPacketResponse;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
@@ -58,6 +68,8 @@ class FoundryPushServiceTest {
     private final UUID handoutId = UUID.randomUUID();
     private final UUID rollTableId = UUID.randomUUID();
     private final UUID cardDeckId = UUID.randomUUID();
+    private final UUID campaignId = UUID.randomUUID();
+    private final UUID sessionId = UUID.randomUUID();
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC);
 
     @Mock
@@ -82,13 +94,21 @@ class FoundryPushServiceTest {
     private TextEncryptor apiKeyEncryptor;
     @Mock
     private IdGenerator ids;
+    @Mock
+    private BuildSessionPacketUseCase sessionPacket;
+    @Mock
+    private SessionQueryPort sessions;
 
     private FoundryPushService service;
 
     @BeforeEach
     void setUp() {
         service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, handouts,
-                rollTables, cardDecks, media, apiKeyEncryptor, ids, clock);
+                rollTables, cardDecks, media, apiKeyEncryptor, ids, clock, sessionPacket, sessions, null);
+        // Outside Spring there's no proxy to inject; pushSession's delegated calls go through
+        // this plain instance directly, which is fine for a unit test with no @Transactional
+        // semantics to worry about (see the field's own comment on why this exists at all).
+        service.self = service;
     }
 
     @Test
@@ -548,6 +568,91 @@ class FoundryPushServiceTest {
         ArgumentCaptor<List<CardData>> cardsCaptor = ArgumentCaptor.forClass(List.class);
         verify(relay).upsertCardDeck(any(), anyString(), anyString(), cardsCaptor.capture(), anyString());
         assertThat(cardsCaptor.getValue().get(0).description()).contains("Chains to 1 other table(s)/deck(s)");
+    }
+
+    @Test
+    void pushSession_sessionNotFoundInCampaign_throwsNotFound() {
+        when(sessions.existsInCampaign(sessionId, campaignId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.pushSession(worldId, campaignId, sessionId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Session");
+
+        verifyNoInteractions(sessionPacket);
+    }
+
+    @Test
+    void pushSession_happyPath_delegatesToEachEntityPushAndCounts() {
+        UUID nestedEntryId = UUID.randomUUID();
+        when(sessions.existsInCampaign(sessionId, campaignId)).thenReturn(true);
+        when(sessionPacket.packet(worldId, campaignId, sessionId)).thenReturn(new SessionPacketResponse(
+                null, null, List.of(), List.of(new PacketArticle(articleId, "An Article", "default", null, null)),
+                List.of(), List.of(),
+                List.of(new PacketRollTable(rollTableId, "A Table", "1d6", 1, 6,
+                        List.of(new PacketRollTableEntry(1, 6, null)))),
+                List.of(new PacketCardDeck(cardDeckId, "A Deck", List.of(new PacketDeckCard("Ace", null)))),
+                List.of(new PacketHandout(handoutId, "A Handout", "PARCHMENT", "raw")),
+                List.of(), null));
+
+        // Boundary stubs for each entity's own push, mirroring that entity's individual
+        // happy-path test above exactly - pushSession must be able to actually complete
+        // each one, not just enumerate ids.
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(articles.findByIdInWorld(articleId, worldId)).thenReturn(Optional.of(article("plain body")));
+        when(articleRenderer.renderBodyAsMarkdown(worldId, "plain body")).thenReturn("plain body");
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(handouts.findByIdInWorld(handoutId, worldId)).thenReturn(Optional.of(handout("raw")));
+        when(rollTables.existsInWorld(rollTableId, worldId)).thenReturn(true);
+        when(rollTables.findByIdInWorld(rollTableId, worldId)).thenReturn(Optional.of(rollTable(
+                List.of(new RollTableEntryView(nestedEntryId, 1, 6, "raw", List.of(), List.of())))));
+        when(articleRenderer.renderBody(any(), any())).thenAnswer(inv -> inv.getArgument(1));
+        when(cardDecks.existsInWorld(cardDeckId, worldId)).thenReturn(true);
+        when(cardDecks.findByIdInWorld(cardDeckId, worldId)).thenReturn(Optional.of(
+                cardDeck(List.of(new DeckCardView(UUID.randomUUID(), "Ace", "raw", List.of(), List.of())))));
+        when(pushRecords.findByEntity(any(), any(), any())).thenReturn(Optional.empty());
+        when(ids.newId()).thenAnswer(inv -> UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundrySessionPushResult result = service.pushSession(worldId, campaignId, sessionId);
+
+        assertThat(result.articlesPushed()).isEqualTo(1);
+        assertThat(result.handoutsPushed()).isEqualTo(1);
+        assertThat(result.rollTablesPushed()).isEqualTo(1);
+        assertThat(result.cardDecksPushed()).isEqualTo(1);
+        assertThat(result.warnings()).isEmpty();
+        // Article + handout both go through the shared JournalEntry path; roll table and
+        // card deck each get their own document type.
+        verify(relay, times(2)).upsertJournalEntry(any(), any(), any(), any(), any(), any());
+        verify(relay).upsertRollTable(any(), any(), any(), any(), any(), any());
+        verify(relay).upsertCardDeck(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void pushSession_warningFromOneEntityStillSurfacesInAggregatedResult() {
+        when(sessions.existsInCampaign(sessionId, campaignId)).thenReturn(true);
+        UUID mediaId = UUID.randomUUID();
+        String body = "![img](/api/media/" + mediaId + "/content)";
+        when(sessionPacket.packet(worldId, campaignId, sessionId)).thenReturn(new SessionPacketResponse(
+                null, null, List.of(), List.of(new PacketArticle(articleId, "An Article", "default", null, null)),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null));
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(articles.findByIdInWorld(articleId, worldId)).thenReturn(Optional.of(article(body)));
+        when(articleRenderer.renderBodyAsMarkdown(worldId, body)).thenReturn(body);
+        when(articleRenderer.markdownToHtml(any())).thenAnswer(inv -> inv.getArgument(0));
+        byte[] tooBig = new byte[(int) FoundryPushLimits.MAX_IMAGE_BYTES + 1];
+        when(media.loadInWorld(mediaId, worldId))
+                .thenReturn(Optional.of(new MediaContentView("big.png", "image/png", tooBig)));
+        when(pushRecords.findByEntity(any(), any(), any())).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundrySessionPushResult result = service.pushSession(worldId, campaignId, sessionId);
+
+        assertThat(result.articlesPushed()).isEqualTo(1);
+        assertThat(result.warnings()).hasSize(1);
+        assertThat(result.warnings().get(0)).contains("big.png");
     }
 
     private RollTableView rollTable(List<RollTableEntryView> entries) {

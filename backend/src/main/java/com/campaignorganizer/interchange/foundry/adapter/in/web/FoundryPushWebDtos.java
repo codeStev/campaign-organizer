@@ -13,4 +13,8 @@ public final class FoundryPushWebDtos {
 
     public record FoundryPushStatusResponse(boolean pushed, String foundryDocumentId, Instant pushedAt) {
     }
+
+    public record FoundrySessionPushResponse(int articlesPushed, int handoutsPushed, int rollTablesPushed,
+                                             int cardDecksPushed, List<String> warnings) {
+    }
 }

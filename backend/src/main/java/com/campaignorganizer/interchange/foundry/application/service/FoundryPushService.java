@@ -5,6 +5,10 @@ import com.campaignorganizer.interchange.foundry.application.port.in.PushArticle
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushCardDeckToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushSessionToFoundryUseCase;
+import com.campaignorganizer.interchange.packet.application.port.in.BuildSessionPacketUseCase;
+import com.campaignorganizer.interchange.packet.application.port.in.SessionPacketDtos.SessionPacketResponse;
+import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
@@ -44,6 +48,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +62,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class FoundryPushService implements PushArticleToFoundryUseCase, PushHandoutToFoundryUseCase,
-        PushRollTableToFoundryUseCase, PushCardDeckToFoundryUseCase, GetFoundryPushStatusUseCase {
+        PushRollTableToFoundryUseCase, PushCardDeckToFoundryUseCase, PushSessionToFoundryUseCase,
+        GetFoundryPushStatusUseCase {
 
     /** Best-effort {@code TableResult.type} values (ADR-0115) — Foundry's official class docs
      * confirm the field exists but not its concrete strings for the version in use; these are
@@ -77,6 +83,13 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     private final TextEncryptor apiKeyEncryptor;
     private final IdGenerator ids;
     private final Clock clock;
+    private final BuildSessionPacketUseCase sessionPacket;
+    private final SessionQueryPort sessions;
+    // Package-private, not final: Spring always supplies the real proxy via the constructor
+    // below in production. Tests in this package construct a plain instance (no Spring
+    // context, no proxy) and assign this directly afterward, since the constructor can't
+    // reference the object currently being constructed.
+    FoundryPushService self;
 
     public FoundryPushService(FoundryConnectionRepositoryPort connections,
                               FoundryPushRecordRepositoryPort pushRecords, FoundryRelayPort relay,
@@ -84,7 +97,8 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
                               HandoutQueryPort handouts, RollTableQueryPort rollTables,
                               CardDeckQueryPort cardDecks, MediaContentQueryPort media,
                               @Qualifier("foundryApiKeyEncryptor") TextEncryptor apiKeyEncryptor, IdGenerator ids,
-                              Clock clock) {
+                              Clock clock, BuildSessionPacketUseCase sessionPacket, SessionQueryPort sessions,
+                              @Lazy FoundryPushService self) {
         this.connections = connections;
         this.pushRecords = pushRecords;
         this.relay = relay;
@@ -97,6 +111,17 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         this.apiKeyEncryptor = apiKeyEncryptor;
         this.ids = ids;
         this.clock = clock;
+        this.sessionPacket = sessionPacket;
+        this.sessions = sessions;
+        // Self-injected proxy (ADR-0115) so pushSession's delegated calls below go through
+        // Spring's real @Transactional interception instead of bypassing it via plain
+        // self-invocation (calling `this.push(...)` directly would silently skip that
+        // method's own @Transactional, since AOP proxying only applies to calls arriving
+        // through the proxy, never to a method calling a sibling method on itself). This
+        // keeps each entity's push in its own short transaction rather than requiring
+        // pushSession to hold one long transaction open across many outbound relay HTTP
+        // calls for every entity in the session.
+        this.self = self;
     }
 
     @Override
@@ -256,6 +281,47 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
                     + "confirmed document-reference field, so this was left as a plain-text note instead.");
         }
         return new CardData(cardId, name, description);
+    }
+
+    /** Pushes everything the existing "print session packet" feature (ADR-0036) already
+     * discovers for one session — referenced articles, session handouts, and any roll
+     * tables/card decks the session's beats chain to — by calling this class's own
+     * per-entity push methods through {@link #self} (see the constructor's comment on
+     * why: plain self-invocation would silently skip each one's own {@code @Transactional}).
+     * Deliberately no {@code @Transactional} here: this method does no persistence of its
+     * own, only delegates, and each delegated call already opens its own short
+     * transaction — wrapping the whole loop in one outer transaction would hold a single
+     * DB transaction open across every relay HTTP call for every entity in the session. */
+    @Override
+    public FoundrySessionPushResult pushSession(UUID worldId, UUID campaignId, UUID sessionId) {
+        if (!sessions.existsInCampaign(sessionId, campaignId)) {
+            throw new NotFoundException("Session not found in campaign");
+        }
+        SessionPacketResponse packet = sessionPacket.packet(worldId, campaignId, sessionId);
+        List<String> warnings = new ArrayList<>();
+
+        int articlesPushed = 0;
+        for (var article : packet.articles()) {
+            warnings.addAll(self.push(worldId, article.id()).warnings());
+            articlesPushed++;
+        }
+        int handoutsPushed = 0;
+        for (var handout : packet.handouts()) {
+            warnings.addAll(self.pushHandout(worldId, handout.id()).warnings());
+            handoutsPushed++;
+        }
+        int rollTablesPushed = 0;
+        for (var rollTable : packet.rollTables()) {
+            warnings.addAll(self.pushRollTable(worldId, rollTable.id()).warnings());
+            rollTablesPushed++;
+        }
+        int cardDecksPushed = 0;
+        for (var cardDeck : packet.cardDecks()) {
+            warnings.addAll(self.pushCardDeck(worldId, cardDeck.id()).warnings());
+            cardDecksPushed++;
+        }
+        return new FoundrySessionPushResult(articlesPushed, handoutsPushed, rollTablesPushed, cardDecksPushed,
+                warnings);
     }
 
     private void recordPush(UUID worldId, FoundryEntityType type, UUID entityId, String documentId) {
