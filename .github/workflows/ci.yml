@@ -5,6 +5,11 @@ on:
     branches: ["**"]
     tags: ["v*.*.*"]
   pull_request:
+  # Manual on-demand run from the GitHub UI ("Run workflow") or `gh workflow
+  # run ci.yml`. Only reaches the build/test jobs below - publish/release stay
+  # gated on `github.event_name == 'push'`, so a manual run never pushes
+  # images or cuts a release.
+  workflow_dispatch:
 
 # Only the latest run per ref matters; cancel superseded ones.
 concurrency:
