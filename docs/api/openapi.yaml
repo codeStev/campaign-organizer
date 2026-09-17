@@ -1016,6 +1016,69 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/foundry/articles/{articleId}/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: articleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [foundry]
+      summary: Push an article to Foundry as a JournalEntry (ADR-0115)
+      description: >-
+        Idempotent - re-pushing the same article updates the same Foundry
+        document in place rather than creating a duplicate. Wiki-links
+        resolve to plain Markdown emphasis, and embedded images are
+        uploaded to the relay and the body rewritten to point at them.
+      operationId: pushArticleToFoundry
+      responses:
+        '200':
+          description: The push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The article, or this world's Foundry connection, was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/articles/{articleId}/push-status:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: articleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [foundry]
+      summary: Whether, and when, this article was last pushed to Foundry (ADR-0115)
+      operationId: getArticleFoundryPushStatus
+      responses:
+        '200':
+          description: The push status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /worlds/{worldId}/foundry-connection/test:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -8168,6 +8231,38 @@ components:
           type: string
           nullable: true
           description: Why the test failed; null when ok is true.
+
+    FoundryPushResult:
+      type: object
+      required: [foundryDocumentId, pushedAt, warnings]
+      properties:
+        foundryDocumentId:
+          type: string
+          description: The stable Foundry document id this content was pushed to.
+        pushedAt:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          items:
+            type: string
+          description: >-
+            Non-fatal issues from this push (e.g. an oversized embedded
+            image that was skipped rather than uploaded).
+
+    FoundryPushStatus:
+      type: object
+      required: [pushed]
+      properties:
+        pushed:
+          type: boolean
+        foundryDocumentId:
+          type: string
+          nullable: true
+        pushedAt:
+          type: string
+          format: date-time
+          nullable: true
 
     CategoryRequest:
       type: object

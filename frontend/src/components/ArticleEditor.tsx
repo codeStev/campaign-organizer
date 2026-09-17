@@ -7,6 +7,7 @@ import {
   templatesApi,
   mediaApi,
   aiApi,
+  foundryPushApi,
   ArticleSummary,
   ArticleRevision,
   ArticleTemplate,
@@ -14,6 +15,7 @@ import {
   ARTICLE_TEMPLATES,
   Category,
   Usage,
+  FoundryPushStatus,
   ApiError,
 } from '../api/client';
 import { Button } from '../components/ui/button';
@@ -124,8 +126,11 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
   const api = useMemo(() => articlesApi(worldId), [worldId]);
   const media = useMemo(() => mediaApi(worldId), [worldId]);
   const ai = useMemo(() => aiApi(worldId), [worldId]);
+  const foundryPush = useMemo(() => foundryPushApi(worldId), [worldId]);
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [foundryStatus, setFoundryStatus] = useState<FoundryPushStatus | null>(null);
+  const [pushingToFoundry, setPushingToFoundry] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
   const [templates, setTemplates] = useState<ArticleTemplateInfo[]>([]);
   const [mode, setMode] = useState<'read' | 'edit'>('read');
@@ -187,12 +192,37 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
         setRevisions(null);
         setDiffPick([]);
         setUsages(null);
+        setFoundryStatus(null);
+        foundryPush
+          .articlePushStatus(id)
+          .then(setFoundryStatus)
+          .catch((err) => {
+            if (err instanceof ApiError && err.status === 401) onAuthExpired();
+          });
       } catch (err) {
         handleError(err);
       }
     },
-    [api, handleError, worldId],
+    [api, handleError, worldId, foundryPush, onAuthExpired],
   );
+
+  async function pushToFoundry() {
+    if (!draft?.id) return;
+    setPushingToFoundry(true);
+    try {
+      const result = await foundryPush.pushArticle(draft.id);
+      setFoundryStatus({ pushed: true, foundryDocumentId: result.foundryDocumentId, pushedAt: result.pushedAt });
+      if (result.warnings.length > 0) {
+        toast.error(result.warnings.join('; '));
+      } else {
+        toast.success('Pushed to Foundry');
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setPushingToFoundry(false);
+    }
+  }
 
   useEffect(() => {
     if (!articleId) {
@@ -448,6 +478,11 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
               </Button>
             )}
             {draft.id && (
+              <Button type="button" variant="link" onClick={() => void pushToFoundry()} disabled={pushingToFoundry}>
+                {pushingToFoundry ? 'Pushing…' : 'Push to Foundry'}
+              </Button>
+            )}
+            {draft.id && (
               <ConfirmDeleteDialog
                 trigger={
                   <Button type="button" variant="link" className="text-destructive hover:text-destructive">
@@ -460,6 +495,9 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
               />
             )}
           </div>
+          {foundryStatus?.pushed && (
+            <p className="muted hint">Pushed to Foundry {new Date(foundryStatus.pushedAt!).toLocaleString()}</p>
+          )}
           <p className="muted hint">
             Tip: link to another article with <code>[[Title]]</code> or <code>[[Title|label]]</code>.
           </p>
@@ -505,6 +543,9 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
           <Button type="button" variant="link" onClick={toggleHistory}>
             History
           </Button>
+          <Button type="button" variant="link" onClick={() => void pushToFoundry()} disabled={pushingToFoundry}>
+            {pushingToFoundry ? 'Pushing…' : 'Push to Foundry'}
+          </Button>
           <ConfirmDeleteDialog
             trigger={
               <Button type="button" variant="link" className="text-destructive hover:text-destructive">
@@ -516,6 +557,9 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
             onConfirm={handleDelete}
           />
         </div>
+        {foundryStatus?.pushed && (
+          <p className="muted hint">Pushed to Foundry {new Date(foundryStatus.pushedAt!).toLocaleString()}</p>
+        )}
       </div>
       <TagList worldId={worldId} tags={draft.tags} />
 

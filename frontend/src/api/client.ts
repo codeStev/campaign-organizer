@@ -833,6 +833,29 @@ export function foundryApi(worldId: string) {
   };
 }
 
+export interface FoundryPushResult {
+  foundryDocumentId: string;
+  pushedAt: string;
+  warnings: string[];
+}
+
+export interface FoundryPushStatus {
+  pushed: boolean;
+  foundryDocumentId: string | null;
+  pushedAt: string | null;
+}
+
+/** Push Campaign Organizer content into a world's connected Foundry session (ADR-0115). */
+export function foundryPushApi(worldId: string) {
+  const base = `/worlds/${worldId}/foundry`;
+  return {
+    pushArticle: (articleId: string) =>
+      request<FoundryPushResult>(`${base}/articles/${articleId}/push`, { method: 'POST' }),
+    articlePushStatus: (articleId: string) =>
+      request<FoundryPushStatus>(`${base}/articles/${articleId}/push-status`),
+  };
+}
+
 export function pinsApi(worldId: string, mapId: string) {
   const base = `/worlds/${worldId}/maps/${mapId}/pins`;
   return {
