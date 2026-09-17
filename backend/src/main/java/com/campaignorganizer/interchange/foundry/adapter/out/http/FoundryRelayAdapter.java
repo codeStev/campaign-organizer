@@ -2,6 +2,7 @@ package com.campaignorganizer.interchange.foundry.adapter.out.http;
 
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
 import com.campaignorganizer.interchange.foundry.domain.FoundryRelayException;
+import com.campaignorganizer.interchange.foundry.domain.StableFoundryId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,22 +38,36 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
     public void upsertJournalEntry(Credentials credentials, String documentId, String name, String markdownBody,
                                    String htmlBody, String folderId) {
         call(credentials, client -> {
-            Map<String, Object> page = new LinkedHashMap<>();
-            page.put("name", name);
-            page.put("type", "text");
-            // format 2 = Markdown (Foundry's JournalEntryPage text format) — but "content" is
-            // what Foundry's journal viewer actually renders; "markdown" only feeds Foundry's
-            // own Markdown editing sheet when a page is opened for editing there. Sending
-            // markdown alone (this feature's original design) left every pushed page
-            // rendering empty — confirmed against a real relay+Foundry instance, ADR-0115.
-            page.put("text", Map.of("format", 2, "markdown", markdownBody, "content", htmlBody));
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("_id", documentId);
             data.put("name", name);
-            data.put("pages", List.of(page));
+            data.put("pages", List.of(buildPage(documentId, name, markdownBody, htmlBody)));
             client.create("JournalEntry", data, folderId);
             return null;
         });
+    }
+
+    /** Package-visible for {@code FoundryRelayAdapterTest} — pure map-building, no HTTP. */
+    static Map<String, Object> buildPage(String documentId, String name, String markdownBody, String htmlBody) {
+        Map<String, Object> page = new LinkedHashMap<>();
+        // A JournalEntryPage is itself an embedded document keyed by its own _id, distinct
+        // from the parent JournalEntry's _id. Foundry's embedded-collection update semantics
+        // upsert an incoming "pages" array by that id; without one, every push sent a page
+        // with no stable identity, so each re-push was treated as a brand-new page to ADD
+        // rather than the existing one to replace — confirmed live: repeatedly pushing the
+        // same article accumulated a duplicate page per push instead of updating one in
+        // place. Deriving it from documentId (itself already a stable hash) keeps it
+        // deterministic without needing the original semantic key here.
+        page.put("_id", StableFoundryId.from(documentId + ":page"));
+        page.put("name", name);
+        page.put("type", "text");
+        // format 2 = Markdown (Foundry's JournalEntryPage text format) — but "content" is
+        // what Foundry's journal viewer actually renders; "markdown" only feeds Foundry's
+        // own Markdown editing sheet when a page is opened for editing there. Sending
+        // markdown alone (this feature's original design) left every pushed page
+        // rendering empty — confirmed against a real relay+Foundry instance, ADR-0115.
+        page.put("text", Map.of("format", 2, "markdown", markdownBody, "content", htmlBody));
+        return page;
     }
 
     @Override
