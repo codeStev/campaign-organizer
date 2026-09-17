@@ -144,21 +144,29 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         String folderId = upsertFolderFor(worldId, FoundryEntityType.ROLL_TABLE, credentials);
         List<TableResultData> results = new ArrayList<>();
         for (RollTableEntryView entry : table.entries()) {
-            results.add(toTableResult(worldId, entry, credentials, inProgress, warnings));
+            results.add(toTableResult(worldId, entry, table.minResult(), table.maxResult(), credentials,
+                    inProgress, warnings));
         }
         relay.upsertRollTable(credentials, documentId, table.title(), table.diceExpression(), results, folderId);
         recordPush(worldId, FoundryEntityType.ROLL_TABLE, rollTableId, documentId);
         return documentId;
     }
 
-    private TableResultData toTableResult(UUID worldId, RollTableEntryView entry, Credentials credentials,
-                                          Set<UUID> inProgress, List<String> warnings) {
+    private TableResultData toTableResult(UUID worldId, RollTableEntryView entry, int tableMinResult,
+                                          int tableMaxResult, Credentials credentials, Set<UUID> inProgress,
+                                          List<String> warnings) {
         String resultId = StableFoundryId.from(
                 "campaign-organizer:" + worldId + ":rolltable-entry:" + entry.id());
         String html = articleRenderer.renderBody(worldId, entry.body() == null ? "" : entry.body());
         String description = uploadEmbeddedMedia(worldId, html == null ? "" : html, credentials, warnings);
-        int min = entry.minResult() == null ? 0 : entry.minResult();
-        int max = entry.maxResult() == null ? 0 : entry.maxResult();
+        // A null/null entry is this app's own catch-all row — "covers every result no explicit
+        // entry claims" (RollTable.validateEntries). Foundry's TableResult has no equivalent
+        // "unclaimed range" concept, so the closest faithful single-row translation is the
+        // table's own full range; mapping it to [0,0] instead (as an earlier version of this
+        // method did) would make the row unreachable for any real dice expression (minimum
+        // roll >= 1), silently dropping the fallback the moment it's pushed to Foundry.
+        int min = entry.minResult() == null ? tableMinResult : entry.minResult();
+        int max = entry.maxResult() == null ? tableMaxResult : entry.maxResult();
 
         // At most one document reference per result — Foundry's TableResult has a single
         // documentUuid field, not a list. A nested table beyond the first, and every nested

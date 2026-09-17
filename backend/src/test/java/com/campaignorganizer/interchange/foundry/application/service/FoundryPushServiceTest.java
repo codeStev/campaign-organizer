@@ -326,6 +326,37 @@ class FoundryPushServiceTest {
     }
 
     @Test
+    void pushRollTable_catchAllEntry_getsTheTablesFullRangeNotZeroZero() {
+        // A null/null entry is this app's own catch-all row ("covers every result no explicit
+        // entry claims" — RollTable.validateEntries). Regression test: an earlier version of
+        // this mapping defaulted null bounds to 0, which is unreachable on any real dice roll
+        // (minimum result >= 1) and would silently drop the fallback row once pushed to Foundry.
+        RollTableEntryView explicit = new RollTableEntryView(UUID.randomUUID(), 1, 3, "Goblin", List.of(), List.of());
+        RollTableEntryView catchAll = new RollTableEntryView(UUID.randomUUID(), null, null, "Nothing", List.of(),
+                List.of());
+        when(rollTables.existsInWorld(rollTableId, worldId)).thenReturn(true);
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(rollTables.findByIdInWorld(rollTableId, worldId))
+                .thenReturn(Optional.of(rollTable(List.of(explicit, catchAll))));
+        when(articleRenderer.renderBody(eq(worldId), any())).thenAnswer(inv -> "<p>" + inv.getArgument(1) + "</p>");
+        when(pushRecords.findByEntity(worldId, FoundryEntityType.ROLL_TABLE, rollTableId))
+                .thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.pushRollTable(worldId, rollTableId);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<TableResultData>> resultsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(relay).upsertRollTable(any(), any(), any(), any(), resultsCaptor.capture(), any());
+        TableResultData catchAllResult = resultsCaptor.getValue().get(1);
+        // rollTable(...) builds tables with minResult=1, maxResult=6 (see the helper below).
+        assertThat(catchAllResult.rangeMin()).isEqualTo(1);
+        assertThat(catchAllResult.rangeMax()).isEqualTo(6);
+    }
+
+    @Test
     void pushRollTable_embeddedImageInEntryBody_isUploadedAndDescriptionRewritten() {
         UUID mediaId = UUID.randomUUID();
         String rendered = "<p><img src=\"/api/media/" + mediaId + "/content\"></p>";
