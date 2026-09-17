@@ -1143,6 +1143,71 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /worlds/{worldId}/foundry/roll-tables/{rollTableId}/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: rollTableId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [foundry]
+      summary: Push a roll table to Foundry as a native RollTable document (ADR-0115)
+      description: >-
+        Idempotent - re-pushing the same roll table updates the same Foundry
+        document in place. Unlike an article/handout, this pushes a formula
+        plus a results array built from each entry (rendered to HTML, since
+        Foundry's TableResult has no Markdown mode); an entry chaining to
+        another roll table recursively ensures that table is pushed first
+        and links to it, cutting reference cycles rather than looping.
+      operationId: pushRollTableToFoundry
+      responses:
+        '200':
+          description: The push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The roll table, or this world's Foundry connection, was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/roll-tables/{rollTableId}/push-status:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: rollTableId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [foundry]
+      summary: Whether, and when, this roll table was last pushed to Foundry (ADR-0115)
+      operationId: getRollTableFoundryPushStatus
+      responses:
+        '200':
+          description: The push status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /worlds/{worldId}/foundry-connection/test:
     parameters:
       - $ref: '#/components/parameters/WorldId'

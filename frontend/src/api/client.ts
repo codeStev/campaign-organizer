@@ -857,6 +857,10 @@ export function foundryPushApi(worldId: string) {
       request<FoundryPushResult>(`${base}/handouts/${handoutId}/push`, { method: 'POST' }),
     handoutPushStatus: (handoutId: string) =>
       request<FoundryPushStatus>(`${base}/handouts/${handoutId}/push-status`),
+    pushRollTable: (rollTableId: string) =>
+      request<FoundryPushResult>(`${base}/roll-tables/${rollTableId}/push`, { method: 'POST' }),
+    rollTablePushStatus: (rollTableId: string) =>
+      request<FoundryPushStatus>(`${base}/roll-tables/${rollTableId}/push-status`),
   };
 }
 
