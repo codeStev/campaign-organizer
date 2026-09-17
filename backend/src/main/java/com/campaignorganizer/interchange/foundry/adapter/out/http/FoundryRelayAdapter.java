@@ -2,6 +2,7 @@ package com.campaignorganizer.interchange.foundry.adapter.out.http;
 
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
 import com.campaignorganizer.interchange.foundry.domain.FoundryRelayException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,35 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
     public String uploadFile(Credentials credentials, String targetDir, String filename, String contentType,
                              byte[] bytes) {
         return call(credentials, client -> client.upload(targetDir, "data", filename, contentType, bytes));
+    }
+
+    @Override
+    public void upsertRollTable(Credentials credentials, String documentId, String name, String formula,
+                                List<TableResultData> results, String folderId) {
+        call(credentials, client -> {
+            List<Map<String, Object>> resultMaps = new ArrayList<>();
+            for (TableResultData result : results) {
+                Map<String, Object> resultMap = new LinkedHashMap<>();
+                resultMap.put("_id", result.id());
+                resultMap.put("range", List.of(result.rangeMin(), result.rangeMax()));
+                resultMap.put("description", result.description());
+                // Foundry's exact TableResult.type string constants for this version are not
+                // yet confirmed against a live instance (ADR-0115) — "text"/"document" are a
+                // documented best-effort guess, not a verified fact.
+                resultMap.put("type", result.type());
+                if (result.documentUuid() != null) {
+                    resultMap.put("documentUuid", result.documentUuid());
+                }
+                resultMaps.add(resultMap);
+            }
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("_id", documentId);
+            data.put("name", name);
+            data.put("formula", formula);
+            data.put("results", resultMaps);
+            client.create("RollTable", data, folderId);
+            return null;
+        });
     }
 
     private <T> T call(Credentials credentials, Function<FoundryRelayClient, T> call) {

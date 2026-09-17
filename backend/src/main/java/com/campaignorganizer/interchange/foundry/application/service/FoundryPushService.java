@@ -3,10 +3,12 @@ package com.campaignorganizer.interchange.foundry.application.service;
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.Credentials;
+import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.TableResultData;
 import com.campaignorganizer.interchange.foundry.domain.FoundryConnection;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
 import com.campaignorganizer.interchange.foundry.domain.FoundryPushLimits;
@@ -19,6 +21,9 @@ import com.campaignorganizer.handouts.application.port.published.HandoutQueryPor
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
+import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleView;
@@ -26,10 +31,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
@@ -45,7 +52,13 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class FoundryPushService implements PushArticleToFoundryUseCase, PushHandoutToFoundryUseCase,
-        GetFoundryPushStatusUseCase {
+        PushRollTableToFoundryUseCase, GetFoundryPushStatusUseCase {
+
+    /** Best-effort {@code TableResult.type} values (ADR-0115) — Foundry's official class docs
+     * confirm the field exists but not its concrete strings for the version in use; these are
+     * this feature's documented guess pending live verification, not a confirmed fact. */
+    private static final String RESULT_TYPE_TEXT = "text";
+    private static final String RESULT_TYPE_DOCUMENT = "document";
 
     private final FoundryConnectionRepositoryPort connections;
     private final FoundryPushRecordRepositoryPort pushRecords;
@@ -53,6 +66,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     private final ArticleQueryPort articles;
     private final ArticleRenderPort articleRenderer;
     private final HandoutQueryPort handouts;
+    private final RollTableQueryPort rollTables;
     private final MediaContentQueryPort media;
     private final TextEncryptor apiKeyEncryptor;
     private final IdGenerator ids;
@@ -61,7 +75,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     public FoundryPushService(FoundryConnectionRepositoryPort connections,
                               FoundryPushRecordRepositoryPort pushRecords, FoundryRelayPort relay,
                               ArticleQueryPort articles, ArticleRenderPort articleRenderer,
-                              HandoutQueryPort handouts, MediaContentQueryPort media,
+                              HandoutQueryPort handouts, RollTableQueryPort rollTables, MediaContentQueryPort media,
                               @Qualifier("foundryApiKeyEncryptor") TextEncryptor apiKeyEncryptor, IdGenerator ids,
                               Clock clock) {
         this.connections = connections;
@@ -70,6 +84,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         this.articles = articles;
         this.articleRenderer = articleRenderer;
         this.handouts = handouts;
+        this.rollTables = rollTables;
         this.media = media;
         this.apiKeyEncryptor = apiKeyEncryptor;
         this.ids = ids;
@@ -98,6 +113,87 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     }
 
     @Override
+    @Transactional
+    public FoundryPushResult pushRollTable(UUID worldId, UUID rollTableId) {
+        if (!rollTables.existsInWorld(rollTableId, worldId)) {
+            throw new NotFoundException("Roll table not found");
+        }
+        Credentials credentials = credentialsFor(requireConnection(worldId));
+        List<String> warnings = new ArrayList<>();
+        String documentId = ensureRollTablePushed(worldId, rollTableId, credentials, new LinkedHashSet<>(),
+                warnings);
+        return new FoundryPushResult(documentId, clock.instant(), warnings);
+    }
+
+    /** Pushes one roll table's {@code RollTable} document, recursing into any
+     * {@code nestedTableIds} an entry chains to so those tables exist in Foundry (and have a
+     * stable id to link to) before this table references them. {@code inProgress} guards
+     * reference cycles the same way this app's own domain already treats them at resolution
+     * time — "cut, not rejected": if a nested id is already being pushed higher up the same
+     * call stack, this returns its deterministic stable id directly instead of recursing again,
+     * so table A referencing B referencing back to A terminates rather than looping forever. */
+    private String ensureRollTablePushed(UUID worldId, UUID rollTableId, Credentials credentials,
+                                         Set<UUID> inProgress, List<String> warnings) {
+        String documentId = StableFoundryId.from(documentKey(worldId, FoundryEntityType.ROLL_TABLE, rollTableId));
+        if (!inProgress.add(rollTableId)) {
+            return documentId;
+        }
+        RollTableView table = rollTables.findByIdInWorld(rollTableId, worldId)
+                .orElseThrow(() -> new NotFoundException("Roll table not found"));
+
+        String folderId = upsertFolderFor(worldId, FoundryEntityType.ROLL_TABLE, credentials);
+        List<TableResultData> results = new ArrayList<>();
+        for (RollTableEntryView entry : table.entries()) {
+            results.add(toTableResult(worldId, entry, credentials, inProgress, warnings));
+        }
+        relay.upsertRollTable(credentials, documentId, table.title(), table.diceExpression(), results, folderId);
+        recordPush(worldId, FoundryEntityType.ROLL_TABLE, rollTableId, documentId);
+        return documentId;
+    }
+
+    private TableResultData toTableResult(UUID worldId, RollTableEntryView entry, Credentials credentials,
+                                          Set<UUID> inProgress, List<String> warnings) {
+        String resultId = StableFoundryId.from(
+                "campaign-organizer:" + worldId + ":rolltable-entry:" + entry.id());
+        String html = articleRenderer.renderBody(worldId, entry.body() == null ? "" : entry.body());
+        String description = uploadEmbeddedMedia(worldId, html == null ? "" : html, credentials, warnings);
+        int min = entry.minResult() == null ? 0 : entry.minResult();
+        int max = entry.maxResult() == null ? 0 : entry.maxResult();
+
+        // At most one document reference per result — Foundry's TableResult has a single
+        // documentUuid field, not a list. A nested table beyond the first, and every nested
+        // deck (Card Deck push doesn't exist yet), fall back to a plain-text note rather than
+        // being silently dropped or crashing the push.
+        List<UUID> nestedTables = entry.nestedTableIds();
+        if (!nestedTables.isEmpty()) {
+            UUID primary = nestedTables.get(0);
+            String nestedDocumentId = ensureRollTablePushed(worldId, primary, credentials, inProgress, warnings);
+            if (nestedTables.size() > 1 || !entry.nestedDeckIds().isEmpty()) {
+                warnings.add("Roll table entry chains to more than one table/deck; only the first "
+                        + "nested table is linked as a Foundry document reference, the rest were skipped.");
+            }
+            return new TableResultData(resultId, min, max, description, RESULT_TYPE_DOCUMENT,
+                    "RollTable." + nestedDocumentId);
+        }
+        if (!entry.nestedDeckIds().isEmpty()) {
+            warnings.add("Roll table entry chains to a card deck, which isn't pushed to Foundry yet "
+                    + "(Card Deck push is a later phase) — left as plain text.");
+        }
+        return new TableResultData(resultId, min, max, description, RESULT_TYPE_TEXT, null);
+    }
+
+    private void recordPush(UUID worldId, FoundryEntityType type, UUID entityId, String documentId) {
+        Instant now = clock.instant();
+        FoundryPushRecord record = pushRecords.findByEntity(worldId, type, entityId)
+                .map(r -> {
+                    r.recordPush(documentId, now);
+                    return r;
+                })
+                .orElseGet(() -> FoundryPushRecord.create(ids.newId(), worldId, type, entityId, documentId, now));
+        pushRecords.save(record);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<FoundryPushStatusView> statusFor(UUID worldId, FoundryEntityType entityType, UUID entityId) {
         return pushRecords.findByEntity(worldId, entityType, entityId)
@@ -116,17 +212,9 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
 
         String documentId = StableFoundryId.from(documentKey(worldId, type, entityId));
         relay.upsertJournalEntry(credentials, documentId, title, rewrittenBody, folderId);
+        recordPush(worldId, type, entityId, documentId);
 
-        Instant now = clock.instant();
-        FoundryPushRecord record = pushRecords.findByEntity(worldId, type, entityId)
-                .map(r -> {
-                    r.recordPush(documentId, now);
-                    return r;
-                })
-                .orElseGet(() -> FoundryPushRecord.create(ids.newId(), worldId, type, entityId, documentId, now));
-        pushRecords.save(record);
-
-        return new FoundryPushResult(documentId, now, warnings);
+        return new FoundryPushResult(documentId, clock.instant(), warnings);
     }
 
     private String upsertFolderFor(UUID worldId, FoundryEntityType type, Credentials credentials) {

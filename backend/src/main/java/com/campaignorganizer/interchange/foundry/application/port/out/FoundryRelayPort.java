@@ -12,6 +12,21 @@ public interface FoundryRelayPort {
     record Credentials(String relayBaseUrl, String apiKey, String clientId) {
     }
 
+    /** One {@code TableResult} row (ADR-0115) — field names/types confirmed against Foundry's
+     * own official document-schema docs (foundryvtt.com/api), a different reference from the
+     * relay's own transport docs: {@code range} is a plain {@code [min, max]} array, the body
+     * content field is {@code description} (HTML, not Markdown — {@code TableResult} has no
+     * Markdown mode unlike {@code JournalEntryPage}), and a chained/nested reference to another
+     * document uses a single {@code documentUuid} string (e.g. {@code "RollTable.<id>"}), not
+     * separate collection/id fields. {@code type}/{@code documentUuid} are {@code null} for a
+     * plain-text result. <b>Not yet verified against a live Foundry instance:</b> the exact
+     * string values Foundry uses for {@code type} (plain-text vs document-reference) — this
+     * class uses {@code "text"}/{@code "document"} as a documented best-effort guess (see
+     * {@code FoundryRelayAdapter}), not a confirmed fact. */
+    record TableResultData(String id, int rangeMin, int rangeMax, String description, String type,
+                           String documentUuid) {
+    }
+
     /** {@code clientId}s of every Foundry session currently connected to the relay. */
     List<String> listConnectedClients(Credentials credentials);
 
@@ -29,4 +44,8 @@ public interface FoundryRelayPort {
      * which is what makes re-uploading the same server-derived stable path idempotent).
      * Returns whatever path the relay reports back — used verbatim, never reconstructed. */
     String uploadFile(Credentials credentials, String targetDir, String filename, String contentType, byte[] bytes);
+
+    /** Idempotent upsert of a native {@code RollTable} document, placed in {@code folderId}. */
+    void upsertRollTable(Credentials credentials, String documentId, String name, String formula,
+                         List<TableResultData> results, String folderId);
 }

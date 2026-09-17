@@ -5,6 +5,7 @@ import com.campaignorganizer.interchange.foundry.adapter.in.web.FoundryPushWebDt
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -22,14 +23,17 @@ public class FoundryPushController {
 
     private final PushArticleToFoundryUseCase pushArticleUseCase;
     private final PushHandoutToFoundryUseCase pushHandoutUseCase;
+    private final PushRollTableToFoundryUseCase pushRollTableUseCase;
     private final GetFoundryPushStatusUseCase statusUseCase;
     private final FoundryPushWebMapper mapper;
 
     public FoundryPushController(PushArticleToFoundryUseCase pushArticleUseCase,
                                  PushHandoutToFoundryUseCase pushHandoutUseCase,
+                                 PushRollTableToFoundryUseCase pushRollTableUseCase,
                                  GetFoundryPushStatusUseCase statusUseCase, FoundryPushWebMapper mapper) {
         this.pushArticleUseCase = pushArticleUseCase;
         this.pushHandoutUseCase = pushHandoutUseCase;
+        this.pushRollTableUseCase = pushRollTableUseCase;
         this.statusUseCase = statusUseCase;
         this.mapper = mapper;
     }
@@ -54,5 +58,17 @@ public class FoundryPushController {
     @GetMapping("/handouts/{handoutId}/push-status")
     public FoundryPushStatusResponse handoutPushStatus(@PathVariable UUID worldId, @PathVariable UUID handoutId) {
         return mapper.toStatusResponse(statusUseCase.statusFor(worldId, FoundryEntityType.HANDOUT, handoutId));
+    }
+
+    @PostMapping("/roll-tables/{rollTableId}/push")
+    @ResponseStatus(HttpStatus.OK)
+    public FoundryPushResponse pushRollTable(@PathVariable UUID worldId, @PathVariable UUID rollTableId) {
+        return mapper.toResponse(pushRollTableUseCase.pushRollTable(worldId, rollTableId));
+    }
+
+    @GetMapping("/roll-tables/{rollTableId}/push-status")
+    public FoundryPushStatusResponse rollTablePushStatus(@PathVariable UUID worldId,
+                                                         @PathVariable UUID rollTableId) {
+        return mapper.toStatusResponse(statusUseCase.statusFor(worldId, FoundryEntityType.ROLL_TABLE, rollTableId));
     }
 }

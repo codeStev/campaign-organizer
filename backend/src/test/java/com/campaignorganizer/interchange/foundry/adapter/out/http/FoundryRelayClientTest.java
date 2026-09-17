@@ -113,6 +113,31 @@ class FoundryRelayClientTest {
     }
 
     @Test
+    void create_rollTableEntityTypeCarriesFormulaAndResultsWithFolderStillTopLevel() {
+        server.expect(requestTo(startsWith(BASE_URL + "/create")))
+                .andExpect(jsonPath("$.entityType").value("RollTable"))
+                .andExpect(jsonPath("$.data.formula").value("1d6"))
+                .andExpect(jsonPath("$.data.results[0].range[0]").value(1))
+                .andExpect(jsonPath("$.data.results[0].range[1]").value(3))
+                .andExpect(jsonPath("$.data.results[0].description").value("<p>Goblin</p>"))
+                .andExpect(jsonPath("$.folder").value("folder123456789a"))
+                .andExpect(jsonPath("$.data.folder").doesNotExist())
+                .andRespond(withSuccess("{\"success\":true}", MediaType.APPLICATION_JSON));
+
+        Map<String, Object> result = Map.of(
+                "_id", "result123456789a",
+                "range", List.of(1, 3),
+                "description", "<p>Goblin</p>",
+                "type", "text");
+        client.create("RollTable",
+                Map.of("_id", "table123456789ab", "name", "A Table", "formula", "1d6", "results",
+                        List.of(result)),
+                "folder123456789a");
+
+        server.verify();
+    }
+
+    @Test
     void create_omitsFolderFieldWhenNull() {
         server.expect(requestTo(startsWith(BASE_URL + "/create")))
                 .andExpect(jsonPath("$.folder").doesNotExist())
