@@ -845,6 +845,14 @@ export interface FoundryPushStatus {
   pushedAt: string | null;
 }
 
+export interface FoundrySessionPushResult {
+  articlesPushed: number;
+  handoutsPushed: number;
+  rollTablesPushed: number;
+  cardDecksPushed: number;
+  warnings: string[];
+}
+
 /** Push Campaign Organizer content into a world's connected Foundry session (ADR-0115). */
 export function foundryPushApi(worldId: string) {
   const base = `/worlds/${worldId}/foundry`;
@@ -865,6 +873,10 @@ export function foundryPushApi(worldId: string) {
       request<FoundryPushResult>(`${base}/card-decks/${cardDeckId}/push`, { method: 'POST' }),
     cardDeckPushStatus: (cardDeckId: string) =>
       request<FoundryPushStatus>(`${base}/card-decks/${cardDeckId}/push-status`),
+    pushSession: (campaignId: string, sessionId: string) =>
+      request<FoundrySessionPushResult>(`${base}/campaigns/${campaignId}/sessions/${sessionId}/push`, {
+        method: 'POST',
+      }),
   };
 }
 

@@ -6,6 +6,7 @@ import {
   campaignsApi,
   sessionsApi,
   handoutsApi,
+  foundryPushApi,
   Beat,
   Campaign,
   Session,
@@ -73,12 +74,14 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
   const [packetOpen, setPacketOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
   const [cheatOpen, setCheatOpen] = useState(false);
+  const [pushingSessionToFoundry, setPushingSessionToFoundry] = useState(false);
 
   const campaign = campaigns.find((c) => c.id === urlCampaignId) ?? null;
   const api = useMemo(
     () => (urlCampaignId ? sessionsApi(worldId, urlCampaignId) : null),
     [worldId, urlCampaignId],
   );
+  const foundryPush = useMemo(() => foundryPushApi(worldId), [worldId]);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -153,6 +156,27 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
     setSummarizing(false);
     setSummaryText(null);
     setSummaryError(null);
+  }
+
+  async function pushSessionToFoundry() {
+    if (!urlCampaignId || !urlSessionId || urlSessionId === 'new') return;
+    setPushingSessionToFoundry(true);
+    try {
+      const result = await foundryPush.pushSession(urlCampaignId, urlSessionId);
+      const parts: string[] = [];
+      if (result.articlesPushed > 0) parts.push(`${result.articlesPushed} article(s)`);
+      if (result.handoutsPushed > 0) parts.push(`${result.handoutsPushed} handout(s)`);
+      if (result.rollTablesPushed > 0) parts.push(`${result.rollTablesPushed} roll table(s)`);
+      if (result.cardDecksPushed > 0) parts.push(`${result.cardDecksPushed} card deck(s)`);
+      toast.success(parts.length > 0 ? `Pushed ${parts.join(', ')} to Foundry` : 'Nothing to push for this session');
+      if (result.warnings.length > 0) {
+        toast.error(result.warnings.join('; '));
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setPushingSessionToFoundry(false);
+    }
   }
 
   const openSession = urlSessionId && urlSessionId !== 'new' ? sessions.find((s) => s.id === urlSessionId) ?? null : null;
@@ -342,6 +366,14 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
                 </Button>
                 <Button variant="link" onClick={() => setRecapOpen(true)} title="Print the story so far">
                   🖨 Recap
+                </Button>
+                <Button
+                  variant="link"
+                  onClick={() => void pushSessionToFoundry()}
+                  disabled={pushingSessionToFoundry}
+                  title="Push articles, handouts, roll tables & card decks from this session — not maps or statblocks"
+                >
+                  {pushingSessionToFoundry ? 'Pushing…' : '📤 Push to Foundry'}
                 </Button>
               </div>
             </div>
