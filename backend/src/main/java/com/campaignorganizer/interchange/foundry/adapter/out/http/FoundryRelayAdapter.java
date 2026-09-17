@@ -87,6 +87,30 @@ public class FoundryRelayAdapter implements FoundryRelayPort {
         });
     }
 
+    @Override
+    public void upsertCardDeck(Credentials credentials, String documentId, String name, List<CardData> cards,
+                               String folderId) {
+        call(credentials, client -> {
+            List<Map<String, Object>> cardMaps = new ArrayList<>();
+            for (CardData card : cards) {
+                Map<String, Object> cardMap = new LinkedHashMap<>();
+                cardMap.put("_id", card.id());
+                cardMap.put("name", card.name());
+                cardMap.put("description", card.description());
+                cardMaps.add(cardMap);
+            }
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("_id", documentId);
+            data.put("name", name);
+            // This feature only ever creates a plain deck (never a hand/pile) — Foundry's
+            // Cards.type distinguishes the three.
+            data.put("type", "deck");
+            data.put("cards", cardMaps);
+            client.create("Cards", data, folderId);
+            return null;
+        });
+    }
+
     private <T> T call(Credentials credentials, Function<FoundryRelayClient, T> call) {
         try {
             FoundryRelayClient client = new FoundryRelayClient(credentials.relayBaseUrl(), credentials.apiKey(),

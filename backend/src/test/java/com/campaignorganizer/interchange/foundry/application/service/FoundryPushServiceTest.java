@@ -17,6 +17,7 @@ import com.campaignorganizer.interchange.foundry.application.port.in.PushArticle
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
+import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.CardData;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.TableResultData;
 import com.campaignorganizer.interchange.foundry.domain.FoundryConnection;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
@@ -26,6 +27,9 @@ import com.campaignorganizer.media.application.port.published.MediaContentQueryP
 import com.campaignorganizer.media.application.port.published.MediaContentQueryPort.MediaContentView;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
@@ -53,6 +57,7 @@ class FoundryPushServiceTest {
     private final UUID articleId = UUID.randomUUID();
     private final UUID handoutId = UUID.randomUUID();
     private final UUID rollTableId = UUID.randomUUID();
+    private final UUID cardDeckId = UUID.randomUUID();
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC);
 
     @Mock
@@ -70,6 +75,8 @@ class FoundryPushServiceTest {
     @Mock
     private RollTableQueryPort rollTables;
     @Mock
+    private CardDeckQueryPort cardDecks;
+    @Mock
     private MediaContentQueryPort media;
     @Mock
     private TextEncryptor apiKeyEncryptor;
@@ -81,7 +88,7 @@ class FoundryPushServiceTest {
     @BeforeEach
     void setUp() {
         service = new FoundryPushService(connections, pushRecords, relay, articles, articleRenderer, handouts,
-                rollTables, media, apiKeyEncryptor, ids, clock);
+                rollTables, cardDecks, media, apiKeyEncryptor, ids, clock);
     }
 
     @Test
@@ -426,9 +433,123 @@ class FoundryPushServiceTest {
         assertThat(aDocId).isNotBlank();
     }
 
+    @Test
+    void pushCardDeck_cardDeckNotFound_throwsNotFound() {
+        when(cardDecks.existsInWorld(cardDeckId, worldId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.pushCardDeck(worldId, cardDeckId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Card deck");
+    }
+
+    @Test
+    void pushCardDeck_noConnectionConfigured_throwsNotFound() {
+        when(cardDecks.existsInWorld(cardDeckId, worldId)).thenReturn(true);
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.pushCardDeck(worldId, cardDeckId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Foundry connection");
+    }
+
+    @Test
+    void pushCardDeck_happyPath_upsertsFolderAndDeckTypeAndCards() {
+        DeckCardView card1 = new DeckCardView(UUID.randomUUID(), "Ace", "Draw one", List.of(), List.of());
+        DeckCardView card2 = new DeckCardView(UUID.randomUUID(), null, "No title", List.of(), List.of());
+        when(cardDecks.existsInWorld(cardDeckId, worldId)).thenReturn(true);
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(cardDecks.findByIdInWorld(cardDeckId, worldId)).thenReturn(Optional.of(cardDeck(List.of(card1, card2))));
+        when(articleRenderer.renderBody(worldId, "Draw one")).thenReturn("<p>Draw one</p>");
+        when(articleRenderer.renderBody(worldId, "No title")).thenReturn("<p>No title</p>");
+        when(pushRecords.findByEntity(worldId, FoundryEntityType.CARD_DECK, cardDeckId)).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundryPushResult result = service.pushCardDeck(worldId, cardDeckId);
+
+        assertThat(result.foundryDocumentId()).matches("^[A-Za-z0-9]{16}$");
+        assertThat(result.warnings()).isEmpty();
+        verify(relay).upsertFolder(eq(expectedCredentials()), anyString(), eq("Card Decks"));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<CardData>> cardsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(relay).upsertCardDeck(eq(expectedCredentials()), eq(result.foundryDocumentId()), eq("A Deck"),
+                cardsCaptor.capture(), anyString());
+        List<CardData> cards = cardsCaptor.getValue();
+        assertThat(cards).hasSize(2);
+        assertThat(cards.get(0).name()).isEqualTo("Ace");
+        assertThat(cards.get(0).description()).isEqualTo("<p>Draw one</p>");
+        // A blank/null title falls back to the plain string "Card" — mirrors
+        // NextTablesView.tsx's own existing display convention for the same case.
+        assertThat(cards.get(1).name()).isEqualTo("Card");
+        verify(pushRecords).save(any(FoundryPushRecord.class));
+    }
+
+    @Test
+    void pushCardDeck_embeddedImageInCardBody_isUploadedAndDescriptionRewritten() {
+        UUID mediaId = UUID.randomUUID();
+        DeckCardView card = new DeckCardView(UUID.randomUUID(), "Ace", "See ![img](/api/media/" + mediaId
+                + "/content)", List.of(), List.of());
+        when(cardDecks.existsInWorld(cardDeckId, worldId)).thenReturn(true);
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(cardDecks.findByIdInWorld(cardDeckId, worldId)).thenReturn(Optional.of(cardDeck(List.of(card))));
+        when(articleRenderer.renderBody(eq(worldId), any()))
+                .thenReturn("<p>See <img src=\"/api/media/" + mediaId + "/content\"></p>");
+        when(media.loadInWorld(mediaId, worldId))
+                .thenReturn(Optional.of(new MediaContentView("pic.png", "image/png", new byte[]{1, 2, 3})));
+        when(relay.uploadFile(eq(expectedCredentials()), anyString(), anyString(), eq("image/png"), any()))
+                .thenReturn("campaign-organizer/" + worldId + "/pic.png");
+        when(pushRecords.findByEntity(worldId, FoundryEntityType.CARD_DECK, cardDeckId)).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.pushCardDeck(worldId, cardDeckId);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<CardData>> cardsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(relay).upsertCardDeck(any(), anyString(), anyString(), cardsCaptor.capture(), anyString());
+        assertThat(cardsCaptor.getValue().get(0).description())
+                .contains("campaign-organizer/" + worldId + "/pic.png")
+                .doesNotContain("/api/media/" + mediaId);
+    }
+
+    @Test
+    void pushCardDeck_cardWithNestedReference_fallsBackToPlainTextNoteWithWarning() {
+        UUID nestedTableId = UUID.randomUUID();
+        DeckCardView card = new DeckCardView(UUID.randomUUID(), "Ace", "Draw again", List.of(nestedTableId),
+                List.of());
+        when(cardDecks.existsInWorld(cardDeckId, worldId)).thenReturn(true);
+        when(connections.findByWorldId(worldId)).thenReturn(Optional.of(connection()));
+        when(apiKeyEncryptor.decrypt("enc-key")).thenReturn("plain-key");
+        when(cardDecks.findByIdInWorld(cardDeckId, worldId)).thenReturn(Optional.of(cardDeck(List.of(card))));
+        when(articleRenderer.renderBody(worldId, "Draw again")).thenReturn("<p>Draw again</p>");
+        when(pushRecords.findByEntity(worldId, FoundryEntityType.CARD_DECK, cardDeckId)).thenReturn(Optional.empty());
+        when(ids.newId()).thenReturn(UUID.randomUUID());
+        when(pushRecords.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FoundryPushResult result = service.pushCardDeck(worldId, cardDeckId);
+
+        // No real Foundry document reference is fabricated for a card (Card has no confirmed
+        // documentUuid-equivalent field) — the push must still succeed, not crash, and must
+        // surface the limitation as a warning rather than silently dropping the chain.
+        assertThat(result.warnings()).hasSize(1);
+        assertThat(result.warnings().get(0)).contains("chains to another table/deck");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<CardData>> cardsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(relay).upsertCardDeck(any(), anyString(), anyString(), cardsCaptor.capture(), anyString());
+        assertThat(cardsCaptor.getValue().get(0).description()).contains("Chains to 1 other table(s)/deck(s)");
+    }
+
     private RollTableView rollTable(List<RollTableEntryView> entries) {
         return new RollTableView(rollTableId, worldId, null, "A Table", null, "1d6", 1, 6, entries, Instant.EPOCH,
                 Instant.EPOCH);
+    }
+
+    private CardDeckView cardDeck(List<DeckCardView> cards) {
+        return new CardDeckView(cardDeckId, worldId, null, "A Deck", null, cards, Instant.EPOCH, Instant.EPOCH);
     }
 
     private HandoutView handout(String body) {

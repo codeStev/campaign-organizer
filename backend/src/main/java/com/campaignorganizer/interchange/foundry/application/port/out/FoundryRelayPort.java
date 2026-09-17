@@ -27,6 +27,17 @@ public interface FoundryRelayPort {
                            String documentUuid) {
     }
 
+    /** One embedded {@code Card} (ADR-0115) — field names/types confirmed against Foundry's own
+     * official document-schema docs (foundryvtt.com/api): {@code name} and {@code description}
+     * (HTML, not Markdown — same as {@code TableResult}, {@code Card} has no Markdown mode
+     * either). <b>Not yet verified against a live Foundry instance:</b> unlike {@code
+     * TableResult}, the fetched class docs for {@code Card} did not confirm any
+     * document-reference field analogous to {@code documentUuid} — this feature therefore
+     * never attempts real Foundry document linking for a card's chained table/deck references;
+     * see {@code FoundryPushService} for the plain-text-note fallback this uses instead. */
+    record CardData(String id, String name, String description) {
+    }
+
     /** {@code clientId}s of every Foundry session currently connected to the relay. */
     List<String> listConnectedClients(Credentials credentials);
 
@@ -48,4 +59,9 @@ public interface FoundryRelayPort {
     /** Idempotent upsert of a native {@code RollTable} document, placed in {@code folderId}. */
     void upsertRollTable(Credentials credentials, String documentId, String name, String formula,
                          List<TableResultData> results, String folderId);
+
+    /** Idempotent upsert of a native {@code Cards} document (always {@code type: "deck"} for
+     * this feature), placed in {@code folderId}. */
+    void upsertCardDeck(Credentials credentials, String documentId, String name, List<CardData> cards,
+                        String folderId);
 }

@@ -3,11 +3,13 @@ package com.campaignorganizer.interchange.foundry.application.service;
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushCardDeckToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryConnectionRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryPushRecordRepositoryPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.Credentials;
+import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.CardData;
 import com.campaignorganizer.interchange.foundry.application.port.out.FoundryRelayPort.TableResultData;
 import com.campaignorganizer.interchange.foundry.domain.FoundryConnection;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
@@ -21,6 +23,9 @@ import com.campaignorganizer.handouts.application.port.published.HandoutQueryPor
 import com.campaignorganizer.handouts.application.port.published.HandoutView;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckQueryPort;
+import com.campaignorganizer.tables.application.carddeck.port.published.CardDeckView;
+import com.campaignorganizer.tables.application.carddeck.port.published.DeckCardView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableEntryView;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableQueryPort;
 import com.campaignorganizer.tables.application.rolltable.port.published.RollTableView;
@@ -52,7 +57,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class FoundryPushService implements PushArticleToFoundryUseCase, PushHandoutToFoundryUseCase,
-        PushRollTableToFoundryUseCase, GetFoundryPushStatusUseCase {
+        PushRollTableToFoundryUseCase, PushCardDeckToFoundryUseCase, GetFoundryPushStatusUseCase {
 
     /** Best-effort {@code TableResult.type} values (ADR-0115) — Foundry's official class docs
      * confirm the field exists but not its concrete strings for the version in use; these are
@@ -67,6 +72,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     private final ArticleRenderPort articleRenderer;
     private final HandoutQueryPort handouts;
     private final RollTableQueryPort rollTables;
+    private final CardDeckQueryPort cardDecks;
     private final MediaContentQueryPort media;
     private final TextEncryptor apiKeyEncryptor;
     private final IdGenerator ids;
@@ -75,7 +81,8 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
     public FoundryPushService(FoundryConnectionRepositoryPort connections,
                               FoundryPushRecordRepositoryPort pushRecords, FoundryRelayPort relay,
                               ArticleQueryPort articles, ArticleRenderPort articleRenderer,
-                              HandoutQueryPort handouts, RollTableQueryPort rollTables, MediaContentQueryPort media,
+                              HandoutQueryPort handouts, RollTableQueryPort rollTables,
+                              CardDeckQueryPort cardDecks, MediaContentQueryPort media,
                               @Qualifier("foundryApiKeyEncryptor") TextEncryptor apiKeyEncryptor, IdGenerator ids,
                               Clock clock) {
         this.connections = connections;
@@ -85,6 +92,7 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
         this.articleRenderer = articleRenderer;
         this.handouts = handouts;
         this.rollTables = rollTables;
+        this.cardDecks = cardDecks;
         this.media = media;
         this.apiKeyEncryptor = apiKeyEncryptor;
         this.ids = ids;
@@ -188,6 +196,66 @@ public class FoundryPushService implements PushArticleToFoundryUseCase, PushHand
                     + "(Card Deck push is a later phase) — left as plain text.");
         }
         return new TableResultData(resultId, min, max, description, RESULT_TYPE_TEXT, null);
+    }
+
+    @Override
+    @Transactional
+    public FoundryPushResult pushCardDeck(UUID worldId, UUID cardDeckId) {
+        if (!cardDecks.existsInWorld(cardDeckId, worldId)) {
+            throw new NotFoundException("Card deck not found");
+        }
+        Credentials credentials = credentialsFor(requireConnection(worldId));
+        List<String> warnings = new ArrayList<>();
+        String documentId = ensureCardDeckPushed(worldId, cardDeckId, credentials, new LinkedHashSet<>(), warnings);
+        return new FoundryPushResult(documentId, clock.instant(), warnings);
+    }
+
+    /** Pushes one card deck's {@code Cards} document. Unlike a roll table result, a {@code Card}
+     * has no confirmed Foundry field for a real document reference (see {@code CardData}'s
+     * javadoc), so a card's {@code nestedTableIds}/{@code nestedDeckIds} never trigger recursive
+     * pushes here — {@code inProgress} is still threaded through for symmetry with {@code
+     * ensureRollTablePushed} and in case a future confirmed reference field needs it, but is not
+     * currently consulted for cycle detection since nothing recurses. */
+    private String ensureCardDeckPushed(UUID worldId, UUID cardDeckId, Credentials credentials,
+                                        Set<UUID> inProgress, List<String> warnings) {
+        String documentId = StableFoundryId.from(documentKey(worldId, FoundryEntityType.CARD_DECK, cardDeckId));
+        if (!inProgress.add(cardDeckId)) {
+            return documentId;
+        }
+        CardDeckView deck = cardDecks.findByIdInWorld(cardDeckId, worldId)
+                .orElseThrow(() -> new NotFoundException("Card deck not found"));
+
+        String folderId = upsertFolderFor(worldId, FoundryEntityType.CARD_DECK, credentials);
+        List<CardData> cards = new ArrayList<>();
+        for (DeckCardView card : deck.cards()) {
+            cards.add(toCardData(worldId, card, credentials, warnings));
+        }
+        relay.upsertCardDeck(credentials, documentId, deck.title(), cards, folderId);
+        recordPush(worldId, FoundryEntityType.CARD_DECK, cardDeckId, documentId);
+        return documentId;
+    }
+
+    private CardData toCardData(UUID worldId, DeckCardView card, Credentials credentials, List<String> warnings) {
+        String cardId = StableFoundryId.from("campaign-organizer:" + worldId + ":carddeck-card:" + card.id());
+        String html = articleRenderer.renderBody(worldId, card.body() == null ? "" : card.body());
+        String description = uploadEmbeddedMedia(worldId, html == null ? "" : html, credentials, warnings);
+        // A blank/null title is this app's own "no face title" state (DeckCard's javadoc calls
+        // it an "optional face title"), not a validation gap — NextTablesView.tsx's own card
+        // list falls back to the plain string "Card" for display, so this mirrors that existing
+        // convention rather than inventing a new one.
+        String name = card.title() == null || card.title().isBlank() ? "Card" : card.title();
+
+        // Unlike a roll table entry, a card's chained table/deck references (FR-41) can't become
+        // a real Foundry document reference — Card has no confirmed field for one (see CardData's
+        // javadoc) — so they're surfaced as a plain-text note plus a push warning instead of
+        // being silently dropped.
+        if (!card.nestedTableIds().isEmpty() || !card.nestedDeckIds().isEmpty()) {
+            description += "<p><em>Chains to " + (card.nestedTableIds().size() + card.nestedDeckIds().size())
+                    + " other table(s)/deck(s) in Campaign Organizer — not linked here.</em></p>";
+            warnings.add("Card \"" + name + "\" chains to another table/deck; Foundry's Card schema has no "
+                    + "confirmed document-reference field, so this was left as a plain-text note instead.");
+        }
+        return new CardData(cardId, name, description);
     }
 
     private void recordPush(UUID worldId, FoundryEntityType type, UUID entityId, String documentId) {

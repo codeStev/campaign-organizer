@@ -4,6 +4,7 @@ import com.campaignorganizer.interchange.foundry.adapter.in.web.FoundryPushWebDt
 import com.campaignorganizer.interchange.foundry.adapter.in.web.FoundryPushWebDtos.FoundryPushStatusResponse;
 import com.campaignorganizer.interchange.foundry.application.port.in.GetFoundryPushStatusUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushArticleToFoundryUseCase;
+import com.campaignorganizer.interchange.foundry.application.port.in.PushCardDeckToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushHandoutToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.application.port.in.PushRollTableToFoundryUseCase;
 import com.campaignorganizer.interchange.foundry.domain.FoundryEntityType;
@@ -24,16 +25,19 @@ public class FoundryPushController {
     private final PushArticleToFoundryUseCase pushArticleUseCase;
     private final PushHandoutToFoundryUseCase pushHandoutUseCase;
     private final PushRollTableToFoundryUseCase pushRollTableUseCase;
+    private final PushCardDeckToFoundryUseCase pushCardDeckUseCase;
     private final GetFoundryPushStatusUseCase statusUseCase;
     private final FoundryPushWebMapper mapper;
 
     public FoundryPushController(PushArticleToFoundryUseCase pushArticleUseCase,
                                  PushHandoutToFoundryUseCase pushHandoutUseCase,
                                  PushRollTableToFoundryUseCase pushRollTableUseCase,
+                                 PushCardDeckToFoundryUseCase pushCardDeckUseCase,
                                  GetFoundryPushStatusUseCase statusUseCase, FoundryPushWebMapper mapper) {
         this.pushArticleUseCase = pushArticleUseCase;
         this.pushHandoutUseCase = pushHandoutUseCase;
         this.pushRollTableUseCase = pushRollTableUseCase;
+        this.pushCardDeckUseCase = pushCardDeckUseCase;
         this.statusUseCase = statusUseCase;
         this.mapper = mapper;
     }
@@ -70,5 +74,17 @@ public class FoundryPushController {
     public FoundryPushStatusResponse rollTablePushStatus(@PathVariable UUID worldId,
                                                          @PathVariable UUID rollTableId) {
         return mapper.toStatusResponse(statusUseCase.statusFor(worldId, FoundryEntityType.ROLL_TABLE, rollTableId));
+    }
+
+    @PostMapping("/card-decks/{cardDeckId}/push")
+    @ResponseStatus(HttpStatus.OK)
+    public FoundryPushResponse pushCardDeck(@PathVariable UUID worldId, @PathVariable UUID cardDeckId) {
+        return mapper.toResponse(pushCardDeckUseCase.pushCardDeck(worldId, cardDeckId));
+    }
+
+    @GetMapping("/card-decks/{cardDeckId}/push-status")
+    public FoundryPushStatusResponse cardDeckPushStatus(@PathVariable UUID worldId,
+                                                        @PathVariable UUID cardDeckId) {
+        return mapper.toStatusResponse(statusUseCase.statusFor(worldId, FoundryEntityType.CARD_DECK, cardDeckId));
     }
 }

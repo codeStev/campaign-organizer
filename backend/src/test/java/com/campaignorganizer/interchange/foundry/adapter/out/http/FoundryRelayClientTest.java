@@ -138,6 +138,28 @@ class FoundryRelayClientTest {
     }
 
     @Test
+    void create_cardsEntityTypeCarriesDeckTypeAndCardsWithFolderStillTopLevel() {
+        server.expect(requestTo(startsWith(BASE_URL + "/create")))
+                .andExpect(jsonPath("$.entityType").value("Cards"))
+                .andExpect(jsonPath("$.data.type").value("deck"))
+                .andExpect(jsonPath("$.data.cards[0].name").value("Ace"))
+                .andExpect(jsonPath("$.data.cards[0].description").value("<p>Draw one</p>"))
+                .andExpect(jsonPath("$.folder").value("folder123456789a"))
+                .andExpect(jsonPath("$.data.folder").doesNotExist())
+                .andRespond(withSuccess("{\"success\":true}", MediaType.APPLICATION_JSON));
+
+        Map<String, Object> card = Map.of(
+                "_id", "card1234567890ab",
+                "name", "Ace",
+                "description", "<p>Draw one</p>");
+        client.create("Cards",
+                Map.of("_id", "deck1234567890ab", "name", "A Deck", "type", "deck", "cards", List.of(card)),
+                "folder123456789a");
+
+        server.verify();
+    }
+
+    @Test
     void create_omitsFolderFieldWhenNull() {
         server.expect(requestTo(startsWith(BASE_URL + "/create")))
                 .andExpect(jsonPath("$.folder").doesNotExist())
