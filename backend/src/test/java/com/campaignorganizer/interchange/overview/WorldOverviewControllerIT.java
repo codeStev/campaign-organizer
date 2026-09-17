@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.campaignorganizer.AbstractIntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -38,9 +39,15 @@ class WorldOverviewControllerIT extends AbstractIntegrationTest {
         createArticle(auth, worldId, "Harbor");
 
         String campaignId = createCampaign(auth, worldId);
-        createSession(auth, worldId, campaignId, "Played it", LocalDate.now().minusDays(1));
-        createSession(auth, worldId, campaignId, "Today's game", LocalDate.now());
-        createSession(auth, worldId, campaignId, "Not yet", LocalDate.now().plusDays(30));
+        // The service resolves "today" from an injected Clock.systemUTC() (SharedConfig),
+        // so these must be computed in UTC too — a bare LocalDate.now() uses the JVM's
+        // default zone and drifts a day off UTC for ~1-2 hours around local midnight in
+        // any zone ahead of UTC (e.g. Europe/Berlin), intermittently misclassifying which
+        // sessions are "run" vs "next" and failing this test only during that window.
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        createSession(auth, worldId, campaignId, "Played it", today.minusDays(1));
+        createSession(auth, worldId, campaignId, "Today's game", today);
+        createSession(auth, worldId, campaignId, "Not yet", today.plusDays(30));
         createSession(auth, worldId, campaignId, "Unscheduled", null);
 
         mockMvc.perform(get("/api/worlds/{w}/overview", worldId)
