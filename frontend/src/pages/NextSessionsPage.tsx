@@ -163,12 +163,12 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
     setPushingSessionToFoundry(true);
     try {
       const result = await foundryPush.pushSession(urlCampaignId, urlSessionId);
-      const parts: string[] = [];
+      const parts: string[] = [`session guide (${result.beatsIncluded} beat(s))`];
       if (result.articlesPushed > 0) parts.push(`${result.articlesPushed} article(s)`);
       if (result.handoutsPushed > 0) parts.push(`${result.handoutsPushed} handout(s)`);
       if (result.rollTablesPushed > 0) parts.push(`${result.rollTablesPushed} roll table(s)`);
       if (result.cardDecksPushed > 0) parts.push(`${result.cardDecksPushed} card deck(s)`);
-      toast.success(parts.length > 0 ? `Pushed ${parts.join(', ')} to Foundry` : 'Nothing to push for this session');
+      toast.success(`Pushed ${parts.join(', ')} to Foundry`);
       if (result.warnings.length > 0) {
         toast.error(result.warnings.join('; '));
       }

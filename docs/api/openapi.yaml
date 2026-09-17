@@ -8510,7 +8510,16 @@ components:
 
     FoundrySessionPushResult:
       type: object
-      required: [articlesPushed, handoutsPushed, rollTablesPushed, cardDecksPushed, warnings]
+      required:
+        [
+          articlesPushed,
+          handoutsPushed,
+          rollTablesPushed,
+          cardDecksPushed,
+          sessionGuideDocumentId,
+          beatsIncluded,
+          warnings,
+        ]
       properties:
         articlesPushed:
           type: integer
@@ -8520,6 +8529,14 @@ components:
           type: integer
         cardDecksPushed:
           type: integer
+        sessionGuideDocumentId:
+          type: string
+          description: >-
+            The stable Foundry id of the session guide JournalEntry this push
+            created/updated (a session always gets one, even with zero beats).
+        beatsIncluded:
+          type: integer
+          description: How many of the session's beats were included in the guide.
         warnings:
           type: array
           items:

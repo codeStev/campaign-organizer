@@ -850,6 +850,8 @@ export interface FoundrySessionPushResult {
   handoutsPushed: number;
   rollTablesPushed: number;
   cardDecksPushed: number;
+  sessionGuideDocumentId: string;
+  beatsIncluded: number;
   warnings: string[];
 }
 
