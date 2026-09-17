@@ -174,17 +174,25 @@ reference docs don't cover them and only a live instance can:
 - Whether the specific API key scopes this feature needs
   (`entity:write`, `file:write`, `clients:read`) are exactly what the
   user's relay setup grants by default, or need explicit enabling.
-- Foundry's actual `RollTable`/`TableResult` document schema for the
-  Foundry version in use (field names have shifted across major Foundry
-  versions), and whether its dice-formula syntax accepts this app's
-  `DiceExpression` grammar unchanged.
-- The exact `Cards`/`Card` embedded-document field that should carry a
-  card's Markdown body — Foundry's core `Cards` schema is less
-  document-oriented than `JournalEntry`/`RollTable` and varies by version.
+- **Update, once Phases 4-5 shipped:** Foundry's own official class docs
+  (foundryvtt.com/api, a *different* reference from the relay's) resolved
+  the RollTable/Cards field-name question — `TableResult.description` and
+  `Card.description` are both `HTMLField`s (unlike `JournalEntryPage.text`,
+  which has an explicit Markdown mode), so roll table entries and deck
+  cards render via the original `ArticleRenderPort.renderBody` (HTML), not
+  `renderBodyAsMarkdown` — and chaining uses a single `documentUuid` string
+  field on `TableResult`, not separate `documentCollection`/`documentId`
+  fields as first assumed. `Card` has no confirmed equivalent reference
+  field at all, so a card's chained table/deck references become a
+  plain-text note plus a push warning instead of a real Foundry link. What
+  the official docs *don't* give — and still needs a live instance —
+  is `TableResult.type`'s exact string constants (`"text"`/`"document"` are
+  this feature's documented best-effort guess) and whether Foundry's Roll
+  syntax accepts this app's `DiceExpression` grammar (`kh`/`kl` modifiers)
+  unchanged.
 
 Each of these is called out again as an explicit manual-verification step
-in the implementation plan for the phase that first needs it, not glossed
-over or assumed correct.
+in the implementation plan, not glossed over or assumed correct.
 
 ## Consequences
 - `media` gains one new published-port method
