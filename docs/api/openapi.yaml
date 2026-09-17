@@ -1208,6 +1208,71 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /worlds/{worldId}/foundry/card-decks/{cardDeckId}/push:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: cardDeckId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [foundry]
+      summary: Push a card deck to Foundry as a native Cards document (ADR-0115)
+      description: >-
+        Idempotent - re-pushing the same card deck updates the same Foundry
+        document in place. One embedded Card per deck card (rendered to HTML,
+        since Foundry's Card has no Markdown mode either); a card chaining to
+        another table/deck has no confirmed Foundry document-reference field
+        to link through, so it's left as a plain-text note plus a warning
+        instead of a real link.
+      operationId: pushCardDeckToFoundry
+      responses:
+        '200':
+          description: The push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The card deck, or this world's Foundry connection, was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The Foundry relay could not be reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /worlds/{worldId}/foundry/card-decks/{cardDeckId}/push-status:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - name: cardDeckId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [foundry]
+      summary: Whether, and when, this card deck was last pushed to Foundry (ADR-0115)
+      operationId: getCardDeckFoundryPushStatus
+      responses:
+        '200':
+          description: The push status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundryPushStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /worlds/{worldId}/foundry-connection/test:
     parameters:
       - $ref: '#/components/parameters/WorldId'

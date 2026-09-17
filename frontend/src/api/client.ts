@@ -861,6 +861,10 @@ export function foundryPushApi(worldId: string) {
       request<FoundryPushResult>(`${base}/roll-tables/${rollTableId}/push`, { method: 'POST' }),
     rollTablePushStatus: (rollTableId: string) =>
       request<FoundryPushStatus>(`${base}/roll-tables/${rollTableId}/push-status`),
+    pushCardDeck: (cardDeckId: string) =>
+      request<FoundryPushResult>(`${base}/card-decks/${cardDeckId}/push`, { method: 'POST' }),
+    cardDeckPushStatus: (cardDeckId: string) =>
+      request<FoundryPushStatus>(`${base}/card-decks/${cardDeckId}/push-status`),
   };
 }
 
