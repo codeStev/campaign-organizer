@@ -2265,6 +2265,28 @@ button:disabled {
   gap: 0.4rem;
 }
 
+/* FoundryCategoryPushDialog (ADR-0115 category/world push addendum). */
+.foundry-push-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+
+.foundry-push-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  cursor: pointer;
+}
+
+.foundry-push-mode-option input[type='radio'] {
+  margin-top: 0.2rem;
+}
+
 .tag-command {
   border: 1px solid var(--border);
 }

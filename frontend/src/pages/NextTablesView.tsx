@@ -6,11 +6,13 @@ import {
   tableDeckCategoriesApi,
   diceApi,
   articlesApi,
+  foundryPushApi,
   RollTable,
   RollTableEntry,
   CardDeck,
   DeckCard,
   TableDeckCategory,
+  FoundryPushStatus,
   ApiError,
 } from '../api/client';
 import { diceRange, DiceRange } from '../lib/dice';
@@ -187,6 +189,9 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
   const tablesApi = useMemo(() => rollTablesApi(worldId), [worldId]);
   const decksApi = useMemo(() => cardDecksApi(worldId), [worldId]);
   const categoriesApi = useMemo(() => tableDeckCategoriesApi(worldId), [worldId]);
+  const foundryPush = useMemo(() => foundryPushApi(worldId), [worldId]);
+  const [foundryStatus, setFoundryStatus] = useState<FoundryPushStatus | null>(null);
+  const [pushingToFoundry, setPushingToFoundry] = useState(false);
   const [tables, setTables] = useState<RollTable[]>([]);
   const [decks, setDecks] = useState<CardDeck[]>([]);
   const [categories, setCategories] = useState<TableDeckCategory[]>([]);
@@ -414,6 +419,28 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
   const printDeck =
     draft.kind === 'deck' && draft.id != null ? decks.find((d) => d.id === draft.id) ?? null : null;
 
+  useEffect(() => {
+    if (!printTable && !printDeck) {
+      setFoundryStatus(null);
+      return;
+    }
+    let cancelled = false;
+    const statusRequest = printTable
+      ? foundryPush.rollTablePushStatus(printTable.id)
+      : foundryPush.cardDeckPushStatus(printDeck!.id);
+    statusRequest
+      .then((status) => {
+        if (!cancelled) setFoundryStatus(status);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) onAuthExpired();
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [printTable?.id, printDeck?.id]);
+
   // Where the last roll landed / which card was drawn — chains on that row
   // become live sub-rollers below the result line (FR-41).
   const landedEntry = roll?.matchedIndex != null ? draft.entries[roll.matchedIndex] ?? null : null;
@@ -615,6 +642,26 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
     );
     if (explicit >= 0) return explicit;
     return draft.entries.findIndex((e) => e.minResult === '' && e.maxResult === '');
+  }
+
+  async function pushToFoundry() {
+    if (!printTable && !printDeck) return;
+    setPushingToFoundry(true);
+    try {
+      const result = printTable
+        ? await foundryPush.pushRollTable(printTable.id)
+        : await foundryPush.pushCardDeck(printDeck!.id);
+      setFoundryStatus({ pushed: true, foundryDocumentId: result.foundryDocumentId, pushedAt: result.pushedAt });
+      if (result.warnings.length > 0) {
+        toast.error(result.warnings.join('; '));
+      } else {
+        toast.success('Pushed to Foundry');
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setPushingToFoundry(false);
+    }
   }
 
   async function doRoll() {
@@ -1287,6 +1334,11 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
                 Duplicate
               </Button>
             )}
+            {(printTable || printDeck) && (
+              <Button type="button" variant="link" onClick={() => void pushToFoundry()} disabled={pushingToFoundry}>
+                {pushingToFoundry ? 'Pushing…' : 'Push to Foundry'}
+              </Button>
+            )}
             {editingExisting && (
               <ConfirmDeleteDialog
                 trigger={
@@ -1300,6 +1352,11 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
               />
             )}
           </div>
+          {(printTable || printDeck) && foundryStatus?.pushed && (
+            <p className="muted hint">
+              Pushed to Foundry {new Date(foundryStatus.pushedAt!).toLocaleString()}
+            </p>
+          )}
         </form>
         )}
 
@@ -1319,10 +1376,21 @@ export function NextTablesView({ worldId, onAuthExpired }: Props) {
                 >
                   🖨 Print
                 </Button>
+                {(printTable || printDeck) && (
+                  <Button type="button" variant="link" onClick={() => void pushToFoundry()}
+                    disabled={pushingToFoundry}>
+                    {pushingToFoundry ? 'Pushing…' : 'Push to Foundry'}
+                  </Button>
+                )}
               </div>
             </div>
             {(printTable?.description || printDeck?.description) && (
               <p className="muted">{printTable?.description ?? printDeck?.description}</p>
+            )}
+            {(printTable || printDeck) && foundryStatus?.pushed && (
+              <p className="muted hint">
+                Pushed to Foundry {new Date(foundryStatus.pushedAt!).toLocaleString()}
+              </p>
             )}
 
             {printTable && (

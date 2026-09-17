@@ -8,6 +8,7 @@ import com.campaignorganizer.media.application.port.in.UploadMediaUseCase;
 import com.campaignorganizer.media.application.port.out.MediaRepositoryPort;
 import com.campaignorganizer.media.application.port.out.MediaStoragePort;
 import com.campaignorganizer.media.application.port.out.WorldExistsPort;
+import com.campaignorganizer.media.application.port.published.MediaContentQueryPort;
 import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.media.application.port.published.MediaLookupPort;
 import com.campaignorganizer.media.domain.MediaAsset;
@@ -17,6 +18,7 @@ import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Media use cases; also implements the published lookup port for other contexts. */
 @Service
 public class MediaService implements UploadMediaUseCase, ListMediaUseCase, DeleteMediaUseCase,
-        LoadMediaContentUseCase, MediaLookupPort, MediaImportPort {
+        LoadMediaContentUseCase, MediaLookupPort, MediaImportPort, MediaContentQueryPort {
 
     private final MediaRepositoryPort media;
     private final MediaStoragePort storage;
@@ -92,6 +94,14 @@ public class MediaService implements UploadMediaUseCase, ListMediaUseCase, Delet
     @Transactional(readOnly = true)
     public boolean existsInWorld(UUID mediaId, UUID worldId) {
         return media.findByIdAndWorld(mediaId, worldId).isPresent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<MediaContentView> loadInWorld(UUID mediaId, UUID worldId) {
+        return media.findByIdAndWorld(mediaId, worldId)
+                .flatMap(asset -> storage.load(asset.getStorageKey())
+                        .map(bytes -> new MediaContentView(asset.getFilename(), asset.getContentType(), bytes)));
     }
 
     // --- published import port (ADR-0061) ---

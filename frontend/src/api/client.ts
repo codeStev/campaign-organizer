@@ -803,6 +803,114 @@ export function layerStylesApi(worldId: string) {
   };
 }
 
+export interface FoundryConnection {
+  relayBaseUrl: string;
+  clientId: string;
+  configured: boolean;
+}
+
+export interface FoundryConnectionRequest {
+  relayBaseUrl: string;
+  clientId: string;
+  /** Blank keeps the currently stored key — never re-send a key you didn't just type. */
+  apiKey: string;
+}
+
+export interface FoundryConnectionTestResult {
+  ok: boolean;
+  connectedClientIds: string[];
+  error: string | null;
+}
+
+/** Per-world Foundry relay connection — always user-supplied, never a shared default. */
+export function foundryApi(worldId: string) {
+  const base = `/worlds/${worldId}/foundry-connection`;
+  return {
+    get: () => request<FoundryConnection>(base),
+    put: (body: FoundryConnectionRequest) =>
+      request<FoundryConnection>(base, { method: 'PUT', body: JSON.stringify(body) }),
+    test: () => request<FoundryConnectionTestResult>(`${base}/test`, { method: 'POST' }),
+  };
+}
+
+export interface FoundryPushResult {
+  foundryDocumentId: string;
+  pushedAt: string;
+  warnings: string[];
+}
+
+export interface FoundryPushStatus {
+  pushed: boolean;
+  foundryDocumentId: string | null;
+  pushedAt: string | null;
+}
+
+export interface FoundrySessionPushResult {
+  articlesPushed: number;
+  handoutsPushed: number;
+  rollTablesPushed: number;
+  cardDecksPushed: number;
+  sessionGuideDocumentId: string;
+  beatsIncluded: number;
+  warnings: string[];
+}
+
+export type FoundryCategoryPushMode = 'FOLDER' | 'SINGLE_DOCUMENT';
+
+export interface FoundryCategoryPushResult {
+  foundryDocumentId: string | null;
+  pushedAt: string;
+  articlesPushed: number;
+  warnings: string[];
+}
+
+export interface FoundryCampaignPushResult {
+  sessionsPushed: number;
+  articlesPushed: number;
+  handoutsPushed: number;
+  rollTablesPushed: number;
+  cardDecksPushed: number;
+  sessionGuidesCreated: number;
+  warnings: string[];
+}
+
+/** Push Campaign Organizer content into a world's connected Foundry session (ADR-0115). */
+export function foundryPushApi(worldId: string) {
+  const base = `/worlds/${worldId}/foundry`;
+  return {
+    pushArticle: (articleId: string) =>
+      request<FoundryPushResult>(`${base}/articles/${articleId}/push`, { method: 'POST' }),
+    articlePushStatus: (articleId: string) =>
+      request<FoundryPushStatus>(`${base}/articles/${articleId}/push-status`),
+    pushHandout: (handoutId: string) =>
+      request<FoundryPushResult>(`${base}/handouts/${handoutId}/push`, { method: 'POST' }),
+    handoutPushStatus: (handoutId: string) =>
+      request<FoundryPushStatus>(`${base}/handouts/${handoutId}/push-status`),
+    pushRollTable: (rollTableId: string) =>
+      request<FoundryPushResult>(`${base}/roll-tables/${rollTableId}/push`, { method: 'POST' }),
+    rollTablePushStatus: (rollTableId: string) =>
+      request<FoundryPushStatus>(`${base}/roll-tables/${rollTableId}/push-status`),
+    pushCardDeck: (cardDeckId: string) =>
+      request<FoundryPushResult>(`${base}/card-decks/${cardDeckId}/push`, { method: 'POST' }),
+    cardDeckPushStatus: (cardDeckId: string) =>
+      request<FoundryPushStatus>(`${base}/card-decks/${cardDeckId}/push-status`),
+    pushSession: (campaignId: string, sessionId: string) =>
+      request<FoundrySessionPushResult>(`${base}/campaigns/${campaignId}/sessions/${sessionId}/push`, {
+        method: 'POST',
+      }),
+    pushCampaign: (campaignId: string) =>
+      request<FoundryCampaignPushResult>(`${base}/campaigns/${campaignId}/push`, { method: 'POST' }),
+    pushCategory: (categoryId: string, mode: FoundryCategoryPushMode) =>
+      request<FoundryCategoryPushResult>(`${base}/categories/${categoryId}/push?mode=${mode}`, {
+        method: 'POST',
+      }),
+    categoryPushStatus: (categoryId: string) =>
+      request<FoundryPushStatus>(`${base}/categories/${categoryId}/push-status`),
+    pushWorldWiki: () => request<FoundryCategoryPushResult>(`${base}/wiki/push`, { method: 'POST' }),
+    worldWikiPushStatus: () => request<FoundryPushStatus>(`${base}/wiki/push-status`),
+  };
+}
+
 export function pinsApi(worldId: string, mapId: string) {
   const base = `/worlds/${worldId}/maps/${mapId}/pins`;
   return {

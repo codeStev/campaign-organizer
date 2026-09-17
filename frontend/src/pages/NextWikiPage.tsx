@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   articlesApi,
   categoriesApi,
   worldTagsApi,
   tagBrowseApi,
+  foundryPushApi,
   ArticleSummary,
   Category,
   ApiError,
+  FoundryCategoryPushMode,
 } from '../api/client';
 import { CategoryTree } from '../components/CategoryTree';
 import { ArticleEditor } from '../components/ArticleEditor';
 import { MobileBackButton } from '../components/MobileBackButton';
+import { FoundryCategoryPushDialog } from '../components/FoundryCategoryPushDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Button } from '../components/ui/button';
 
 interface Props {
   worldId: string;
@@ -40,6 +46,8 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [tagMatchIds, setTagMatchIds] = useState<Set<string> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [foundryPushCategory, setFoundryPushCategory] = useState<Category | null>(null);
+  const [confirmWorldPushOpen, setConfirmWorldPushOpen] = useState(false);
 
   const onError = (err: unknown) => {
     if (err instanceof ApiError && err.status === 401) return onAuthExpired();
@@ -184,6 +192,33 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     }
   }
 
+  function reportPushResult(result: { articlesPushed: number; warnings: string[] }) {
+    if (result.warnings.length > 0) {
+      toast.error(result.warnings.join('; '));
+    } else {
+      toast.success(`Pushed ${result.articlesPushed} article(s) to Foundry`);
+    }
+  }
+
+  async function pushCategoryToFoundry(mode: FoundryCategoryPushMode) {
+    if (!foundryPushCategory) return;
+    try {
+      reportPushResult(await foundryPushApi(worldId).pushCategory(foundryPushCategory.id, mode));
+    } catch (err) {
+      onError(err);
+    } finally {
+      setFoundryPushCategory(null);
+    }
+  }
+
+  async function pushWorldWikiToFoundry() {
+    try {
+      reportPushResult(await foundryPushApi(worldId).pushWorldWiki());
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   const tagFilteredArticles = tagMatchIds ? articles.filter((a) => tagMatchIds.has(a.id)) : articles;
 
   return (
@@ -204,6 +239,7 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           onRenameCategory={(c, name) => void renameCategory(c, name)}
           onRenameEntity={(a, name) => void renameArticle(a, name)}
           onDeleteEntity={(a) => void deleteArticle(a)}
+          onPushCategoryToFoundry={(c) => setFoundryPushCategory(c)}
           newEntityActions={[
             {
               label: 'New article',
@@ -215,6 +251,9 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           searchPlaceholder="Search articles…"
           emptyLabel="No articles found."
         />
+        <Button type="button" variant="link" onClick={() => setConfirmWorldPushOpen(true)}>
+          Push whole wiki to Foundry…
+        </Button>
         {worldTags.length > 0 && (
           <div className="wiki-tags-section">
             <p className="eyebrow">Tags</p>
@@ -247,6 +286,21 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           onAuthExpired={onAuthExpired}
         />
       </div>
+      <FoundryCategoryPushDialog
+        open={foundryPushCategory !== null}
+        onOpenChange={(open) => !open && setFoundryPushCategory(null)}
+        title={`Push "${foundryPushCategory ? foundryPushCategory.name : ''}" to Foundry`}
+        description="Includes every article directly in this category and in its subcategories."
+        onConfirm={(mode) => void pushCategoryToFoundry(mode)}
+      />
+      <ConfirmDialog
+        open={confirmWorldPushOpen}
+        onOpenChange={setConfirmWorldPushOpen}
+        title="Push whole wiki to Foundry?"
+        description="Includes every category and every article in this world, including uncategorised ones, laid out as nested Foundry folders."
+        confirmLabel="Push"
+        onConfirm={() => void pushWorldWikiToFoundry()}
+      />
     </div>
   );
 }

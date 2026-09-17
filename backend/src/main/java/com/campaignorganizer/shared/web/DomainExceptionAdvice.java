@@ -1,6 +1,7 @@
 package com.campaignorganizer.shared.web;
 
 import com.campaignorganizer.ai.domain.AiUnavailableException;
+import com.campaignorganizer.interchange.foundry.domain.FoundryRelayException;
 import com.campaignorganizer.shared.domain.AuthenticationFailedException;
 import com.campaignorganizer.shared.domain.ConflictException;
 import com.campaignorganizer.shared.domain.DomainException;
@@ -42,6 +43,11 @@ public class DomainExceptionAdvice {
     @ExceptionHandler(AiUnavailableException.class)
     public ProblemDetail handleAiUnavailable(AiUnavailableException ex) {
         return problem(HttpStatus.SERVICE_UNAVAILABLE, "AI unavailable", ex);
+    }
+
+    @ExceptionHandler(FoundryRelayException.class)
+    public ProblemDetail handleFoundryRelayUnavailable(FoundryRelayException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Foundry relay unavailable", ex);
     }
 
     /** Fallback for any other domain rule failure. */

@@ -6,6 +6,7 @@ import {
   campaignsApi,
   sessionsApi,
   handoutsApi,
+  foundryPushApi,
   Beat,
   Campaign,
   Session,
@@ -26,6 +27,7 @@ import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { Spinner } from '../components/ui/spinner';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface Props {
   worldId: string;
@@ -73,12 +75,16 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
   const [packetOpen, setPacketOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
   const [cheatOpen, setCheatOpen] = useState(false);
+  const [pushingSessionToFoundry, setPushingSessionToFoundry] = useState(false);
+  const [pushingCampaignToFoundry, setPushingCampaignToFoundry] = useState(false);
+  const [confirmCampaignPushOpen, setConfirmCampaignPushOpen] = useState(false);
 
   const campaign = campaigns.find((c) => c.id === urlCampaignId) ?? null;
   const api = useMemo(
     () => (urlCampaignId ? sessionsApi(worldId, urlCampaignId) : null),
     [worldId, urlCampaignId],
   );
+  const foundryPush = useMemo(() => foundryPushApi(worldId), [worldId]);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -153,6 +159,48 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
     setSummarizing(false);
     setSummaryText(null);
     setSummaryError(null);
+  }
+
+  async function pushSessionToFoundry() {
+    if (!urlCampaignId || !urlSessionId || urlSessionId === 'new') return;
+    setPushingSessionToFoundry(true);
+    try {
+      const result = await foundryPush.pushSession(urlCampaignId, urlSessionId);
+      const parts: string[] = [`session guide (${result.beatsIncluded} beat(s))`];
+      if (result.articlesPushed > 0) parts.push(`${result.articlesPushed} article(s)`);
+      if (result.handoutsPushed > 0) parts.push(`${result.handoutsPushed} handout(s)`);
+      if (result.rollTablesPushed > 0) parts.push(`${result.rollTablesPushed} roll table(s)`);
+      if (result.cardDecksPushed > 0) parts.push(`${result.cardDecksPushed} card deck(s)`);
+      toast.success(`Pushed ${parts.join(', ')} to Foundry`);
+      if (result.warnings.length > 0) {
+        toast.error(result.warnings.join('; '));
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setPushingSessionToFoundry(false);
+    }
+  }
+
+  async function pushCampaignToFoundry() {
+    if (!urlCampaignId) return;
+    setPushingCampaignToFoundry(true);
+    try {
+      const result = await foundryPush.pushCampaign(urlCampaignId);
+      const parts: string[] = [`${result.sessionsPushed} session(s)`, `${result.sessionGuidesCreated} guide(s)`];
+      if (result.articlesPushed > 0) parts.push(`${result.articlesPushed} article(s)`);
+      if (result.handoutsPushed > 0) parts.push(`${result.handoutsPushed} handout(s)`);
+      if (result.rollTablesPushed > 0) parts.push(`${result.rollTablesPushed} roll table(s)`);
+      if (result.cardDecksPushed > 0) parts.push(`${result.cardDecksPushed} card deck(s)`);
+      toast.success(`Pushed ${parts.join(', ')} to Foundry`);
+      if (result.warnings.length > 0) {
+        toast.error(result.warnings.join('; '));
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setPushingCampaignToFoundry(false);
+    }
   }
 
   const openSession = urlSessionId && urlSessionId !== 'new' ? sessions.find((s) => s.id === urlSessionId) ?? null : null;
@@ -262,6 +310,14 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
             >
               + New session
             </Button>
+            <Button
+              type="button"
+              variant="link"
+              disabled={pushingCampaignToFoundry}
+              onClick={() => setConfirmCampaignPushOpen(true)}
+            >
+              {pushingCampaignToFoundry ? 'Pushing…' : '📤 Push whole campaign to Foundry'}
+            </Button>
           </div>
         )}
         {loading && (
@@ -342,6 +398,14 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
                 </Button>
                 <Button variant="link" onClick={() => setRecapOpen(true)} title="Print the story so far">
                   🖨 Recap
+                </Button>
+                <Button
+                  variant="link"
+                  onClick={() => void pushSessionToFoundry()}
+                  disabled={pushingSessionToFoundry}
+                  title="Push articles, handouts, roll tables & card decks from this session — not maps or statblocks"
+                >
+                  {pushingSessionToFoundry ? 'Pushing…' : '📤 Push to Foundry'}
                 </Button>
               </div>
             </div>
@@ -450,6 +514,14 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
           onError={handleError}
         />
       )}
+      <ConfirmDialog
+        open={confirmCampaignPushOpen}
+        onOpenChange={setConfirmCampaignPushOpen}
+        title="Push whole campaign to Foundry?"
+        description="Runs the per-session push (articles, handouts, roll tables, card decks, session guide) across every session in this campaign."
+        confirmLabel="Push"
+        onConfirm={() => void pushCampaignToFoundry()}
+      />
     </div>
   );
 }

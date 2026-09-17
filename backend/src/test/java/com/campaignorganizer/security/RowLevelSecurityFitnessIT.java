@@ -27,7 +27,8 @@ class RowLevelSecurityFitnessIT extends AbstractIntegrationTest {
 
     private static final List<String> TIER_2_TABLES = List.of(
             "articles", "beat_kinds", "calendars", "campaigns", "card_decks", "categories", "character_sheets",
-            "documents", "entity_tags", "field_templates", "handout_categories", "handouts", "map_categories",
+            "documents", "entity_tags", "field_templates", "foundry_connections", "foundry_pushed_documents",
+            "handout_categories", "handouts", "map_categories",
             "maps", "media", "players", "relationships", "roll_tables", "sheet_categories", "statblocks",
             "table_deck_categories", "timelines", "whiteboards");
 
