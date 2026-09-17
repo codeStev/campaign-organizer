@@ -1,5 +1,6 @@
 package com.campaignorganizer.interchange.foundry.adapter.out.http;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -36,17 +37,26 @@ final class FoundryRelayClient {
         this.restClient = restClient;
     }
 
-    /** {@code clientId}s of every Foundry session currently connected under this API key.
-     * Response shape not yet confirmed against a real relay instance — see ADR-0115's
-     * list of empirically-unverified assumptions. */
+    /** {@code clientId}s of every Foundry session currently connected under this API key
+     * (requires the {@code clients:read} scope). Confirmed against the real relay's
+     * published reference (foundryrestapi.com/docs/api/clients) — the response is a
+     * list of client objects (worldTitle, systemId, isOnline, ...), not a flat list of
+     * id strings; only {@code clientId} is used here. */
     List<String> listClients() {
         ClientsResponse response = restClient.get()
                 .uri("/clients")
                 .retrieve()
                 .body(ClientsResponse.class);
-        return response == null || response.clients() == null ? List.of() : response.clients();
+        if (response == null || response.clients() == null) {
+            return List.of();
+        }
+        return response.clients().stream().map(ClientInfo::clientId).toList();
     }
 
-    private record ClientsResponse(List<String> clients) {
+    private record ClientsResponse(List<ClientInfo> clients) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ClientInfo(String clientId) {
     }
 }
