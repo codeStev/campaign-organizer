@@ -1333,6 +1333,8 @@ button:disabled {
 .editor-content .ProseMirror a,
 .preview-body a {
   color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--primary) 50%, transparent);
 }
 
 /* Wiki-links (ADR-0076): the live editor's own distinct styling for the
