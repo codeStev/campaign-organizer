@@ -2385,6 +2385,42 @@ button:disabled {
   color: var(--muted-foreground);
 }
 
+/* Auto-link scan panel (ADR-0116). */
+.autolink-group {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.autolink-source-link {
+  font-weight: 600;
+  padding-left: 0;
+}
+
+.autolink-match {
+  margin: 0.6rem 0 0.6rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+.autolink-snippet {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+}
+
+.autolink-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+  font-size: 0.85rem;
+}
+
+.autolink-option code {
+  font-size: 0.8rem;
+}
+
 /* Session log heading with inline recap action (FR-45). */
 .session-heading {
   display: flex;
