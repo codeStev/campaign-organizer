@@ -65,6 +65,36 @@ class TagControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.tags.length()").value(2));
     }
 
+    /**
+     * Regression test: a naive delete-then-reinsert `set()` can violate the
+     * entity/name unique constraint if the delete's SQL is flushed after the
+     * reinsert's (Hibernate always flushes pending inserts before pending
+     * deletes within one transaction, regardless of code order) — invisible
+     * on a first save (nothing to conflict with), only surfacing once a
+     * later edit keeps at least one existing tag name.
+     */
+    @Test
+    void savingTagsASecondTimeKeepingAnExistingTagSucceeds() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String articleId = createArticle(auth, worldId, "Old Man Harrow");
+
+        mockMvc.perform(put("/api/worlds/{w}/articles/{a}/tags", worldId, articleId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tags\":[\"villain\"]}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/worlds/{w}/articles/{a}/tags", worldId, articleId)
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tags\":[\"villain\",\"recurring\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags.length()").value(2))
+                .andExpect(jsonPath("$.tags[0]").value("recurring"))
+                .andExpect(jsonPath("$.tags[1]").value("villain"));
+    }
+
     @Test
     void unknownArticleReturns404() throws Exception {
         String auth = authHeader();
