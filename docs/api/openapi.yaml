@@ -5461,6 +5461,67 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/articles/autolink-candidates:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+    get:
+      tags: [articles]
+      summary: Scan every article body for unlinked mentions of other articles
+      description: >
+        ADR-0116's manual auto-link scan: plain-text mentions of another
+        article's title or alias, not already inside a link, grouped by
+        which article the mention was found in. Purely a suggestion list -
+        nothing is converted until reviewed via the apply endpoint.
+      operationId: scanAutolinkCandidates
+      responses:
+        '200':
+          description: One group per source article with at least one candidate mention.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AutolinkCandidateGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}/autolink:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    post:
+      tags: [articles]
+      summary: Convert selected auto-link candidates into real links
+      description: >
+        Re-scans the article's current body and replaces only the selected
+        occurrences with a labeled [[chosenName|original text]] link,
+        preserving the author's original wording as the visible label
+        regardless of which name-form was chosen as the target. Goes
+        through the normal article update path, so this creates a revision
+        like any other edit.
+      operationId: applyAutolinks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyAutolinksRequest'
+      responses:
+        '200':
+          description: The updated article.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /overview:
     get:
       tags: [worlds]
@@ -5619,6 +5680,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EntityTags'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worlds/{worldId}/articles/{articleId}/aliases:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/ArticleId'
+    get:
+      tags: [articles]
+      summary: Get an article's aliases
+      operationId: getArticleAliases
+      responses:
+        '200':
+          description: The article's alternate names (ADR-0116).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleAliases'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [articles]
+      summary: Replace an article's aliases
+      operationId: setArticleAliases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleAliases'
+      responses:
+        '200':
+          description: The article's aliases, replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleAliases'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -6762,6 +6866,21 @@ components:
       required: [tags]
       properties:
         tags:
+          type: array
+          items:
+            type: string
+
+    ArticleAliases:
+      type: object
+      required: [aliases]
+      description: >-
+        Alternate names for an article (ADR-0116) - findable by the auto-link
+        scan and usable directly as a [[link]]/[label](target) target. Each
+        is trimmed and de-duplicated case-insensitively (first-seen casing
+        kept) but not lower-cased, unlike tags, since an alias is a proper
+        name an author typed deliberately.
+      properties:
+        aliases:
           type: array
           items:
             type: string
@@ -8976,6 +9095,69 @@ components:
           format: uuid
         title:
           type: string
+
+    AutolinkCandidateGroup:
+      type: object
+      required: [articleId, articleTitle, matches]
+      description: Every candidate mention found inside one source article's body.
+      properties:
+        articleId:
+          type: string
+          format: uuid
+        articleTitle:
+          type: string
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutolinkMatch'
+
+    AutolinkMatch:
+      type: object
+      required: [targetArticleId, candidateNames, matchedText, occurrenceIndex, snippet]
+      properties:
+        targetArticleId:
+          type: string
+          format: uuid
+          description: The article this mention could link to.
+        candidateNames:
+          type: array
+          items:
+            type: string
+          description: >-
+            Every name-form the target article is known by - canonical title
+            first, then aliases - offered as choices for which one to write
+            as the link's target, regardless of which one textually matched.
+        matchedText:
+          type: string
+          description: The exact text found, preserved verbatim as the link's label if applied.
+        occurrenceIndex:
+          type: integer
+          description: 0-based ordinal among matches of this same target article within this body.
+        snippet:
+          type: string
+          description: A short excerpt of surrounding text, for display.
+
+    ApplyAutolinksRequest:
+      type: object
+      required: [selections]
+      properties:
+        selections:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutolinkSelection'
+
+    AutolinkSelection:
+      type: object
+      required: [targetArticleId, occurrenceIndex, chosenName]
+      properties:
+        targetArticleId:
+          type: string
+          format: uuid
+        occurrenceIndex:
+          type: integer
+        chosenName:
+          type: string
+          description: One of that match's candidateNames - the text to write as the link's target.
 
     WorldOverviewStats:
       type: object

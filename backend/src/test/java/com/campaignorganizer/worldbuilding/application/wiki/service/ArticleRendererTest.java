@@ -3,9 +3,11 @@ package com.campaignorganizer.worldbuilding.application.wiki.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleAliasRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort.ArticleRef;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,12 +22,15 @@ class ArticleRendererTest {
     @Mock
     private ArticleRepositoryPort articles;
 
+    @Mock
+    private ArticleAliasRepositoryPort aliases;
+
     private ArticleRenderer renderer;
     private final UUID worldId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        renderer = new ArticleRenderer(articles);
+        renderer = new ArticleRenderer(articles, aliases);
     }
 
     @Test
@@ -39,6 +44,7 @@ class ArticleRendererTest {
         UUID goblinId = UUID.randomUUID();
         when(articles.findRefsByWorld(worldId)).thenReturn(
                 List.of(new ArticleRef(goblinId, "goblin", "Goblin")));
+        when(aliases.findAllByWorld(worldId)).thenReturn(Map.of());
 
         String out = renderer.renderBody(worldId, "See **[[Goblin]]** nearby.");
 
@@ -53,6 +59,7 @@ class ArticleRendererTest {
         UUID goblinId = UUID.randomUUID();
         when(articles.findRefsByWorld(worldId)).thenReturn(
                 List.of(new ArticleRef(goblinId, "goblin", "Goblin")));
+        when(aliases.findAllByWorld(worldId)).thenReturn(Map.of());
 
         // WikiLinker must run before Markdown rendering. If Markdown ran first, "*elite*"
         // in the label would already be "<em>elite</em>" by the time WikiLinker's permissive

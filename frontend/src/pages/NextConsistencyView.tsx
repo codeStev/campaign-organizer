@@ -9,6 +9,7 @@ import {
 import { Button } from '../components/ui/button';
 import { NewWindowPortal, PrintButton } from '../components/NewWindowPortal';
 import { PrintOptionsMenu, usePrintOptions } from '../components/PrintOptionsMenu';
+import { AutolinkPanel } from '../components/AutolinkPanel';
 
 interface Props {
   worldId: string;
@@ -161,6 +162,13 @@ export function NextConsistencyView({ worldId, worldName, onOpenArticle, onAuthE
           </div>
         )}
       </div>
+
+      <AutolinkPanel
+        worldId={worldId}
+        onOpenArticle={onOpenArticle}
+        onAuthExpired={onAuthExpired}
+        onApplied={() => void refresh()}
+      />
 
       {report && !clean && printing && (
         <NewWindowPortal title={`Print — Consistency report`} onClose={() => setPrinting(false)}>

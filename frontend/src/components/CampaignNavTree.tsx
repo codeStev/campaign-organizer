@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { MoreHorizontal } from 'lucide-react';
 import { campaignsApi, sessionsApi, arcsApi, Campaign, Session, Arc } from '../api/client';
+import { useDataRefreshListener } from '../lib/dataRefresh';
 import { TruncatedLabel } from './TruncatedLabel';
 import { PromptDialog } from './PromptDialog';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
@@ -74,6 +75,21 @@ export function CampaignNavTree({ worldId }: Props) {
   useEffect(() => {
     campaignsApi(worldId).list().then(setCampaigns).catch(() => {});
   }, [worldId]);
+
+  // Cross-component staleness fix: a session/arc/campaign created or deleted
+  // from its own dedicated page (not through this tree's own dialogs) has
+  // no way to reach this component's independent copy of the data otherwise
+  // - see dataRefresh.ts. Re-fetches the campaign list plus every campaign
+  // branch already loaded (collapsed/never-expanded branches stay lazy).
+  const refreshAll = useCallback(() => {
+    campaignsApi(worldId).list().then(setCampaigns).catch(() => {});
+    for (const campaignId of children.keys()) {
+      void loadChildren(campaignId, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, children]);
+
+  useDataRefreshListener(worldId, refreshAll);
 
   // Which campaign/section/entity the current route is on, so a deep link
   // (reload, direct URL) lands with the right branches already expanded.

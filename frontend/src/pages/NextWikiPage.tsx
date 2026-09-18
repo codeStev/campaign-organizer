@@ -45,6 +45,8 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
   const [worldTags, setWorldTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [tagMatchIds, setTagMatchIds] = useState<Set<string> | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMatchIds, setSearchMatchIds] = useState<Set<string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [foundryPushCategory, setFoundryPushCategory] = useState<Category | null>(null);
   const [confirmWorldPushOpen, setConfirmWorldPushOpen] = useState(false);
@@ -56,10 +58,11 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
 
   function refresh() {
     setLoading(true);
-    return Promise.all([articlesApi(worldId).list(), categoriesApi(worldId).list()])
-      .then(([a, c]) => {
+    return Promise.all([articlesApi(worldId).list(), categoriesApi(worldId).list(), worldTagsApi(worldId).list()])
+      .then(([a, c, t]) => {
         setArticles(a);
         setCategories(c);
+        setWorldTags(t);
       })
       .catch(onError)
       .finally(() => setLoading(false));
@@ -67,7 +70,6 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
 
   useEffect(() => {
     void refresh();
-    worldTagsApi(worldId).list().then(setWorldTags).catch(onError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
@@ -94,6 +96,34 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, selectedTags]);
+
+  // The sidebar's search box only matches an entity's label by default
+  // (CategoryTree.tsx) - too narrow here, since a GM's mental model is
+  // "search for a thing" and a tag is as much "the thing" as a title word
+  // (ADR-0087). Debounce-fetch the server's title+body+tag search instead
+  // of reimplementing tag matching client-side; CategoryTree's own
+  // `entityMatches` override defers to this id set once it arrives.
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchMatchIds(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      articlesApi(worldId)
+        .list({ q })
+        .then((results) => {
+          if (!cancelled) setSearchMatchIds(new Set(results.map((a) => a.id)));
+        })
+        .catch(onError);
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, searchQuery]);
 
   // Absolute path, not a bare relative navigate(id): with flat sibling
   // routes ("wiki" and "wiki/:articleId"), React Router's default
@@ -250,6 +280,12 @@ export function NextWikiPage({ worldId, onAuthExpired }: Props) {
           loading={loading}
           searchPlaceholder="Search articles…"
           emptyLabel="No articles found."
+          onQueryChange={setSearchQuery}
+          entityMatches={(a, queryLc) =>
+            searchMatchIds == null
+              ? a.title.toLowerCase().includes(queryLc)
+              : searchMatchIds.has(a.id)
+          }
         />
         <Button type="button" variant="link" onClick={() => setConfirmWorldPushOpen(true)}>
           Push whole wiki to Foundry…

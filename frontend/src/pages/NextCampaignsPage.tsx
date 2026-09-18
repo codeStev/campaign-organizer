@@ -15,6 +15,7 @@ import {
 } from '../api/client';
 import { ClockBoard } from './ClockBoard';
 import { RosterPanel } from '../components/RosterPanel';
+import { notifyDataChanged } from '../lib/dataRefresh';
 import { TodoListPanel } from '../components/TodoListPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { SessionCalendar } from '../components/SessionCalendar';
@@ -128,6 +129,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
     try {
       const created = await api.create({ name });
       await refresh();
+      notifyDataChanged(worldId);
       select(created);
       navigate(`/next/worlds/${worldId}/campaigns/${created.id}`);
       toast.success(`Campaign "${created.name}" created`);
@@ -223,6 +225,7 @@ export function NextCampaignsPage({ worldId, onAuthExpired }: Props) {
         navigate(`/next/worlds/${worldId}/campaigns`);
       }
       await refresh();
+      notifyDataChanged(worldId);
     } catch (err) {
       handleError(err);
     }

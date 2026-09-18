@@ -87,6 +87,7 @@ the old one.
 | [0095](0095-game-system-details-and-campaign-link.md) | Game system details (tagline/color/notes) and `Campaign.systemId` | Accepted |
 | [0096](0096-global-statblock-catalog.md) | Global, system-scoped statblock catalog with copy-on-import | Accepted |
 | [0097](0097-encounter-builder.md) | Persisted encounter builder, linkable to arc beats | Accepted |
+| [0116](0116-reliable-editable-article-links.md) | Reliable/editable article links, aliases, auto-link scan (extends ADR-0014) | Accepted |
 
 ## Template
 

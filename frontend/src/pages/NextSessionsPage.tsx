@@ -14,6 +14,7 @@ import {
   ApiError,
 } from '../api/client';
 import { fetchCampaignBeats } from '../lib/beats';
+import { notifyDataChanged } from '../lib/dataRefresh';
 import { SessionPacketView } from './SessionPacketView';
 import { RecapView } from './RecapView';
 import { CheatSheetView } from './CheatSheetView';
@@ -263,6 +264,7 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
     try {
       const saved = draft.id ? await api.update(draft.id, body) : await api.create(body);
       await refreshSessions();
+      notifyDataChanged(worldId);
       setMode('read');
       navigate(`/next/worlds/${worldId}/sessions/${urlCampaignId}/${saved.id}`);
       toast.success(`Session "${body.title}" saved`);
@@ -276,6 +278,7 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
     try {
       await api.remove(draft.id);
       await refreshSessions();
+      notifyDataChanged(worldId);
       navigate(`/next/worlds/${worldId}/sessions/${urlCampaignId}`);
     } catch (err) {
       handleError(err);

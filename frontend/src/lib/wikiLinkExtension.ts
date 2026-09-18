@@ -1,4 +1,4 @@
-import { Mark, mergeAttributes, markInputRule } from '@tiptap/core';
+import { Mark, mergeAttributes, markInputRule, markPasteRule } from '@tiptap/core';
 
 // Same grammar as the backend WikiLinker (ADR-0014) and the client-side
 // read-only renderer (lib/markdown.ts's WIKI_LINK).
@@ -9,6 +9,11 @@ const WIKI_LINK_RE = /^\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/;
 // for why these exist separately from WIKI_LINK_RE/markdownTokenizer.
 const WIKI_LINK_LABELED_INPUT_RE = /\[\[\s*([^\]|]+?)\s*\|\s*([^\]]+?)\s*\]\]$/;
 const WIKI_LINK_UNLABELED_INPUT_RE = /\[\[\s*([^\]|]+?)\s*\]\]$/;
+
+// Paste-rule variants: same grammar again, but global (scanning the whole
+// pasted slice, not anchored to the cursor) - see addPasteRules below.
+const WIKI_LINK_LABELED_PASTE_RE = /\[\[\s*([^\]|]+?)\s*\|\s*([^\]]+?)\s*\]\]/g;
+const WIKI_LINK_UNLABELED_PASTE_RE = /\[\[\s*([^\]|]+?)\s*\]\]/g;
 
 /**
  * `[[Article Title]]` / `[[Article Title|Display Text]]` support for the
@@ -109,6 +114,29 @@ export const WikiLink = Mark.create({
       }),
       markInputRule({
         find: WIKI_LINK_UNLABELED_INPUT_RE,
+        type: this.type,
+        getAttributes: (match) => ({ target: match[1].trim(), labeled: false }),
+      }),
+    ];
+  },
+
+  /**
+   * Input rules alone only catch `[[...]]` typed live, character by
+   * character - text arriving any other way (paste, most notably) lands as
+   * a plain text node and hits the exact escaping bug this file's header
+   * comment describes, silently corrupting on the next save. Paste rules
+   * are the same grammar again, scanning the whole pasted slice instead of
+   * firing at the cursor on each keystroke.
+   */
+  addPasteRules() {
+    return [
+      markPasteRule({
+        find: WIKI_LINK_LABELED_PASTE_RE,
+        type: this.type,
+        getAttributes: (match) => ({ target: match[1].trim(), labeled: true }),
+      }),
+      markPasteRule({
+        find: WIKI_LINK_UNLABELED_PASTE_RE,
         type: this.type,
         getAttributes: (match) => ({ target: match[1].trim(), labeled: false }),
       }),

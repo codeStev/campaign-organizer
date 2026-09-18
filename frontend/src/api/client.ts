@@ -577,6 +577,19 @@ export function articlesApi(worldId: string) {
   };
 }
 
+/** Manual auto-link scan/apply (ADR-0116) - article bodies only. */
+export function autolinkApi(worldId: string) {
+  const base = `/worlds/${worldId}/articles`;
+  return {
+    scan: () => request<AutolinkCandidateGroup[]>(`${base}/autolink-candidates`),
+    apply: (articleId: string, selections: AutolinkSelection[]) =>
+      request<Article>(`${base}/${articleId}/autolink`, {
+        method: 'POST',
+        body: JSON.stringify({ selections }),
+      }),
+  };
+}
+
 export interface CategoryRequest {
   name: string;
   parentId?: string | null;
@@ -610,6 +623,29 @@ export interface ConsistencyReport {
   brokenLinks: BrokenLink[];
   orphanedArticles: ConsistencyArticle[];
   unreferencedByCampaigns: ConsistencyArticle[];
+}
+
+export interface AutolinkMatch {
+  targetArticleId: string;
+  /** Every name-form the target article is known by - canonical title first,
+   * then aliases - offered as choices for which one to write as the link's
+   * target, regardless of which one textually matched (ADR-0116). */
+  candidateNames: string[];
+  matchedText: string;
+  occurrenceIndex: number;
+  snippet: string;
+}
+
+export interface AutolinkCandidateGroup {
+  articleId: string;
+  articleTitle: string;
+  matches: AutolinkMatch[];
+}
+
+export interface AutolinkSelection {
+  targetArticleId: string;
+  occurrenceIndex: number;
+  chosenName: string;
 }
 
 /** FR-43: read-only world lint over the same machinery as the usage panel. */
@@ -2165,6 +2201,21 @@ export function articleTagsApi(worldId: string, articleId: string) {
 
 export function statblockTagsApi(worldId: string, statblockId: string) {
   return entityTagsApi(`/worlds/${worldId}/statblocks/${statblockId}`);
+}
+
+export interface ArticleAliases {
+  aliases: string[];
+}
+
+/** Alternate names for an article (ADR-0116) - findable by the auto-link
+ * scan and usable directly as a link target. */
+export function articleAliasesApi(worldId: string, articleId: string) {
+  const base = `/worlds/${worldId}/articles/${articleId}/aliases`;
+  return {
+    get: () => request<ArticleAliases>(base),
+    set: (aliases: string[]) =>
+      request<ArticleAliases>(base, { method: 'PUT', body: JSON.stringify({ aliases }) }),
+  };
 }
 
 export function worldTagsApi(worldId: string) {

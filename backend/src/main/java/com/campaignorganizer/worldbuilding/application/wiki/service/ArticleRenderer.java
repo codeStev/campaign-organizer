@@ -1,5 +1,6 @@
 package com.campaignorganizer.worldbuilding.application.wiki.service;
 
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleAliasRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleRenderPort;
 import com.campaignorganizer.worldbuilding.domain.wiki.HtmlSanitizer;
@@ -14,8 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Renders an article's stored Markdown body to display-ready HTML (ADR-0054):
- * wiki-links first (ADR-0014, while the body is still plain text — running
- * Markdown rendering first can inject tags into a link label before
+ * wiki-links first (ADR-0014/ADR-0116, while the body is still plain text —
+ * running Markdown rendering first can inject tags into a link label before
  * {@link WikiLinker} sees it), then Markdown -> HTML, then sanitized
  * (ADR-0025, moved here from write time since this render already runs on
  * every read).
@@ -24,11 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class ArticleRenderer implements ArticleRenderPort {
 
     private final ArticleRepositoryPort articles;
+    private final ArticleAliasRepositoryPort aliases;
     private final MarkdownRenderer markdownRenderer = new MarkdownRenderer();
     private final HtmlSanitizer sanitizer = new HtmlSanitizer();
 
-    public ArticleRenderer(ArticleRepositoryPort articles) {
+    public ArticleRenderer(ArticleRepositoryPort articles, ArticleAliasRepositoryPort aliases) {
         this.articles = articles;
+        this.aliases = aliases;
     }
 
     @Override
@@ -37,7 +40,8 @@ public class ArticleRenderer implements ArticleRenderPort {
         if (body == null) {
             return null;
         }
-        String linked = body.contains("[[") ? WikiLinker.render(body, index(worldId)) : body;
+        // Not just "[[" - ADR-0116's [label](target) syntax needs no double bracket.
+        String linked = body.indexOf('[') >= 0 ? WikiLinker.render(body, index(worldId)) : body;
         return sanitizer.sanitize(markdownRenderer.render(linked));
     }
 
@@ -47,7 +51,7 @@ public class ArticleRenderer implements ArticleRenderPort {
         if (body == null) {
             return null;
         }
-        return body.contains("[[") ? WikiLinker.renderMarkdown(body, index(worldId)) : body;
+        return body.indexOf('[') >= 0 ? WikiLinker.renderMarkdown(body, index(worldId)) : body;
     }
 
     @Override
@@ -64,6 +68,6 @@ public class ArticleRenderer implements ArticleRenderPort {
     }
 
     private Map<String, LinkRef> index(UUID worldId) {
-        return ArticleRefIndex.build(articles.findRefsByWorld(worldId));
+        return ArticleRefIndex.build(articles.findRefsByWorld(worldId), aliases.findAllByWorld(worldId));
     }
 }
