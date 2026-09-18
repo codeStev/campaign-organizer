@@ -88,6 +88,7 @@ the old one.
 | [0096](0096-global-statblock-catalog.md) | Global, system-scoped statblock catalog with copy-on-import | Accepted |
 | [0097](0097-encounter-builder.md) | Persisted encounter builder, linkable to arc beats | Accepted |
 | [0116](0116-reliable-editable-article-links.md) | Reliable/editable article links, aliases, auto-link scan (extends ADR-0014) | Accepted |
+| [0117](0117-obsidian-link-autoconvert.md) | Auto-convert pasted Obsidian links to wiki-links (extends ADR-0116) | Accepted |
 
 ## Template
 

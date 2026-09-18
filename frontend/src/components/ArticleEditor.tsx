@@ -24,6 +24,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
+import { notifyDataChanged } from '../lib/dataRefresh';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagInput, TagList } from './TagInput';
@@ -403,6 +404,7 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
       setPreviewHtml(saved.bodyHtml ?? '');
       setMode('read');
       onChanged();
+      notifyDataChanged(worldId);
       if (wasNew) navigate(`/next/worlds/${worldId}/wiki/${saved.id}`);
       toast.success(`Article "${saved.title}" saved`);
     } catch (err) {

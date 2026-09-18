@@ -1,4 +1,5 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from '@tiptap/markdown';
@@ -33,7 +34,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { LinkPopover } from './LinkPopover';
 import { WikiLinkPopover } from './WikiLinkPopover';
 import { AiDraftDialog } from './AiDraftDialog';
-import { ArticleTemplate, DraftLevel } from '../api/client';
+import { isObsidianHref } from '../lib/obsidianLinks';
+import { useDataRefreshListener } from '../lib/dataRefresh';
+import { articlesApi, ArticleTemplate, DraftLevel } from '../api/client';
 
 interface Props {
   value: string;
@@ -149,6 +152,74 @@ export function MarkdownEditor({
     }
   }, [value, editor]);
 
+  // Lowercase title -> canonical title, for matching a pasted Obsidian
+  // link's text against this world's articles (see convertObsidianLinks
+  // below). Fetched once per world and refetched on the same
+  // cross-component "something changed" signal CampaignNavTree uses -
+  // migrating Obsidian content plausibly means creating many new target
+  // articles within one long session.
+  const articleTitlesRef = useRef<Map<string, string> | null>(null);
+  const refetchArticleTitles = useCallback(() => {
+    if (!worldId) return;
+    articlesApi(worldId)
+      .list()
+      .then((articles) => {
+        articleTitlesRef.current = new Map(articles.map((a) => [a.title.toLowerCase(), a.title]));
+      })
+      .catch(() => {});
+  }, [worldId]);
+  useEffect(() => {
+    articleTitlesRef.current = null;
+    refetchArticleTitles();
+  }, [refetchArticleTitles]);
+  useDataRefreshListener(worldId ?? '', refetchArticleTitles);
+
+  /**
+   * Migrating content from Obsidian pastes its internal wiki-links as
+   * ordinary Tiptap Link marks with an Obsidian-internal href (confirmed
+   * live: `app://obsidian.md/<path>`) - not our `[[wiki-link]]` syntax, so
+   * they'd otherwise sit there as real but dead links forever (the
+   * auto-link scan only looks at plain, unlinked text - a link, even to
+   * nowhere useful, doesn't count). Runs after a paste completes: any Link
+   * mark whose href looks like an Obsidian internal link, and whose text
+   * exactly matches a known article title, gets converted from a Link mark
+   * to a WikiLink mark - a real link elsewhere, nothing to link to here
+   * yet, is left untouched.
+   */
+  function convertObsidianLinks() {
+    const titles = articleTitlesRef.current;
+    if (!editor || !titles || titles.size === 0) return;
+    const { state } = editor;
+    const { doc, schema } = state;
+    const linkType = schema.marks.link;
+    const wikiLinkType = schema.marks.wikiLink;
+    if (!linkType || !wikiLinkType) return;
+    let tr = state.tr;
+    let converted = 0;
+    doc.descendants((node, pos) => {
+      if (!node.isText) return;
+      const mark = linkType.isInSet(node.marks);
+      if (!mark || !isObsidianHref(mark.attrs.href as string)) return;
+      const text = node.text ?? '';
+      const target = titles.get(text.toLowerCase());
+      if (!target) return;
+      const from = pos;
+      const to = pos + node.nodeSize;
+      // Labeled, not unlabeled: an unlabeled mark's saved markdown target is
+      // whatever text it currently wraps (WikiLink.renderMarkdown), not this
+      // `target` attribute - only the labeled form actually pins the link
+      // to the canonical title while preserving the pasted text's own
+      // casing as the visible label (same reasoning as the auto-link scan's
+      // always-labeled replacements).
+      tr = tr.removeMark(from, to, linkType).addMark(from, to, wikiLinkType.create({ target, labeled: true }));
+      converted += 1;
+    });
+    if (converted > 0) {
+      editor.view.dispatch(tr);
+      toast.success(`Converted ${converted} Obsidian link${converted === 1 ? '' : 's'} to wiki-link${converted === 1 ? '' : 's'}`);
+    }
+  }
+
   async function insertImage(file: File) {
     const upload = uploadRef.current;
     if (!upload || !editor) return;
@@ -167,6 +238,11 @@ export function MarkdownEditor({
   }
 
   function handlePaste(event: React.ClipboardEvent) {
+    // Deferred: the default paste (image handling aside) hasn't inserted
+    // its content into the document yet at this point in the event -
+    // scheduling past the current call stack lets ProseMirror finish first.
+    setTimeout(convertObsidianLinks, 0);
+
     const files = Array.from(event.clipboardData?.files ?? []).filter((f) =>
       f.type.startsWith('image/'),
     );
