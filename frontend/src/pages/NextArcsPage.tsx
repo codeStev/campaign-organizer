@@ -21,6 +21,7 @@ import {
 } from '../api/client';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
+import { notifyDataChanged } from '../lib/dataRefresh';
 import { Button } from '../components/ui/button';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { Input } from '../components/ui/input';
@@ -173,6 +174,7 @@ export function NextArcsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
       const created = await arcApi.create({ title: newArcTitle });
       setNewArcTitle('');
       await refreshArcs();
+      notifyDataChanged(worldId);
       toast.success(`Arc "${created.title}" created`);
     } catch (err) {
       handleError(err);
@@ -195,6 +197,7 @@ export function NextArcsPage({ worldId, onOpenArticle, onAuthExpired }: Props) {
     try {
       await arcApi.remove(arc.id);
       await refreshArcs();
+      notifyDataChanged(worldId);
       navigate(`/next/worlds/${worldId}/arcs/${urlCampaignId}`);
     } catch (err) {
       handleError(err);

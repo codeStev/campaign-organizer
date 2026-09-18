@@ -87,6 +87,16 @@ interface CategoryTreeProps<TEntity, TCategory extends CategoryLike> {
   emptyLabel?: string;
   /** Custom row content (e.g. a kind icon) — defaults to a plain truncated label. */
   renderEntityRow?: (entity: TEntity) => ReactNode;
+  /**
+   * Overrides the default label-substring search match — e.g. Wiki also
+   * wants a tag match (ADR-0087) to count, which needs an id set fetched
+   * from the server. Receives the lowercased, trimmed query; omit for the
+   * default `entityLabel(entity).toLowerCase().includes(queryLc)` check.
+   */
+  entityMatches?: (entity: TEntity, queryLc: string) => boolean;
+  /** Fires whenever the search box's value changes, so a caller doing its
+   * own extra matching (see `entityMatches`) knows what to fetch for. */
+  onQueryChange?: (query: string) => void;
 }
 
 /**
@@ -120,8 +130,15 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   uncategorizedLabel = 'Uncategorised',
   emptyLabel = 'Nothing found.',
   renderEntityRow,
+  entityMatches,
+  onQueryChange,
 }: CategoryTreeProps<TEntity, TCategory>) {
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    onQueryChange?.(query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null | undefined>(undefined);
   const [draggingEntity, setDraggingEntity] = useState<TEntity | null>(null);
@@ -167,7 +184,11 @@ export function CategoryTree<TEntity, TCategory extends CategoryLike>({
   }, [childrenByCategory]);
 
   const queryLc = query.trim().toLowerCase();
-  const matchingEntities = queryLc ? entities.filter((e) => entityLabel(e).toLowerCase().includes(queryLc)) : entities;
+  const matchingEntities = !queryLc
+    ? entities
+    : entities.filter((e) =>
+        entityMatches ? entityMatches(e, queryLc) : entityLabel(e).toLowerCase().includes(queryLc),
+      );
 
   const entitiesByCategory = useMemo(() => {
     const map = new Map<string, TEntity[]>();
