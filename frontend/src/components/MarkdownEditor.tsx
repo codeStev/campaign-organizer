@@ -17,6 +17,7 @@ import {
   Quote as QuoteIcon,
   SquareCode as SquareCodeIcon,
   Link as LinkIcon,
+  BookOpen as WikiLinkIcon,
   Image as ImageIcon,
   Minus as MinusIcon,
   Table2 as TableIcon,
@@ -30,12 +31,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { LinkPopover } from './LinkPopover';
+import { WikiLinkPopover } from './WikiLinkPopover';
 import { AiDraftDialog } from './AiDraftDialog';
 import { ArticleTemplate, DraftLevel } from '../api/client';
 
 interface Props {
   value: string;
   onChange: (markdown: string) => void;
+  /** Enables the wiki-link edit popover's "Change article…" search
+   * (ArticleLinkPicker) when set; omit to only offer Remove there. */
+  worldId?: string;
   /** Uploads a file and resolves to its URL; enables image embedding when set. */
   onUploadImage?: (file: File) => Promise<string>;
   /**
@@ -76,6 +81,7 @@ const TEXT_STYLE_OPTIONS = [
 export function MarkdownEditor({
   value,
   onChange,
+  worldId,
   onUploadImage,
   onAiDraft,
   articleTemplate,
@@ -92,6 +98,7 @@ export function MarkdownEditor({
   // re-render, and so onUpdate doesn't re-report a change it just caused.
   const lastValueRef = useRef(value);
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [wikiLinkPopoverOpen, setWikiLinkPopoverOpen] = useState(false);
   // Tiptap's `editor` isn't itself reactive - bump this on every transaction
   // so toolbar pressed-states/dropdown values stay current with the cursor.
   const [, setTick] = useState(0);
@@ -99,7 +106,19 @@ export function MarkdownEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        link: { openOnClick: false, HTMLAttributes: { class: 'md-link' } },
+        link: {
+          openOnClick: false,
+          HTMLAttributes: { class: 'md-link' },
+          // Tiptap's default isAllowedUri treats any "word:" prefix as an
+          // attempted (and by default disallowed) URI scheme, so a bare
+          // article title containing a colon (e.g. "Chapter: The
+          // Beginning") silently fails setLink() with no error surfaced.
+          // The real safety boundary is already server-side
+          // (HtmlSanitizer's Sanitizers.LINKS policy) - this check was
+          // pure client-side friction, and actively wrong for article-name
+          // hrefs (ADR-0116's [label](Article) syntax).
+          isAllowedUri: () => true,
+        },
       }),
       Markdown,
       TableKit.configure({ table: { resizable: false } }),
@@ -165,6 +184,24 @@ export function MarkdownEditor({
     files.forEach((f) => void insertImage(f));
   }
 
+  // Neither link mark is click-navigable in the editor (openOnClick: false
+  // for regular links; wiki-links were never navigable here at all) - a
+  // click's only job is to open that mark's edit popover instead, since
+  // otherwise editing requires already knowing to place the cursor and find
+  // the matching toolbar button. The native contenteditable click has
+  // already moved the ProseMirror selection into the mark by the time this
+  // fires, so editor.isActive/getAttributes below already reflect it.
+  function handlePreviewClick(event: React.MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (target.closest('.wiki-link-editor')) {
+      event.preventDefault();
+      setWikiLinkPopoverOpen(true);
+    } else if (target.closest('a.md-link')) {
+      event.preventDefault();
+      setLinkPopoverOpen(true);
+    }
+  }
+
   const textStyle = editor?.isActive('heading', { level: 1 })
     ? 'h1'
     : editor?.isActive('heading', { level: 2 })
@@ -180,6 +217,9 @@ export function MarkdownEditor({
   }
 
   const linkHref = editor?.isActive('link') ? ((editor.getAttributes('link').href as string) ?? '') : '';
+  const wikiLinkTarget = editor?.isActive('wikiLink')
+    ? ((editor.getAttributes('wikiLink').target as string) ?? '')
+    : '';
   const insideTable = Boolean(editor?.isActive('table'));
 
   return (
@@ -402,6 +442,28 @@ export function MarkdownEditor({
             editor?.isActive('link') ? () => editor?.chain().focus().unsetLink().run() : undefined
           }
         />
+        {editor?.isActive('wikiLink') && (
+          <WikiLinkPopover
+            trigger={
+              <Toggle type="button" variant="outline" size="sm" pressed>
+                <WikiLinkIcon />
+              </Toggle>
+            }
+            worldId={worldId}
+            open={wikiLinkPopoverOpen}
+            onOpenChange={setWikiLinkPopoverOpen}
+            target={wikiLinkTarget}
+            onRepoint={(title) =>
+              editor
+                ?.chain()
+                .focus()
+                .extendMarkRange('wikiLink')
+                .insertContent(`[[${title}]]`, { contentType: 'markdown' })
+                .run()
+            }
+            onRemove={() => editor?.chain().focus().unsetMark('wikiLink', { extendEmptyMarkRange: true }).run()}
+          />
+        )}
         {onUploadImage && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -500,7 +562,13 @@ export function MarkdownEditor({
         )}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileSelected} />
-      <div className="editor-content" onPaste={handlePaste} onDrop={handleDrop} data-testid="md-content">
+      <div
+        className="editor-content"
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        onClick={handlePreviewClick}
+        data-testid="md-content"
+      >
         <EditorContent editor={editor} />
       </div>
       {onUploadImage && (
