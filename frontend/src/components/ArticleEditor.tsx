@@ -4,6 +4,7 @@ import {
   articlesApi,
   articleRevisionsApi,
   articleTagsApi,
+  articleAliasesApi,
   templatesApi,
   mediaApi,
   aiApi,
@@ -26,6 +27,7 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagInput, TagList } from './TagInput';
+import { AliasInput } from './AliasInput';
 import { RevisionDiff } from './RevisionDiff';
 
 // Radix Select can't use "" as an item value (reserved for "no selection"),
@@ -88,6 +90,7 @@ interface Draft {
   body: string;
   parentArticleId: string | null;
   tags: string[];
+  aliases: string[];
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -98,6 +101,7 @@ const EMPTY_DRAFT: Draft = {
   body: '',
   parentArticleId: null,
   tags: [],
+  aliases: [],
 };
 
 interface Props {
@@ -177,7 +181,11 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
   const loadArticle = useCallback(
     async (id: string) => {
       try {
-        const [article, articleTags] = await Promise.all([api.get(id), articleTagsApi(worldId, id).get()]);
+        const [article, articleTags, articleAliases] = await Promise.all([
+          api.get(id),
+          articleTagsApi(worldId, id).get(),
+          articleAliasesApi(worldId, id).get(),
+        ]);
         setDraft({
           id: article.id,
           categoryId: article.categoryId ?? null,
@@ -186,6 +194,7 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
           body: article.body ?? '',
           parentArticleId: article.parentArticleId ?? null,
           tags: articleTags.tags,
+          aliases: articleAliases.aliases,
         });
         setPreviewHtml(article.bodyHtml ?? '');
         setMode('read');
@@ -377,7 +386,10 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
     };
     try {
       const saved = draft.id ? await api.update(draft.id, payload) : await api.create(payload);
-      const savedTags = await articleTagsApi(worldId, saved.id).set(draft.tags);
+      const [savedTags, savedAliases] = await Promise.all([
+        articleTagsApi(worldId, saved.id).set(draft.tags),
+        articleAliasesApi(worldId, saved.id).set(draft.aliases),
+      ]);
       setDraft({
         id: saved.id,
         categoryId: saved.categoryId ?? null,
@@ -386,6 +398,7 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
         body: saved.body ?? '',
         parentArticleId: saved.parentArticleId ?? null,
         tags: savedTags.tags,
+        aliases: savedAliases.aliases,
       });
       setPreviewHtml(saved.bodyHtml ?? '');
       setMode('read');
@@ -458,9 +471,11 @@ export function ArticleEditor({ worldId, articleId, articles, categories, onOpen
             </SelectContent>
           </Select>
           <TagInput worldId={worldId} value={draft.tags} onChange={(tags) => setDraft({ ...draft, tags })} />
+          <AliasInput value={draft.aliases} onChange={(aliases) => setDraft({ ...draft, aliases })} />
           <MarkdownEditor
             value={draft.body}
             onChange={(body) => setDraft({ ...draft, body })}
+            worldId={worldId}
             onUploadImage={async (file) => (await media.upload(file)).url}
             articleTemplate={draft.template}
             onArticleTemplateChange={selectTemplate}

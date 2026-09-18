@@ -13,6 +13,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.in.ListArticleR
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ListArticlesUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.RestoreArticleRevisionUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.UpdateArticleUseCase;
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleAliasRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRevisionRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleTagLookupPort;
@@ -48,6 +49,7 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
         ArticleQueryPort, ArticleImportPort {
 
     private final ArticleRepositoryPort articles;
+    private final ArticleAliasRepositoryPort aliases;
     private final ArticleRevisionRepositoryPort revisions;
     private final CategoryQueryPort categories;
     private final WorldExistsPort worlds;
@@ -56,11 +58,13 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     private final IdGenerator ids;
     private final Clock clock;
 
-    public ArticleService(ArticleRepositoryPort articles, ArticleRevisionRepositoryPort revisions,
+    public ArticleService(ArticleRepositoryPort articles, ArticleAliasRepositoryPort aliases,
+                          ArticleRevisionRepositoryPort revisions,
                           CategoryQueryPort categories, WorldExistsPort worlds,
                           ArticleTagLookupPort tagLookup, ArticleViewMapper viewMapper,
                           IdGenerator ids, Clock clock) {
         this.articles = articles;
+        this.aliases = aliases;
         this.revisions = revisions;
         this.categories = categories;
         this.worlds = worlds;
@@ -205,7 +209,7 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
         if (names == null || names.isEmpty()) {
             return Map.of();
         }
-        var index = ArticleRefIndex.build(articles.findRefsByWorld(worldId));
+        var index = ArticleRefIndex.build(articles.findRefsByWorld(worldId), aliases.findAllByWorld(worldId));
         return names.stream()
                 .filter(index::containsKey)
                 .collect(Collectors.toMap(Function.identity(), name -> index.get(name).id()));

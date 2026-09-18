@@ -26,9 +26,9 @@ class RowLevelSecurityFitnessIT extends AbstractIntegrationTest {
             "worlds", "game_systems", "global_field_templates", "global_statblocks", "ai_provider_settings");
 
     private static final List<String> TIER_2_TABLES = List.of(
-            "articles", "beat_kinds", "calendars", "campaigns", "card_decks", "categories", "character_sheets",
-            "documents", "entity_tags", "field_templates", "foundry_connections", "foundry_pushed_documents",
-            "handout_categories", "handouts", "map_categories",
+            "article_aliases", "articles", "beat_kinds", "calendars", "campaigns", "card_decks", "categories",
+            "character_sheets", "documents", "entity_tags", "field_templates", "foundry_connections",
+            "foundry_pushed_documents", "handout_categories", "handouts", "map_categories",
             "maps", "media", "players", "relationships", "roll_tables", "sheet_categories", "statblocks",
             "table_deck_categories", "timelines", "whiteboards");
 

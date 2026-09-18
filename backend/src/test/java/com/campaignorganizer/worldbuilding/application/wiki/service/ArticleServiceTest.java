@@ -13,6 +13,7 @@ import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ArticleCommands.CreateArticleCommand;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ArticleCommands.UpdateArticleCommand;
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.ArticleListQuery;
+import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleAliasRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRevisionRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleTagLookupPort;
@@ -43,6 +44,8 @@ class ArticleServiceTest {
     @Mock
     private ArticleRepositoryPort articles;
     @Mock
+    private ArticleAliasRepositoryPort aliases;
+    @Mock
     private ArticleRevisionRepositoryPort revisions;
     @Mock
     private CategoryQueryPort categories;
@@ -62,7 +65,7 @@ class ArticleServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ArticleService(articles, revisions, categories, worlds, tagLookup, viewMapper,
+        service = new ArticleService(articles, aliases, revisions, categories, worlds, tagLookup, viewMapper,
                 ids, clock);
         lenient().when(worlds.exists(worldId)).thenReturn(true);
         lenient().when(tagLookup.articleIdsTaggedContaining(any(), any())).thenReturn(Set.of());
