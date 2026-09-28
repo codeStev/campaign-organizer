@@ -27,7 +27,7 @@ repositories {
 }
 
 val mapstructVersion = "1.6.3"
-val archunitVersion = "1.5.0"
+val archunitVersion = "1.5.1"
 val jjwtVersion = "0.13.0"
 
 dependencies {
