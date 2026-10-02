@@ -1542,6 +1542,9 @@ export interface PacketBeat {
   done: boolean;
   arcTitle?: string | null;
   articleIds: string[];
+  statblockIds: string[];
+  tableIds: string[];
+  deckIds: string[];
 }
 
 export interface PacketArticle {
