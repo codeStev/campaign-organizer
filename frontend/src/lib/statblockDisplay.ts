@@ -5,6 +5,8 @@ export interface StatEntry {
   label: string;
   value: unknown;
   type?: FieldType;
+  /** Title of the template section the field belongs to; unset for stray keys. */
+  section?: string;
 }
 
 /** Minimal shape shared by FieldTemplate and GlobalFieldTemplate (ADR-0093) for lookup. */
@@ -40,7 +42,13 @@ export function orderedStatEntries(
   for (const section of template.sections) {
     for (const field of section.fields) {
       if (Object.prototype.hasOwnProperty.call(values, field.key)) {
-        entries.push({ key: field.key, label: field.label, value: values[field.key], type: field.type });
+        entries.push({
+          key: field.key,
+          label: field.label,
+          value: values[field.key],
+          type: field.type,
+          section: section.title,
+        });
         seen.add(field.key);
       }
     }
