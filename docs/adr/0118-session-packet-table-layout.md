@@ -20,10 +20,14 @@ statblocks were a loose grid of label/value pairs rather than a table.
   assigned only to sections that have content after the include-tree filter.
 - **The cheat sheet moves to the front** (after the front sheet) because it is
   the quick-lookup material. ADR-0086's decision to include it is unchanged.
-- **Navigation aids.** The contents list carries page numbers and each
-  section has a running page header ("D · Statblocks"). Both rely on CSS
-  paged-media features whose browser support is uneven; the contents falls
-  back to section letters without page numbers where unsupported.
+- **Navigation aids.** The contents list and the "Needs" chips refer to
+  sections by letter, and each section has a running page header
+  ("D · Statblocks") so the reader can flip to a letter. The headers are one
+  named `@page` per section, generated for the chosen paper size and margins.
+  **Page numbers are not printed**: CSS `target-counter()` would provide them,
+  but Chromium (checked in Chrome 151) accepts the syntax in `@supports` and
+  then renders nothing, so a page-number column would stay empty. If browsers
+  implement it later, the contents and chips can add it without a layout change.
 - **Fewer page breaks.** A new page starts only at a section start and for
   maps and handouts. Items inside a section flow and avoid breaking inside.
 - **Statblocks are real tables** with a shaded name row, template sections as

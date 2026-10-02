@@ -75,7 +75,7 @@ export interface NeedChip {
   label: string;
   /** Letter of the section the item is printed in. */
   letter: string;
-  /** Anchor id of the printed item, for page-number lookup. */
+  /** Anchor id of the printed item (the chip links to it on screen). */
   anchor: string;
 }
 

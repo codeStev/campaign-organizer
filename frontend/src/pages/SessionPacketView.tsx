@@ -387,7 +387,6 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                     <a href={`#sec-${sec.id}`}>
                       <span className="print-toc-letter">{sec.letter}</span>
                       <span className="print-toc-title">{sec.title}</span>
-                      <span className="print-toc-page" />
                     </a>
                   </li>
                 ))}

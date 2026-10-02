@@ -3656,20 +3656,6 @@ button:disabled {
   }
 }
 
-/* Page numbers for the contents and the "Needs" chips need CSS paged-media
-   cross references; browsers without them just omit the numbers. */
-@media print {
-  @supports (content: target-counter(attr(href url), page)) {
-    .print-toc .print-toc-page::after {
-      content: target-counter(attr(href url), page);
-    }
-    .print-chip::after {
-      content: ' p' target-counter(attr(href url), page);
-      color: #666;
-    }
-  }
-}
-
 /* Chained roll tables / card decks (FR-41) */
 .chain-picker {
   border: 1px dashed var(--border);
