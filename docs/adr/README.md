@@ -89,6 +89,7 @@ the old one.
 | [0097](0097-encounter-builder.md) | Persisted encounter builder, linkable to arc beats | Accepted |
 | [0116](0116-reliable-editable-article-links.md) | Reliable/editable article links, aliases, auto-link scan (extends ADR-0014) | Accepted |
 | [0117](0117-obsidian-link-autoconvert.md) | Auto-convert pasted Obsidian links to wiki-links (extends ADR-0116) | Accepted |
+| [0118](0118-session-packet-table-layout.md) | Session packet laid out for use at the table | Accepted |
 
 ## Template
 
