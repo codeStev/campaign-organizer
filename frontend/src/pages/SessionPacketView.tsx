@@ -14,9 +14,20 @@ import {
   PacketArticle,
   Statblock,
 } from '../api/client';
-import { orderedStatEntries, templateIdOf } from '../lib/statblockDisplay';
 import { cardLabel, entryRange, statblockLine } from '../lib/cheatSheetDisplay';
 import { renderMarkdown } from '../lib/markdown';
+import {
+  anchorId,
+  beatNeeds,
+  buildSections,
+  groupArticlesByTemplate,
+  NeedsLookup,
+  PacketSectionId,
+  templateLabel,
+} from '../lib/packetLayout';
+import { PacketPageStyles } from '../components/packet/PacketPageStyles';
+import { PacketStatblock } from '../components/packet/PacketStatblock';
+import { PacketNeeds } from '../components/packet/PacketNeeds';
 
 /** Every article id within an article's subtree (itself + descendants). */
 function articleSubtreeIds(articleId: string, childrenByParent: Map<string, PacketArticle[]>): string[] {
@@ -225,6 +236,47 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
     return excludedIds.has(`cheatSheet:${sheet.id}`) ? null : sheet;
   }, [packet, excludedIds]);
 
+  const allTemplates = useMemo(() => [...templates, ...globalTemplates], [templates, globalTemplates]);
+  const sortedStatblocks = useMemo(
+    () => [...shownStatblocks].sort((a, b) => a.name.localeCompare(b.name)),
+    [shownStatblocks],
+  );
+  const articleGroups = useMemo(() => groupArticlesByTemplate(shownArticles), [shownArticles]);
+  const sections = useMemo(() => {
+    const counts: Record<PacketSectionId, number> = {
+      cheatSheet: shownCheatSheet ? 1 : 0,
+      beats: shownBeats.length,
+      articles: shownArticles.length,
+      statblocks: shownStatblocks.length,
+      tables: shownRollTables.length + shownCardDecks.length,
+      maps: shownMaps.length,
+      handouts: shownHandouts.length,
+      clocks: shownClocks.length,
+    };
+    return buildSections(counts);
+  }, [
+    shownCheatSheet,
+    shownBeats,
+    shownArticles,
+    shownStatblocks,
+    shownRollTables,
+    shownCardDecks,
+    shownMaps,
+    shownHandouts,
+    shownClocks,
+  ]);
+  const needsLookup: NeedsLookup = useMemo(
+    () => ({
+      sections,
+      articles: new Map(shownArticles.map((x) => [x.id, x.title])),
+      statblocks: new Map(shownStatblocks.map((x) => [x.id, x.name])),
+      tables: new Map(shownRollTables.map((x) => [x.id, x.title])),
+      decks: new Map(shownCardDecks.map((x) => [x.id, x.title])),
+    }),
+    [sections, shownArticles, shownStatblocks, shownRollTables, shownCardDecks],
+  );
+  const section = (id: PacketSectionId) => sections.find((x) => x.id === id);
+
   useEffect(() => {
     let active = true;
     sessionsApi(worldId, campaignId)
@@ -281,241 +333,77 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
       )}
 
       <div className="print-doc" {...printDocProps}>
-        <section className="print-cover">
+        {packet && (
+          <PacketPageStyles
+            paper={printOpts.paper}
+            margin={printOpts.margin}
+            sections={sections}
+            sessionTitle={heading}
+          />
+        )}
+
+        <section className="print-front pk-front">
           <h1>{heading}</h1>
           <p className="print-subtitle">
             {packet?.campaignName}
             {s?.date ? ` · ${s.date}` : ''}
           </p>
-        </section>
 
-        {loading && <p className="print-status">Preparing packet…</p>}
+          {loading && <p className="print-status">Preparing packet…</p>}
 
-        {!loading && packet && (
-          <>
-            {(s?.summary || (s?.notes && includeGmNotes)) && (
-              <section className="print-article">
-                <h1>Session overview</h1>
-                {s?.summary && (
-                  <>
-                    <p className="print-kicker">summary</p>
-                    <div
-                      className="preview-body"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }}
-                    />
-                  </>
-                )}
-                {s?.notes && includeGmNotes && (
-                  <>
-                    <p className="print-kicker">gm notes</p>
-                    <div
-                      className="preview-body"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(s.notes) }}
-                    />
-                  </>
-                )}
-              </section>
-            )}
-
-            <section className="print-article">
-              <h1>Beats</h1>
-              {shownBeats.length === 0 && (
-                <p className="print-status">No beats scheduled into this session.</p>
+          {!loading && packet && (
+            <>
+              {s?.summary && (
+                <>
+                  <h2>Summary</h2>
+                  <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(s.summary) }} />
+                </>
               )}
-              <ol className="print-beats">
+              {s?.notes && includeGmNotes && (
+                <>
+                  <h2>GM notes</h2>
+                  <div className="preview-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(s.notes) }} />
+                </>
+              )}
+
+              <h2>Beats at a glance</h2>
+              {shownBeats.length === 0 && <p className="print-status">No beats scheduled into this session.</p>}
+              <ul className="print-glance">
                 {shownBeats.map((b) => (
-                  <li key={b.id} className="print-beat">
+                  <li key={b.id} className="print-compact-item">
                     <span className="print-beat-title">
                       {b.done ? '☑' : '☐'} {b.title}
                     </span>
                     {b.arcTitle && <span className="print-beat-arc"> — {b.arcTitle}</span>}
-                    {b.body && (
-                      <div
-                        className="preview-body"
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(b.body) }}
-                      />
-                    )}
+                    <PacketNeeds chips={beatNeeds(b, needsLookup)} />
+                  </li>
+                ))}
+              </ul>
+
+              <h2>Contents</h2>
+              <ol className="print-toc">
+                {sections.map((sec) => (
+                  <li key={sec.id}>
+                    <a href={`#sec-${sec.id}`}>
+                      <span className="print-toc-letter">{sec.letter}</span>
+                      <span className="print-toc-title">{sec.title}</span>
+                    </a>
                   </li>
                 ))}
               </ol>
-            </section>
+            </>
+          )}
+        </section>
 
-            {shownArticles.length > 0 && (
-              <div className="print-divider">
-                <h1>Referenced material</h1>
-                <p className="print-kicker">articles linked from this session's beats</p>
-              </div>
-            )}
-
-            {shownArticles.map((a) => (
-              <article key={a.id} className="print-article">
-                <h1>{a.title}</h1>
-                <p className="print-kicker">{a.template.toLowerCase()}</p>
-                {/* eslint-disable-next-line react/no-danger */}
-                <div
-                  className="print-body preview-body"
-                  dangerouslySetInnerHTML={{ __html: a.bodyHtml || '<p><em>(empty)</em></p>' }}
-                />
-              </article>
-            ))}
-
-            {shownMaps.map((m) => (
-              <section key={m.id} className="print-map-section">
-                <h1>{m.name}</h1>
-                {m.imageUrl && (
-                  <div className="print-map-figure">
-                    <img src={m.imageUrl} alt={m.name} />
-                    {m.pins.map((p, i) => (
-                      <span
-                        key={i}
-                        className="print-map-marker"
-                        style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
-                      >
-                        {i + 1}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {m.pins.length > 0 && (
-                  <ol className="print-map-legend">
-                    {m.pins.map((p, i) => (
-                      <li key={i}>{p.label || 'Unlabeled pin'}</li>
-                    ))}
-                  </ol>
-                )}
-              </section>
-            ))}
-
-            {shownStatblocks.length > 0 && (
-              <section className="print-map-section">
-                <h1>Statblocks</h1>
-                {shownStatblocks.map((sb) => (
-                  <div key={sb.id} className="print-statblock">
-                    <h2>{sb.name}</h2>
-                    <dl className="print-stats">
-                      {orderedStatEntries(sb.stats, templateIdOf(sb), [...templates, ...globalTemplates]).map((entry) => (
-                        <div key={entry.key} className="print-stat">
-                          <dt>{entry.label}</dt>
-                          {entry.type === 'TEXTAREA' ? (
-                            <dd
-                              className="preview-body"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdown(String(entry.value)) }}
-                            />
-                          ) : (
-                            <dd>{String(entry.value)}</dd>
-                          )}
-                        </div>
-                      ))}
-                    </dl>
-                    {sb.notes && (
-                      <div
-                        className="preview-body"
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(sb.notes) }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </section>
-            )}
-
-            {shownRollTables.length > 0 && (
-              <section className="print-map-section">
-                <h1>Roll tables</h1>
-                {shownRollTables.map((t) => (
-                  <div key={t.id} className="print-roll-table">
-                    <h2>{t.title}</h2>
-                    <p className="print-kicker">
-                      {t.diceExpression} ({t.minResult}–{t.maxResult})
-                    </p>
-                    <table className="print-table-grid">
-                      <tbody>
-                        {t.entries.map((e, i) => (
-                          <tr key={i}>
-                            <td className="print-table-range">
-                              {e.minResult != null && e.maxResult != null
-                                ? `${e.minResult}–${e.maxResult}`
-                                : 'else'}
-                            </td>
-                            {/* eslint-disable-next-line react/no-danger */}
-                            <td className="preview-body" dangerouslySetInnerHTML={{ __html: e.bodyHtml }} />
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-              </section>
-            )}
-
-            {shownCardDecks.length > 0 && (
-              <section className="print-map-section">
-                <h1>Card decks</h1>
-                {shownCardDecks.map((d) => (
-                  <div key={d.id} style={{ marginBottom: '1rem' }}>
-                    <h2>{d.title}</h2>
-                    <div className="card-sheet">
-                      {d.cards.map((c, i) => (
-                        <div key={i} className="deck-card">
-                          {c.title && <div className="deck-card-name">{c.title}</div>}
-                          {/* eslint-disable-next-line react/no-danger */}
-                          <div className="preview-body" dangerouslySetInnerHTML={{ __html: c.bodyHtml }} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            )}
-
-            {shownHandouts.map((h) => (
-              <section key={h.id} className="print-map-section">
-                <div className="handout-print">
-                  <article className={`handout-doc ${h.preset.toLowerCase()}`}>
-                    <h2 className="handout-title">{h.title}</h2>
-                    {/* eslint-disable-next-line react/no-danger */}
-                    <div
-                      className="preview-body"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(h.body) }}
-                    />
-                  </article>
-                </div>
-              </section>
-            ))}
-
-            {shownClocks.length > 0 && (
-              <section className="print-map-section">
-                <h1>Clocks</h1>
-                <p className="print-kicker">blank for hand-marking at the table</p>
-                {shownClocks.map((c) => (
-                  <div key={c.id} className="print-clock">
-                    <h2>{c.title}</h2>
-                    {c.description && <p className="print-kicker">{c.description}</p>}
-                    <div className="circle-tracker">
-                      {c.segments.map((_, i) => (
-                        <span key={i} className="pip read-only" title={`${i + 1}`} />
-                      ))}
-                    </div>
-                    {c.segments.some((s) => s.title) && (
-                      <ol className="print-map-legend">
-                        {c.segments.map((s, i) =>
-                          s.title ? (
-                            <li key={i}>
-                              {i + 1}: {s.title}
-                              {s.description ? ` — ${s.description}` : ''}
-                            </li>
-                          ) : null,
-                        )}
-                      </ol>
-                    )}
-                  </div>
-                ))}
-              </section>
-            )}
-
-            {shownCheatSheet && (
-              <section className="print-map-section cheat-sheet-print">
-                <h1>Cheat sheet</h1>
-                <ol className="cheatsheet-list">
+        {!loading && packet && (
+          <>
+            {section('cheatSheet') && shownCheatSheet && (
+              <section id="sec-cheatSheet" className="print-sec pk-cheatSheet cheat-sheet-print">
+                <h1>
+                  {section('cheatSheet')!.letter} · {section('cheatSheet')!.title}
+                </h1>
+                {shownCheatSheet && (
+                  <ol className="cheatsheet-list">
                   {shownCheatSheet.fragments.map((f, i) => (
                     <li key={i} className={`cheatsheet-item cheatsheet-${f.type.toLowerCase()}`}>
                       <span className="cheatsheet-num">{i + 1}</span>
@@ -539,9 +427,9 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                         ) : f.type === 'STATBLOCK' && f.statblock ? (
                           <>
                             <strong>{f.statblock.name}</strong>
-                            {statblockLine(f.statblock, [...templates, ...globalTemplates]) && (
+                            {statblockLine(f.statblock, allTemplates) && (
                               <div className="cheatsheet-statline">
-                                {statblockLine(f.statblock, [...templates, ...globalTemplates])}
+                                {statblockLine(f.statblock, allTemplates)}
                               </div>
                             )}
                           </>
@@ -573,6 +461,210 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                     </li>
                   ))}
                 </ol>
+                )}
+              </section>
+            )}
+
+            {section('beats') && (
+              <section id="sec-beats" className="print-sec pk-beats">
+                <h1>
+                  {section('beats')!.letter} · {section('beats')!.title}
+                </h1>
+                <ol className="print-beats">
+                  {shownBeats.map((b) => (
+                    <li key={b.id} className="print-beat print-compact-item">
+                      <span className="print-beat-title">
+                        {b.done ? '☑' : '☐'} {b.title}
+                      </span>
+                      {b.arcTitle && <span className="print-beat-arc"> — {b.arcTitle}</span>}
+                      {b.body && (
+                        <div
+                          className="preview-body"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(b.body) }}
+                        />
+                      )}
+                      <PacketNeeds chips={beatNeeds(b, needsLookup)} />
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+
+            {section('articles') && (
+              <section id="sec-articles" className="print-sec pk-articles">
+                <h1>
+                  {section('articles')!.letter} · {section('articles')!.title}
+                </h1>
+                {articleGroups.map((g) => (
+                  <div key={g.template}>
+                    <h2 className="print-group-title">{templateLabel(g.template)}</h2>
+                    {g.articles.map((a) => (
+                      <article key={a.id} id={anchorId('article', a.id)} className="print-article-item">
+                        <h2>{a.title}</h2>
+                        {/* eslint-disable-next-line react/no-danger */}
+                        <div
+                          className="print-body preview-body"
+                          dangerouslySetInnerHTML={{ __html: a.bodyHtml || '<p><em>(empty)</em></p>' }}
+                        />
+                      </article>
+                    ))}
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {section('statblocks') && (
+              <section id="sec-statblocks" className="print-sec pk-statblocks">
+                <h1>
+                  {section('statblocks')!.letter} · {section('statblocks')!.title}
+                </h1>
+                <div className="print-statblock-grid">
+                  {sortedStatblocks.map((sb) => (
+                    <PacketStatblock
+                      key={sb.id}
+                      statblock={sb}
+                      templates={allTemplates}
+                      anchor={anchorId('statblock', sb.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {section('tables') && (
+              <section id="sec-tables" className="print-sec pk-tables">
+                <h1>
+                  {section('tables')!.letter} · {section('tables')!.title}
+                </h1>
+                {shownRollTables.map((t) => (
+                  <div key={t.id} id={anchorId('table', t.id)} className="print-roll-table print-compact-item">
+                    <h2>{t.title}</h2>
+                    <p className="print-kicker">
+                      {t.diceExpression} ({t.minResult}–{t.maxResult})
+                    </p>
+                    <table className="print-table-grid">
+                      <tbody>
+                        {t.entries.map((e, i) => (
+                          <tr key={i}>
+                            <td className="print-table-range">
+                              {e.minResult != null && e.maxResult != null
+                                ? `${e.minResult}–${e.maxResult}`
+                                : 'else'}
+                            </td>
+                            {/* eslint-disable-next-line react/no-danger */}
+                            <td className="preview-body" dangerouslySetInnerHTML={{ __html: e.bodyHtml }} />
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+                {shownCardDecks.map((d) => (
+                  <div key={d.id} id={anchorId('deck', d.id)} className="print-compact-item">
+                    <h2>{d.title}</h2>
+                    <div className="card-sheet">
+                      {d.cards.map((c, i) => (
+                        <div key={i} className="deck-card">
+                          {c.title && <div className="deck-card-name">{c.title}</div>}
+                          {/* eslint-disable-next-line react/no-danger */}
+                          <div className="preview-body" dangerouslySetInnerHTML={{ __html: c.bodyHtml }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {section('maps') && (
+              <section id="sec-maps" className="print-sec pk-maps">
+                {shownMaps.map((m, mi) => (
+                  <div key={m.id} className={mi > 0 ? 'print-sec-page' : undefined}>
+                    {mi === 0 && (
+                      <h1>
+                        {section('maps')!.letter} · {section('maps')!.title}
+                      </h1>
+                    )}
+                    <h2>{m.name}</h2>
+                    {m.imageUrl && (
+                      <div className="print-map-figure">
+                        <img src={m.imageUrl} alt={m.name} />
+                        {m.pins.map((p, i) => (
+                          <span
+                            key={i}
+                            className="print-map-marker"
+                            style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
+                          >
+                            {i + 1}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {m.pins.length > 0 && (
+                      <ol className="print-map-legend">
+                        {m.pins.map((p, i) => (
+                          <li key={i}>{p.label || 'Unlabeled pin'}</li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {section('handouts') && (
+              <section id="sec-handouts" className="print-sec pk-handouts">
+                {shownHandouts.map((h, hi) => (
+                  <div key={h.id} className={hi > 0 ? 'print-sec-page' : undefined}>
+                    {hi === 0 && (
+                      <h1>
+                        {section('handouts')!.letter} · {section('handouts')!.title}
+                      </h1>
+                    )}
+                    <div className="handout-print">
+                      <article className={`handout-doc ${h.preset.toLowerCase()}`}>
+                        <h2 className="handout-title">{h.title}</h2>
+                        {/* eslint-disable-next-line react/no-danger */}
+                        <div
+                          className="preview-body"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(h.body) }}
+                        />
+                      </article>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {section('clocks') && (
+              <section id="sec-clocks" className="print-sec pk-clocks">
+                <h1>
+                  {section('clocks')!.letter} · {section('clocks')!.title}
+                </h1>
+                <p className="print-kicker">blank for hand-marking at the table</p>
+                {shownClocks.map((c) => (
+                  <div key={c.id} className="print-clock print-compact-item">
+                    <h2>{c.title}</h2>
+                    {c.description && <p className="print-kicker">{c.description}</p>}
+                    <div className="circle-tracker">
+                      {c.segments.map((_, i) => (
+                        <span key={i} className="pip read-only" title={`${i + 1}`} />
+                      ))}
+                    </div>
+                    {c.segments.some((sg) => sg.title) && (
+                      <ol className="print-map-legend">
+                        {c.segments.map((sg, i) =>
+                          sg.title ? (
+                            <li key={i}>
+                              {i + 1}: {sg.title}
+                              {sg.description ? ` — ${sg.description}` : ''}
+                            </li>
+                          ) : null,
+                        )}
+                      </ol>
+                    )}
+                  </div>
+                ))}
               </section>
             )}
           </>

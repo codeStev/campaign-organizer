@@ -114,7 +114,9 @@ first-class (screen-sharing/GM-only was declined — see FR-15).
 - **FR-28 Session prep packet.** One-click printable packet for a session: its
   scheduled beats, the articles they reference, maps those articles are pinned on,
   campaign statblocks, and (opt-out, included by default) the session's cheat
-  sheet (FR-37). (ADR-0036, ADR-0046, ADR-0086)
+  sheet (FR-37). Laid out for use at the table: a front sheet with a beat
+  checklist and contents, lettered sections with running page headers, and
+  statblocks as tables. (ADR-0036, ADR-0046, ADR-0086, ADR-0118)
 - **FR-29 Statblock cards.** Print statblocks as cut-out reference cards; tick
   specific statblocks to print a chosen subset, or print the whole filtered list.
   (ADR-0037, ADR-0041)
