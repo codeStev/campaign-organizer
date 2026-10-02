@@ -69,7 +69,9 @@ export function PacketStatblock({ statblock: sb, templates, anchor }: Props) {
         rows.push(
           <tr key={`t${gi}-${ei}`} className="print-statblock-long">
             <td colSpan={4}>
-              <strong>{entry.label}</strong>
+              {entry.label.trim().toLowerCase() !== (entry.section ?? '').trim().toLowerCase() && (
+                <strong>{entry.label}</strong>
+              )}
               <div
                 className="preview-body"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(String(entry.value)) }}
