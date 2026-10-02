@@ -3497,6 +3497,163 @@ button:disabled {
   }
 }
 
+/* Session packet table layout (ADR-0118) */
+.print-front h2 {
+  margin: 1rem 0 0.3rem;
+  font-size: 1.05rem;
+}
+
+.print-toc {
+  list-style: none;
+  padding: 0;
+  margin: 0.3rem 0 0;
+  columns: 2;
+  column-gap: 2rem;
+}
+
+.print-toc li {
+  break-inside: avoid;
+  padding: 0.12rem 0;
+  border-bottom: 1px dotted #999;
+}
+
+.print-toc a {
+  display: flex;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.print-toc .print-toc-letter {
+  font-weight: 700;
+  min-width: 1.2rem;
+}
+
+.print-toc .print-toc-title {
+  flex: 1;
+}
+
+.print-needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.4rem;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+}
+
+.print-needs-label {
+  color: #666;
+}
+
+.print-chip {
+  border: 1px solid #999;
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.print-chip b {
+  margin-left: 0.2rem;
+}
+
+.print-sec h1 {
+  margin-top: 0;
+}
+
+.print-group-title {
+  margin: 1rem 0 0.4rem;
+  padding: 0.1rem 0.4rem;
+  background: #e6e6e6;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-article-item {
+  break-inside: auto;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #ccc;
+}
+
+.print-article-item h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.1rem;
+}
+
+.print-statblock-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.print-statblock-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  break-inside: avoid;
+}
+
+.print-statblock-table th,
+.print-statblock-table td {
+  border: 1px solid #888;
+  padding: 0.1rem 0.3rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.print-statblock-table th {
+  width: 18%;
+  background: #eee;
+  font-weight: 600;
+}
+
+.print-statblock-table .print-statblock-name {
+  width: auto;
+  background: #444;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.print-statblock-table .print-statblock-section th {
+  width: auto;
+  background: #d8d8d8;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-statblock-table .preview-body {
+  font-weight: 400;
+}
+
+.print-statblock-table .preview-body p {
+  margin: 0.1rem 0;
+}
+
+.print-compact-item {
+  break-inside: avoid;
+  margin-bottom: 0.9rem;
+}
+
+@media print {
+  /* Page breaks only at lettered-section starts (named pages break on their
+     own) and for maps / handouts; items inside a section flow. */
+  .print-sec .print-article,
+  .print-sec .print-map-section {
+    break-before: auto;
+  }
+  .print-sec-page {
+    break-before: page;
+  }
+  .print-front {
+    break-after: page;
+  }
+}
+
 /* Chained roll tables / card decks (FR-41) */
 .chain-picker {
   border: 1px dashed var(--border);
