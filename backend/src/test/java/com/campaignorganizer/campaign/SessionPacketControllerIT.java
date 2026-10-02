@@ -60,10 +60,12 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
         String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
                 "{\"title\":\"Session 1\",\"sessionNumber\":1}");
 
-        // A beat scheduled into the session, linking the NPC and the place.
+        String guard = create("/api/worlds/" + worldId + "/statblocks", "{\"name\":\"Guard\"}");
+
+        // A beat scheduled into the session, linking the NPC, the place and a statblock.
         create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/arcs/" + arcId + "/beats",
                 "{\"title\":\"Meet Sildar\",\"sessionId\":\"" + sessionId + "\",\"articleIds\":[\""
-                        + npc + "\",\"" + place + "\"]}");
+                        + npc + "\",\"" + place + "\"],\"statblockIds\":[\"" + guard + "\"]}");
         // A beat in another session must NOT appear.
         String otherSession = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
                 "{\"title\":\"Session 2\"}");
@@ -83,6 +85,9 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.beats.length()").value(1))
                 .andExpect(jsonPath("$.beats[0].title").value("Meet Sildar"))
                 .andExpect(jsonPath("$.beats[0].arcTitle").value("Main Arc"))
+                .andExpect(jsonPath("$.beats[0].statblockIds[0]").value(guard))
+                .andExpect(jsonPath("$.beats[0].tableIds.length()").value(0))
+                .andExpect(jsonPath("$.beats[0].deckIds.length()").value(0))
                 .andExpect(jsonPath("$.articles[*].title", Matchers.hasItems("Sildar", "Phandalin")))
                 .andExpect(jsonPath("$.articles[?(@.title == 'Sildar')].bodyHtml")
                         .value(Matchers.hasItem(Matchers.containsString("A knight."))))
@@ -155,6 +160,8 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
                         worldId, campaignId, sessionId)
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.beats[0].tableIds[0]").value(weather))
+                .andExpect(jsonPath("$.beats[0].deckIds[0]").value(omens))
                 .andExpect(jsonPath("$.rollTables.length()").value(1))
                 .andExpect(jsonPath("$.rollTables[0].title").value("Weather"))
                 .andExpect(jsonPath("$.rollTables[0].diceExpression").value("1d2"))

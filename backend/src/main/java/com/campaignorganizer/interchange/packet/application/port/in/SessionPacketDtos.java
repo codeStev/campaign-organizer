@@ -17,7 +17,10 @@ public final class SessionPacketDtos {
             String body,
             boolean done,
             String arcTitle,
-            List<UUID> articleIds) {}
+            List<UUID> articleIds,
+            List<UUID> statblockIds,
+            List<UUID> tableIds,
+            List<UUID> deckIds) {}
 
     /** An article referenced by the session's beats, rendered for print. */
     public record PacketArticle(
