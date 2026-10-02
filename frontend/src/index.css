@@ -3017,8 +3017,10 @@ button:disabled {
 @media print {
   /* Printing the main window would otherwise print the whole app shell
      behind the overlay too — hide every other direct child of <body>
-     (just the app root, in practice) so only the overlay's content prints. */
-  body > *:not(.mobile-print-overlay) {
+     (just the app root, in practice) so only the overlay's content prints.
+     The popup window's own mount (.print-window) must stay visible, or
+     printing from the popup would come out blank. */
+  body > *:not(.mobile-print-overlay):not(.print-window) {
     display: none !important;
   }
 
