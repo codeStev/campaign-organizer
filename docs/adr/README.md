@@ -90,6 +90,7 @@ the old one.
 | [0116](0116-reliable-editable-article-links.md) | Reliable/editable article links, aliases, auto-link scan (extends ADR-0014) | Accepted |
 | [0117](0117-obsidian-link-autoconvert.md) | Auto-convert pasted Obsidian links to wiki-links (extends ADR-0116) | Accepted |
 | [0119](0119-account-api-tokens.md) | Account-scoped API tokens for machine clients (scoped allowlist, hashed at rest) | Accepted |
+| [0120](0120-companion-api-campaigns-glossary.md) | Companion API: campaign list and campaign glossary (new `interchange/companion`) | Accepted |
 
 ## Template
 
