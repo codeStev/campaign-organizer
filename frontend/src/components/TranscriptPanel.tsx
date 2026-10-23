@@ -25,12 +25,12 @@ function Line({ line }: { line: TranscriptLine }) {
     <li className="flex gap-2">
       <span className="muted shrink-0 tabular-nums">{clock(line.offsetMs)}</span>
       {line.kind === 'IN_CHARACTER' ? (
-        <span>
+        <span className="min-w-0 break-words">
           {line.speaker && <strong>{line.speaker}: </strong>}
           {line.text}
         </span>
       ) : (
-        <em>{line.text}</em>
+        <em className="min-w-0 break-words">{line.text}</em>
       )}
     </li>
   );
@@ -74,7 +74,7 @@ export function TranscriptPanel({ worldId, campaignId, sessionId, onError }: Pro
   if (transcript === null || transcript.lines.length === 0) return null;
 
   return (
-    <details className="card">
+    <details className="card min-w-0">
       <summary>
         <strong className="muted">Transcript</strong>{' '}
         <span className="muted">
