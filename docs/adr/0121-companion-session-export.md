@@ -1,6 +1,6 @@
 # ADR-0121: Companion export of session summaries and transcripts
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-23
 - Extends: ADR-0119 (API tokens), ADR-0120 (companion API)
 
