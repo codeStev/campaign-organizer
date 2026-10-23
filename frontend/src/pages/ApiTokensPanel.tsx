@@ -182,7 +182,7 @@ export function ApiTokensPanel({ onAuthExpired }: Props) {
       )}
 
       {creating ? (
-        <form onSubmit={handleCreate}>
+        <form onSubmit={handleCreate} className="flex flex-col items-start gap-2">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -190,6 +190,7 @@ export function ApiTokensPanel({ onAuthExpired }: Props) {
             aria-label="Token name"
             maxLength={100}
             required
+            className="max-w-sm"
           />
           {SCOPES.map((scope) => (
             <label key={scope.value} className="checkbox-label">
@@ -208,12 +209,14 @@ export function ApiTokensPanel({ onAuthExpired }: Props) {
               </option>
             ))}
           </select>
-          <Button type="submit" disabled={busy || name.trim() === '' || scopes.length === 0}>
-            {busy ? 'Creating…' : 'Create token'}
-          </Button>
-          <Button type="button" variant="link" onClick={resetForm}>
-            Cancel
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="submit" disabled={busy || name.trim() === '' || scopes.length === 0}>
+              {busy ? 'Creating…' : 'Create token'}
+            </Button>
+            <Button type="button" variant="link" onClick={resetForm}>
+              Cancel
+            </Button>
+          </div>
         </form>
       ) : (
         <Button variant="outline" onClick={() => setCreating(true)}>
