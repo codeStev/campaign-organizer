@@ -65,8 +65,10 @@ tokens themselves, backup/import, Foundry connection, AI settings.
 ### Contract and storage
 Contract-first: `docs/api/openapi.yaml` gains the token endpoints and a
 `bearerApiToken` security scheme. Flyway `V75__api_tokens.sql` creates
-`api_tokens` with an RLS policy from birth (ADR-0114, tier 2 via
-`account_id`).
+`api_tokens`. Like `account_sessions` it has **no RLS policy**: the auth
+filter looks a token up by hash before any account is known, so the
+`app.current_account_id` setting (ADR-0114) cannot exist yet. Isolation is
+enforced in the queries, which always scope management calls by `account_id`.
 
 ## Consequences
 - A leaked token exposes at most the allowlisted scopes of one account and is
