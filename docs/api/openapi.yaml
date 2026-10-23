@@ -2905,6 +2905,42 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/transcript:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [campaigns]
+      summary: The session's transcript (id is null when none was saved yet)
+      description: >-
+        The story lines (in-character and narration only, ADR-0121) a companion
+        app such as DiscordWhispr exported for this session. Read-only here: it
+        is written by the companion export.
+      operationId: getSessionTranscript
+      responses:
+        '200':
+          description: The transcript, or a line-less view with null id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionTranscript'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [campaigns]
+      summary: Delete the session's transcript
+      operationId: deleteSessionTranscript
+      responses:
+        '204':
+          description: Transcript deleted (or nothing to delete).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/attendance:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -7750,6 +7786,58 @@ components:
           type: [string, "null"]
           format: uuid
           description: Required for DECK_CARD (with deckId).
+
+    TranscriptLineKind:
+      type: string
+      description: >-
+        Only story content exists (ADR-0121); meta talk, off-topic talk and
+        unclear lines cannot be stored.
+      enum: [IN_CHARACTER, NARRATION]
+
+    TranscriptLine:
+      type: object
+      required: [offsetMs, kind, text]
+      properties:
+        offsetMs:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Milliseconds from the start of the recording.
+        speaker:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: The character being voiced; never a player's name.
+        kind:
+          $ref: '#/components/schemas/TranscriptLineKind'
+        text:
+          type: string
+          maxLength: 2000
+
+    SessionTranscript:
+      type: object
+      required: [sessionId, lines]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null when no transcript was saved for the session yet.
+        sessionId:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptLine'
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
 
     CheatSheetRequest:
       type: object
