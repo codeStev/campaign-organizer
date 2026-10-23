@@ -31,6 +31,7 @@ import com.campaignorganizer.worldbuilding.domain.wiki.Slugs;
 import java.time.Clock;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -188,6 +189,12 @@ public class ArticleService implements CreateArticleUseCase, UpdateArticleUseCas
     @Transactional(readOnly = true)
     public Optional<ArticleView> findByIdInWorld(UUID articleId, UUID worldId) {
         return articles.findByIdAndWorld(articleId, worldId).map(viewMapper::toView);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArticleSummaryView> findSummariesByIdsInWorld(UUID worldId, Collection<UUID> articleIds) {
+        return articles.findByWorldAndIds(worldId, articleIds).stream().map(viewMapper::toSummary).toList();
     }
 
     @Override

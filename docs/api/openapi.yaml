@@ -22,6 +22,10 @@ servers:
 tags:
   - name: auth
     description: Email/password login, exchanged for a bearer token.
+  - name: companion
+    description: >-
+      Account-level, campaign-addressed endpoints for companion apps such as
+      the DiscordWhispr recorder (ADR-0120).
   - name: accounts
     description: >-
       Self-registration and account management (ADR-0110). Every world and
@@ -3197,6 +3201,65 @@ paths:
                 $ref: '#/components/schemas/Todo'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /companion/campaigns:
+    get:
+      tags: [companion]
+      summary: List every campaign of every world the caller owns
+      description: >-
+        Account-level campaign list for companion apps such as the DiscordWhispr
+        recorder (ADR-0120), which know an account, not a world. Needs a full
+        login, or an API token with the `campaigns:read` scope (ADR-0119).
+      operationId: listCompanionCampaigns
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '200':
+          description: The caller's campaigns, grouped by world, newest world first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanionCampaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /companion/campaigns/{campaignId}/glossary:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [companion]
+      summary: The proper nouns tied to one campaign
+      description: >-
+        Names and aliases only, never article bodies (ADR-0120). Contains
+        articles (character, location, organization, species or item templates)
+        linked from the campaign's beats or referenced by its sheets and
+        statblocks, plus the campaign's character sheets and statblocks
+        (including those its beats link). Nothing else from the world is
+        included. Needs a full login, or an API token with the `glossary:read`
+        scope. A campaign of another account is reported as not found.
+      operationId: getCampaignGlossary
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '200':
+          description: The campaign's glossary, de-duplicated and sorted by name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignGlossary'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -7441,6 +7504,57 @@ components:
     CampaignStatus:
       type: string
       enum: [PLANNED, ACTIVE, ON_HIATUS, COMPLETED]
+
+    CompanionCampaign:
+      type: object
+      required: [id, name, status, worldId, worldName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+        worldId:
+          type: string
+          format: uuid
+        worldName:
+          type: string
+
+    GlossaryTermKind:
+      type: string
+      description: >-
+        Article templates map to their lowercase name; character sheets are
+        `character`, statblocks are `creature`.
+      enum: [character, location, organization, species, item, creature]
+
+    GlossaryTerm:
+      type: object
+      required: [name, kind, aliases]
+      properties:
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/GlossaryTermKind'
+        aliases:
+          type: array
+          items:
+            type: string
+
+    CampaignGlossary:
+      type: object
+      required: [campaignId, campaignName, terms]
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/GlossaryTerm'
 
     CampaignRequest:
       type: object

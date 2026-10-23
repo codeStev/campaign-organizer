@@ -6,6 +6,7 @@ import com.campaignorganizer.accounts.adapter.account.out.oidc.OidcAuthenticatio
 import com.campaignorganizer.accounts.adapter.account.out.persistence.OidcAuthorizationRequestRepositoryAdapter;
 import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnCreationOptionsRepositoryAdapter;
 import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnRequestOptionsRepositoryAdapter;
+import com.campaignorganizer.accounts.domain.apitoken.ApiTokenScope;
 import com.campaignorganizer.security.ApiTokenAuthFilter;
 import com.campaignorganizer.security.JwtAuthFilter;
 import com.campaignorganizer.security.JwtService;
@@ -21,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.authorization.AuthorizationManagerFactories;
 import org.springframework.security.authorization.AuthorizationManagerFactory;
@@ -279,6 +281,12 @@ public class SecurityConfig {
                         // "/**" alone doesn't reliably match the bare "/api/worlds/{worldId}" resource itself.
                         .requestMatchers("/api/worlds/{worldId}", "/api/worlds/{worldId}/**")
                         .access(AuthorizationManagers.allOf(mfaRequired, worldAccessAuthorizationManager))
+                        // Companion API (ADR-0120): the only endpoints an API token (ADR-0119) may reach,
+                        // each naming exactly one scope. A full MFA login passes as well.
+                        .requestMatchers(HttpMethod.GET, "/api/companion/campaigns")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.CAMPAIGNS_READ))
+                        .requestMatchers(HttpMethod.GET, "/api/companion/campaigns/*/glossary")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.GLOSSARY_READ))
                         .requestMatchers("/api/**").access(mfaRequired)
                         .anyRequest().permitAll())
                 .exceptionHandling(eh -> eh
@@ -304,6 +312,12 @@ public class SecurityConfig {
             }
         }
         return chain;
+    }
+
+    private static AuthorizationManager<RequestAuthorizationContext> mfaOrScope(
+            AuthorizationManager<RequestAuthorizationContext> mfaRequired, ApiTokenScope scope) {
+        return AuthorizationManagers.anyOf(mfaRequired, AuthorityAuthorizationManager
+                .<RequestAuthorizationContext>hasAuthority(ApiTokenAuthFilter.scopeAuthority(scope)));
     }
 
     /**
