@@ -462,6 +462,38 @@ export const accountSessionsApi = {
   revoke: (id: string) => request<void>(`/accounts/me/sessions/${id}`, { method: 'DELETE' }),
 };
 
+export type ApiTokenScope = 'campaigns:read' | 'glossary:read' | 'sessions:write' | 'transcripts:write';
+
+export interface ApiTokenSummary {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: ApiTokenScope[];
+  createdAt: string;
+  expiresAt?: string | null;
+  lastUsedAt?: string | null;
+}
+
+export interface CreateApiTokenRequest {
+  name: string;
+  scopes: ApiTokenScope[];
+  expiresAt?: string | null;
+}
+
+export interface CreatedApiToken {
+  /** The secret (cot_...): returned exactly once, never retrievable again. */
+  token: string;
+  summary: ApiTokenSummary;
+}
+
+/** Machine-client credentials for the current account (ADR-0119). */
+export const apiTokensApi = {
+  list: () => request<ApiTokenSummary[]>('/accounts/me/api-tokens'),
+  create: (body: CreateApiTokenRequest) =>
+    request<CreatedApiToken>('/accounts/me/api-tokens', { method: 'POST', body: JSON.stringify(body) }),
+  revoke: (id: string) => request<void>(`/accounts/me/api-tokens/${id}`, { method: 'DELETE' }),
+};
+
 /** Admin-only account roster management. */
 export const accountsApi = {
   list: () => request<Account[]>('/accounts'),

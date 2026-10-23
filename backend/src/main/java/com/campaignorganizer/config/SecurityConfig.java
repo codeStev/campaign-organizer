@@ -6,6 +6,7 @@ import com.campaignorganizer.accounts.adapter.account.out.oidc.OidcAuthenticatio
 import com.campaignorganizer.accounts.adapter.account.out.persistence.OidcAuthorizationRequestRepositoryAdapter;
 import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnCreationOptionsRepositoryAdapter;
 import com.campaignorganizer.accounts.adapter.account.out.persistence.WebAuthnRequestOptionsRepositoryAdapter;
+import com.campaignorganizer.security.ApiTokenAuthFilter;
 import com.campaignorganizer.security.JwtAuthFilter;
 import com.campaignorganizer.security.JwtService;
 import com.campaignorganizer.security.ProblemDetailAccessDeniedHandler;
@@ -112,6 +113,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter,
+                                           ApiTokenAuthFilter apiTokenAuthFilter,
                                            RateLimitFilter rateLimitFilter,
                                            WorldAccessAuthorizationManager worldAccessAuthorizationManager,
                                            AppProperties properties,
@@ -185,7 +187,13 @@ public class SecurityConfig {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             boolean missingMfaFactor = authentication != null && authentication.getAuthorities().stream()
                     .noneMatch(authority -> JwtService.MFA_AUTHORITY.equals(authority.getAuthority()));
-            if (missingMfaFactor) {
+            boolean apiToken = authentication != null && authentication.getAuthorities().stream()
+                    .anyMatch(authority -> ApiTokenAuthFilter.API_TOKEN_AUTHORITY.equals(authority.getAuthority()));
+            if (apiToken) {
+                // A token reaching an endpoint that does not name its scope: masked like an
+                // ownership mismatch rather than hinting that an MFA login would work (ADR-0119).
+                notFoundOnOwnershipMismatch.handle(request, response, ex);
+            } else if (missingMfaFactor) {
                 mfaRequiredHandler.handle(request, response, ex);
             } else if (accountsMatcher.matches(request)) {
                 forbiddenOnRoleMismatch.handle(request, response, ex);
@@ -277,6 +285,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler(routedByPath))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(rateLimitFilter, JwtAuthFilter.class);
         SecurityFilterChain chain = http.build();
         // WebAuthnConfigurer exposes no DSL hook for the authentication (login-challenge) side's

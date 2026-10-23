@@ -7,6 +7,7 @@ import { RecoveryCodesList } from '../components/RecoveryCodesList';
 import { WebauthnCredentialsPanel } from './WebauthnCredentialsPanel';
 import { TotpReEnrollmentPanel } from './TotpReEnrollmentPanel';
 import { SessionsPanel } from './SessionsPanel';
+import { ApiTokensPanel } from './ApiTokensPanel';
 
 interface Props {
   onAuthExpired: () => void;
@@ -99,6 +100,9 @@ export function SecuritySettingsPanel({ onAuthExpired }: Props) {
 
       <h3>Sessions</h3>
       <SessionsPanel onAuthExpired={onAuthExpired} />
+
+      <h3>API tokens</h3>
+      <ApiTokensPanel onAuthExpired={onAuthExpired} />
 
       <ConfirmDialog
         open={confirmRegenerateOpen}
