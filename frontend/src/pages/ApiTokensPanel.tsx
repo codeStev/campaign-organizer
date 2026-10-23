@@ -131,13 +131,13 @@ export function ApiTokensPanel({ onAuthExpired }: Props) {
       {error && <p className="error">{error}</p>}
 
       {issuedSecret && (
-        <div className="settings-list-row" role="status">
-          <div>
+        <div className="settings-list-row flex-wrap" role="status">
+          <div className="min-w-0 flex-1">
             <strong>Copy your new token now</strong>
             <p className="muted">It won't be shown again.</p>
-            <code>{issuedSecret}</code>
+            <code className="break-all">{issuedSecret}</code>
           </div>
-          <div>
+          <div className="flex shrink-0 items-center gap-2">
             <Button variant="outline" onClick={copySecret}>
               Copy
             </Button>
@@ -156,7 +156,7 @@ export function ApiTokensPanel({ onAuthExpired }: Props) {
         <ul className="settings-list">
           {tokens.map((token) => (
             <li key={token.id} className="settings-list-row">
-              <div>
+              <div className="min-w-0 flex-1 break-words">
                 <strong>{token.name}</strong> · <code>{token.prefix}…</code>
                 <p className="muted">{token.scopes.map(scopeLabel).join(', ')}</p>
                 <p className="muted">
