@@ -160,4 +160,16 @@ class SessionTranscriptControllerIT extends AbstractIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, auth))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void theWorldExportCarriesTheTranscript() throws Exception {
+        setup();
+        replace(story());
+
+        mockMvc.perform(get("/api/worlds/{w}/export", worldId).header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionTranscripts.length()").value(1))
+                .andExpect(jsonPath("$.sessionTranscripts[0].sessionId").value(sessionId))
+                .andExpect(jsonPath("$.sessionTranscripts[0].lines.length()").value(2));
+    }
 }

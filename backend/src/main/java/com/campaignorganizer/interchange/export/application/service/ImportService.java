@@ -46,6 +46,8 @@ import com.campaignorganizer.media.application.port.published.MediaImportPort;
 import com.campaignorganizer.shared.domain.ValidationException;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
+import com.campaignorganizer.campaign.application.session.port.published.SessionTranscriptImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionTranscriptView;
 import com.campaignorganizer.handouts.application.port.published.HandoutCategoryImportPort;
 import com.campaignorganizer.handouts.application.port.published.HandoutCategoryView;
 import com.campaignorganizer.handouts.application.port.published.HandoutImportPort;
@@ -142,6 +144,7 @@ public class ImportService implements ImportBackupUseCase {
     private final HandoutCategoryImportPort handoutCategoryImportPort;
     private final HandoutImportPort handoutImportPort;
     private final CheatSheetImportPort cheatSheetImportPort;
+    private final SessionTranscriptImportPort sessionTranscriptImportPort;
     private final TagImportPort tagImportPort;
     private final ClockImportPort clockImportPort;
     private final LooseThreadImportPort looseThreadImportPort;
@@ -169,7 +172,8 @@ public class ImportService implements ImportBackupUseCase {
             TableDeckCategoryImportPort tableDeckCategoryImportPort, RollTableImportPort rollTableImportPort,
             CardDeckImportPort cardDeckImportPort,
             HandoutCategoryImportPort handoutCategoryImportPort, HandoutImportPort handoutImportPort,
-            CheatSheetImportPort cheatSheetImportPort, TagImportPort tagImportPort,
+            CheatSheetImportPort cheatSheetImportPort, SessionTranscriptImportPort sessionTranscriptImportPort,
+            TagImportPort tagImportPort,
             ClockImportPort clockImportPort, LooseThreadImportPort looseThreadImportPort,
             TodoImportPort todoImportPort) {
         this.objectMapper = objectMapper;
@@ -208,6 +212,7 @@ public class ImportService implements ImportBackupUseCase {
         this.handoutCategoryImportPort = handoutCategoryImportPort;
         this.handoutImportPort = handoutImportPort;
         this.cheatSheetImportPort = cheatSheetImportPort;
+        this.sessionTranscriptImportPort = sessionTranscriptImportPort;
         this.tagImportPort = tagImportPort;
         this.clockImportPort = clockImportPort;
         this.looseThreadImportPort = looseThreadImportPort;
@@ -275,6 +280,9 @@ public class ImportService implements ImportBackupUseCase {
                 readList(root, "handoutCategories", HandoutCategoryView.class);
         List<HandoutView> handouts = readList(root, "handouts", HandoutView.class);
         List<CheatSheetView> cheatSheets = readList(root, "cheatSheets", CheatSheetView.class);
+        // Absent from bundles made before ADR-0121; readList treats a missing field as empty.
+        List<SessionTranscriptView> sessionTranscripts =
+                readList(root, "sessionTranscripts", SessionTranscriptView.class);
         List<TagView> tags = readList(root, "tags", TagView.class);
         List<ClockView> clocks = readList(root, "clocks", ClockView.class);
         List<LooseThreadView> looseThreads = readList(root, "looseThreads", LooseThreadView.class);
@@ -315,6 +323,7 @@ public class ImportService implements ImportBackupUseCase {
         handoutCategories.forEach(c -> remap.assign(c.id()));
         handouts.forEach(h -> remap.assign(h.id()));
         cheatSheets.forEach(cs -> remap.assign(cs.id()));
+        sessionTranscripts.forEach(t -> remap.assign(t.id()));
         tags.forEach(t -> remap.assign(t.id()));
         clocks.forEach(c -> remap.assign(c.id()));
         looseThreads.forEach(t -> remap.assign(t.id()));
@@ -570,6 +579,12 @@ public class ImportService implements ImportBackupUseCase {
         for (CheatSheetView cs : cheatSheets) {
             cheatSheetImportPort.importCheatSheet(new CheatSheetView(remap.get(cs.id()),
                     remap.get(cs.sessionId()), cs.fragments(), cs.createdAt(), cs.updatedAt()));
+        }
+
+        // Session transcripts (ADR-0121) after sessions: their session id is remapped.
+        for (SessionTranscriptView t : sessionTranscripts) {
+            sessionTranscriptImportPort.importTranscript(new SessionTranscriptView(remap.get(t.id()),
+                    remap.get(t.sessionId()), t.lines(), t.createdAt(), t.updatedAt()));
         }
 
         // Session attendance (ADR-0091): sessionId and playerId are remapped; a linked
