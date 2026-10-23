@@ -21,6 +21,7 @@ import { CheatSheetView } from './CheatSheetView';
 import { LooseThreadsPanel } from '../components/LooseThreadsPanel';
 import { AttendancePanel } from '../components/AttendancePanel';
 import { TodoListPanel } from '../components/TodoListPanel';
+import { TranscriptPanel } from '../components/TranscriptPanel';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 import { renderMarkdown } from '../lib/markdown';
 import { Button } from '../components/ui/button';
@@ -474,6 +475,8 @@ export function NextSessionsPage({ worldId, onAuthExpired }: Props) {
                 <p>{summaryText}</p>
               </div>
             )}
+
+            <TranscriptPanel worldId={worldId} campaignId={urlCampaignId!} sessionId={openSession.id} onError={handleError} />
           </article>
         )}
       </div>
