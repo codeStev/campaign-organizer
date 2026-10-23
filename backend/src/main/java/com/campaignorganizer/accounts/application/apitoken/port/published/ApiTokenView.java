@@ -9,6 +9,7 @@ import java.util.UUID;
 public record ApiTokenView(
         UUID id,
         UUID accountId,
+        int accountTokenVersion,
         String name,
         String prefix,
         Set<ApiTokenScope> scopes,

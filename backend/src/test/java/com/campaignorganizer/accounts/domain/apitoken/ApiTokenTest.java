@@ -15,7 +15,7 @@ class ApiTokenTest {
     private static final Instant NOW = Instant.parse("2026-10-23T10:00:00Z");
 
     private static ApiToken token(Instant expiresAt) {
-        return ApiToken.create(UUID.randomUUID(), UUID.randomUUID(), "recorder", "hash", "cot_abcd",
+        return ApiToken.create(UUID.randomUUID(), UUID.randomUUID(), 0, "recorder", "hash", "cot_abcd",
                 Set.of(ApiTokenScope.GLOSSARY_READ), expiresAt, NOW);
     }
 
@@ -62,9 +62,9 @@ class ApiTokenTest {
         Set<ApiTokenScope> scopes = Set.of(ApiTokenScope.GLOSSARY_READ);
         UUID id = UUID.randomUUID();
 
-        assertThatThrownBy(() -> ApiToken.create(id, id, " ", "hash", "cot_abcd", scopes, null, NOW))
+        assertThatThrownBy(() -> ApiToken.create(id, id, 0, " ", "hash", "cot_abcd", scopes, null, NOW))
                 .isInstanceOf(ValidationException.class);
-        assertThatThrownBy(() -> ApiToken.create(id, id, "x".repeat(101), "hash", "cot_abcd", scopes, null, NOW))
+        assertThatThrownBy(() -> ApiToken.create(id, id, 0, "x".repeat(101), "hash", "cot_abcd", scopes, null, NOW))
                 .isInstanceOf(ValidationException.class);
     }
 
@@ -72,7 +72,7 @@ class ApiTokenTest {
     void rejectsEmptyScopesAndPastExpiry() {
         UUID id = UUID.randomUUID();
 
-        assertThatThrownBy(() -> ApiToken.create(id, id, "n", "hash", "cot_abcd", Set.of(), null, NOW))
+        assertThatThrownBy(() -> ApiToken.create(id, id, 0, "n", "hash", "cot_abcd", Set.of(), null, NOW))
                 .isInstanceOf(ValidationException.class);
         assertThatThrownBy(() -> token(NOW)).isInstanceOf(ValidationException.class);
     }

@@ -6,6 +6,7 @@
 CREATE TABLE api_tokens (
     id            UUID PRIMARY KEY,
     account_id    UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    account_token_version INT NOT NULL,       -- accounts.token_version at creation; a bump invalidates the token
     name          VARCHAR(100) NOT NULL,
     token_hash    VARCHAR(64) NOT NULL UNIQUE,
     prefix        VARCHAR(16) NOT NULL,

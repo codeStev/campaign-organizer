@@ -1,5 +1,7 @@
 package com.campaignorganizer.accounts.application.apitoken.service;
 
+import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
+import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.apitoken.port.in.CreateApiTokenUseCase;
 import com.campaignorganizer.accounts.application.apitoken.port.in.ListApiTokensUseCase;
 import com.campaignorganizer.accounts.application.apitoken.port.in.RevokeApiTokenUseCase;
@@ -25,14 +27,16 @@ public class ApiTokenService implements CreateApiTokenUseCase, ListApiTokensUseC
         ApiTokenQueryPort {
 
     private final ApiTokenRepositoryPort tokens;
+    private final AccountQueryPort accounts;
     private final ApiTokenSecretPort secrets;
     private final ApiTokenViewMapper viewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
-    public ApiTokenService(ApiTokenRepositoryPort tokens, ApiTokenSecretPort secrets,
+    public ApiTokenService(ApiTokenRepositoryPort tokens, AccountQueryPort accounts, ApiTokenSecretPort secrets,
                            ApiTokenViewMapper viewMapper, IdGenerator ids, Clock clock) {
         this.tokens = tokens;
+        this.accounts = accounts;
         this.secrets = secrets;
         this.viewMapper = viewMapper;
         this.ids = ids;
@@ -42,9 +46,11 @@ public class ApiTokenService implements CreateApiTokenUseCase, ListApiTokensUseC
     @Override
     @Transactional
     public CreatedApiToken create(CreateApiTokenCommand command) {
+        AccountView account = accounts.findById(command.accountId())
+                .orElseThrow(() -> new NotFoundException("Account not found"));
         GeneratedSecret generated = secrets.generate();
-        ApiToken token = ApiToken.create(ids.newId(), command.accountId(), command.name(), generated.hash(),
-                generated.prefix(), command.scopes(), command.expiresAt(), clock.instant());
+        ApiToken token = ApiToken.create(ids.newId(), account.id(), account.tokenVersion(), command.name(),
+                generated.hash(), generated.prefix(), command.scopes(), command.expiresAt(), clock.instant());
         return new CreatedApiToken(generated.secret(), viewMapper.toView(tokens.save(token)));
     }
 

@@ -7,12 +7,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.campaignorganizer.accounts.application.account.port.published.AccountQueryPort;
+import com.campaignorganizer.accounts.application.account.port.published.AccountView;
 import com.campaignorganizer.accounts.application.apitoken.port.in.CreateApiTokenUseCase.CreateApiTokenCommand;
 import com.campaignorganizer.accounts.application.apitoken.port.in.CreateApiTokenUseCase.CreatedApiToken;
 import com.campaignorganizer.accounts.application.apitoken.port.out.ApiTokenRepositoryPort;
 import com.campaignorganizer.accounts.application.apitoken.port.out.ApiTokenSecretPort;
 import com.campaignorganizer.accounts.application.apitoken.port.out.ApiTokenSecretPort.GeneratedSecret;
 import com.campaignorganizer.accounts.application.apitoken.port.published.ApiTokenView;
+import com.campaignorganizer.accounts.domain.account.MfaMethod;
+import com.campaignorganizer.accounts.domain.account.Role;
 import com.campaignorganizer.accounts.domain.apitoken.ApiToken;
 import com.campaignorganizer.accounts.domain.apitoken.ApiTokenScope;
 import com.campaignorganizer.shared.application.IdGenerator;
@@ -39,6 +43,8 @@ class ApiTokenServiceTest {
     @Mock
     private ApiTokenRepositoryPort tokens;
     @Mock
+    private AccountQueryPort accounts;
+    @Mock
     private ApiTokenSecretPort secrets;
     @Mock
     private IdGenerator ids;
@@ -49,17 +55,19 @@ class ApiTokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ApiTokenService(tokens, secrets, new ApiTokenViewMapperImpl(), ids, clock);
+        service = new ApiTokenService(tokens, accounts, secrets, new ApiTokenViewMapperImpl(), ids, clock);
     }
 
     private ApiToken stored(Instant expiresAt) {
-        return ApiToken.reconstitute(UUID.randomUUID(), accountId, "recorder", "hash", "cot_abcd",
+        return ApiToken.reconstitute(UUID.randomUUID(), accountId, 3, "recorder", "hash", "cot_abcd",
                 Set.of(ApiTokenScope.GLOSSARY_READ), NOW.minusSeconds(3600), expiresAt, null, null);
     }
 
     @Test
     void creatingReturnsTheSecretOnceAndStoresOnlyItsHash() {
         UUID id = UUID.randomUUID();
+        when(accounts.findById(accountId)).thenReturn(Optional.of(new AccountView(accountId, "gm@example.org",
+                Role.USER, true, 3, MfaMethod.TOTP, NOW)));
         when(ids.newId()).thenReturn(id);
         when(secrets.generate()).thenReturn(new GeneratedSecret("cot_secret", "the-hash", "cot_secre"));
         when(tokens.save(any(ApiToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -70,6 +78,7 @@ class ApiTokenServiceTest {
         assertThat(created.secret()).isEqualTo("cot_secret");
         assertThat(created.token()).extracting(ApiTokenView::id, ApiTokenView::accountId, ApiTokenView::prefix)
                 .containsExactly(id, accountId, "cot_secre");
+        assertThat(created.token().accountTokenVersion()).isEqualTo(3);
         verify(tokens).save(any(ApiToken.class));
     }
 

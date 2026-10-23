@@ -19,6 +19,7 @@ public final class ApiToken {
 
     private final UUID id;
     private final UUID accountId;
+    private final int accountTokenVersion;
     private final String name;
     private final String tokenHash;
     private final String prefix;
@@ -28,7 +29,7 @@ public final class ApiToken {
     private Instant lastUsedAt;
     private Instant revokedAt;
 
-    private ApiToken(UUID id, UUID accountId, String name, String tokenHash, String prefix,
+    private ApiToken(UUID id, UUID accountId, int accountTokenVersion, String name, String tokenHash, String prefix,
                      Set<ApiTokenScope> scopes, Instant createdAt, Instant expiresAt, Instant lastUsedAt,
                      Instant revokedAt) {
         if (name == null || name.isBlank()) {
@@ -45,6 +46,7 @@ public final class ApiToken {
         }
         this.id = id;
         this.accountId = accountId;
+        this.accountTokenVersion = accountTokenVersion;
         this.name = name;
         this.tokenHash = tokenHash;
         this.prefix = prefix;
@@ -55,19 +57,20 @@ public final class ApiToken {
         this.revokedAt = revokedAt;
     }
 
-    public static ApiToken create(UUID id, UUID accountId, String name, String tokenHash, String prefix,
+    public static ApiToken create(UUID id, UUID accountId, int accountTokenVersion, String name, String tokenHash, String prefix,
                                   Set<ApiTokenScope> scopes, Instant expiresAt, Instant now) {
         if (expiresAt != null && !expiresAt.isAfter(now)) {
             throw new ValidationException("API token expiry must be in the future");
         }
-        return new ApiToken(id, accountId, name, tokenHash, prefix, scopes, now, expiresAt, null, null);
+        return new ApiToken(id, accountId, accountTokenVersion, name, tokenHash, prefix, scopes, now, expiresAt, null,
+                null);
     }
 
-    public static ApiToken reconstitute(UUID id, UUID accountId, String name, String tokenHash, String prefix,
+    public static ApiToken reconstitute(UUID id, UUID accountId, int accountTokenVersion, String name, String tokenHash, String prefix,
                                         Set<ApiTokenScope> scopes, Instant createdAt, Instant expiresAt,
                                         Instant lastUsedAt, Instant revokedAt) {
-        return new ApiToken(id, accountId, name, tokenHash, prefix, scopes, createdAt, expiresAt, lastUsedAt,
-                revokedAt);
+        return new ApiToken(id, accountId, accountTokenVersion, name, tokenHash, prefix, scopes, createdAt,
+                expiresAt, lastUsedAt, revokedAt);
     }
 
     public boolean isUsable(Instant now) {
@@ -99,6 +102,10 @@ public final class ApiToken {
 
     public UUID getAccountId() {
         return accountId;
+    }
+
+    public int getAccountTokenVersion() {
+        return accountTokenVersion;
     }
 
     public String getName() {
