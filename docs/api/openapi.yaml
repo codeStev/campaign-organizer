@@ -3301,6 +3301,184 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /companion/campaigns/{campaignId}/sessions:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [companion]
+      summary: The campaign's sessions, as much as an export may see
+      description: >-
+        Id, title, number, date, whether a summary exists, and when the session
+        last changed; never summary or note text (ADR-0121). Needs a full login,
+        or an API token with the `sessions:write` scope.
+      operationId: listCompanionSessions
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '200':
+          description: The campaign's sessions in session order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanionSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [companion]
+      summary: Create a session in the campaign
+      description: >-
+        For an export of a recording that has no session yet. A missing number
+        becomes the highest number in the campaign plus one. Needs a full login,
+        or an API token with the `sessions:write` scope.
+      operationId: createCompanionSession
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCompanionSessionRequest'
+      responses:
+        '201':
+          description: The new session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanionSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /companion/campaigns/{campaignId}/sessions/{sessionId}/summary:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [companion]
+      summary: Write the session's summary without overwriting the GM's own
+      description: >-
+        Markdown, at most 20000 characters. Accepted when the session has no
+        summary yet, or when `expectedUpdatedAt` equals the session's current
+        `updatedAt` (nothing was edited since the caller last wrote it);
+        otherwise 409. Returns the session with its new `updatedAt`. Needs a
+        full login, or an API token with the `sessions:write` scope (ADR-0121).
+      operationId: writeCompanionSessionSummary
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteSessionSummaryRequest'
+      responses:
+        '200':
+          description: The session after the write.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanionSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The summary was changed since `expectedUpdatedAt`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /companion/campaigns/{campaignId}/sessions/{sessionId}/transcript:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [companion]
+      summary: Replace the session's whole transcript
+      description: >-
+        Idempotent: the lines replace any earlier transcript. Only IN_CHARACTER
+        and NARRATION lines are accepted; any other kind is a 400, so private
+        talk cannot be stored whatever the client does (ADR-0121). At most 20000
+        lines. Needs a full login, or an API token with the `transcripts:write`
+        scope.
+      operationId: replaceCompanionSessionTranscript
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceTranscriptRequest'
+      responses:
+        '200':
+          description: The transcript was stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [companion]
+      summary: Delete the session's transcript
+      description: Needs a full login, or an API token with the `transcripts:write` scope.
+      operationId: deleteCompanionSessionTranscript
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '204':
+          description: Transcript deleted (or nothing to delete).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /dice/roll:
     post:
       tags: [dice]
@@ -7591,6 +7769,80 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GlossaryTerm'
+
+    CompanionSession:
+      type: object
+      required: [id, title, hasSummary, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sessionNumber:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          format: date
+          nullable: true
+        hasSummary:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCompanionSessionRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        date:
+          type: string
+          format: date
+          nullable: true
+        sessionNumber:
+          type: integer
+          nullable: true
+
+    WriteSessionSummaryRequest:
+      type: object
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: Markdown; `[[wiki links]]` resolve to articles.
+        expectedUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: The `updatedAt` the caller saw after its last write.
+
+    ReplaceTranscriptRequest:
+      type: object
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 20000
+          items:
+            $ref: '#/components/schemas/TranscriptLine'
+
+    TranscriptReceipt:
+      type: object
+      required: [lineCount, updatedAt]
+      properties:
+        lineCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
 
     CampaignRequest:
       type: object
