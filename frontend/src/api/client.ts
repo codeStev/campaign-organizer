@@ -1567,6 +1567,34 @@ export function sessionAttendanceApi(worldId: string, campaignId: string, sessio
   };
 }
 
+export type TranscriptLineKind = 'IN_CHARACTER' | 'NARRATION';
+
+export interface TranscriptLine {
+  offsetMs: number;
+  /** The character being voiced; never a player's name. */
+  speaker?: string | null;
+  kind: TranscriptLineKind;
+  text: string;
+}
+
+export interface SessionTranscript {
+  /** Null when no transcript was exported for the session yet. */
+  id?: string | null;
+  sessionId: string;
+  lines: TranscriptLine[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+/** The story lines a companion app exported for a session (ADR-0121); read-only here, deletable. */
+export function sessionTranscriptApi(worldId: string, campaignId: string, sessionId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions/${sessionId}/transcript`;
+  return {
+    get: () => request<SessionTranscript>(base),
+    remove: () => request<void>(base, { method: 'DELETE' }),
+  };
+}
+
 export interface PacketBeat {
   id: string;
   title: string;

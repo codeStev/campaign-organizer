@@ -34,7 +34,7 @@ class RowLevelSecurityFitnessIT extends AbstractIntegrationTest {
 
     private static final List<String> TIER_3_TABLES = List.of(
             "arcs", "campaign_calendar_feeds", "campaign_players", "clocks", "encounters", "loose_threads",
-            "sessions", "todos", "cheat_sheets", "session_attendance", "arc_beats", "beat_articles",
+            "sessions", "todos", "cheat_sheets", "session_attendance", "session_transcripts", "arc_beats", "beat_articles",
             "beat_card_decks", "beat_encounters", "beat_roll_tables", "beat_statblocks", "encounter_entries",
             "map_pins", "article_revisions", "calendar_months", "timeline_events");
 

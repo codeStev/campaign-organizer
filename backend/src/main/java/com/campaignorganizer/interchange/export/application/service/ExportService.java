@@ -9,6 +9,8 @@ import com.campaignorganizer.campaign.application.encounter.port.published.Encou
 import com.campaignorganizer.campaign.application.loosethread.port.published.LooseThreadQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetView;
+import com.campaignorganizer.campaign.application.session.port.published.SessionTranscriptQueryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionTranscriptView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
 import com.campaignorganizer.campaign.application.campaign.port.published.CampaignPlayerQueryPort;
@@ -98,6 +100,7 @@ public class ExportService implements ExportWorldUseCase {
     private final HandoutCategoryQueryPort handoutCategories;
     private final HandoutQueryPort handouts;
     private final CheatSheetQueryPort cheatSheets;
+    private final SessionTranscriptQueryPort sessionTranscripts;
     private final TagQueryPort tags;
     private final ClockQueryPort clocks;
     private final EncounterQueryPort encounters;
@@ -122,7 +125,7 @@ public class ExportService implements ExportWorldUseCase {
                          TableDeckCategoryQueryPort tableDeckCategories,
                          RollTableQueryPort rollTables, CardDeckQueryPort cardDecks,
                          HandoutCategoryQueryPort handoutCategories, HandoutQueryPort handouts,
-                         CheatSheetQueryPort cheatSheets,
+                         CheatSheetQueryPort cheatSheets, SessionTranscriptQueryPort sessionTranscripts,
                          TagQueryPort tags, ClockQueryPort clocks, EncounterQueryPort encounters,
                          LooseThreadQueryPort looseThreads, TodoQueryPort todos) {
         this.worlds = worlds;
@@ -158,6 +161,7 @@ public class ExportService implements ExportWorldUseCase {
         this.handoutCategories = handoutCategories;
         this.handouts = handouts;
         this.cheatSheets = cheatSheets;
+        this.sessionTranscripts = sessionTranscripts;
         this.tags = tags;
         this.clocks = clocks;
         this.encounters = encounters;
@@ -237,14 +241,18 @@ public class ExportService implements ExportWorldUseCase {
         bundle.put("beatKinds", beatKinds.findByWorld(worldId));
         // Session cheat sheets (FR-37): one per session, when present.
         List<CheatSheetView> cheatSheetViews = new ArrayList<>();
+        // Session transcripts (ADR-0121): story lines only, one per session, when present.
+        List<SessionTranscriptView> transcriptViews = new ArrayList<>();
         // Session attendance (ADR-0091): zero or more rows per session.
         List<Object> allAttendance = new ArrayList<>();
         for (Object s : allSessions) {
             UUID sessionId = ((SessionView) s).id();
             cheatSheets.findBySession(sessionId).ifPresent(cheatSheetViews::add);
+            sessionTranscripts.findBySession(sessionId).ifPresent(transcriptViews::add);
             allAttendance.addAll(sessionAttendance.findBySession(sessionId));
         }
         bundle.put("cheatSheets", cheatSheetViews);
+        bundle.put("sessionTranscripts", transcriptViews);
         bundle.put("sessionAttendance", allAttendance);
 
         bundle.put("sheetCategories", sheetCategories.findByWorld(worldId));
