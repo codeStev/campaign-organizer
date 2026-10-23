@@ -1,7 +1,6 @@
 package com.campaignorganizer.interchange.companion.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -17,10 +16,10 @@ import com.campaignorganizer.characters.application.statblock.port.published.Sta
 import com.campaignorganizer.characters.application.statblock.port.published.StatblockView;
 import com.campaignorganizer.interchange.companion.application.port.in.GetCampaignGlossaryUseCase.CampaignGlossary;
 import com.campaignorganizer.interchange.companion.application.port.in.ListCompanionCampaignsUseCase.CompanionCampaign;
+import com.campaignorganizer.interchange.companion.application.service.CompanionCampaignAccess;
 import com.campaignorganizer.interchange.companion.application.service.CompanionService;
 import com.campaignorganizer.interchange.companion.domain.glossary.GlossaryTerm;
 import com.campaignorganizer.interchange.companion.domain.glossary.GlossaryTermKind;
-import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleAliasQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleSummaryView;
@@ -48,6 +47,8 @@ class CompanionServiceTest {
     @Mock
     private CampaignQueryPort campaigns;
     @Mock
+    private CompanionCampaignAccess access;
+    @Mock
     private ArcQueryPort arcs;
     @Mock
     private ArcBeatQueryPort beats;
@@ -68,7 +69,7 @@ class CompanionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CompanionService(worlds, campaigns, arcs, beats, articles, aliases, sheets, statblocks);
+        service = new CompanionService(worlds, campaigns, access, arcs, beats, articles, aliases, sheets, statblocks);
     }
 
     private WorldView world(UUID ownerId) {
@@ -90,8 +91,7 @@ class CompanionServiceTest {
     }
 
     private void givenOwnedCampaign() {
-        when(campaigns.findById(campaignId)).thenReturn(Optional.of(campaign()));
-        when(worlds.findById(worldId)).thenReturn(Optional.of(world(accountId)));
+        when(access.requireOwned(accountId, campaignId)).thenReturn(campaign());
         when(arcs.findByCampaign(campaignId)).thenReturn(List.of(new ArcView(arcId, campaignId, "Arc", null, "ACTIVE",
                 0, NOW, NOW)));
     }
@@ -112,21 +112,6 @@ class CompanionServiceTest {
         when(worlds.findByOwner(accountId)).thenReturn(List.of());
 
         assertThat(service.list(accountId)).isEmpty();
-    }
-
-    @Test
-    void aCampaignOfAnotherAccountIsNotFound() {
-        when(campaigns.findById(campaignId)).thenReturn(Optional.of(campaign()));
-        when(worlds.findById(worldId)).thenReturn(Optional.of(world(UUID.randomUUID())));
-
-        assertThatThrownBy(() -> service.get(accountId, campaignId)).isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void anUnknownCampaignIsNotFound() {
-        when(campaigns.findById(campaignId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.get(accountId, campaignId)).isInstanceOf(NotFoundException.class);
     }
 
     @Test

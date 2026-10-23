@@ -287,6 +287,17 @@ public class SecurityConfig {
                         .access(mfaOrScope(mfaRequired, ApiTokenScope.CAMPAIGNS_READ))
                         .requestMatchers(HttpMethod.GET, "/api/companion/campaigns/*/glossary")
                         .access(mfaOrScope(mfaRequired, ApiTokenScope.GLOSSARY_READ))
+                        // Session, summary and transcript export (ADR-0121), one scope per capability.
+                        .requestMatchers(HttpMethod.GET, "/api/companion/campaigns/*/sessions")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.SESSIONS_WRITE))
+                        .requestMatchers(HttpMethod.POST, "/api/companion/campaigns/*/sessions")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.SESSIONS_WRITE))
+                        .requestMatchers(HttpMethod.PUT, "/api/companion/campaigns/*/sessions/*/summary")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.SESSIONS_WRITE))
+                        .requestMatchers(HttpMethod.PUT, "/api/companion/campaigns/*/sessions/*/transcript")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.TRANSCRIPTS_WRITE))
+                        .requestMatchers(HttpMethod.DELETE, "/api/companion/campaigns/*/sessions/*/transcript")
+                        .access(mfaOrScope(mfaRequired, ApiTokenScope.TRANSCRIPTS_WRITE))
                         .requestMatchers("/api/**").access(mfaRequired)
                         .anyRequest().permitAll())
                 .exceptionHandling(eh -> eh

@@ -13,12 +13,10 @@ import com.campaignorganizer.interchange.companion.application.port.in.GetCampai
 import com.campaignorganizer.interchange.companion.application.port.in.ListCompanionCampaignsUseCase;
 import com.campaignorganizer.interchange.companion.domain.glossary.GlossaryBuilder;
 import com.campaignorganizer.interchange.companion.domain.glossary.GlossaryTermKind;
-import com.campaignorganizer.shared.domain.NotFoundException;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleAliasQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleQueryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleSummaryView;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldQueryPort;
-import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +36,7 @@ public class CompanionService implements ListCompanionCampaignsUseCase, GetCampa
 
     private final WorldQueryPort worlds;
     private final CampaignQueryPort campaigns;
+    private final CompanionCampaignAccess access;
     private final ArcQueryPort arcs;
     private final ArcBeatQueryPort beats;
     private final ArticleQueryPort articles;
@@ -45,11 +44,13 @@ public class CompanionService implements ListCompanionCampaignsUseCase, GetCampa
     private final CharacterSheetQueryPort sheets;
     private final StatblockQueryPort statblocks;
 
-    public CompanionService(WorldQueryPort worlds, CampaignQueryPort campaigns, ArcQueryPort arcs,
+    public CompanionService(WorldQueryPort worlds, CampaignQueryPort campaigns, CompanionCampaignAccess access,
+                            ArcQueryPort arcs,
                             ArcBeatQueryPort beats, ArticleQueryPort articles, ArticleAliasQueryPort aliases,
                             CharacterSheetQueryPort sheets, StatblockQueryPort statblocks) {
         this.worlds = worlds;
         this.campaigns = campaigns;
+        this.access = access;
         this.arcs = arcs;
         this.beats = beats;
         this.articles = articles;
@@ -71,11 +72,8 @@ public class CompanionService implements ListCompanionCampaignsUseCase, GetCampa
     @Override
     @Transactional(readOnly = true)
     public CampaignGlossary get(UUID accountId, UUID campaignId) {
-        CampaignView campaign = campaigns.findById(campaignId).orElseThrow(this::campaignNotFound);
-        WorldView world = worlds.findById(campaign.worldId())
-                .filter(w -> accountId.equals(w.ownerId()))
-                .orElseThrow(this::campaignNotFound);
-        UUID worldId = world.id();
+        CampaignView campaign = access.requireOwned(accountId, campaignId);
+        UUID worldId = campaign.worldId();
 
         List<UUID> arcIds = arcs.findByCampaign(campaignId).stream().map(ArcView::id).toList();
         Set<UUID> beatStatblockIds = new LinkedHashSet<>(beats.linkedStatblockIdsByArcs(arcIds));
@@ -98,9 +96,5 @@ public class CompanionService implements ListCompanionCampaignsUseCase, GetCampa
         campaignStatblocks.forEach(statblock -> glossary.add(statblock.name(), GlossaryTermKind.CREATURE, List.of()));
 
         return new CampaignGlossary(campaignId, campaign.name(), glossary.build());
-    }
-
-    private NotFoundException campaignNotFound() {
-        return new NotFoundException("Campaign not found");
     }
 }
