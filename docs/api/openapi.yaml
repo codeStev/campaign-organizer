@@ -633,6 +633,72 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /accounts/me/api-tokens:
+    get:
+      tags: [accounts]
+      summary: List the current account's API tokens
+      description: >-
+        Machine-client credentials (ADR-0119), oldest first. Revoked tokens are
+        omitted. The secret is never returned here, only a short display prefix.
+      operationId: listApiTokens
+      responses:
+        '200':
+          description: The account's non-revoked API tokens.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiTokenSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [accounts]
+      summary: Create an API token
+      description: >-
+        Requires a full (PASSWORD+MFA) session. The secret is returned exactly
+        once, in this response; only its hash is stored. A token never counts as
+        an MFA login and only works on endpoints that list one of its scopes
+        (ADR-0119).
+      operationId: createApiToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiTokenRequest'
+      responses:
+        '201':
+          description: Token created; the only time its secret is shown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedApiToken'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/api-tokens/{tokenId}:
+    parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [accounts]
+      summary: Revoke one of the current account's API tokens
+      operationId: revokeApiToken
+      responses:
+        '204':
+          description: Token revoked; its next use is rejected.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /accounts/{accountId}:
     parameters:
       - $ref: '#/components/parameters/AccountId'
@@ -5934,6 +6000,12 @@ components:
       bearerFormat: JWT
       description: >
         Bearer token obtained from POST /auth/login. Signed with HS256.
+    apiToken:
+      type: http
+      scheme: bearer
+      description: >
+        Account API token (cot_...) created via POST /accounts/me/api-tokens.
+        Accepted only on endpoints that name one of the token's scopes.
 
   parameters:
     WorldId:
@@ -8605,6 +8677,71 @@ components:
         current:
           type: boolean
           description: Whether this is the session of the token used to make this request.
+
+    ApiTokenScope:
+      type: string
+      description: >-
+        What an API token may do (ADR-0119). A token only works on endpoints
+        that list one of its scopes.
+      enum: [campaigns:read, glossary:read, sessions:write, transcripts:write]
+
+    ApiTokenSummary:
+      type: object
+      required: [id, name, prefix, scopes, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        prefix:
+          type: string
+          description: First characters of the secret, to tell tokens apart.
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiTokenScope'
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateApiTokenRequest:
+      type: object
+      required: [name, scopes]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        scopes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ApiTokenScope'
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional; must be in the future.
+
+    CreatedApiToken:
+      type: object
+      required: [token, summary]
+      properties:
+        token:
+          type: string
+          description: The secret (cot_...). Shown once, never retrievable again.
+        summary:
+          $ref: '#/components/schemas/ApiTokenSummary'
 
     RegisterRequest:
       type: object
