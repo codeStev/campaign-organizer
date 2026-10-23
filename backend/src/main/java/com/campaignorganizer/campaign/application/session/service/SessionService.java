@@ -8,6 +8,8 @@ import com.campaignorganizer.campaign.application.session.port.in.SessionCommand
 import com.campaignorganizer.campaign.application.session.port.in.UpdateSessionUseCase;
 import com.campaignorganizer.campaign.application.session.port.out.CampaignExistsPort;
 import com.campaignorganizer.campaign.application.session.port.out.SessionRepositoryPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionExportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionExportView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionQueryPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionView;
@@ -15,7 +17,10 @@ import com.campaignorganizer.campaign.domain.session.Session;
 import com.campaignorganizer.shared.application.IdGenerator;
 import com.campaignorganizer.shared.domain.NotFoundException;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -24,19 +29,22 @@ import org.springframework.transaction.annotation.Transactional;
 /** Session use cases; also implements the published query port for consumers. */
 @Service
 public class SessionService implements CreateSessionUseCase, UpdateSessionUseCase, DeleteSessionUseCase,
-        ListSessionsUseCase, SessionQueryPort, SessionImportPort {
+        ListSessionsUseCase, SessionQueryPort, SessionImportPort, SessionExportPort {
 
     private final SessionRepositoryPort sessions;
     private final CampaignExistsPort campaigns;
     private final SessionViewMapper viewMapper;
+    private final SessionExportViewMapper exportViewMapper;
     private final IdGenerator ids;
     private final Clock clock;
 
     public SessionService(SessionRepositoryPort sessions, CampaignExistsPort campaigns,
-                          SessionViewMapper viewMapper, IdGenerator ids, Clock clock) {
+                          SessionViewMapper viewMapper, SessionExportViewMapper exportViewMapper,
+                          IdGenerator ids, Clock clock) {
         this.sessions = sessions;
         this.campaigns = campaigns;
         this.viewMapper = viewMapper;
+        this.exportViewMapper = exportViewMapper;
         this.ids = ids;
         this.clock = clock;
     }
@@ -73,6 +81,31 @@ public class SessionService implements CreateSessionUseCase, UpdateSessionUseCas
     public List<SessionView> list(UUID worldId, UUID campaignId) {
         requireCampaign(worldId, campaignId);
         return findOrdered(campaignId);
+    }
+
+    // --- published export port (companion export, ADR-0121) ---
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SessionExportView> listForExport(UUID campaignId) {
+        return sessions.findOrdered(campaignId).stream().map(exportViewMapper::toView).toList();
+    }
+
+    @Override
+    @Transactional
+    public SessionExportView createForExport(UUID campaignId, String title, LocalDate date, Integer sessionNumber) {
+        Integer number = sessionNumber != null ? sessionNumber : sessions.findOrdered(campaignId).stream()
+                .map(Session::getSessionNumber).filter(Objects::nonNull).max(Integer::compare).orElse(0) + 1;
+        Session created = Session.create(ids.newId(), campaignId, title, number, date, null, null, clock.instant());
+        return exportViewMapper.toView(sessions.save(created));
+    }
+
+    @Override
+    @Transactional
+    public SessionExportView writeSummary(UUID campaignId, UUID sessionId, String summary, Instant expectedUpdatedAt) {
+        Session session = require(sessionId, campaignId);
+        session.writeSummary(summary, expectedUpdatedAt, clock.instant());
+        return exportViewMapper.toView(sessions.save(session));
     }
 
     // --- published import port (ADR-0061) ---

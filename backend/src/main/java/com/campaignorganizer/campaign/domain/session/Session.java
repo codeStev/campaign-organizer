@@ -1,12 +1,17 @@
 package com.campaignorganizer.campaign.domain.session;
 
+import com.campaignorganizer.shared.domain.ConflictException;
 import com.campaignorganizer.shared.domain.ValidationException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /** A play session within a campaign (aggregate root). */
 public final class Session {
+
+    /** The limit the session summary and notes already have at the web boundary. */
+    public static final int MAX_TEXT_LENGTH = 20_000;
 
     private final UUID id;
     private final UUID campaignId;
@@ -43,6 +48,33 @@ public final class Session {
                        Instant now) {
         apply(title, sessionNumber, date, summary, notes);
         this.updatedAt = now;
+    }
+
+    /**
+     * Writes the summary on behalf of an export (ADR-0121) without ever overwriting a summary the
+     * caller did not write: accepted when there is no summary yet, or when {@code expectedUpdatedAt}
+     * is the session's current update time (so nothing was edited since the caller last wrote it).
+     */
+    public void writeSummary(String summary, Instant expectedUpdatedAt, Instant now) {
+        if (summary == null || summary.isBlank()) {
+            throw new ValidationException("Summary must not be blank");
+        }
+        if (summary.length() > MAX_TEXT_LENGTH) {
+            throw new ValidationException("Summary must be at most " + MAX_TEXT_LENGTH + " characters");
+        }
+        boolean hasSummary = this.summary != null && !this.summary.isBlank();
+        boolean unchangedSince = expectedUpdatedAt != null
+                && expectedUpdatedAt.truncatedTo(ChronoUnit.MICROS)
+                        .equals(this.updatedAt.truncatedTo(ChronoUnit.MICROS));
+        if (hasSummary && !unchangedSince) {
+            throw new ConflictException("The session's summary was changed since the last export");
+        }
+        this.summary = summary;
+        this.updatedAt = now;
+    }
+
+    public boolean hasSummary() {
+        return summary != null && !summary.isBlank();
     }
 
     private void apply(String title, Integer sessionNumber, LocalDate date, String summary, String notes) {
