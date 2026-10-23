@@ -3215,6 +3215,9 @@ paths:
         recorder (ADR-0120), which know an account, not a world. Needs a full
         login, or an API token with the `campaigns:read` scope (ADR-0119).
       operationId: listCompanionCampaigns
+      security:
+        - bearerAuth: []
+        - apiToken: []
       responses:
         '200':
           description: The caller's campaigns, grouped by world, newest world first.
@@ -3247,6 +3250,9 @@ paths:
         included. Needs a full login, or an API token with the `glossary:read`
         scope. A campaign of another account is reported as not found.
       operationId: getCampaignGlossary
+      security:
+        - bearerAuth: []
+        - apiToken: []
       responses:
         '200':
           description: The campaign's glossary, de-duplicated and sorted by name.

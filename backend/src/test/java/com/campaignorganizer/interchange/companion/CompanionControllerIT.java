@@ -98,6 +98,62 @@ class CompanionControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void aTokenWithTheMatchingScopeReachesEachEndpointAndNothingElse() throws Exception {
+        String auth = authHeader();
+        String worldId = createWorld(auth);
+        String campaignId = createCampaign(auth, worldId, "Echos des Chaos");
+        String campaignsOnly = "Bearer " + createToken(auth, "campaigns:read");
+        String glossaryOnly = "Bearer " + createToken(auth, "glossary:read");
+
+        mockMvc.perform(get("/api/companion/campaigns").header(HttpHeaders.AUTHORIZATION, campaignsOnly))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(campaignId));
+        mockMvc.perform(get("/api/companion/campaigns/{c}/glossary", campaignId)
+                        .header(HttpHeaders.AUTHORIZATION, glossaryOnly))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.campaignName").value("Echos des Chaos"));
+
+        // The other endpoint, and anything outside /api/companion, stay closed to that token.
+        mockMvc.perform(get("/api/companion/campaigns/{c}/glossary", campaignId)
+                        .header(HttpHeaders.AUTHORIZATION, campaignsOnly))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/companion/campaigns").header(HttpHeaders.AUTHORIZATION, glossaryOnly))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/worlds").header(HttpHeaders.AUTHORIZATION, campaignsOnly))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/worlds/{w}/campaigns", worldId).header(HttpHeaders.AUTHORIZATION, glossaryOnly))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aTokenSeesOnlyItsOwnAccountsCampaigns() throws Exception {
+        String auth = authHeader();
+        createCampaign(auth, createWorld(auth), "Mine");
+        String strangerAuth = authHeader();
+        String strangerCampaign = createCampaign(strangerAuth, createWorld(strangerAuth), "Theirs");
+        String token = "Bearer " + createToken(auth, "campaigns:read", "glossary:read");
+
+        mockMvc.perform(get("/api/companion/campaigns").header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Mine"));
+        mockMvc.perform(get("/api/companion/campaigns/{c}/glossary", strangerCampaign)
+                        .header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isNotFound());
+    }
+
+    private String createToken(String auth, String... scopes) throws Exception {
+        String scopeJson = java.util.Arrays.stream(scopes).map(s -> "\"" + s + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        return JsonPath.read(mockMvc.perform(post("/api/accounts/me/api-tokens")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"recorder\",\"scopes\":[" + scopeJson + "]}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(), "$.token");
+    }
+
     private String createCampaign(String auth, String worldId, String name) throws Exception {
         return JsonPath.read(mockMvc.perform(post("/api/worlds/{w}/campaigns", worldId)
                         .header(HttpHeaders.AUTHORIZATION, auth)
