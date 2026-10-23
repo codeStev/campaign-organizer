@@ -2,6 +2,7 @@ package com.campaignorganizer.worldbuilding.adapter.wiki.out.persistence;
 
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
 import com.campaignorganizer.worldbuilding.domain.wiki.Article;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,14 @@ public class ArticlePersistenceAdapter implements ArticleRepositoryPort {
     public List<Article> findByWorldAndCategory(UUID worldId, UUID categoryId) {
         return repository.findByWorldIdAndCategoryIdOrderByCreatedAtDesc(worldId, categoryId).stream()
                 .map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public List<Article> findByWorldAndIds(UUID worldId, Collection<UUID> articleIds) {
+        if (articleIds.isEmpty()) {
+            return List.of();
+        }
+        return repository.findByWorldIdAndIdIn(worldId, articleIds).stream().map(mapper::toDomain).toList();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.campaignorganizer.worldbuilding.application.wiki.port.out;
 
 import com.campaignorganizer.worldbuilding.domain.wiki.Article;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,6 +11,8 @@ public interface ArticleRepositoryPort {
     List<Article> findByWorld(UUID worldId);
 
     List<Article> findByWorldAndCategory(UUID worldId, UUID categoryId);
+    /** Unknown ids and ids of other worlds are simply absent. */
+    List<Article> findByWorldAndIds(UUID worldId, Collection<UUID> articleIds);
 
     List<Article> search(UUID worldId, String query);
 

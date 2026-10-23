@@ -1,5 +1,6 @@
 package com.campaignorganizer.worldbuilding.application.wiki.port.published;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,6 +15,9 @@ public interface ArticleQueryPort {
     Optional<ArticleView> findByIdInWorld(UUID articleId, UUID worldId);
 
     Optional<ArticleView> findById(UUID articleId);
+
+    /** Body-free listing of the given articles; unknown ids and ids of other worlds are absent. */
+    List<ArticleSummaryView> findSummariesByIdsInWorld(UUID worldId, Collection<UUID> articleIds);
 
     boolean existsInWorld(UUID articleId, UUID worldId);
 
