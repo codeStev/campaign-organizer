@@ -97,4 +97,16 @@ class SessionTest {
         assertThatThrownBy(() -> s.writeSummary("x".repeat(Session.MAX_TEXT_LENGTH + 1), null, T1))
                 .isInstanceOf(ValidationException.class);
     }
+
+    @Test
+    void writeSummaryHandsBackAMicrosecondExactUpdateTimeSoTheCallersEchoMatchesTheDatabase() {
+        Session s = withSummary(null);
+
+        s.writeSummary("Recap", null, Instant.parse("2026-02-02T00:00:00.123456789Z"));
+
+        assertThat(s.getUpdatedAt()).isEqualTo(Instant.parse("2026-02-02T00:00:00.123456Z"));
+        // ...so writing again with exactly that time is accepted.
+        s.writeSummary("Recap two", s.getUpdatedAt(), Instant.parse("2026-02-03T00:00:00Z"));
+        assertThat(s.getSummary()).isEqualTo("Recap two");
+    }
 }

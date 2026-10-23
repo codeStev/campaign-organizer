@@ -96,6 +96,7 @@ class SessionServiceTest {
         var created = service.createForExport(campaignId, "Session 2026-10-23", LocalDate.parse("2026-10-23"), null);
 
         assertThat(created.sessionNumber()).isEqualTo(8);
+        assertThat(created.updatedAt().getNano() % 1000).isZero();
         assertThat(created.hasSummary()).isFalse();
     }
 

@@ -19,6 +19,7 @@ import com.campaignorganizer.shared.domain.NotFoundException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -96,7 +97,8 @@ public class SessionService implements CreateSessionUseCase, UpdateSessionUseCas
     public SessionExportView createForExport(UUID campaignId, String title, LocalDate date, Integer sessionNumber) {
         Integer number = sessionNumber != null ? sessionNumber : sessions.findOrdered(campaignId).stream()
                 .map(Session::getSessionNumber).filter(Objects::nonNull).max(Integer::compare).orElse(0) + 1;
-        Session created = Session.create(ids.newId(), campaignId, title, number, date, null, null, clock.instant());
+        Session created = Session.create(ids.newId(), campaignId, title, number, date, null, null,
+                clock.instant().truncatedTo(ChronoUnit.MICROS));
         return exportViewMapper.toView(sessions.save(created));
     }
 

@@ -70,7 +70,9 @@ public final class Session {
             throw new ConflictException("The session's summary was changed since the last export");
         }
         this.summary = summary;
-        this.updatedAt = now;
+        // PostgreSQL keeps microseconds and rounds the rest, so the time handed back to the caller must
+        // already be microsecond-exact or the caller's echo would differ from the stored value.
+        this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
     }
 
     public boolean hasSummary() {
