@@ -22,6 +22,10 @@ servers:
 tags:
   - name: auth
     description: Email/password login, exchanged for a bearer token.
+  - name: companion
+    description: >-
+      Account-level, campaign-addressed endpoints for companion apps such as
+      the DiscordWhispr recorder (ADR-0120).
   - name: accounts
     description: >-
       Self-registration and account management (ADR-0110). Every world and
@@ -628,6 +632,72 @@ paths:
       responses:
         '204':
           description: Session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/me/api-tokens:
+    get:
+      tags: [accounts]
+      summary: List the current account's API tokens
+      description: >-
+        Machine-client credentials (ADR-0119), oldest first. Revoked tokens are
+        omitted. The secret is never returned here, only a short display prefix.
+      operationId: listApiTokens
+      responses:
+        '200':
+          description: The account's non-revoked API tokens.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiTokenSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [accounts]
+      summary: Create an API token
+      description: >-
+        Requires a full (PASSWORD+MFA) session. The secret is returned exactly
+        once, in this response; only its hash is stored. A token never counts as
+        an MFA login and only works on endpoints that list one of its scopes
+        (ADR-0119).
+      operationId: createApiToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiTokenRequest'
+      responses:
+        '201':
+          description: Token created; the only time its secret is shown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedApiToken'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/me/api-tokens/{tokenId}:
+    parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [accounts]
+      summary: Revoke one of the current account's API tokens
+      operationId: revokeApiToken
+      responses:
+        '204':
+          description: Token revoked; its next use is rejected.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2835,6 +2905,42 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/transcript:
+    parameters:
+      - $ref: '#/components/parameters/WorldId'
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [campaigns]
+      summary: The session's transcript (id is null when none was saved yet)
+      description: >-
+        The story lines (in-character and narration only, ADR-0121) a companion
+        app such as DiscordWhispr exported for this session. Read-only here: it
+        is written by the companion export.
+      operationId: getSessionTranscript
+      responses:
+        '200':
+          description: The transcript, or a line-less view with null id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionTranscript'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [campaigns]
+      summary: Delete the session's transcript
+      operationId: deleteSessionTranscript
+      responses:
+        '204':
+          description: Transcript deleted (or nothing to delete).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /worlds/{worldId}/campaigns/{campaignId}/sessions/{sessionId}/attendance:
     parameters:
       - $ref: '#/components/parameters/WorldId'
@@ -3131,6 +3237,243 @@ paths:
                 $ref: '#/components/schemas/Todo'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /companion/campaigns:
+    get:
+      tags: [companion]
+      summary: List every campaign of every world the caller owns
+      description: >-
+        Account-level campaign list for companion apps such as the DiscordWhispr
+        recorder (ADR-0120), which know an account, not a world. Needs a full
+        login, or an API token with the `campaigns:read` scope (ADR-0119).
+      operationId: listCompanionCampaigns
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '200':
+          description: The caller's campaigns, grouped by world, newest world first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanionCampaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /companion/campaigns/{campaignId}/glossary:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [companion]
+      summary: The proper nouns tied to one campaign
+      description: >-
+        Names and aliases only, never article bodies (ADR-0120). Contains
+        articles (character, location, organization, species or item templates)
+        linked from the campaign's beats or referenced by its sheets and
+        statblocks, plus the campaign's character sheets and statblocks
+        (including those its beats link). Nothing else from the world is
+        included. Needs a full login, or an API token with the `glossary:read`
+        scope. A campaign of another account is reported as not found.
+      operationId: getCampaignGlossary
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '200':
+          description: The campaign's glossary, de-duplicated and sorted by name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignGlossary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /companion/campaigns/{campaignId}/sessions:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [companion]
+      summary: The campaign's sessions, as much as an export may see
+      description: >-
+        Id, title, number, date, whether a summary exists, and when the session
+        last changed; never summary or note text (ADR-0121). Needs a full login,
+        or an API token with the `sessions:write` scope.
+      operationId: listCompanionSessions
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '200':
+          description: The campaign's sessions in session order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanionSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [companion]
+      summary: Create a session in the campaign
+      description: >-
+        For an export of a recording that has no session yet. A missing number
+        becomes the highest number in the campaign plus one. Needs a full login,
+        or an API token with the `sessions:write` scope.
+      operationId: createCompanionSession
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCompanionSessionRequest'
+      responses:
+        '201':
+          description: The new session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanionSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /companion/campaigns/{campaignId}/sessions/{sessionId}/summary:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [companion]
+      summary: Write the session's summary without overwriting the GM's own
+      description: >-
+        Markdown, at most 20000 characters. Accepted when the session has no
+        summary yet, or when `expectedUpdatedAt` equals the session's current
+        `updatedAt` (nothing was edited since the caller last wrote it);
+        otherwise 409. Returns the session with its new `updatedAt`. Needs a
+        full login, or an API token with the `sessions:write` scope (ADR-0121).
+      operationId: writeCompanionSessionSummary
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteSessionSummaryRequest'
+      responses:
+        '200':
+          description: The session after the write.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanionSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The summary was changed since `expectedUpdatedAt`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /companion/campaigns/{campaignId}/sessions/{sessionId}/transcript:
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [companion]
+      summary: Replace the session's whole transcript
+      description: >-
+        Idempotent: the lines replace any earlier transcript. Only IN_CHARACTER
+        and NARRATION lines are accepted; any other kind is a 400, so private
+        talk cannot be stored whatever the client does (ADR-0121). At most 20000
+        lines. Needs a full login, or an API token with the `transcripts:write`
+        scope.
+      operationId: replaceCompanionSessionTranscript
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceTranscriptRequest'
+      responses:
+        '200':
+          description: The transcript was stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [companion]
+      summary: Delete the session's transcript
+      description: Needs a full login, or an API token with the `transcripts:write` scope.
+      operationId: deleteCompanionSessionTranscript
+      security:
+        - bearerAuth: []
+        - apiToken: []
+      responses:
+        '204':
+          description: Transcript deleted (or nothing to delete).
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -5934,6 +6277,12 @@ components:
       bearerFormat: JWT
       description: >
         Bearer token obtained from POST /auth/login. Signed with HS256.
+    apiToken:
+      type: http
+      scheme: bearer
+      description: >
+        Account API token (cot_...) created via POST /accounts/me/api-tokens.
+        Accepted only on endpoints that name one of the token's scopes.
 
   parameters:
     WorldId:
@@ -7370,6 +7719,131 @@ components:
       type: string
       enum: [PLANNED, ACTIVE, ON_HIATUS, COMPLETED]
 
+    CompanionCampaign:
+      type: object
+      required: [id, name, status, worldId, worldName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+        worldId:
+          type: string
+          format: uuid
+        worldName:
+          type: string
+
+    GlossaryTermKind:
+      type: string
+      description: >-
+        Article templates map to their lowercase name; character sheets are
+        `character`, statblocks are `creature`.
+      enum: [character, location, organization, species, item, creature]
+
+    GlossaryTerm:
+      type: object
+      required: [name, kind, aliases]
+      properties:
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/GlossaryTermKind'
+        aliases:
+          type: array
+          items:
+            type: string
+
+    CampaignGlossary:
+      type: object
+      required: [campaignId, campaignName, terms]
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/GlossaryTerm'
+
+    CompanionSession:
+      type: object
+      required: [id, title, hasSummary, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sessionNumber:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          format: date
+          nullable: true
+        hasSummary:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCompanionSessionRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        date:
+          type: string
+          format: date
+          nullable: true
+        sessionNumber:
+          type: integer
+          nullable: true
+
+    WriteSessionSummaryRequest:
+      type: object
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: Markdown; `[[wiki links]]` resolve to articles.
+        expectedUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: The `updatedAt` the caller saw after its last write.
+
+    ReplaceTranscriptRequest:
+      type: object
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 20000
+          items:
+            $ref: '#/components/schemas/TranscriptLine'
+
+    TranscriptReceipt:
+      type: object
+      required: [lineCount, updatedAt]
+      properties:
+        lineCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
     CampaignRequest:
       type: object
       required: [name]
@@ -7564,6 +8038,58 @@ components:
           type: [string, "null"]
           format: uuid
           description: Required for DECK_CARD (with deckId).
+
+    TranscriptLineKind:
+      type: string
+      description: >-
+        Only story content exists (ADR-0121); meta talk, off-topic talk and
+        unclear lines cannot be stored.
+      enum: [IN_CHARACTER, NARRATION]
+
+    TranscriptLine:
+      type: object
+      required: [offsetMs, kind, text]
+      properties:
+        offsetMs:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Milliseconds from the start of the recording.
+        speaker:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: The character being voiced; never a player's name.
+        kind:
+          $ref: '#/components/schemas/TranscriptLineKind'
+        text:
+          type: string
+          maxLength: 2000
+
+    SessionTranscript:
+      type: object
+      required: [sessionId, lines]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null when no transcript was saved for the session yet.
+        sessionId:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptLine'
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
 
     CheatSheetRequest:
       type: object
@@ -8620,6 +9146,71 @@ components:
         current:
           type: boolean
           description: Whether this is the session of the token used to make this request.
+
+    ApiTokenScope:
+      type: string
+      description: >-
+        What an API token may do (ADR-0119). A token only works on endpoints
+        that list one of its scopes.
+      enum: [campaigns:read, glossary:read, sessions:write, transcripts:write]
+
+    ApiTokenSummary:
+      type: object
+      required: [id, name, prefix, scopes, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        prefix:
+          type: string
+          description: First characters of the secret, to tell tokens apart.
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiTokenScope'
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateApiTokenRequest:
+      type: object
+      required: [name, scopes]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        scopes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ApiTokenScope'
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional; must be in the future.
+
+    CreatedApiToken:
+      type: object
+      required: [token, summary]
+      properties:
+        token:
+          type: string
+          description: The secret (cot_...). Shown once, never retrievable again.
+        summary:
+          $ref: '#/components/schemas/ApiTokenSummary'
 
     RegisterRequest:
       type: object

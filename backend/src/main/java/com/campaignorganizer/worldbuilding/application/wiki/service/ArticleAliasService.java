@@ -5,6 +5,8 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.in.GetArticleAl
 import com.campaignorganizer.worldbuilding.application.wiki.port.in.SetArticleAliasesUseCase;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleAliasRepositoryPort;
 import com.campaignorganizer.worldbuilding.application.wiki.port.out.ArticleRepositoryPort;
+import com.campaignorganizer.worldbuilding.application.wiki.port.published.ArticleAliasQueryPort;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  * so this stays entirely inside {@code worldbuilding} rather than routing
  * through a separate bounded context). */
 @Service
-public class ArticleAliasService implements GetArticleAliasesUseCase, SetArticleAliasesUseCase {
+public class ArticleAliasService implements GetArticleAliasesUseCase, SetArticleAliasesUseCase,
+        ArticleAliasQueryPort {
 
     private final ArticleAliasRepositoryPort aliases;
     private final ArticleRepositoryPort articles;
@@ -58,6 +61,18 @@ public class ArticleAliasService implements GetArticleAliasesUseCase, SetArticle
                 .toList();
         this.aliases.replaceAll(worldId, articleId, normalized);
         return normalized;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, List<String>> findByArticlesInWorld(UUID worldId, Collection<UUID> articleIds) {
+        Map<UUID, List<String>> result = new LinkedHashMap<>();
+        aliases.findAllByWorld(worldId).forEach((articleId, names) -> {
+            if (articleIds.contains(articleId)) {
+                result.put(articleId, names);
+            }
+        });
+        return result;
     }
 
     private void requireArticle(UUID worldId, UUID articleId) {

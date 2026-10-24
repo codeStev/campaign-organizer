@@ -1,5 +1,6 @@
 package com.campaignorganizer.worldbuilding.adapter.wiki.out.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,7 @@ public interface ArticleJpaRepository extends JpaRepository<ArticleJpaEntity, UU
     List<ArticleJpaEntity> findByWorldIdAndCategoryIdOrderByCreatedAtDesc(UUID worldId, UUID categoryId);
 
     Optional<ArticleJpaEntity> findByIdAndWorldId(UUID id, UUID worldId);
+    List<ArticleJpaEntity> findByWorldIdAndIdIn(UUID worldId, Collection<UUID> ids);
 
     boolean existsByWorldIdAndSlug(UUID worldId, String slug);
 

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.campaignorganizer.campaign.application.arc.port.published.ArcBeatImportPort;
@@ -30,6 +31,7 @@ import com.campaignorganizer.campaign.application.loosethread.port.published.Loo
 import com.campaignorganizer.campaign.application.player.port.published.PlayerImportPort;
 import com.campaignorganizer.campaign.application.player.port.published.PlayerView;
 import com.campaignorganizer.campaign.application.session.port.published.CheatSheetImportPort;
+import com.campaignorganizer.campaign.application.session.port.published.SessionTranscriptImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceImportPort;
 import com.campaignorganizer.campaign.application.session.port.published.SessionAttendanceView;
 import com.campaignorganizer.campaign.application.session.port.published.SessionImportPort;
@@ -78,6 +80,7 @@ import com.campaignorganizer.worldbuilding.application.wiki.port.published.Categ
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldImportPort;
 import com.campaignorganizer.worldbuilding.application.world.port.published.WorldView;
 import tools.jackson.databind.ObjectMapper;
+import com.campaignorganizer.campaign.application.session.port.published.SessionTranscriptView;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -168,6 +171,8 @@ class ImportServiceTest {
     @Mock
     private CheatSheetImportPort cheatSheetImportPort;
     @Mock
+    private SessionTranscriptImportPort sessionTranscriptImportPort;
+    @Mock
     private TagImportPort tagImportPort;
     @Mock
     private ClockImportPort clockImportPort;
@@ -194,7 +199,7 @@ class ImportServiceTest {
                 arcBeatImportPort, whiteboardImportPort, mediaImportPort,
                 tableDeckCategoryImportPort, rollTableImportPort,
                 cardDeckImportPort, handoutCategoryImportPort, handoutImportPort,
-                cheatSheetImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
+                cheatSheetImportPort, sessionTranscriptImportPort, tagImportPort, clockImportPort, looseThreadImportPort,
                 todoImportPort);
     }
 
@@ -702,5 +707,53 @@ class ImportServiceTest {
         ArgumentCaptor<CardDeckView> deckCaptor = ArgumentCaptor.forClass(CardDeckView.class);
         verify(cardDeckImportPort).importCardDeck(deckCaptor.capture());
         assertThat(deckCaptor.getValue().cards().get(0).nestedDeckIds()).isEmpty();
+    }
+
+    private Map<String, Object> bundleWithSession(UUID oldWorldId, UUID oldCampaignId, UUID oldSessionId, Instant now) {
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportVersion", ExportService.EXPORT_VERSION);
+        bundle.put("world", new WorldView(oldWorldId, "Aeron", null, Map.of(), false, UUID.randomUUID(), now, now));
+        bundle.put("campaigns", List.of(new CampaignView(oldCampaignId, oldWorldId, "Echos", null, null,
+                CampaignStatus.ACTIVE, null, null, now, now)));
+        bundle.put("sessions", List.of(
+                new SessionView(oldSessionId, oldCampaignId, "Session 1", 1, null, null, null, now, now)));
+        for (String key : List.of("media", "categories", "articles", "maps", "mapPins", "calendars", "timelines",
+                "timelineEvents", "relationships", "arcs", "beats", "fieldTemplates", "characterSheets",
+                "whiteboards")) {
+            bundle.put(key, List.of());
+        }
+        return bundle;
+    }
+
+    @Test
+    void importsTranscriptsOntoTheirRemappedSession() throws Exception {
+        UUID oldSessionId = UUID.randomUUID();
+        UUID oldTranscriptId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        Map<String, Object> bundle = bundleWithSession(UUID.randomUUID(), UUID.randomUUID(), oldSessionId, now);
+        bundle.put("sessionTranscripts", List.of(new SessionTranscriptView(oldTranscriptId, oldSessionId,
+                List.of(new SessionTranscriptView.LineView(500, "Eckart", "IN_CHARACTER", "Willkommen!")), now, now)));
+        ArgumentCaptor<SessionView> sessionCaptor = ArgumentCaptor.forClass(SessionView.class);
+
+        service.importWorld(objectMapper.writeValueAsBytes(bundle), Map.of());
+
+        verify(sessionImportPort).importSession(sessionCaptor.capture());
+        ArgumentCaptor<SessionTranscriptView> captor = ArgumentCaptor.forClass(SessionTranscriptView.class);
+        verify(sessionTranscriptImportPort).importTranscript(captor.capture());
+        assertThat(captor.getValue().sessionId()).isEqualTo(sessionCaptor.getValue().id())
+                .isNotEqualTo(oldSessionId);
+        assertThat(captor.getValue().id()).isNotEqualTo(oldTranscriptId);
+        assertThat(captor.getValue().lines()).extracting(SessionTranscriptView.LineView::text)
+                .containsExactly("Willkommen!");
+    }
+
+    @Test
+    void aBundleMadeBeforeTranscriptsExistedStillImports() throws Exception {
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        Map<String, Object> bundle = bundleWithSession(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), now);
+
+        service.importWorld(objectMapper.writeValueAsBytes(bundle), Map.of());
+
+        verifyNoInteractions(sessionTranscriptImportPort);
     }
 }

@@ -462,6 +462,38 @@ export const accountSessionsApi = {
   revoke: (id: string) => request<void>(`/accounts/me/sessions/${id}`, { method: 'DELETE' }),
 };
 
+export type ApiTokenScope = 'campaigns:read' | 'glossary:read' | 'sessions:write' | 'transcripts:write';
+
+export interface ApiTokenSummary {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: ApiTokenScope[];
+  createdAt: string;
+  expiresAt?: string | null;
+  lastUsedAt?: string | null;
+}
+
+export interface CreateApiTokenRequest {
+  name: string;
+  scopes: ApiTokenScope[];
+  expiresAt?: string | null;
+}
+
+export interface CreatedApiToken {
+  /** The secret (cot_...): returned exactly once, never retrievable again. */
+  token: string;
+  summary: ApiTokenSummary;
+}
+
+/** Machine-client credentials for the current account (ADR-0119). */
+export const apiTokensApi = {
+  list: () => request<ApiTokenSummary[]>('/accounts/me/api-tokens'),
+  create: (body: CreateApiTokenRequest) =>
+    request<CreatedApiToken>('/accounts/me/api-tokens', { method: 'POST', body: JSON.stringify(body) }),
+  revoke: (id: string) => request<void>(`/accounts/me/api-tokens/${id}`, { method: 'DELETE' }),
+};
+
 /** Admin-only account roster management. */
 export const accountsApi = {
   list: () => request<Account[]>('/accounts'),
@@ -1532,6 +1564,34 @@ export function sessionAttendanceApi(worldId: string, campaignId: string, sessio
     get: () => request<AttendanceEntry[]>(base),
     put: (entries: AttendanceEntryInput[]) =>
       request<AttendanceEntry[]>(base, { method: 'PUT', body: JSON.stringify({ entries }) }),
+  };
+}
+
+export type TranscriptLineKind = 'IN_CHARACTER' | 'NARRATION';
+
+export interface TranscriptLine {
+  offsetMs: number;
+  /** The character being voiced; never a player's name. */
+  speaker?: string | null;
+  kind: TranscriptLineKind;
+  text: string;
+}
+
+export interface SessionTranscript {
+  /** Null when no transcript was exported for the session yet. */
+  id?: string | null;
+  sessionId: string;
+  lines: TranscriptLine[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+/** The story lines a companion app exported for a session (ADR-0121); read-only here, deletable. */
+export function sessionTranscriptApi(worldId: string, campaignId: string, sessionId: string) {
+  const base = `/worlds/${worldId}/campaigns/${campaignId}/sessions/${sessionId}/transcript`;
+  return {
+    get: () => request<SessionTranscript>(base),
+    remove: () => request<void>(base, { method: 'DELETE' }),
   };
 }
 
