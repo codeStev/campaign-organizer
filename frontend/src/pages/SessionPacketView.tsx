@@ -167,6 +167,9 @@ interface Props {
   onError: (err: unknown) => void;
 }
 
+/** Tables with more rows than this may flow across pages instead of being kept whole. */
+const LONG_TABLE_ROWS = 12;
+
 /**
  * Full-screen print packet for one session (ADR-0036): its scheduled beats, the
  * articles those beats reference, and the campaign's statblocks — everything for
@@ -537,7 +540,11 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                   {section('tables')!.letter} · {section('tables')!.title}
                 </h1>
                 {shownRollTables.map((t) => (
-                  <div key={t.id} id={anchorId('table', t.id)} className="print-roll-table print-compact-item">
+                  <div
+                    key={t.id}
+                    id={anchorId('table', t.id)}
+                    className={`print-roll-table print-compact-item${t.entries.length > LONG_TABLE_ROWS ? ' print-table-long' : ''}`}
+                  >
                     <h2>{t.title}</h2>
                     <p className="print-kicker">
                       {t.diceExpression} ({t.minResult}–{t.maxResult})
@@ -627,7 +634,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                         {/* eslint-disable-next-line react/no-danger */}
                         <div
                           className="preview-body"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(h.body) }}
+                          dangerouslySetInnerHTML={{ __html: h.bodyHtml }}
                         />
                       </article>
                     </div>
