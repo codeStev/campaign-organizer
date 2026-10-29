@@ -3423,6 +3423,16 @@ button:disabled {
   margin-bottom: 1.2rem;
 }
 
+/* A long table may not fit the rest of a page, and keeping it whole would push it to the next
+   page and leave this one nearly empty; it flows across pages instead, rows stay whole. */
+.print-roll-table.print-table-long {
+  break-inside: auto;
+}
+
+.print-roll-table.print-table-long tr {
+  break-inside: avoid;
+}
+
 .print-table-grid {
   width: 100%;
   border-collapse: collapse;
