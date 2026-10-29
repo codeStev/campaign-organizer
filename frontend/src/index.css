@@ -3088,6 +3088,22 @@ button:disabled {
   page: print-a4-narrow;
 }
 
+/* A very long word (a pasted URL) wraps inside its box. It used to widen the box past the page edge
+   and get cut off. `break-word` is not enough, only `anywhere` lets the box shrink below the word. */
+.print-doc .preview-body {
+  overflow-wrap: anywhere;
+}
+
+/* Statblock text keeps its column widths; only the title row, which has no fixed width, may break
+   anywhere. */
+.print-statblock-table .preview-body {
+  overflow-wrap: break-word;
+}
+
+.print-statblock-name {
+  overflow-wrap: anywhere;
+}
+
 .print-toolbar {
   position: sticky;
   top: 0;
