@@ -8267,7 +8267,7 @@ components:
 
     PacketBeat:
       type: object
-      required: [id, title, done, articleIds]
+      required: [id, title, done, articleIds, statblockIds, tableIds, deckIds]
       properties:
         id:
           type: string
@@ -8282,6 +8282,21 @@ components:
         arcTitle:
           type: [string, "null"]
         articleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        statblockIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tableIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        deckIds:
           type: array
           items:
             type: string

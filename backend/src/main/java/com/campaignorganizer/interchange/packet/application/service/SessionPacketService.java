@@ -121,7 +121,9 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
 
         List<PacketBeat> packetBeats = sessionBeats.stream()
                 .map(b -> new PacketBeat(b.id(), b.title(), b.body(), b.done(),
-                        arcTitles.get(b.arcId()), List.copyOf(b.articleIds())))
+                        arcTitles.get(b.arcId()), List.copyOf(b.articleIds()),
+                        List.copyOf(b.statblockIds()), List.copyOf(b.tableIds()),
+                        List.copyOf(b.deckIds())))
                 .toList();
 
         // Statblocks referenced by this session's beats first, then campaign-scoped extras.
