@@ -95,6 +95,29 @@ class SessionPacketControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void handoutBodiesAreRenderedOnTheServerWithWikiLinksResolved() throws Exception {
+        setup();
+        create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Sildar\",\"body\":\"<p>A knight.</p>\"}");
+        String sessionId = create("/api/worlds/" + worldId + "/campaigns/" + campaignId + "/sessions",
+                "{\"title\":\"Session 1\"}");
+        create("/api/worlds/" + worldId + "/handouts", "{\"title\":\"Letter\",\"preset\":\"LETTER\","
+                + "\"sessionId\":\"" + sessionId + "\",\"body\":\"Dear **friend**, ask [[Sildar]] or [[Nobody Known]].\"}");
+
+        mockMvc.perform(get("/api/worlds/{w}/campaigns/{c}/sessions/{s}/packet",
+                        worldId, campaignId, sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.handouts.length()").value(1))
+                .andExpect(jsonPath("$.handouts[0].body")
+                        .value(Matchers.containsString("[[Sildar]]")))
+                .andExpect(jsonPath("$.handouts[0].bodyHtml")
+                        .value(Matchers.allOf(
+                                Matchers.containsString("<strong>friend</strong>"),
+                                Matchers.containsString("Sildar"),
+                                Matchers.not(Matchers.containsString("[[Sildar]]")))));
+    }
+
+    @Test
     void exposesParentArticleIdForNestingInThePrintTree() throws Exception {
         setup();
         String parent = create("/api/worlds/" + worldId + "/articles", "{\"title\":\"Phandalin\"}");

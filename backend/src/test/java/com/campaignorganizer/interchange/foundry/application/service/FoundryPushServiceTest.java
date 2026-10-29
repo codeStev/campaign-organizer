@@ -616,7 +616,7 @@ class FoundryPushServiceTest {
                 List.of(new PacketRollTable(rollTableId, "A Table", "1d6", 1, 6,
                         List.of(new PacketRollTableEntry(1, 6, null)))),
                 List.of(new PacketCardDeck(cardDeckId, "A Deck", List.of(new PacketDeckCard("Ace", null)))),
-                List.of(new PacketHandout(handoutId, "A Handout", "PARCHMENT", "raw")),
+                List.of(new PacketHandout(handoutId, "A Handout", "PARCHMENT", "raw", "<p>raw</p>")),
                 List.of(), null));
 
         // Boundary stubs for each entity's own push, mirroring that entity's individual

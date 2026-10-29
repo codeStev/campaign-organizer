@@ -79,7 +79,8 @@ public final class SessionPacketDtos {
             UUID id,
             String title,
             String preset,
-            String body) {}
+            String body,
+            String bodyHtml) {}
 
     /**
      * A segment of a packet clock (ADR-0084). Deliberately carries no fill

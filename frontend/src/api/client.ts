@@ -1659,6 +1659,8 @@ export interface PacketHandout {
   title: string;
   preset: HandoutPreset;
   body: string;
+  /** `body` rendered on the server with `[[wiki-links]]` resolved against the world. */
+  bodyHtml: string;
 }
 
 /** No `filled` field - the packet prints a blank diagram for hand-marking (ADR-0084). */

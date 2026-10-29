@@ -627,7 +627,7 @@ export function SessionPacketView({ worldId, campaignId, sessionId, onClose, onE
                         {/* eslint-disable-next-line react/no-danger */}
                         <div
                           className="preview-body"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(h.body) }}
+                          dangerouslySetInnerHTML={{ __html: h.bodyHtml }}
                         />
                       </article>
                     </div>

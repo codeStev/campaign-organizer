@@ -8349,10 +8349,12 @@ components:
 
     PacketHandout:
       type: object
-      required: [id, title, preset, body]
+      required: [id, title, preset, body, bodyHtml]
       description: >
-        A handout tagged to this session (ADR-0077). Body is raw Markdown -
-        handouts render client-side, like the packet's other freeform text.
+        A handout tagged to this session (ADR-0077). `body` is the raw
+        Markdown; `bodyHtml` is the same text rendered server-side with
+        `[[wiki-links]]` resolved against the world, like the packet's roll-table
+        entries and deck cards.
       properties:
         id:
           type: string
@@ -8362,6 +8364,8 @@ components:
         preset:
           type: string
         body:
+          type: string
+        bodyHtml:
           type: string
 
     PacketClockSegment:

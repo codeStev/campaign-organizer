@@ -267,7 +267,8 @@ public class SessionPacketService implements BuildSessionPacketUseCase {
     }
 
     private PacketHandout toPacketHandout(HandoutView h) {
-        return new PacketHandout(h.id(), h.title(), h.preset(), h.body());
+        return new PacketHandout(h.id(), h.title(), h.preset(), h.body(),
+                articleRenderer.renderBody(h.worldId(), h.body()));
     }
 
     /** Drops each segment's fill state - the packet is stateless/print-blank by design. */
