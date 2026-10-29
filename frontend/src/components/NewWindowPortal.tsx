@@ -114,6 +114,12 @@ export function NewWindowPortal({ title, onClose, children }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
 
+  // The title is known only once the packet has loaded, after the window was opened. It names
+  // the file when "Save as PDF" is chosen. (In the mobile overlay the app's own tab is printed.)
+  useEffect(() => {
+    if (windowRef && windowRef !== window) windowRef.document.title = title;
+  }, [title, windowRef]);
+
   if (!container) return null;
   return createPortal(
     <NewWindowContainerContext.Provider value={container}>
