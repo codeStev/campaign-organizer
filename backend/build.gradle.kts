@@ -6,7 +6,7 @@ plugins {
     // (WebAuthn user-verification bypass via session deserialization identity comparison).
     // Doesn't affect this app's exploit surface directly (no distributed session store here),
     // but there's no reason to build new WebAuthn support on a version with a known WebAuthn CVE.
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
     jacoco
 }
